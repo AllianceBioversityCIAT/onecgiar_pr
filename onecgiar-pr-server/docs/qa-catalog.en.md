@@ -1,8 +1,8 @@
 # QA field catalog API (English)
 
-This document is the **contract** of `GET /api/qa/catalog`: the read-only declaration of every result type, section and field that exists in a PRMS phase year. It is written for the **QA platform team** (consumer) and for PRMS engineers (maintainers). Spec: `docs/specs/quality-assurance/qa-field-catalog/`.
+This document is the **contract** of `GET /api/qa/catalog` and, from v1.26, of the [results feed](#results-feed). The catalog is the read-only declaration of every result type, section and field that exists in a PRMS phase year. It is written for the **QA platform team** (consumer) and for PRMS engineers (maintainers). Spec: `docs/specs/quality-assurance/qa-field-catalog/`.
 
-The catalog describes **which fields exist and how they behave** (type, control list, required, validity). It does **not** carry result values; sending values to QA is a separate, later contract.
+The catalog describes **which fields exist and how they behave** (type, control list, required, validity). It does **not** carry result values; those travel through the [results feed](#results-feed) (`GET /api/qa/results`, `POST /api/qa/results/details`), which uses the keys and shapes defined here.
 
 ---
 
@@ -37,7 +37,7 @@ x-api-key: <CLARISA key registered for QA>
 {
   "portfolio": "P25",
   "phase": 2026,
-  "catalog_version": "2026.30",
+  "catalog_version": "2026.32",
   "generated_at": "2026-10-06T12:00:00.000Z",
   "result_types": [
     { "key": "innovation_development", "label": "Innovation development", "level": "output" }
@@ -249,7 +249,7 @@ The innovation package (`innovation_package`, IPSR) is validated by the same liv
 - **A stored row with no value is not an element.** Every `multi_select`, `single_select` and `list` field has one value per element, and a stored row whose value is empty is not part of the answer. For example, `partners.kp_author_affiliations` holds one element per author affiliation M-QAP matched, so a partner row of the result that has no M-QAP match is not an element of that list.
 - A `list` / `object` field may have subfields that themselves have subfields (**maximum depth 2**; for example Contributing Science Program/Accelerator, each program with its own ToC mappings). A deeper structure is never returned.
 - Some values are **lookups**: Reporting does not store them but reads them from a reference source by a stored id (for example the ToC statement, indicator typology, unit and target of a mapping; a CLARISA partner type). They appear as ordinary subfields or fields; they are read-only reference values. How they are resolved is internal and not part of this contract. Values read through the submitter's ToC rows (`toc.planned_result`, `toc.narrative`, `toc.program_invested_financial_resources`) and a Science Program's planned-result answer may come back **repeated once per ToC mapping** of that element; the consumer takes the distinct value.
-- **QA's unit of selection is the top-level field.** Subfields describe the shape of each element of that field; the future results endpoint returns the **whole object** of a selected field, never a single subfield.
+- **QA's unit of selection is the top-level field.** Subfields describe the shape of each element of that field; the results feed returns the **whole object** of a selected field, never a single subfield.
 
 ---
 
@@ -287,14 +287,14 @@ Notes:
 - **`result_type_id` is not exposed.** Use `result_types[].key`.
 - **Control-list contents are not provided here**, only their names.
 - **The catalog is not exhaustive of PRMS columns.** Fields that are internal, audit-only or derived are intentionally absent; fields that are for QA but not yet described are also absent (see [known gaps](#known-gaps)). Absence from the catalog does not mean absence from PRMS.
-- **No result values** flow through this endpoint.
+- **No result values** flow through this endpoint; they flow through the [results feed](#results-feed).
 - **Order is meaningful only as sorted by the API** (section `order`, then field `order`); do not depend on key spelling for ordering.
 
 ---
 
-## Catalog at revision 30 (2026.30)
+## Catalog at revision 32 (2026.32)
 
-Counts measured on the code catalog on 2026-10-09 (the same data the endpoint returns):
+Counts measured on the code catalog on 2026-10-09 (the same data the endpoint returns); revision 31 (QRF-T-9) changes no count, only value bindings:
 
 | Item | Count |
 |---|---|
@@ -317,6 +317,212 @@ The first boot of this revision wrote 9 result types, 21 sections and 167 field 
 
 ---
 
+## Results feed
+
+Two read-only routes bring result **values** to QA: a paginated list of the results that are ready for QA, and a batch read of the catalog fields of chosen results. Spec: `docs/specs/quality-assurance/qa-results-feed/`. Everything below is what the shipped code does.
+
+(Program codes and ids in the examples are illustrative.)
+
+The flow: list (`GET /api/qa/results`), then read the values of the ids you want (`POST /api/qa/results/details`), then keep the keys and shapes of the [catalog](#response-shape) as the dictionary of what you received.
+
+### Routes
+
+| Item | `GET /api/qa/results` | `POST /api/qa/results/details` |
+|---|---|---|
+| Purpose | Eligible results of one phase year, paginated | Values of up to 50 results, for the fields you name |
+| Input | Query string | JSON body |
+| Success | **200** | **200** (a read, not a 201); ineligible ids are part of the body |
+| Auth | Header `x-api-key`, as in the [catalog endpoint](#endpoint) | Same |
+| Permission of the key | `/api/qa/results` | `/api/qa/results/details` |
+| Body of a 200 | Returned as-is (no `{ response, statusCode }` wrapper) | Same |
+
+Each route is registered in CLARISA on its own: a key granted `/api/qa/catalog` only is a **401** on both results routes. The PRMS user header `auth` is not accepted. Neither route is rate limited by PRMS.
+
+```
+GET /api/qa/results?phase_year=2026&program_ids=5,7&result_type_keys=policy_change&page=1&page_size=100
+x-api-key: <CLARISA key registered for QA>
+
+POST /api/qa/results/details
+x-api-key: <CLARISA key registered for QA>
+{ "phase_year": 2026, "result_ids": [900001, 900002], "field_keys": ["general.title"] }
+```
+
+### Which results are eligible
+
+Both routes apply the **same** rule. A result is eligible for a `phase_year` only when all of these hold:
+
+| # | Condition | `not_eligible` reason when it fails (details route) |
+|---|---|---|
+| 1 | The result exists and is active (a soft-deleted result counts as not existing) | `not_found` |
+| 2 | Its status is **Submitted** | `not_submitted` |
+| 3 | Its phase has that `phase_year` (Reporting and IPSR versions of the year both count, subject to OQ-4 of the spec) | `other_phase` |
+| 4 | It is a W1/W2 result (not bilateral or SGP-02) | `not_w1w2` |
+| 5 | Its result type has a catalog key. Capacity change and Complementary innovation have none | `type_not_catalogued` |
+| 6 | It has an active **lead program** | `no_lead_program` |
+
+`type_not_catalogued` and `no_lead_program` are the two conditions beyond status, phase and source.
+
+### `GET /api/qa/results`
+
+| Query | Type | Rule |
+|---|---|---|
+| `phase_year` | integer, **required** | 2000 to 2100. Never defaulted from the clock or the open phase. |
+| `program_ids` | comma-separated integers | Optional. CLARISA ids, each 1 to 2 147 483 647. Matches the **lead** program only. Absent or empty = no filter. An unknown program is an empty page, not an error. |
+| `result_type_keys` | comma-separated strings | Optional. Keys of `result_types[]` of that year's catalog. Absent or empty = no filter. |
+| `page` | integer | Optional, default 1, range 1 to 1 000 000. |
+| `page_size` | integer | Optional, default **100**, range 1 to **200**. |
+
+With both filters present the result is their intersection. The order is total and fixed: `submitted_at` ascending, then `result_id` ascending, so a result never moves between pages of identical calls. `submitted_at` is the latest active submission of the result. A result with no submission history has `submitted_at: null` and sorts **first** in the ascending order (MySQL puts `NULL` first).
+
+```json
+{
+  "phase": 2026,
+  "page": 1,
+  "page_size": 100,
+  "total": 1,
+  "breakdown": {
+    "by_program": [ { "clarisa_id": 5, "code": "SP05", "count": 1 } ],
+    "by_result_type": [ { "key": "policy_change", "count": 1 } ]
+  },
+  "items": [
+    {
+      "result_id": 900001,
+      "result_code": 5120,
+      "program": { "clarisa_id": 5, "code": "SP05" },
+      "result_type_key": "policy_change",
+      "submitted_at": "2026-09-30T14:03:12.000Z"
+    }
+  ]
+}
+```
+
+| Property | Type | Meaning |
+|---|---|---|
+| `phase` | integer | The requested `phase_year`. |
+| `page`, `page_size` | integer | Echo of the effective values (defaults applied). |
+| `total` | integer | Count of the **filtered** eligible set, independent of `page`. |
+| `breakdown` | object | Counts of the filtered set: `by_program` and `by_result_type`. |
+| `by_program` | array | One entry per lead program, ordered by `code`: `clarisa_id` (CLARISA id), `code`, `count`. |
+| `by_result_type` | array | One entry per result type: `key` (catalog key), `count`. Do not rely on its order. |
+| `items[].result_id` | integer | PRMS result id. The id `details` takes. |
+| `items[].result_code` | integer | The result code people see in URLs and tickets. It is **not** the id. |
+| `items[].program` | `{ clarisa_id, code }` | Lead program. |
+| `items[].result_type_key` | string | Catalog key, never the PRMS `result_type_id`. |
+| `items[].submitted_at` | string or null | ISO-8601 UTC. `null` only for a Submitted result with no submission history. |
+
+A page past the end is a **200** with `items: []` and the real `total`. A filter that matches nothing is a **200** with `total: 0`, empty `items` and empty `breakdown` arrays.
+
+### `POST /api/qa/results/details`
+
+| Body | Type | Rule |
+|---|---|---|
+| `phase_year` | integer, **required** | 2000 to 2100. Must be a JSON number. |
+| `result_ids` | integer[], **required** | 1 to **50** entries, each 1 to 2 147 483 647 (`result_id`, not `result_code`). The bound counts the array **as sent**: duplicates still count, then are answered once. |
+| `field_keys` | string[], optional | **Top-level** catalog keys. At least one entry, each at most 200 characters. `[]` is a 400. A subfield key (`directory_user`) or an unknown key is a 400 that names it. Absent = every applicable field. |
+
+An unknown property of the body is ignored.
+
+```json
+{
+  "phase": 2026,
+  "catalog_version": "2026.32",
+  "results": [
+    {
+      "result_id": 900001,
+      "result_code": 5120,
+      "result_type_key": "capacity_sharing",
+      "values": {
+        "capacity_sharing.length_of_training": { "value": 4, "degree": 2 }
+      }
+    }
+  ],
+  "not_eligible": [ { "result_id": 900003, "reason": "not_submitted" } ]
+}
+```
+
+| Property | Type | Meaning |
+|---|---|---|
+| `phase` | integer | The requested `phase_year`. |
+| `catalog_version` | string | **Equal** to `catalog_version` of `GET /api/qa/catalog?phase_year=` for the same year. A different value means your copy of the catalog is stale; reload it. |
+| `results` | array | Eligible ids, in request order, each id once. |
+| `results[].result_id`, `result_code`, `result_type_key` | integer, integer, string | As in the list item. |
+| `results[].values` | object | Keyed by catalog field key (top level). |
+| `not_eligible` | array of `{ result_id, reason }` | Every requested id that is not eligible, in request order, each id once. |
+
+`not_eligible[].reason` is a **closed** list, evaluated in the order of the [eligibility table](#which-results-are-eligible) (the first failing condition wins): `not_found`, `not_submitted`, `other_phase`, `not_w1w2`, `type_not_catalogued`, `no_lead_program`. A new reason is an additive change recorded in the change log. An ineligible id never fails the batch.
+
+A database read that fails is **not** a per-id reason: it fails the **whole batch** with a generic **500** (`The QA results could not be read`). No table, column, SQL or id appears in it. Retry the batch; do not infer that one of the ids is at fault.
+
+#### What `values` holds
+
+- `values` holds every field that is valid in the `phase_year` **and** applies to the result's type (`result_types` contains it or `*`), narrowed to `field_keys` when given. A requested key that does not apply to a result's type is **absent** from that result's `values`; it is not `null`.
+- A field with no stored value is **present**, never omitted. Its empty value depends on its shape: `null`; `[]` for `multi_select` and `list`; and, for a scalar type that declares subfields, `{ "value": null, "<subfield key>": null or [] }`, **never a bare `null`** (for example `general.lead_contact_person` with nothing stored is `{ "value": null, "directory_user": null }`). Absent keys therefore mean "does not apply"; an empty value (`null`, `[]` or that object) means "applies, no value".
+- Objects carry only catalog keys at every depth, plus the single key `value` defined below.
+
+| Catalog `type` | Value in `values` |
+|---|---|
+| `text` | string or `null` |
+| `date` | string or `null`: `YYYY-MM-DD` for a date, ISO-8601 UTC for a date-time |
+| `number` | number or `null` |
+| `boolean` | boolean or `null` |
+| `single_select` | the option id as stored (number, or string for a control list with text ids) or `null`. The contents of the control list are not served. |
+| `multi_select` | array of option ids, each as stored (number, or string for a control list with text ids); `[]` when none |
+| `list` | array of objects, one per element, keyed by subfield key; `[]` when none |
+| `object` | object keyed by subfield key (no `value` key), or `null` when nothing is stored. At revision 31 two fields use it: `knowledge_product.accessibility_cg` and `knowledge_product.altmetric` |
+| A **scalar** type with subfields | `{ "value": <scalar>, "<subfield key>": … }`; no stored value is `{ "value": null, "<subfield key>": null or [] }`, never bare `null` |
+
+A scalar field that declares subfields (`text`, `date`, `number`, `boolean`, `single_select`) never returns the bare scalar. Its scalar is under `value`, and each subfield is keyed by its own key and shaped by its own type. Capacity sharing is the example: `capacity_sharing.length_of_training` returns `{ "value": 4, "degree": 2 }`.
+
+#### Capacity sharing: normalization applied
+
+[Known gap 17](#known-gaps) is **applied by the feed**: the raw stored value is normalized before it is returned, so the `visible_when` of `degree` holds on what you receive.
+
+| Stored raw value | `value` | `degree` |
+|---|---|---|
+| 1 (PhD) or 2 (Master) | 4 (Long-term) | the stored 1 or 2 |
+| 3 (Short-term) or 4 (Long-term) | the stored value | `null` |
+| none | `null` | `null` |
+
+#### Question answers and stored NULL
+
+- **Question-backed fields read only the answers to their own question.** `innovation_dev.gesi_stage`, `innovation_dev.risk_stage`, `innovation_dev.ipr_consideration`, `innovation_dev.team_diversity` and its `actions` subfield bind to the result's active, ticked answers. A binding whose field names a **closed** control list reads only the rows whose value is one of that list's ids (an `IN (...)` term of the same batched statement, QRF-DD-13), so an answer to another question is never returned as the value. A result with no answer to the question has `null` (`[]` for `actions`).
+- **`linked.has_innovation_link` stays `null` when the stored value is NULL.** The 2026 form shows a stored NULL as "No" (the client model defaults it to `false`); the feed sends `null`, the stored value, not the form's display. Read `null` as "not answered", and do not treat it as `false`.
+
+### Errors
+
+| Case | Status |
+|---|---|
+| `x-api-key` missing, unknown, expired, or without the permission of that route | **401** (generic body). Authentication runs before validation. |
+| `phase_year` missing, not an integer, or outside **2000 to 2100** | **400** |
+| `page`, `page_size`, `program_ids`, `result_ids` or `field_keys` outside the ranges above | **400** |
+| `result_type_keys` with an unknown key | **400** naming the keys |
+| `field_keys` with an unknown or non-top-level key | **400** naming the keys |
+| `phase_year` in range with no catalog (for example 2023, 2025) | **404**, the same as `/api/qa/catalog` |
+| A read failed | **500**, generic message |
+
+Notes:
+
+- **The range differs from the catalog endpoint.** `phase_year=1999` is a **400** on the results routes and a **404** on `/api/qa/catalog`. A year in 2000 to 2100 with no catalog is a 404 on all three.
+- The 404 comes before the key checks: an unknown `result_type_keys` or `field_keys` value on an uncatalogued year answers 404.
+- Error bodies use the standard PRMS error envelope; they are not part of the feed shape.
+
+### Person-bearing keys
+
+The feed returns a field only when you request it, but without `field_keys` it returns every applicable field. These top-level keys hold or point to a person; request them knowingly. Derived by searching `CATALOG_FIELDS` (key and label, every subfield level) for person, contact, author, email, name, facilitator, developer, collaborator, user and submitter terms, then keeping the ones that hold a person.
+
+| Key | Holds | Value |
+|---|---|---|
+| `general.lead_contact_person` | The lead contact's name or email as entered, plus `directory_user` (id of the directory user) | `{ "value": text, "directory_user": id }` |
+| `general.created_by` | The user who created the result | user id |
+| `innovation_dev.developers` | Free text: names or emails | text |
+| `innovation_dev.collaborators` | Free text: names, emails and affiliations | text |
+| `ipsr_step_1.workshop_facilitators` | Facilitators: `first_name`, `last_name`, `email` | list |
+| `knowledge_product.authors` | Author names (public CGSpace data) | list (`name`) |
+
+`contributors.submitter` is a program, not a person, and the author affiliations of `partners.kp_author_affiliations` are institutions. Neither is listed.
+
+---
+
 ## Known gaps
 
 These are deliberate and tracked; each one is **additive** when resolved.
@@ -330,7 +536,7 @@ These are deliberate and tracked; each one is **additive** when resolved.
 2. **Subfield conditions (resolved in the model, v1.5).** Subfields may carry `required_when` / `visible_when`; the catalog content that uses them arrives per field in later revisions.
 3. **Conditional requirements (resolved in the model, v1.5; transcription incomplete).** `required_when` and `visible_when` are returned wherever the catalog states them (see [display rules](#display-rules)); entries whose rule has not yet been transcribed still read `required: false` without a condition, so the absence of a condition does not prove that an entry is optional.
 4. **Year coverage.** 2026 only.
-   - **Question fields (innovation development).** `innovation_dev.gesi_stage`, `innovation_dev.risk_stage`, `innovation_dev.ipr_consideration` and `innovation_dev.team_diversity` bind to the answered rows of the result's answers (one row per option marked, active). A row belongs to a question through the field's control list: by id for the closed team diversity lists, and by option text for the three lists that are not closed (their option ids are not the same in every environment).
+   - **Question fields (innovation development).** `innovation_dev.gesi_stage`, `innovation_dev.risk_stage`, `innovation_dev.ipr_consideration` and `innovation_dev.team_diversity` bind to the answered rows of the result's answers (one row per option marked, active). A row belongs to a question through the field's control list, by id: the team diversity lists, and, since QRF-T-9 (QRF-DD-13), the GESI stage (152..156), risk stage (157..161) and IPR (163..165) lists, whose ids the owner verified identical in test and prod on 2026-10-28. The feed applies the closed list as a row filter (see [Question answers and stored NULL](#question-answers-and-stored-null)).
 5. **Live verification (2026-10-06, local instance, CLARISA test key with permission `/api/qa/catalog`):** `phase_year=2026` → 200 with the 2026.5 content (body identical to the committed catalog, apart from `generated_at`); `phase_year=2023` → 404; `phase_year=abc` → 400; no key, unknown key or user `auth` header → 401. Not yet verified on a deployed environment.
 6. **Control-list contents are not served** by this endpoint.
 7. **`visible_when` is not persisted in `qa_catalog_field`** (migration pending; the owner runs it). The endpoint serves it from the code catalog, so the response is correct; the stored catalog tables do not yet carry the rule.
@@ -345,7 +551,9 @@ These are deliberate and tracked; each one is **additive** when resolved.
 15. **`policy_change.actors_influenced` has no `visible_when`.** The form shows it only when the answer to `policy_change.related_to` is the option "The capacity development of key actors in a policy process" (the client compares the answer with question id 51). That id is environment-specific (test 51; prod options 49 and 50, no 51) and the options of `related_to` are matched by label, not by id, so the condition vocabulary cannot name it without inventing an id. With prod's `related_to` option ids (49 and 50, no 51) the form would never show "Number of key actors influenced" in prod; UNVERIFIED in prod (from inventory 2026-B:86). The field is returned always visible and optional; QA should treat it as applicable only for that option. **`policy_change.amount_status` option ids** (Confirmed 1, Estimated 2, Unknown 3) are hard-coded in the form; the column is free text, so the stored value is not guaranteed to be one of them.
 16. **`knowledge_product.is_isi_cg` and `knowledge_product.accessibility_cg` are returned `required: false` although the live validation requires them.** For a knowledge product whose type is a journal article the live validation (function-stated) requires a non-blank ISI status and a non-blank accessibility (the stored value behind the `accessibility` subfield of `accessibility_cg`; the form shows the `open_access` text when there is one and otherwise derives it from `accessibility`). The type test is a text pattern match on the free-text knowledge product type, which `required_when` (equality and list membership only) cannot express, and the type is not a closed list; the form marks both fields not required. The live validation also reads only the metadata row whose source name contains `cgspace`, while the catalog's repository (CGSpace) variants read the first active metadata row, whatever repository it names (CGSpace, MELSpace, WorldFish DSpace); for a record of another repository the validation and the catalog can therefore disagree. A consumer should treat a missing value of either field as invalid for a journal article.
 
-17. **`capacity_sharing.length_of_training` and its subfield `degree` both bind the raw `capdev_term_id`.** The form stores the degree when there is one and the length otherwise, so the raw value is read in both directions: a stored **1 or 2** means "Long-term (4) plus that degree" (read `length_of_training` as **4** and `degree` as the stored 1 or 2); a stored **3 or 4** is the length only and carries **no degree** (read `degree` as empty). The `visible_when` of `degree` (`length_of_training` eq 4) applies to this normalized reading, not to the raw column, and the future results endpoint returns the normalized values. A consumer that reads the raw column and applies the catalog conditions to it gets a wrong answer for a stored 1 or 2.
+17. **`capacity_sharing.length_of_training` and its subfield `degree` both bind the raw `capdev_term_id`.** The form stores the degree when there is one and the length otherwise, so the raw value is read in both directions: a stored **1 or 2** means "Long-term (4) plus that degree" (read `length_of_training` as **4** and `degree` as the stored 1 or 2); a stored **3 or 4** is the length only and carries **no degree** (read `degree` as empty). The `visible_when` of `degree` (`length_of_training` eq 4) applies to this normalized reading, not to the raw column, and the results feed returns the normalized values (**applied** by `POST /api/qa/results/details`, v1.26; see [capacity sharing: normalization applied](#capacity-sharing-normalization-applied)). A consumer that reads the raw column and applies the catalog conditions to it gets a wrong answer for a stored 1 or 2.
+
+18. **`policy_change.related_to` is not narrowed to its own question.** It binds to the answered rows of the result's answers, like the innovation development question fields, but its question ids differ by environment (the form's root question is 49 in test and 48 in prod), so no closed list can be declared for it. Until the ids are the same in every environment the feed returns the first active, ticked answer of the result for this field, which can belong to another question when the result stores several answers. Known gap, not fixed in QRF-T-9.
 
 ---
 
@@ -379,3 +587,6 @@ These are deliberate and tracked; each one is **additive** when resolved.
 | 2026-10-09 | **v1.23 — 2026-10-09: IPSR step 2 complete (QAC-T-29); catalog_version 2026.28.** No key is renamed or removed. (a) **Type change (pre-release):** `ipsr_step_2_1.complementary_innovations` changes type `multi_select` to `list` (storage and stored rows unchanged: the relation over the package's active role-2 rows) and drops its field-level `control_list`; the identity subfield `result` (control list `ipsr_bundle_candidates`, required) carries it. (b) New subfields of the bundle: `result_type` (the element's result type, control list `result_types`), `short_title`, `title`, `description`, `functions` (`multi_select`, control list `complementary_functions`), `other_functions`, `projects_organizations_working_on_innovation`, `specify_projects_organizations`; the modal ones are visible when `result_type` is 11, and `short_title`, `title` and the projects answer are also required then. (c) New field `ipsr_step_2_2.enabler_elements` (`list`, required and confirmed, same elements as 2.1) with the subfields `result`, `enabler_type_level_1` and `enabler_type_level_2` (optional `multi_select` over the reference list `complementary_innovation_enabler_types`; one stored column read through the level of the referenced type); new section `ipsr_s22_basic_info`; the IPSR sections of step 3 and 4 are renumbered (86 to 89). The 2.2 tab is administrator-only (role rule, documented, not a condition). Counts: 153 fields (was 152), 170 subfields (was 158), 24 sections (was 23); `PENDING_CATALOG` 71 columns across 17 tables (was 77 across 20); `NOT_FOR_QA` 375 (the label, tree and audit columns of the enabler-types reference table, now an in-scope table). |
 | 2026-10-09 | **v1.24 — 2026-10-09: IPSR step 3 complete (QAC-T-30); catalog_version 2026.29.** No key is renamed or removed and no type changes. (a) New top-level fields in `ipsr_s3_core`: `ipsr_step_3.core.readiness_evidences` and `ipsr_step_3.core.use_evidences` (`list` over the active step 3 evidence of the core element and level; subfields `evidence_source`, `link`, `is_public_file`, `file_name`, `file_url`, `gender_related`, `climate_related`, `nutrition_related`, `environmental_biodiversity_related`, `poverty_related`, `innovation_use_related`, `description`), and `ipsr_step_3.core.current_use.actors`, `.organizations`, `.measures` (lists over the rows of the core element, each row with its required evidence link). (b) New subfields of `ipsr_step_3.complementary_components`: `readiness_level`, `use_level` (required), and the lists `readiness_evidences`, `use_evidences` (second level, same item subfields). (c) Rule changes on existing keys (the keys and storage are unchanged): `ipsr_step_3.assessed_during_workshop` is now visible when a workshop was organized; the current levels (core and complementary) are visible and required for the answers 1 and 2 of the workshop question (were required for the answer 1 only) and `required_confirmed` is now false for the core ones; `ipsr_step_3.core.readiness_level` and `.use_level` become `required: true, required_confirmed: false`. (d) The inventory key `file` of the evidence item is split into `file_name` and `file_url` (the owner's QAC-T-17 precedent for `evidence.items`; the two-level subfield cap leaves no room to nest the file object). (e) The level gate of the evidence lists and the use-level-0 gate of the current use are NOT stated (level ids are not the level numbers; see the IPSR step 3 notes). Counts: 158 fields (was 153), 239 subfields (was 170, 32 at the second level), 24 sections; `PENDING_CATALOG` 52 columns across 14 tables (was 71 across 17; the four legacy evidence columns of the element row stay pending: packages without link rows hold their only evidence there); `NOT_FOR_QA` 377 (the id and creation date of the new evidence-link table, now an in-scope table). |
 | 2026-10-09 | **v1.25 — 2026-10-09: IPSR step 4 complete (QAC-T-31); catalog_version 2026.30.** No key is renamed or removed and no type changes. (a) New section `ipsr_s4_investment` (order 89); the section `ipsr_s4_materials` moves from order 89 to 90 so the investment tables come first. (b) New top-level fields, `list`s, innovation package only: `ipsr_step_4.initiative_investment`, `ipsr_step_4.bilateral_investment`, `ipsr_step_4.partner_investment`, `required: false`, `required_confirmed: true`. Subfields: `program` / `project` / `institution` (required identity), `partner_type` (partners only), `kind_cash` (`required_when` `is_determined` equals false; NULL is read as false) and `is_determined` (optional). The budget columns are the same ones bound by `innovation_dev.estimates_*` and `innovation_use.investment.*`; each key returns only the elements of its own list. (c) Rule change on an existing key: the `link` subfield of `ipsr_step_4.reference_materials` is now `required: true` (the list stays optional and unconfirmed). (d) The partner list is every active partner row of any role; the form lists only roles 2 and 7 with an active budget row, and elements without a budget row carry no requirement (Known gap 14; the inventory condition "row exists AND ..." is dropped because the model cannot condition on budget-row existence; see the IPSR step 4 notes). Counts: 161 fields (was 158), 249 subfields (was 239, 32 at the second level), 25 sections; `PENDING_CATALOG` 52 columns across 14 tables (unchanged); `NOT_FOR_QA` 377 (unchanged). |
+| 2026-10-28 | **v1.26 — 2026-10-28: results feed documented (spec `quality-assurance/qa-results-feed`, QRF-T-7); `catalog_version` unchanged (2026.30).** New part [Results feed](#results-feed) for two routes, both authenticated with a CLARISA key that has the permission of that route: `GET /api/qa/results` (eligible results of one `phase_year`, filters `program_ids` / `result_type_keys`, order `submitted_at` then `result_id`, `page` 1 to 1 000 000, `page_size` 1 to 200 default 100, `breakdown`) and `POST /api/qa/results/details` (`result_ids` 1 to 50 counted as sent, optional top-level `field_keys`, `not_eligible[].reason` closed list `not_found`, `not_submitted`, `other_phase`, `not_w1w2`, `type_not_catalogued`, `no_lead_program`, a failing read is a whole-batch generic 500). `phase_year` on these routes is 2000 to 2100 (1999 is a 400 here and a 404 on `/api/qa/catalog`). A missing value is `null` (`[]` for `multi_select` and `list`); a scalar field with subfields is `{ value, <subfield key>: … }`. [Known gap 17](#known-gaps) is applied: `capacity_sharing.length_of_training` is returned normalized. Person-bearing keys are listed so the QA Admin chooses them knowingly. Additive only: no catalog key, type or condition changes. |
+| 2026-10-28 | **v1.27 — 2026-10-28: value-binding fixes from the results-feed golden comparison (spec `quality-assurance/qa-results-feed`, QRF-T-9); catalog_version 2026.31; the public shape is unchanged.** The revision is bumped because the catalog content hash covers the value bindings; no key, type, condition, label or response shape changes. The fixes are G-1 (lead center and lead partner) and G-2 (closed-list row filter). (a) `contributors.lead_center` now returns the center code (`center_id`, for example `CENTER-02`) of the active row with `is_leading_result = 1`; it returned the flag (1 or 0). `partners.lead_partner` now returns the `institutions_id` of the active leading row, with the same fix. (b) The innovation development question fields (`innovation_dev.gesi_stage`, `risk_stage`, `ipr_consideration`, `team_diversity` and its `actions`) read only the answers to their own question: closed lists `question_options_gesi_stage` (152..156), `question_options_risk_stage` (157..161) and `question_options_ipr` (163..165) are added and the value read applies a closed list as a row filter (QRF-DD-13). Before, each field returned any answered row of the result. (c) `linked.has_innovation_link` is documented: a stored NULL is sent as `null`, while the form displays "No". (d) Known gap 18 recorded (`policy_change.related_to`). |
+| 2026-10-31 | **v1.28 — 2026-10-31: revision reconciliation; catalog_version 2026.32; the public shape is unchanged.** Two independent changes had both bumped 2026 from revision 30 to 31 with different content: P2-4037 (QRF-T-9 value-binding fixes, v1.27) and P2-4061 (spec `bugfix/toc-kpi-optional-green-check`: `toc.planned_result` is no longer required for 2026, the 2026 green check no longer blocks on an unanswered planned-result question). Revision 32 is the merged content of both; nothing else changes. Consumers holding `2026.31` re-read the catalog. |

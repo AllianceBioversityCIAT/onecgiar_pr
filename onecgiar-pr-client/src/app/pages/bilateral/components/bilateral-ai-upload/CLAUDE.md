@@ -1,6 +1,6 @@
 # bilateral-ai-upload
 
-**Verified:** 2026-10-27 · branch qa-development-2026-mc-2 · AQT-T-1
+**Verified:** 2026-10-29 · branch qa-development-2026-mc · AQC-T-1
 
 ## Qué es
 Paso "AI" del creador de resultados bilaterales: el usuario sube documentos,
@@ -47,7 +47,8 @@ sustituye.** El job pasa a vivir en la lista de `BilateralAiService`
   `openDrawer()`. Copy centralizado en
   `internationalization/bilateral-ai-processes.copy.ts`. **`AQT-T-1`
   (2026-10-27):** ese toast de queued ahora usa `severity: 'info'` (azul),
-  no `'success'` — la tarjeta de confirmación de arriba no cambió.
+  no `'success'` — **`AQC-T-1` (2026-10-29):** la tarjeta de confirmación de arriba
+  también es info/azul (`--pr-color-blue-*`, ícono `info`; sin `--pr-status-approved-*`).
 - **Si el envío falla:** el formulario conserva ficheros y texto
   (`handleUploadError`, sin cambios) y no se añade ningún job.
 - **`?job=`** (deep link del email de fallo, P-23, productor en

@@ -98,14 +98,16 @@ describe('QAC-T-18 innovation development (Results)', () => {
       ).toEqual([116, 117, 118, 119, 120, 121]);
     });
 
-    it('stage and IPR option lists are NOT closed (ids are AUTO_INCREMENT per environment)', () => {
-      for (const list of [
-        'question_options_gesi_stage',
-        'question_options_risk_stage',
-        'question_options_ipr',
-      ]) {
-        expect(CLOSED_CONTROL_LISTS[list]).toBeUndefined();
-      }
+    it('stage and IPR option lists are closed with the P-20 ids (QRF-DD-13, owner-verified identical in test and prod)', () => {
+      expect(CLOSED_CONTROL_LISTS.question_options_gesi_stage).toEqual([
+        152, 153, 154, 155, 156,
+      ]);
+      expect(CLOSED_CONTROL_LISTS.question_options_risk_stage).toEqual([
+        157, 158, 159, 160, 161,
+      ]);
+      expect(CLOSED_CONTROL_LISTS.question_options_ipr).toEqual([
+        163, 164, 165,
+      ]);
     });
   });
 

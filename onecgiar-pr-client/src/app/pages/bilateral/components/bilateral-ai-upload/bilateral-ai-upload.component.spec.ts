@@ -315,6 +315,15 @@ describe('BilateralAiUploadComponent', () => {
         expect(confirmation).toBeTruthy();
         expect(confirmation.textContent).toContain('P2 was added to the AI queue');
 
+        // AQC-R-1 / AQC-R-3: the card reads as informational (blue, `info`), never as success.
+        // jsdom cannot resolve var(), so this proves the tokens are in the markup, not how they paint.
+        const confirmationIcon: HTMLElement | null = confirmation.querySelector('i.material-icons-round');
+        expect(confirmationIcon).toBeTruthy();
+        expect(confirmationIcon!.textContent!.trim()).toBe('info');
+        expect(confirmationIcon!.textContent).not.toContain('task_alt');
+        expect(confirmation.outerHTML).not.toContain('status-approved');
+        expect(confirmation.outerHTML).toContain('pr-color-blue');
+
         expect(fixture.nativeElement.querySelector('app-ai-processing-panel')).toBeNull();
 
         expect(toastSpy).toHaveBeenCalledWith(

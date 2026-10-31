@@ -79,6 +79,11 @@ export const EXCLUDED_TABLES: ExcludedTable[] = [
     reason: 'control list of result levels (not result data)',
   },
   {
+    table: 'result_qa_intake_log',
+    reason:
+      'append-only audit of QA intake/release calls by external platforms (qa-intake QIN-R-5); not data entered in the result form',
+  },
+  {
     table: 'result_qaed_log',
     reason: 'QA audit log written by the QA flow (not catalogued result data)',
   },
