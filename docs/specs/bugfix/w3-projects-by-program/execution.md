@@ -48,3 +48,16 @@
   - Optional polish: `[loading]` on the Retry button.
 - **Requirements covered:** WPP-R-2 (S-2.1), WPP-R-3 (S-3.1, S-3.2).
 - **Not Done carried:** none (pre-push `--findRelatedTests` is a pre-push gate, tracked in the advisory).
+
+### WPP-T-3 — Manual verification on PRTest · `[~]` · 2026-10-31
+
+| Field | Value |
+|---|---|
+| Who / how | Leader through Claude in Chrome, at Santiago's request. Read-only: GET calls and opening the picker; nothing selected, nothing saved |
+| Deploy | `performance-refactor` `ff95c902a` (contains `717e5aed7`) |
+| #1 | `GET api/results-framework-reporting/bilateral-projects/by-program?programId=SP09` → 177 unique projects = Portfolio Overview `mapped` 177 (`portfolio/bilateral-projects`). Same number as prod via localhost on 2026-10-30 |
+| #2 | Every program, dropdown unique projects vs PO `mapped`: SP01 273/273, SP02 185/184, SP03 90/90, SP04 117/117, SP05 56/56, SP06 194/193, SP07 127/127, SP08 50/50, SP09 177/177, SP10 44/44, SP11 69/69, SP12 60/60, SP13 52/52. Never below `mapped`; ToC-linked rows still present (e.g. SP01 235) |
+| #3 | Partial. On SP09 result 10037 (Reporting 2026) the picker opens with "All centers (177)" and 12 centre pills (AfricaRice 9 … WorldFish 4). Type-ahead **not verified**: the browser tool stopped taking screenshots and typed text did not reach the input (tool problem, not app evidence) |
+| #4 | Not done: needs DevTools request blocking; Santiago |
+| #5 | Result 12333 (code 8456), question unanswered: no "No CGIAR Centers related…" note; the Centers dropdown is still there |
+| Not Done | #3 type-ahead and #4 (Santiago). Task stays `[~]` |

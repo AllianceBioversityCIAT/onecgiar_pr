@@ -68,7 +68,7 @@
 
 ### `TKG-T-3` — Manual verification on PRTest (Santiago)
 
-- **Status:** `[ ]` · **Depends on:** TKG-T-1 and TKG-T-2 deployed to PRTest (performance-refactor; the Jenkins deploy runs the migration)
+- **Status:** `[x]` (2026-10-31, read-only on PRTest; evidence in `execution.md`) · **Depends on:** TKG-T-1 and TKG-T-2 deployed to PRTest (performance-refactor; the Jenkins deploy runs the migration)
 - **Implements:** TKG-R-1 behaviour (S-1.1 to S-1.5)
 - **Checks** (read the sidebar green check; for the No / Yes cases use test results, never prod data):
   1. A 2026 result with the question unanswered and the rest complete (953-equivalent on PRTest) shows the green check, and the bottom bar agrees.
