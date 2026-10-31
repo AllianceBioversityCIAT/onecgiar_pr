@@ -353,3 +353,22 @@ export function buildCreateResultPayload(options: CreateResultPayloadOptions): R
     ...(ptProvenance && options.ptPrefill ? { progress_tracker_prefill: options.ptPrefill } : {})
   };
 }
+
+// @akili-spec results/impact-results-reporting/sp-reporting-entry
+/**
+ * IRE-R-6 / IRE-DD-5: impact results (level 1, type 9) carry NO indicator, target, ToC node or
+ * contributors — the server rejects them. `buildCreateResultPayload` always sends `indicators: []`
+ * and `contributing_indicator`, so impact mode needs its own builder returning ONLY `{ result }`.
+ */
+export function buildImpactCreateResultPayload(options: { initiativeId: number | string; resultName: string; impactAreaId: number }): Record<string, any> {
+  return {
+    result: {
+      result_level_id: 1,
+      result_type_id: 9,
+      initiative_id: options.initiativeId,
+      result_name: options.resultName,
+      handler: '',
+      impact_area_id: options.impactAreaId
+    }
+  };
+}

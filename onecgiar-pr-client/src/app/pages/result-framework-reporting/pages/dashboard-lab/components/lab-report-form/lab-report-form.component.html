@@ -3,6 +3,101 @@
      WCAG AA contrast, and sticky footer with readiness indicator. -->
 <form class="relative flex flex-col gap-4 flex-1 min-h-0" (ngSubmit)="onFormSubmit($event)" [attr.aria-busy]="creatingResult() || validatingHandler()">
 
+@if (isImpact()) {
+  <!-- @akili-spec results/impact-results-reporting/sp-reporting-entry (IRE-T-3, IRE-R-5/6, IRE-DD-4)
+       Impact mode: area (read-only) + title only. Indicator, target, contribution, ToC / Progress
+       Tracker, category / level, contributors and innovation link are never rendered here. -->
+  <section
+    data-testid="card-impact-result"
+    class="rounded-xl border border-[var(--pr-border)] bg-white p-4 shadow-2xs flex flex-col gap-4 min-[640px]:p-4.5"
+    [class.lrf-card--invalid]="fieldInvalid('title')">
+    <div>
+      <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">Result kind</p>
+      <div
+        data-testid="impact-area-readonly"
+        class="flex min-h-[46px] items-center gap-2.5 rounded-[10px] border border-[rgba(30,32,47,0.14)] bg-[var(--pr-color-accents-1)] px-3.5 py-2 text-[13.5px] text-[var(--pr-color-secondary-400)]">
+        <span class="font-semibold">Impact result ·</span>
+        <img [src]="impactArea()!.icon" alt="" aria-hidden="true" class="size-[22px] shrink-0 object-contain" />
+        <span data-testid="impact-area-name">{{ impactArea()!.name }}</span>
+      </div>
+    </div>
+
+    <div class="lrf-field" [class.lrf-field--invalid]="fieldInvalid('title')" data-testid="field-title">
+      <div class="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+        <label for="result-title-input" class="m-0 flex items-center gap-1.5 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+          Result title <span class="text-[var(--pr-color-red-300)]">*</span>
+          @if (fieldInvalid('title')) {
+            <span class="material-icons-round text-[16px] text-[var(--pr-color-red-300)]" aria-hidden="true">error_outline</span>
+          }
+        </label>
+        <span
+          data-testid="title-word-gauge"
+          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11.5px] font-semibold transition-colors"
+          [ngClass]="titleWordCountClass()">
+          {{ titleWordCountLabel() }}
+        </span>
+      </div>
+      <p id="title-helper" class="m-0 mb-2 text-[12px] leading-normal text-gray-500">{{ titleHint() }}</p>
+      <textarea
+        #titleInput
+        id="result-title-input"
+        name="resultName"
+        rows="2"
+        [ngModel]="createResultBody().result_name"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="patch('result_name', $event)"
+        [disabled]="creatingResult()"
+        placeholder="Brief, descriptive title for this result…"
+        class="w-full rounded-[10px] border border-[var(--pr-border)] p-3 text-[13.5px] leading-relaxed resize-none transition-all focus:border-[var(--pr-color-primary-300)] focus:ring-2 focus:ring-[var(--pr-color-primary-100)] focus:outline-none"
+        [class.border-red-400]="titleWordCount() > 30 || fieldInvalid('title')"
+        [attr.aria-invalid]="fieldInvalid('title') ? 'true' : null"
+        [attr.aria-describedby]="fieldInvalid('title') ? 'title-helper title-error' : 'title-helper'"
+        (input)="adjustTextareaHeight($event)"></textarea>
+      @if (fieldInvalid('title')) {
+        <p id="title-error" class="lrf-field-error" role="alert">
+          @if (titleWordCount() > 30) {
+            Shorten the title to 30 words or fewer.
+          } @else {
+            Enter a result title to continue.
+          }
+        </p>
+      }
+    </div>
+  </section>
+
+  <div class="h-6 shrink-0"></div>
+
+  <div class="sticky bottom-0 -mx-4 mt-auto flex flex-col gap-3 border-t border-[rgba(30,32,47,0.1)] bg-white px-4 py-3.5 z-30 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] min-[640px]:-mx-6 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between min-[640px]:gap-4 min-[640px]:px-6">
+    @if (missingFields().length) {
+      <span data-testid="missing-fields-button" class="flex items-center gap-2 text-[13px] text-[var(--pr-color-accents-6)]">
+        <span class="size-[7px] shrink-0 rounded-full bg-[var(--pr-color-orange-500)]"></span>
+        {{ missingFields().length }} field{{ missingFields().length === 1 ? '' : 's' }} left before you can create
+      </span>
+    } @else {
+      <span data-testid="ready-to-create-indicator" class="flex items-center gap-2 text-[13px] text-[var(--pr-color-accents-6)] font-medium">
+        <span class="size-[7px] shrink-0 rounded-full bg-[var(--pr-color-green-500)]"></span> Ready to create
+      </span>
+    }
+    <div class="flex w-full shrink-0 items-stretch gap-2.5 min-[640px]:w-auto min-[640px]:items-center">
+      <button
+        type="button"
+        (click)="cancelled.emit()"
+        class="flex-1 appearance-none rounded-[10px] border border-[rgba(30,32,47,0.16)] bg-white px-5 py-2.5 text-[13.5px] font-semibold text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)] cursor-pointer min-[640px]:flex-none">
+        Cancel
+      </button>
+      @if (canReport()) {
+        <button
+          type="submit"
+          data-testid="create-result-submit-btn"
+          [disabled]="!canSave()"
+          class="inline-flex flex-1 appearance-none items-center justify-center gap-2 rounded-[10px] border-0 bg-gradient-to-r from-[var(--pr-color-primary-300)] to-[var(--pr-color-primary-400)] px-5 py-2.5 text-[13.5px] font-semibold text-white shadow-xs hover:opacity-95 disabled:cursor-not-allowed disabled:bg-none disabled:bg-[#e7e1fb] disabled:text-[#b3a4e8] disabled:shadow-none cursor-pointer transition-all min-[640px]:flex-none">
+          {{ creatingResult() ? 'Creating…' : 'Save' }}
+        </button>
+      }
+    </div>
+  </div>
+} @else {
+
   <!-- ==================== CARD 1: RESULT IDENTITY ==================== -->
   <section
     data-testid="card-result-identity"
@@ -950,5 +1045,6 @@
       Cancel
     </button>
   </div>
+}
 }
 </form>

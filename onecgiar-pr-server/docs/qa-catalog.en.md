@@ -37,7 +37,7 @@ x-api-key: <CLARISA key registered for QA>
 {
   "portfolio": "P25",
   "phase": 2026,
-  "catalog_version": "2026.31",
+  "catalog_version": "2026.32",
   "generated_at": "2026-10-06T12:00:00.000Z",
   "result_types": [
     { "key": "innovation_development", "label": "Innovation development", "level": "output" }
@@ -292,7 +292,7 @@ Notes:
 
 ---
 
-## Catalog at revision 31 (2026.31)
+## Catalog at revision 32 (2026.32)
 
 Counts measured on the code catalog on 2026-10-09 (the same data the endpoint returns); revision 31 (QRF-T-9) changes no count, only value bindings:
 
@@ -425,7 +425,7 @@ An unknown property of the body is ignored.
 ```json
 {
   "phase": 2026,
-  "catalog_version": "2026.31",
+  "catalog_version": "2026.32",
   "results": [
     {
       "result_id": 900001,
@@ -589,3 +589,4 @@ These are deliberate and tracked; each one is **additive** when resolved.
 | 2026-10-09 | **v1.25 — 2026-10-09: IPSR step 4 complete (QAC-T-31); catalog_version 2026.30.** No key is renamed or removed and no type changes. (a) New section `ipsr_s4_investment` (order 89); the section `ipsr_s4_materials` moves from order 89 to 90 so the investment tables come first. (b) New top-level fields, `list`s, innovation package only: `ipsr_step_4.initiative_investment`, `ipsr_step_4.bilateral_investment`, `ipsr_step_4.partner_investment`, `required: false`, `required_confirmed: true`. Subfields: `program` / `project` / `institution` (required identity), `partner_type` (partners only), `kind_cash` (`required_when` `is_determined` equals false; NULL is read as false) and `is_determined` (optional). The budget columns are the same ones bound by `innovation_dev.estimates_*` and `innovation_use.investment.*`; each key returns only the elements of its own list. (c) Rule change on an existing key: the `link` subfield of `ipsr_step_4.reference_materials` is now `required: true` (the list stays optional and unconfirmed). (d) The partner list is every active partner row of any role; the form lists only roles 2 and 7 with an active budget row, and elements without a budget row carry no requirement (Known gap 14; the inventory condition "row exists AND ..." is dropped because the model cannot condition on budget-row existence; see the IPSR step 4 notes). Counts: 161 fields (was 158), 249 subfields (was 239, 32 at the second level), 25 sections; `PENDING_CATALOG` 52 columns across 14 tables (unchanged); `NOT_FOR_QA` 377 (unchanged). |
 | 2026-10-28 | **v1.26 — 2026-10-28: results feed documented (spec `quality-assurance/qa-results-feed`, QRF-T-7); `catalog_version` unchanged (2026.30).** New part [Results feed](#results-feed) for two routes, both authenticated with a CLARISA key that has the permission of that route: `GET /api/qa/results` (eligible results of one `phase_year`, filters `program_ids` / `result_type_keys`, order `submitted_at` then `result_id`, `page` 1 to 1 000 000, `page_size` 1 to 200 default 100, `breakdown`) and `POST /api/qa/results/details` (`result_ids` 1 to 50 counted as sent, optional top-level `field_keys`, `not_eligible[].reason` closed list `not_found`, `not_submitted`, `other_phase`, `not_w1w2`, `type_not_catalogued`, `no_lead_program`, a failing read is a whole-batch generic 500). `phase_year` on these routes is 2000 to 2100 (1999 is a 400 here and a 404 on `/api/qa/catalog`). A missing value is `null` (`[]` for `multi_select` and `list`); a scalar field with subfields is `{ value, <subfield key>: … }`. [Known gap 17](#known-gaps) is applied: `capacity_sharing.length_of_training` is returned normalized. Person-bearing keys are listed so the QA Admin chooses them knowingly. Additive only: no catalog key, type or condition changes. |
 | 2026-10-28 | **v1.27 — 2026-10-28: value-binding fixes from the results-feed golden comparison (spec `quality-assurance/qa-results-feed`, QRF-T-9); catalog_version 2026.31; the public shape is unchanged.** The revision is bumped because the catalog content hash covers the value bindings; no key, type, condition, label or response shape changes. The fixes are G-1 (lead center and lead partner) and G-2 (closed-list row filter). (a) `contributors.lead_center` now returns the center code (`center_id`, for example `CENTER-02`) of the active row with `is_leading_result = 1`; it returned the flag (1 or 0). `partners.lead_partner` now returns the `institutions_id` of the active leading row, with the same fix. (b) The innovation development question fields (`innovation_dev.gesi_stage`, `risk_stage`, `ipr_consideration`, `team_diversity` and its `actions`) read only the answers to their own question: closed lists `question_options_gesi_stage` (152..156), `question_options_risk_stage` (157..161) and `question_options_ipr` (163..165) are added and the value read applies a closed list as a row filter (QRF-DD-13). Before, each field returned any answered row of the result. (c) `linked.has_innovation_link` is documented: a stored NULL is sent as `null`, while the form displays "No". (d) Known gap 18 recorded (`policy_change.related_to`). |
+| 2026-10-31 | **v1.28 — 2026-10-31: revision reconciliation; catalog_version 2026.32; the public shape is unchanged.** Two independent changes had both bumped 2026 from revision 30 to 31 with different content: P2-4037 (QRF-T-9 value-binding fixes, v1.27) and P2-4061 (spec `bugfix/toc-kpi-optional-green-check`: `toc.planned_result` is no longer required for 2026, the 2026 green check no longer blocks on an unanswered planned-result question). Revision 32 is the merged content of both; nothing else changes. Consumers holding `2026.31` re-read the catalog. |

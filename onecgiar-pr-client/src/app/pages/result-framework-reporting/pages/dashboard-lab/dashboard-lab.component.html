@@ -1597,6 +1597,15 @@
                 (toggleFavorite)="toggleFavorite($event)"
                 (exitFavoritesOnly)="setFavoritesOnly(false)"
                 [ptActivity]="ptActivity()" />
+              <!-- Impact results card (IRE-R-1/3/4): sibling AFTER the table, outside its filter pipeline; no
+                   search/filter signal is passed so filters cannot hide it. Grouped view only. -->
+              @if (reportingViewMode() === 'grouped') {
+                <app-impact-results-card
+                  [initiativeId]="selected()?.initiativeId ?? null"
+                  [versionId]="effectiveVersionId()"
+                  [canReport]="entityAowService.canReportResults()"
+                  (reportArea)="openImpactReport($event)" />
+              }
               <!-- Intermediate Outcomes + 2030 Outcomes are top-level cards inside the table
                    (siblings of AoWs). The old "open 2030 detail" jump button is gone. -->
             } @else if (plannedBrowseView() === 'byAow') {
@@ -2220,6 +2229,7 @@
   <app-indicator-drawer
     [indicator]="m.indicator"
     [emerging]="!!m.emerging"
+    [impactArea]="m.impactArea ?? null"
     [tocNode]="m.node"
     [initiativeId]="selected()?.initiativeId || 0"
     [groupTitle]="m.groupTitle"

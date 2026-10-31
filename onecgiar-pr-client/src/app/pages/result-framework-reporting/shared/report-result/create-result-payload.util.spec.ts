@@ -1,5 +1,6 @@
 import {
   buildCreateResultPayload,
+  buildImpactCreateResultPayload,
   buildPtProvenanceTail,
   CreateResultPayloadOptions,
   isKnowledgeProductResultType,
@@ -516,5 +517,19 @@ describe('buildCreateResultPayload — Progress Tracker provenance (PTB-T-5)', (
     expect(noPick).not.toHaveProperty('progress_tracker_prefill');
     const noBlock = buildCreateResultPayload(options({ indicator: indicatorOfType(7), body: { ...emptyBody, result_name: 'x' }, ptProposal, ptPrefill: null }));
     expect(noBlock).not.toHaveProperty('progress_tracker_prefill');
+  });
+});
+
+describe('buildImpactCreateResultPayload (IRE-R-6)', () => {
+  it('sends only `result`, with exactly the six impact keys', () => {
+    const body = buildImpactCreateResultPayload({ initiativeId: 42, resultName: 'Impact title', impactAreaId: 4 });
+    expect(Object.keys(body)).toEqual(['result']);
+    expect(Object.keys(body['result']).sort()).toEqual(['handler', 'impact_area_id', 'initiative_id', 'result_level_id', 'result_name', 'result_type_id']);
+    expect(body['result']).toEqual({ result_level_id: 1, result_type_id: 9, initiative_id: 42, result_name: 'Impact title', handler: '', impact_area_id: 4 });
+  });
+
+  it('leaves the existing builder without impact_area_id (IRE-R-7)', () => {
+    const body = buildCreateResultPayload(options({ body: { ...emptyBody, result_name: 'x' } }));
+    expect(body['result']).not.toHaveProperty('impact_area_id');
   });
 });

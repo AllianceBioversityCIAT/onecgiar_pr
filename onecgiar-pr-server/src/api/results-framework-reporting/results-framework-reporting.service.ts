@@ -1342,6 +1342,7 @@ export class ResultsFrameworkReportingService {
     }
   }
 
+  // @akili-spec bugfix/w3-projects-by-program
   async getBilateralProjectsByScienceProgram(programId?: string) {
     try {
       const normalizedProgramId = programId?.trim().toUpperCase();
@@ -1372,8 +1373,27 @@ export class ResultsFrameworkReportingService {
           tocContext.phaseUuid,
         );
 
+      // WPP-DD-3: an unresolved phase year skips the CLARISA source (ToC-only).
+      let phaseYear = Number.NaN;
+      try {
+        const version = await this.resolveReportingVersion(
+          tocContext.versionId,
+        );
+        phaseYear = Number(version?.phase_year);
+      } catch {
+        phaseYear = Number.NaN;
+      }
+      const clarisaRows =
+        Number.isFinite(phaseYear) && phaseYear > 0
+          ? ((await this._clarisaProjectsRepository.findApprovedProjectsByProgramCode(
+              initiative.official_code.toUpperCase(),
+              phaseYear,
+            )) ?? [])
+          : [];
+
       const seenProjectIds = new Set<number>();
-      const bilateralProjects = (rows ?? []).filter((row) => {
+      const mergedRows: any = [...(rows ?? []), ...clarisaRows];
+      const bilateralProjects = mergedRows.filter((row) => {
         const projectId = Number(row?.project_id);
         if (!Number.isFinite(projectId) || projectId <= 0) {
           return false;

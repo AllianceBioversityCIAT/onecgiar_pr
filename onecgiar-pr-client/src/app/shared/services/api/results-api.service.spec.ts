@@ -5254,6 +5254,19 @@ describe('ResultsApiService', () => {
     });
   });
 
+  describe('GET_impactLevelCounts', () => {
+    it('should GET the impact counts with initiativeId and versionId query params', done => {
+      service.GET_impactLevelCounts('SP01', 7).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/impact-level/counts?initiativeId=SP01&versionId=7`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
   describe('POST_createResult', () => {
     it('should call POST_createResult and return expected data', done => {
       const mockBody = { name: 'test' };

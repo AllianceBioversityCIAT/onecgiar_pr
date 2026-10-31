@@ -1772,6 +1772,11 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/reporting-entry-hub/projects?programId=${programId}`);
   }
 
+  // IRE-R-2 (impact results card): per impact-area counts for the program + version.
+  GET_impactLevelCounts(initiativeId: string | number, versionId: string | number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/impact-level/counts?initiativeId=${initiativeId}&versionId=${versionId}`);
+  }
+
   POST_createResult(body: any) {
     return this.http.post<any>(`${environment.apiBaseUrl}api/results-framework-reporting/create`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }

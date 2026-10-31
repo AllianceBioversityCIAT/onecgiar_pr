@@ -1,6 +1,6 @@
 # report-result
 
-**Verified:** 2026-10-13 · JuankCadavid/pt-center-mapping (Progress Tracker draft → `result.description`); prior: 2026-09-15 · branch qa-development-2026-mc · 7de6ad2fb
+**Verified:** 2026-10-31 · qa-development-2026-ss · results/impact-results-reporting/sp-reporting-entry IRE-T-5 (impact builder + IMPACT_AREAS documented) · prior: 2026-10-13 · JuankCadavid/pt-center-mapping (Progress Tracker draft → `result.description`); prior: 2026-09-15 · branch qa-development-2026-mc · 7de6ad2fb
 
 ## Qué es
 Las piezas puras que comparten las tres superficies que crean un resultado contra un indicador del
@@ -102,3 +102,7 @@ the two keys to the create body. The server is the second lock: `_persistInnovat
 writes only when `has_innovation_link === true` **and** a linked result travels with it, so a
 pre-2026 create can never reach the writer. Do not relax either lock.
 
+
+## Impact results (2026-10-31, spec `results/impact-results-reporting/sp-reporting-entry`)
+- `impact-areas.constant.ts` exporta `IMPACT_AREAS` (`{ id, name, icon }`, ids CLARISA 1..5; IRE-DD-2), usado por la tarjeta y el modo impact del form.
+- `buildImpactCreateResultPayload({ initiativeId, resultName, impactAreaId })` devuelve SOLO `{ result: { result_level_id: 1, result_type_id: 9, initiative_id, result_name, handler: '', impact_area_id } }` (seis claves; sin `indicators`, `contributing_indicator`, ToC ni contributors; IRE-DD-5). `buildCreateResultPayload` queda intacto — no mezclar.

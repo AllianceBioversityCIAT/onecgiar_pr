@@ -39,6 +39,8 @@ import {
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { GuidedCreationComponent } from './components/guided-creation/guided-creation.component';
 import { IndicatorDrawerComponent } from './components/indicator-drawer/indicator-drawer.component';
+import { ImpactResultsCardComponent } from './components/impact-results-card/impact-results-card.component';
+import { IMPACT_AREAS, ImpactArea } from '../../shared/report-result/impact-areas.constant';
 import { ReportingAowTableComponent, ReportingAowGroup, ReportingIndicator } from './components/reporting-aow-table/reporting-aow-table.component';
 import { buildReportModalNode } from './components/reporting-aow-table/report-modal-context.util';
 import { ReportingProgramBandComponent, BandFilterOption } from './components/reporting-program-band/reporting-program-band.component';
@@ -444,6 +446,7 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
     IndicatorDrawerComponent,
     HighlightSearchPipe,
     ReportingAowTableComponent,
+    ImpactResultsCardComponent,
     ReportingProgramBandComponent,
     ReportingInsightsPanelComponent,
     ReportingQuickTypologyFiltersComponent,
@@ -794,7 +797,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   // ---- Manage drawer (one indicator) ----
   /** The indicator being managed, with the HLO it belongs to for context. Emerging uses null indicator. */
-  readonly managed = signal<{ indicator: any | null; groupTitle: string; node: any; emerging?: boolean } | null>(null);
+  readonly managed = signal<{ indicator: any | null; groupTitle: string; node: any; emerging?: boolean; impactArea?: ImpactArea | null } | null>(null);
   /** Which tab the drawer should land on — chosen by the card button that opened it. */
   // @akili-spec changes/indicator-reported-results — `results` = the Reported results table (IRR-R-1)
   readonly manageTab = signal<'report' | 'info' | 'results'>('report');
@@ -818,7 +821,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       null;
     const tocId = indicator?.toc_result_id ?? group?.toc_result_id;
     this.manageTab.set(tab);
-    this.managed.set({ indicator: { ...indicator, toc_result_id: tocId }, groupTitle, node: group });
+    this.managed.set({ indicator: { ...indicator, toc_result_id: tocId }, groupTitle, node: group, impactArea: null });
   }
 
   closeManage(): void {
@@ -848,7 +851,21 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     if (!this.canReportEmerging()) return;
     this.primeEntityAowContext();
     this.manageTab.set('report');
-    this.managed.set({ indicator: null, groupTitle: '', node: null, emerging: true });
+    this.managed.set({ indicator: null, groupTitle: '', node: null, emerging: true, impactArea: null });
+  }
+
+  /**
+   * Impact card -> drawer in impact mode (IRE-R-4). Same opening sequence as `openEmergingReport`
+   * but gated by `canReportResults()` (the card only exists for users who may report), NOT
+   * `canReportEmerging` (design 6.2). `emerging` stays false so impact mode never leaks into it.
+   */
+  // @akili-spec results/impact-results-reporting/sp-reporting-entry
+  openImpactReport(areaId: number): void {
+    const impactArea = IMPACT_AREAS.find(a => a.id === areaId);
+    if (!impactArea || !this.entityAowService.canReportResults()) return;
+    this.primeEntityAowContext();
+    this.manageTab.set('report');
+    this.managed.set({ indicator: null, groupTitle: '', node: null, emerging: false, impactArea });
   }
 
   /** Drop `reportEmerging` from the URL once consumed; keep `returnTab` for cancel restore. */
