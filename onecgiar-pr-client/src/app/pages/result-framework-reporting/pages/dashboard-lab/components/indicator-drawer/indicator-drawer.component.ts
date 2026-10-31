@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { LabReportFormComponent } from '../lab-report-form/lab-report-form.component';
 import { SpReportingAccessNoticeComponent } from '../sp-reporting-access-notice/sp-reporting-access-notice.component';
 import { resolveReportResultTypeId, resolveReportResultTypeName } from '../../../../shared/report-result/create-result-payload.util';
+import { ImpactArea } from '../../../../shared/report-result/impact-areas.constant';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 // @akili-spec changes/report-result-form-ux (RFUX-T-1, RFUX-R-1, RFUX-R-8)
@@ -154,6 +155,9 @@ export class IndicatorDrawerComponent {
   });
   /** Emerging create: no KPI, no contributor fetch, report tab only (`ERC-DD-1`). */
   readonly emerging = input<boolean>(false);
+  // @akili-spec results/impact-results-reporting/sp-reporting-entry (IRE-T-3, IRE-DD-4)
+  /** Impact result entry: the chosen Impact Area. Null = not impact mode (every existing host). */
+  readonly impactArea = input<ImpactArea | null>(null);
   readonly groupTitle = input<string>('');
   readonly programCode = input<string>('');
   /** The ToC node the indicator hangs from, and the owning initiative. */
@@ -337,6 +341,7 @@ export class IndicatorDrawerComponent {
     results: { title: 'Reported results', icon: 'fact_check' }
   };
   readonly tabTitle = computed(() => {
+    if (this.impactArea() && this.tab() === 'report') return 'Report impact result';
     if (this.emerging() && this.tab() === 'report') return 'Report emerging result';
     return IndicatorDrawerComponent.TAB_CHROME[this.tab()].title;
   });
@@ -344,7 +349,9 @@ export class IndicatorDrawerComponent {
     if (this.emerging() && this.tab() === 'report') return 'add_circle';
     return IndicatorDrawerComponent.TAB_CHROME[this.tab()].icon;
   });
-  readonly drawerAriaLabel = computed(() => (this.emerging() ? 'Report emerging result' : 'Manage indicator'));
+  readonly drawerAriaLabel = computed(() =>
+    this.impactArea() ? 'Report impact result' : this.emerging() ? 'Report emerging result' : 'Manage indicator'
+  );
   /** True once the mode is fixed, so the smart default stops overriding. */
   private tabTouched = false;
 

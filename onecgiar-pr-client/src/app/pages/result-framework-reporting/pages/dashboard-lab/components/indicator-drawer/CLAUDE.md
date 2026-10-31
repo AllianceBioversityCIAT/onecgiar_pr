@@ -1,6 +1,6 @@
 # indicator-drawer
 
-**Verified:** 2026-09-21 · qa-development-2026-ss · 118716bc7 (base HEAD; RRC-T-3 edit uncommitted at stamp time) · prior: 2026-09-04 · qa-development-2026 · fa3f06a90
+**Verified:** 2026-10-31 · qa-development-2026-ss · results/impact-results-reporting/sp-reporting-entry IRE-T-5 (impact mode re-verified) · prior: 2026-10-30 · qa-development-2026-ss · spec `results/impact-results-reporting/sp-reporting-entry` IRE-T-3 (impact mode input, uncommitted at stamp time) · prior: 2026-09-21 · qa-development-2026-ss · 118716bc7 (base HEAD; RRC-T-3 edit uncommitted at stamp time) · prior: 2026-09-04 · qa-development-2026 · fa3f06a90
 
 ## Qué es
 El **aside** de un indicador: entra deslizando desde la derecha, sin scrim, para que la lista siga
@@ -21,6 +21,10 @@ outputs  closed · widthChange
   `GET_ExistingResultsContributors`; oculta las pestañas `info`/`results`; el título es **Report
   emerging result**; reenvía `[emergingMode]="true"` y `[emergingCategory]="null"` a
   `lab-report-form`. Planned Report (`emerging` false + indicador) sigue igual que antes.
+- **Impact mode (2026-10-30, IRE-T-3):** input `impactArea: ImpactArea | null` (default `null` = todo host
+  existente igual que antes). Con valor: título/aria "Report impact result", se reenvía `[impactArea]` a
+  `lab-report-form`, y se ocultan el header de contexto del indicador, el aviso "already reported",
+  el texto de emerging y las pestañas `info`/`results`. NO usa `emerging` (IRE-DD-4: permiso y copy propios).
 - `canReport` se reenvía a `lab-report-form`; **por defecto `false`**, para que un host que se
   olvide de pasarlo no exponga la acción por accidente.
 - Ancho arrastrable desde el borde izquierdo; a partir de 720 px el formulario pasa a dos columnas.
