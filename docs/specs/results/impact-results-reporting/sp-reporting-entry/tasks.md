@@ -35,7 +35,7 @@
 ### IRE-T-1 — Impact area constant, counts API method, impact payload builder — `[x]`
 
 - **Type:** client (shared)
-- **Description:** New `shared/report-result/impact-areas.constant.ts` (5 entries: id, CLARISA name, `assets/impact_areas/png/<id>.png`). New `GET_impactLevelCounts(initiativeId, versionId)` in `src/app/shared/services/api/results-api.service.ts` (E6). New `buildImpactCreateResultPayload` in `shared/report-result/create-result-payload.util.ts` returning only `{ result: { result_level_id: 1, result_type_id: 9, initiative_id, result_name, handler: '', impact_area_id } }`; existing builder untouched.
+- **Description:** New `shared/report-result/impact-areas.constant.ts` (5 entries: id, CLARISA name, `assets/impact_areas/<id>.png`). New `GET_impactLevelCounts(initiativeId, versionId)` in `src/app/shared/services/api/results-api.service.ts` (E6). New `buildImpactCreateResultPayload` in `shared/report-result/create-result-payload.util.ts` returning only `{ result: { result_level_id: 1, result_type_id: 9, initiative_id, result_name, handler: '', impact_area_id } }`; existing builder untouched.
 - **Implements:** design §4, §5, IRE-DD-2, IRE-DD-5; IRE-R-6 (body), IRE-R-7
 - **Files (expected):** the three files above + their specs
 - **Depends on:** —

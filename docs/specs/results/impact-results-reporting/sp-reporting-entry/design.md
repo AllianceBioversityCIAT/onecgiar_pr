@@ -56,7 +56,7 @@ No persistence change. Client-side shapes:
 
 | Shape | Fields |
 |---|---|
-| Impact area (constant) | `id` 1–5, `name` (CLARISA name, verified live in IRS-T-1), `icon` (`assets/impact_areas/png/<id>.png`) |
+| Impact area (constant) | `id` 1–5, `name` (CLARISA name, verified live in IRS-T-1), `icon` (`assets/impact_areas/<id>.png`) |
 | Counts (E6) | `{ areas: [{impact_area_id, count}] (5 rows), total }` |
 | Drawer impact context | `{ id, name, icon }` or null |
 

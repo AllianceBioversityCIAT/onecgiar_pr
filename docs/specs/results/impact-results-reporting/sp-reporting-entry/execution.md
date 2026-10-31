@@ -109,3 +109,36 @@
 - **ADVISORY (recorded, not actioned):** RELIABILITY — batch-script red exit recorded above as harness gap; READABILITY — `canReport` test mounts twice in one `it`.
 - **Requirements covered:** IRE-NFR-2 (CT side); guide upkeep.
 - **Budget:** review rounds used 6 / ≤ 8; tasks 5 of 6 code+test done.
+
+### IRE-T-6 — PRTest verification (HITL / T6) — in progress
+
+- **Go-ahead:** user "si dale" (2026-10-31) for commit → push → merge into `performance-refactor` → deploy.
+- **Pre-push:** free RAM 1.2 GB (< 4 GB) → user chose `--runInBand`. `npx jest --runInBand --findRelatedTests dashboard-lab.component.ts indicator-drawer.component.ts lab-report-form.component.ts impact-results-card.component.ts impact-areas.constant.ts --silent --reporters=summary --no-coverage --forceExit` → `Test Suites: 40 passed · Tests: 1477 passed` (115 s). `results-api.service.ts` / `create-result-payload.util.ts` unchanged since IRE-T-1's 438-suite run.
+- **Commits on `qa-development-2026-ss`:** `81173125d` (T-1), `f0e20f45c` (T-2), `5fab7cdaa` (T-3), `6b42237f6` (T-4), `7e0f5ceed` (T-5), `3bf03c2f1` (spec docs) — pushed.
+- **Merge blocker resolved (out of spec scope, user-approved option "Subir a rev 32 en qa-dev"):** merge into `performance-refactor` conflicted on `onecgiar-pr-server/src/api/qa-catalog/__snapshots__/qa-catalog.snapshot.json` — P2-4037 (staging/perf) and P2-4061 (`7227e8d4c`, qa-dev) had each bumped QA catalog 2026 from revision 30 to 31 with different content. Merged `origin/staging` into qa-dev (28 commits: P2-4037, P2-4040, P2-4041), bumped `definitions/versions.ts` to 32, regenerated the snapshot (`npm run qa-catalog:snapshot` → 444 keys, guarded write passed), moved the 3 version assertions to `2026.32`, added `qa-catalog.en.md` change log v1.28. `npx jest --runInBand --testPathPattern=src/api/qa-catalog` → `42 passed · 911 passed`. Commit `4e1268cf3`, pushed.
+- **performance-refactor:** merge `ff95c902a` (no conflicts), pushed; local refs synced; `qa-catalog/` and `result-framework-reporting/` identical to qa-dev. Checkout returned to `qa-development-2026-ss`.
+- **Pending (live, after ~30 min deploy):** served bundle = `ff95c902a`; SP01 · Reporting 2026 (initiative 50, version 36): card after 2030 outcomes in grouped view, absent in flat view; counts = E6 = SQL; keyboard order; visual vs User Guide v2 step 1; one real create from a card → detail page with `?phase=`, type 9, area at Principal. Then `family.md` row 2 → `done`.
+
+#### IRE-T-6 HITL evidence — round 1 (2026-10-31, user-run on PRTest, transcript: user messages with images #57–#68 and two pasted JSON payloads)
+
+| Check | Evidence | Result |
+|---|---|---|
+| Served bundle | DevTools search `Report impact result` → `dashboard-lab.component-RFKVNNF6.js:9817/9833` | ✅ deployed code |
+| Placement + anatomy (R-1) | Card after 2030 outcomes; IMPACT tag, title, "5 Impact Areas · no targets", NEW, Total, 5 rows in order; no bar/ratio/%/By AOW | ✅ |
+| Flat view (S1.2) | User: card absent in **All indicators** | ✅ |
+| Filters (R-3) | Search "some" + Only pending + KP chip ("No indicators match your filters") → card still shown with counts | ✅ |
+| Counts (R-2) | Card = E6 `{4:1, others 0, total 1}` = SQL (a4_climate 1, total 1) for initiative 50 / version 36 | ✅ |
+| Keyboard (NFR-1) | User: Tab reaches the 5 Report result buttons in order | ✅ |
+| Title rule (R-5) | 31 words → "31 / 30 (Limit exceeded)", Save disabled, "1 field left" | ✅ |
+| Create (R-6 S6.1) | Result 10039 (id 12507) "IRE-T-6 PRTest test": 201, toast "Result created", navigated to `/result/result-detail/10039/general-information?phase=36`; DB level 1, type 9, version 36, `climate_change_tag_level_id = 3` (others 1); detail shows Climate "2 Principal"; card then Climate 2 / Total 2 | ✅ |
+| Body (R-6) | Second create "Another Impact test result" payload: exactly `result_level_id 1, result_type_id 9, initiative_id 50, result_name, handler "", impact_area_id 3` | ✅ |
+| Permission (R-4 S4.2) | User: a user without a role in the SP cannot create impact results | ✅ |
+| `results_impact_level` | NULL for 12507 — expected: row is written by the Impact level info save (child #3) | ℹ️ |
+| **Icons (R-1 / NFR-1)** | Card rows show an empty gap left of the name; drawer shows a near-invisible glyph — `assets/impact_areas/png/<id>.png` are white glyphs on transparent (IPSR coloured-circle assets) | ❌ defect |
+
+#### IRE-T-6 rework — icon paths — PASS (attempt 1)
+
+- **Fix:** `IMPACT_AREAS` icons → existing coloured tiles `assets/impact_areas/<id>.png`; constant spec updated; `design.md` §4 and `tasks.md` IRE-T-1 path updated (this log keeps the historical path above). IPSR untouched.
+- **Verification:** `npx jest --runInBand --testPathPattern="(impact-areas.constant|impact-results-card|lab-report-form.component.impact-mode|indicator-drawer.component.impact-mode)"` → 4 suites / 25 tests passed; eslint clean; pre-push `--findRelatedTests impact-areas.constant.ts` (runInBand) → `40 passed · 1477 passed`.
+- **Reviewer:** `STATUS: PASS` — five tiles opened and matched to ids (1 orange Nutrition, 2 blue Poverty, 3 yellow Gender, 4 dark green Climate, 5 light green Environment), mapping and colours agree with IPSR `step-n1-impact-areas`; no stale path in spec docs or client guides; visibility still needs the PRTest re-check.
+- **Pending:** PRTest re-check of icons after deploy; then T-6 `[x]` and `family.md` row 2 → `done`. Test results 10039 and "Another Impact test result" (Gender) to be deleted/discontinued on PRTest by the user.

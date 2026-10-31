@@ -7,9 +7,9 @@ export interface ImpactArea {
 }
 
 export const IMPACT_AREAS: ImpactArea[] = [
-  { id: 1, name: 'Nutrition, Health and Food Security', icon: 'assets/impact_areas/png/1.png' },
-  { id: 2, name: 'Poverty Reduction, Livelihoods and Jobs', icon: 'assets/impact_areas/png/2.png' },
-  { id: 3, name: 'Gender Equality, Youth and Social Inclusion', icon: 'assets/impact_areas/png/3.png' },
-  { id: 4, name: 'Climate Adaptation and Mitigation', icon: 'assets/impact_areas/png/4.png' },
-  { id: 5, name: 'Environmental Health and Biodiversity', icon: 'assets/impact_areas/png/5.png' }
+  { id: 1, name: 'Nutrition, Health and Food Security', icon: 'assets/impact_areas/1.png' },
+  { id: 2, name: 'Poverty Reduction, Livelihoods and Jobs', icon: 'assets/impact_areas/2.png' },
+  { id: 3, name: 'Gender Equality, Youth and Social Inclusion', icon: 'assets/impact_areas/3.png' },
+  { id: 4, name: 'Climate Adaptation and Mitigation', icon: 'assets/impact_areas/4.png' },
+  { id: 5, name: 'Environmental Health and Biodiversity', icon: 'assets/impact_areas/5.png' }
 ];
