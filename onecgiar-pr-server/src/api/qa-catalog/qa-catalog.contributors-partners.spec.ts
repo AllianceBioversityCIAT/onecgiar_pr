@@ -124,6 +124,12 @@ describe('QAC-T-15 contributors & partners: owner field list', () => {
       },
     );
 
+    it('S-2.1: toc.planned_result is optional (unanswered passes in 2026) yet stays confirmed', () => {
+      const f = get('toc.planned_result');
+      expect(f.required).toBe(false);
+      expect(f.required_confirmed).toBe(true);
+    });
+
     it('client-only rules stay unconfirmed (the live function does not state them)', () => {
       const invested = get('toc.program_invested_financial_resources');
       expect(invested.required_confirmed).toBe(false);

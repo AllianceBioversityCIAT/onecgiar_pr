@@ -178,7 +178,7 @@ BEGIN
 END`;
 
 // Live body + IRS-DD-5 gates (ToC block wrapped for type 9, innovation-link check skipped for type 9).
-const CONTRIBUTOR_PARTNER_WITH_IMPACT = `CREATE FUNCTION \`validation_contributor_partner_P25\`(resultId BIGINT) RETURNS tinyint
+export const CONTRIBUTOR_PARTNER_WITH_IMPACT = `CREATE FUNCTION \`validation_contributor_partner_P25\`(resultId BIGINT) RETURNS tinyint
     DETERMINISTIC
 BEGIN
     

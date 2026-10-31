@@ -422,9 +422,9 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     section: SECTION,
     order: 2,
     result_types: ALL_TYPES,
-    // CP.html:38-46 (always shown). FUNCTION-STATED in 2026: the form marks it required only before 2026 (`[required]="!isAvisaInitiative() && !isCP2026()"`,
-    // CP.html:41), but V-CP:11-27 a NULL answer falls into the "mapped" branch, so the function effectively requires it. Kept (never weakened).
-    required: true,
+    // CP.html:38-46 (always shown). Optional in 2026 when unanswered: the live function `validation_contributor_partner_P25` treats a NULL answer as optional
+    // from 2026 (P2-4061, migration 1792100000000); Yes still requires `toc.entries`, No still requires the narrative (see their required_when).
+    required: false,
     required_confirmed: true,
     ...FROM_2026,
     // the submitter's answer: one value (see SUBMITTER_ROW_STEP)
