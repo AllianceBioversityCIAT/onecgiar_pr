@@ -25,6 +25,50 @@ export class ClarisaProjectsRepository extends Repository<ClarisaProject> {
   }
 
   /**
+   * Projects CLARISA approves for a program in a phase year (same approval rule as
+   * getPortfolioProjectFacts). Row shape mirrors AoWBilateralRepository
+   * .findBilateralProjectsByProgramOfficialCode. Read-only; every value is bound.
+   */
+  // @akili-spec bugfix/w3-projects-by-program
+  async findApprovedProjectsByProgramCode(
+    programCode: string,
+    phaseYear: number,
+  ): Promise<any[]> {
+    const sql = `
+      SELECT DISTINCT
+        NULL AS toc_result_id,
+        NULL AS official_code,
+        cp.id AS project_id,
+        cp.full_name AS project_name,
+        NULL AS project_summary,
+        cp.organization_code AS organization_code,
+        ci.id AS organization_id,
+        ci.name AS organization_name,
+        ci.acronym AS organization_acronym,
+        ci.website_link AS organization_website_link
+      FROM clarisa_projects cp
+      INNER JOIN clarisa_project_mappings cpm ON cpm.project_id = cp.id
+      LEFT JOIN clarisa_institutions ci ON ci.id = cp.organization_code
+      WHERE UPPER(TRIM(cpm.program_code)) = UPPER(TRIM(?))
+        AND cpm.allocation > 0
+        AND BINARY TRIM(cpm.status) IN (?)
+        AND cp.phase = ?
+        AND (cp.is_active IS NULL OR cp.is_active <> 0)
+      ORDER BY cp.full_name ASC
+    `;
+
+    return this.dataSource
+      .query(sql, [programCode, [...APPROVED_MAPPING_STATUSES], phaseYear])
+      .catch((err) => {
+        throw this._handlersError.returnErrorRepository({
+          error: err,
+          className: ClarisaProjectsRepository.name,
+          debug: true,
+        });
+      });
+  }
+
+  /**
    * One row per active project of the given CLARISA `year` (phase) with the facts the
    * Portfolio Overview W3 section aggregates (WPS-T-1). Read-only; every value is bound.
    *

@@ -361,13 +361,25 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
     this.api.dataControlSE.currentResultSectionName.set('Partners & Contributors');
   }
 
+  /** WPP-R-2: true only once `getData()` has REJECTED or RESOLVED EMPTY; false while pending or loaded. */
+  centersLoadFailed = signal(false);
+  centersLoadErrorNote = 'The CGIAR Centers list could not be loaded.';
+
+  /** WPP-R-2: (re)asks for the CLARISA centres catalogue; also the Retry action's handler. */
+  loadCentersCatalogue(): void {
+    this.centersSE
+      .getData()
+      .then(list => this.centersLoadFailed.set(!list?.length))
+      .catch(() => this.centersLoadFailed.set(true));
+  }
+
   ngOnInit() {
     // P2-3554: the CLARISA centres catalogue is fetched once at app bootstrap. If that single attempt
     // failed, EVERY centres dropdown on this section — "Contributing CGIAR Centers" and the mandatory
     // "Lead center" — shows "No information found" for the rest of the session, so the section cannot be
     // completed at all. `getData()` is a no-op once the catalogue is in memory, so this is the (cheap)
     // recovery point: re-ask on entering the section that needs it.
-    this.centersSE.getData().catch(() => undefined);
+    this.loadCentersCatalogue();
     this.rdPartnersSE.resetState();
     // `UCA-T-9` attempt 3, Issue 1: tell the service to call us back whenever a catalogue-driven lead
     // re-assignment happens after our own load, so we can reconcile the baseline. Cleared in

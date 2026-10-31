@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-10-13 · qa-development-2026-ss · spec `results/program-full-names-labels-part-2` PF2-T-6: SP chips render via `spChipLabel` (`scienceProgramLabel`; the Other(s) sentinel keeps its text); prior: 2026-09-28 · qa-development-2026-ss · (uncommitted) · `applyTocMappingOnLoad()`'s External Partners split extracted into public `reclassifyPartnersFromToc()` so IPSR's own load path can call it (see note below); prior: 2026-09-25 · bugfix/p2-3542-section-bar-toc-tabs · b0d320f5d · `CPMultipleWPsComponent` publica al piso los gaps de las pestañas ToC no renderizadas (P2-3542); prior: 2026-09-16 · performance-refactor · 01891aebd · el color de las tarjetas sigue al contador (P2-3738); prior: 2026-09-11 · branch qa-development-2026-ss · bugfix/toc-hlo-outcome-locked BUG-T-1
+**Verified:** 2026-10-30 · qa-development-2026-ss · (uncommitted) · spec `bugfix/w3-projects-by-program` WPP-T-2: centres-catalogue error + Retry, and the "No CGIAR Centers related…" note waits for `planned_result === true` (see § WPP-R-2/R-3); prior: 2026-10-13 · qa-development-2026-ss · spec `results/program-full-names-labels-part-2` PF2-T-6: SP chips render via `spChipLabel` (`scienceProgramLabel`; the Other(s) sentinel keeps its text); prior: 2026-09-28 · qa-development-2026-ss · (uncommitted) · `applyTocMappingOnLoad()`'s External Partners split extracted into public `reclassifyPartnersFromToc()` so IPSR's own load path can call it (see note below); prior: 2026-09-25 · bugfix/p2-3542-section-bar-toc-tabs · b0d320f5d · `CPMultipleWPsComponent` publica al piso los gaps de las pestañas ToC no renderizadas (P2-3542); prior: 2026-09-16 · performance-refactor · 01891aebd · el color de las tarjetas sigue al contador (P2-3738); prior: 2026-09-11 · branch qa-development-2026-ss · bugfix/toc-hlo-outcome-locked BUG-T-1
 (removed P2-3235's `tocAlignmentReadOnly()` ToC-alignment lock on the Level/HLO/Outcome/Output
 selects — explicit PO override (santiago.sanchez@cgiar.org, `proposal.md` §11), not a defect fix;
 these selects are now gated only by `editable` + the role read-only handling already inside
@@ -621,6 +621,16 @@ gone is the read-only display itself, by request, not a technical constraint.
 | `components/` | Chips y bloques de contribuidores/socios | Los dropdowns agrupados de admin tienen comportamiento propio: validar antes de cambiar bindings |
 
 ⚠️ **`CPNormalSelectorComponent.preselectPartnersEffect` (`components/multiple-wps/components/normal-selector/normal-selector.component.ts`) writes `partnersBody.institutions` on load — `UCA-T-9` attempt 3, Issue 2.** Unlike its two siblings in THIS file (`preselectCentersEffect`/`preselectScienceEffect`), it had no `sectionHydratedFromToc()/tocSelectionTouched()` guard until this fix, so a late `tocReferencePartnerInstitutionIds` write (from `multiple-wps-content`'s async ToC-resolution effect) populated `institutions` on every settle, not just once per hydration — a clean load with an unselected but ToC-mapped partner list loaded dirty and silently fired the contribution email on the next Back/Next. Now gated identically to its siblings. If you add a fourth prefill effect anywhere in this tree, it needs the same guard — see `docs/specs/changes/unsaved-changes-alert/execution.md`'s `UCA-T-9` attempt-3 entry.
+
+## WPP-R-2 / WPP-R-3 — centres catalogue error + Retry, and the no-centres note (2026-10-30)
+
+- `ngOnInit` now calls `loadCentersCatalogue()` (wraps the P2-3554 `centersSE.getData()`): signal `centersLoadFailed` is
+  `true` only when it rejects or resolves empty, `false` while pending/loaded. Template shows `app-alert-status status="error"`
+  + `app-pr-button` Retry (`data-testid="cp-centers-load-error"` / `cp-centers-retry`) above the centres block; Retry re-calls the method.
+- 🛑 The `noCentersNote` (`@else` of `hasReferenceCenters()`) is now `@else if (planned_result === true)`: unanswered ToC KPI
+  question → no note. The "Contributing CGIAR Centers" dropdown + its mandatory marker live in the separate block below and are
+  untouched, so they still render when unanswered.
+- Tests: last describe of `*.zoneless.spec.ts` (S-2.1, S-3.1, S-3.2).
 
 ## Tests
 Tres suites (`*.lead-contact-person.spec.ts` — cubría P2-2911 AC2 contra el DOM renderizado — se

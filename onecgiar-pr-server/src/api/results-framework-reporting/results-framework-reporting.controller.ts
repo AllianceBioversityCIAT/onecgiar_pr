@@ -489,7 +489,7 @@ export class ResultsFrameworkReportingController {
   @ApiOperation({
     summary: 'List bilateral projects for a science program',
     description:
-      'Returns all bilateral projects registered in the Project Registry for the given science program (official code) in the active reporting phase, without filtering by ToC result or indicator.',
+      'Returns the bilateral projects for the given science program (official code) in the active reporting phase: those linked in its Theory of Change plus those CLARISA approves for the program (union, deduplicated, ToC first), without filtering by ToC result or indicator.',
   })
   @ApiQuery({
     name: 'programId',

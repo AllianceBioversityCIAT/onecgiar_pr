@@ -184,6 +184,7 @@ const mockClarisaCenterRepository = {
 
 const mockClarisaProjectsRepository = {
   getPortfolioProjectFacts: jest.fn(),
+  findApprovedProjectsByProgramCode: jest.fn(),
 };
 
 // W12-R-2: default versionId resolution goes through VersioningService.$_findActivePhase
@@ -4261,6 +4262,13 @@ describe('ResultsFrameworkReportingService', () => {
   });
 
   describe('getBilateralProjectsByScienceProgram (P2-3001)', () => {
+    // Version/CLARISA mocks keep implementations across describes (clearAllMocks only
+    // clears calls); reset so every case here is order-independent.
+    beforeEach(() => {
+      mockVersionRepository.findOne.mockReset();
+      mockClarisaProjectsRepository.findApprovedProjectsByProgramCode.mockReset();
+    });
+
     it('should return deduplicated bilateral projects for a science program', async () => {
       mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
         id: 10,
@@ -4307,9 +4315,19 @@ describe('ResultsFrameworkReportingService', () => {
       mockTocResultsRepository.findBilateralProjectsByProgramOfficialCode.mockResolvedValueOnce(
         [],
       );
+      mockVersionRepository.findOne.mockResolvedValueOnce({
+        id: 7,
+        phase_year: 2026,
+      });
+      mockClarisaProjectsRepository.findApprovedProjectsByProgramCode.mockResolvedValueOnce(
+        [],
+      );
 
       const result = await service.getBilateralProjectsByScienceProgram('SP02');
 
+      expect(
+        mockClarisaProjectsRepository.findApprovedProjectsByProgramCode,
+      ).toHaveBeenCalledWith('SP02', 2026);
       expect(result.response).toEqual([]);
       expect(result.status).toBe(200);
     });
@@ -4318,6 +4336,100 @@ describe('ResultsFrameworkReportingService', () => {
       const result = await service.getBilateralProjectsByScienceProgram('  ');
 
       expect(result.status).toBe(400);
+    });
+
+    // @akili-spec bugfix/w3-projects-by-program (WPP-T-1)
+    describe('CLARISA-approved projects merge (WPP-R-1)', () => {
+      const givenProgram = () =>
+        mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+          id: 10,
+          official_code: 'SP09',
+        });
+      const givenToc = (ids: number[]) =>
+        mockTocResultsRepository.findBilateralProjectsByProgramOfficialCode.mockResolvedValueOnce(
+          ids.map((project_id) => ({ project_id })),
+        );
+      const givenClarisa = (ids: number[]) =>
+        mockClarisaProjectsRepository.findApprovedProjectsByProgramCode.mockResolvedValueOnce(
+          ids.map((project_id) => ({ project_id })),
+        );
+      const givenYear = () =>
+        mockVersionRepository.findOne.mockResolvedValueOnce({
+          id: 7,
+          phase_year: 2026,
+        });
+
+      beforeEach(() => {
+        mockClarisaProjectsRepository.findApprovedProjectsByProgramCode.mockReset();
+        mockVersionRepository.findOne.mockReset();
+      });
+
+      it('S-1.1: ToC empty + CLARISA rows -> CLARISA rows returned', async () => {
+        givenProgram();
+        givenToc([]);
+        givenYear();
+        givenClarisa([10, 11]);
+
+        const result =
+          await service.getBilateralProjectsByScienceProgram('SP09');
+
+        expect(
+          mockClarisaProjectsRepository.findApprovedProjectsByProgramCode,
+        ).toHaveBeenCalledWith('SP09', 2026);
+        expect(result.response.map((row) => row.project_id)).toEqual([10, 11]);
+      });
+
+      it('S-1.2: union, ToC first, deduplicated', async () => {
+        givenProgram();
+        givenToc([11, 12]);
+        givenYear();
+        givenClarisa([10, 11]);
+
+        const result =
+          await service.getBilateralProjectsByScienceProgram('SP09');
+
+        expect(result.response.map((row) => row.project_id)).toEqual([
+          11, 12, 10,
+        ]);
+      });
+
+      it('S-1.3: ToC rows kept when CLARISA has none', async () => {
+        givenProgram();
+        givenToc([12]);
+        givenYear();
+        givenClarisa([]);
+
+        const result =
+          await service.getBilateralProjectsByScienceProgram('SP09');
+
+        expect(result.response.map((row) => row.project_id)).toEqual([12]);
+      });
+
+      it('WPP-DD-3: unresolved year skips CLARISA and keeps ToC rows', async () => {
+        givenProgram();
+        givenToc([12]);
+        mockVersionRepository.findOne
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce(null);
+
+        const result =
+          await service.getBilateralProjectsByScienceProgram('SP09');
+
+        expect(
+          mockClarisaProjectsRepository.findApprovedProjectsByProgramCode,
+        ).not.toHaveBeenCalled();
+        expect(result.status).toBe(200);
+        expect(result.response.map((row) => row.project_id)).toEqual([12]);
+      });
+
+      it('S-1.5: unknown program still returns 404', async () => {
+        mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce(null);
+
+        const result =
+          await service.getBilateralProjectsByScienceProgram('SP99');
+
+        expect(result.status).toBe(404);
+      });
     });
   });
 

@@ -99,6 +99,13 @@
     <app-alert-status data-testid="cp-contributor-definition" [description]="contributorDefinitionNote" [collapsible]="false"></app-alert-status>
   }
 
+  @if (centersLoadFailed()) {
+    <div data-testid="cp-centers-load-error">
+      <app-alert-status status="error" [description]="centersLoadErrorNote" [collapsible]="false"></app-alert-status>
+      <app-pr-button data-testid="cp-centers-retry" text="Retry" icon="refresh" colorType="secondary" (clickEvent)="loadCentersCatalogue()"></app-pr-button>
+    </div>
+  }
+
   <!-- P2-2998 / P2-3036 (2026): Contributing CGIAR Centers split into "from ToC" + "Other(s)". SAVE NOT ADDRESSED YET. -->
   @if (isCP2026() && this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== false) {
     @if (hasReferenceCenters()) {
@@ -119,10 +126,11 @@
         (selectOptionEvent)="onContributingCenterSelect($event)">
         <ng-container ngProjectAs="[selectedItems]" *ngTemplateOutlet="contributingCenterChips"></ng-container>
       </app-pr-multi-select>
-    } @else {
+    } @else if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result === true) {
       <!-- P2-2998 AC4: ToC returned no centers → show note; the Other(s) dropdown below auto-activates with ALL centers.
            OTV-R-1: the field-header that used to duplicate the dropdown's own label was removed — the dropdown below
-           now carries "Contributing CGIAR Centers" itself via its conditional [label]. -->
+           now carries "Contributing CGIAR Centers" itself via its conditional [label].
+           WPP-R-3: the note waits for an explicit "Yes" on the ToC KPI question (unanswered → no note; dropdown stays). -->
       <div class="pr-message">
         <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
         <p>{{ noCentersNote }}</p>
