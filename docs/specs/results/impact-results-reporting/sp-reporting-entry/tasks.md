@@ -117,7 +117,7 @@
   - **Consumers:** none.
 - **Definition of done:** CT green at both widths; guides updated.
 
-### IRE-T-6 — PRTest verification (HITL / T6) — `[ ]`
+### IRE-T-6 — PRTest verification (HITL / T6) — `[x]`
 
 - **Type:** rollout / visual
 - **Description:** After user go-ahead → commit, push to `qa-development-2026-ss`, merge into `performance-refactor` (user's checkout), deploy (~30 min). User (or agent by screenshot, read-only) checks on SP01, Reporting 2026 (initiative 50, version 36): card after 2030 outcomes in grouped view, absent in flat view; counts equal E6 and the user-run SQL; keyboard order header → rows → buttons; visual vs User Guide v2 step 1; one real create from a card (test result accepted on PRTest) lands on the detail page with the area at Principal.

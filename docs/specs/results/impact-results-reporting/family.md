@@ -17,7 +17,7 @@
 | # | Spec Path | Depends on | Parallel-safe | Status |
 |---|---|---|---|---|
 | 1 | `results/impact-results-reporting/server-foundation` | none | no | done |
-| 2 | `results/impact-results-reporting/sp-reporting-entry` | `results/impact-results-reporting/server-foundation` | yes (with #3) | in-progress |
+| 2 | `results/impact-results-reporting/sp-reporting-entry` | `results/impact-results-reporting/server-foundation` | yes (with #3) | done |
 | 3 | `results/impact-results-reporting/result-detail-impact` | `results/impact-results-reporting/server-foundation` | yes (with #2) | pending |
 
 Build order (MoSCoW): all three are **Must** — P2-3901 AC 1–19 span them. #1 carries the only migration and the API contracts; #2 and #3 are client-only and touch disjoint areas (SP Reporting page vs result-detail), so they can run in separate worktrees once #1 is `done`.

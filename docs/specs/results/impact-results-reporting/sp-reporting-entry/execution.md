@@ -110,7 +110,7 @@
 - **Requirements covered:** IRE-NFR-2 (CT side); guide upkeep.
 - **Budget:** review rounds used 6 / ≤ 8; tasks 5 of 6 code+test done.
 
-### IRE-T-6 — PRTest verification (HITL / T6) — in progress
+### IRE-T-6 — PRTest verification (HITL / T6) — PASS
 
 - **Go-ahead:** user "si dale" (2026-10-31) for commit → push → merge into `performance-refactor` → deploy.
 - **Pre-push:** free RAM 1.2 GB (< 4 GB) → user chose `--runInBand`. `npx jest --runInBand --findRelatedTests dashboard-lab.component.ts indicator-drawer.component.ts lab-report-form.component.ts impact-results-card.component.ts impact-areas.constant.ts --silent --reporters=summary --no-coverage --forceExit` → `Test Suites: 40 passed · Tests: 1477 passed` (115 s). `results-api.service.ts` / `create-result-payload.util.ts` unchanged since IRE-T-1's 438-suite run.
@@ -142,3 +142,18 @@
 - **Verification:** `npx jest --runInBand --testPathPattern="(impact-areas.constant|impact-results-card|lab-report-form.component.impact-mode|indicator-drawer.component.impact-mode)"` → 4 suites / 25 tests passed; eslint clean; pre-push `--findRelatedTests impact-areas.constant.ts` (runInBand) → `40 passed · 1477 passed`.
 - **Reviewer:** `STATUS: PASS` — five tiles opened and matched to ids (1 orange Nutrition, 2 blue Poverty, 3 yellow Gender, 4 dark green Climate, 5 light green Environment), mapping and colours agree with IPSR `step-n1-impact-areas`; no stale path in spec docs or client guides; visibility still needs the PRTest re-check.
 - **Pending:** PRTest re-check of icons after deploy; then T-6 `[x]` and `family.md` row 2 → `done`. Test results 10039 and "Another Impact test result" (Gender) to be deleted/discontinued on PRTest by the user.
+
+#### IRE-T-6 HITL evidence — round 2 (2026-10-31, user screenshot image #70)
+
+| Check | Evidence | Result |
+|---|---|---|
+| Icons (R-1 / NFR-1) | PRTest SP01 Reporting, grouped view: each row shows its coloured tile left of the name — Nutrition orange, Poverty blue, Gender yellow, Climate dark green, Environment light green | ✅ |
+
+**IRE-T-6 — PASS.** All live checks green (round 1 table + round 2). `family.md` row 2 → `done`.
+
+## Summary
+
+- **Status:** all 6 tasks `[x]` (2026-10-31). Review rounds: 8 (T-1 1, T-2 1, T-3 1, T-4 2, T-5 1, T-6 icon rework 1, plus 1 pre-review attempt-2 on T-4 counted above) — within the ≤ 8 budget.
+- **Commits (qa-development-2026-ss):** `81173125d`, `f0e20f45c`, `5fab7cdaa`, `6b42237f6`, `7e0f5ceed`, `3bf03c2f1`, staging merge + QA catalog 2026.32 `4e1268cf3`, icon fix; performance-refactor merges `ff95c902a`, `77b2b0739`.
+- **Out-of-scope work done with user approval:** QA catalog 2026 revision collision (P2-4037 vs P2-4061) reconciled to 2026.32.
+- **For `/akili-archive`:** design §6.1 wording (table *hides* Report buttons, card disables); `npm run test:ct:batch` red-exit harness gap; advisories recorded per task; Cypress 14.5.1 binary installed in the user cache; `codegraph sync`; notify Juan Guzmán that the next catalog revision is 33; delete PRTest test results 10039 and "Another Impact test result".
