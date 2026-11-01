@@ -1,3 +1,4 @@
+import { IMPACT_RESULT_DISPLAY_NAME, isP25ImpactResult } from '../../../../../shared/utils/impact-result.util';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { switchMap } from 'rxjs/operators';
 import { Observable, of } from 'rxjs';
@@ -300,7 +301,10 @@ export function toProgrammeResultRow(raw: Record<string, any>): ProgrammeResultR
     id: num(raw?.['id']),
     code: text(raw?.['result_code']),
     title: text(raw?.['title']),
-    category: text(raw?.['result_type']),
+    // IRD-T-7: rows carry result_type_id + acronym, so only a P25 type-9 row is relabelled.
+    category: isP25ImpactResult({ result_type_id: raw?.['result_type_id'], portfolio: raw?.['acronym'] ?? raw?.['portfolio'] })
+      ? IMPACT_RESULT_DISPLAY_NAME
+      : text(raw?.['result_type']),
     statusId: num(raw?.['status_id']),
     statusName: text(raw?.['status_name']),
     resultTypeId: num(raw?.['result_type_id']),

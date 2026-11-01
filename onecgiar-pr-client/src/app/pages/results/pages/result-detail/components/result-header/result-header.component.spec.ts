@@ -160,6 +160,44 @@ describe('ResultHeaderComponent', () => {
   // RSBL-R-1, RSBL-R-2, RSBL-R-6 / RSBL-AC-1, RSBL-AC-2, RSBL-AC-6. Fixture already carries
   // initiative_official_code: 'SP04' and initiative_name: 'Multifunctional Landscapes' (do not
   // swap in SP09 — that value is the legacy screenshot copy example only, not the live fixture).
+  describe('impact result level line (IRD-T-7)', () => {
+    const level = () => q('[data-testid="result-header-identity"] span').textContent.trim();
+
+    function asImpact(tags: Record<string, number>) {
+      Object.assign(dataControlMock.currentResult, { result_type_id: 9, result_level_name: 'Output', ...tags });
+      dataControlMock.isP25ImpactResultSignal = () => true;
+    }
+
+    it('shows just "Impact" when no area is Principal', async () => {
+      asImpact({ nutrition_tag_level_id: 2, poverty_tag_level_id: 1 });
+      await build();
+
+      expect(level()).toBe('Impact');
+    });
+
+    it('names the single Principal area', async () => {
+      asImpact({ gender_tag_level_id: 3, poverty_tag_level_id: 2 });
+      await build();
+
+      expect(level()).toBe('Impact · Impact Area Gender Equality, Youth and Social Inclusion');
+    });
+
+    it('joins two Principal areas in impact-area order', async () => {
+      asImpact({ climate_change_tag_level_id: 3, nutrition_tag_level_id: 3 });
+      await build();
+
+      expect(level()).toBe('Impact · Impact Area Nutrition, Health and Food Security, Climate Adaptation and Mitigation');
+    });
+
+    it('leaves the level untouched for a non-impact result', async () => {
+      dataControlMock.isP25ImpactResultSignal = () => false;
+      dataControlMock.currentResult.gender_tag_level_id = 3;
+      await build();
+
+      expect(level()).toBe('Output');
+    });
+  });
+
   describe('submitter (Science Program)', () => {
     it('shows the Science Program as Submitter, code and name, without opening the ⓘ popover', async () => {
       await build();

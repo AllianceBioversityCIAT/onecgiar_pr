@@ -7,6 +7,7 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { PdfExportService } from '../../../../../../shared/services/pdf-export.service';
 import { ResultMetadataPanelService } from '../../../../../../shared/components/result-metadata/result-metadata-panel.service';
+import { principalImpactAreaNames } from '../../../../../../shared/utils/impact-result.util';
 import { CopyButtonComponent } from '../../../../../../shared/components/copy-button/copy-button.component';
 
 interface MetaRow {
@@ -186,7 +187,13 @@ export class ResultHeaderComponent implements DoCheck {
   }
 
   get level(): string {
-    return this.dataControlSE.currentResult?.result_level_name ?? '';
+    const result = this.dataControlSE.currentResult;
+    // IRD-T-7: P25 impact results read `Impact · Impact Area <names>` (tag columns come on GET_resultById).
+    if (this.dataControlSE.isP25ImpactResultSignal?.()) {
+      const names = principalImpactAreaNames(result);
+      return names.length ? `Impact · Impact Area ${names.join(', ')}` : 'Impact';
+    }
+    return result?.result_level_name ?? '';
   }
 
   get funding(): string {

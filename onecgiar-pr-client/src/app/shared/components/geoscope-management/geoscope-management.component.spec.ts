@@ -190,6 +190,23 @@ describe('GeoscopeManagementComponent', () => {
     });
   });
 
+  describe('allowedScopeIds (IRD-T-6)', () => {
+    it('keeps every option, TBD included, when unset (default for all other callers)', () => {
+      component.module = ModuleTypeEnum.REPORTING;
+      component.ngOnInit();
+      expect(component.visibleGeoscopeOptions).toBe(component.geoscopeOptions);
+      expect(component.visibleGeoscopeOptions.map(o => o.id)).toEqual([1, 2, 3, 5, 50]);
+    });
+
+    it('offers only the allowed ids and no TBD when set', () => {
+      fixture.componentRef.setInput('allowedScopeIds', [2, 3]);
+      component.module = ModuleTypeEnum.REPORTING;
+      component.ngOnInit();
+      expect(component.visibleGeoscopeOptions.map(o => o.id)).toEqual([2, 3]);
+      expect(component.geoscopeOptions.some(o => o.id === 50)).toBe(false);
+    });
+  });
+
   describe('ngOnInit', () => {
     it('should set geoscopeOptions with an additional option when module is REPORTING', () => {
       component.module = ModuleTypeEnum.REPORTING;

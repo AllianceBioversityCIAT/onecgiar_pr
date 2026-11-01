@@ -45,6 +45,13 @@ export class ChangeResultTypeModalComponent implements OnChanges {
   <dt>1If you need support to modify any of the harvested metadata from CGSpace, contact your Center’s knowledge manager. <strong>And do the sync again.</strong></dt>
 </dl>`
   );
+  /** IRD-T-7 (IRD-R-12): shown only while the open result is a P25 impact result. */
+  readonly impactTypeChangeWarning = "Changing the type deletes this result's Impact level info and its links to previous results.";
+
+  get showImpactTypeChangeWarning(): boolean {
+    return !!this.api.dataControlSE.isP25ImpactResultSignal?.();
+  }
+
   isChagingType: boolean = false;
   IOutcome = [1, 2];
 

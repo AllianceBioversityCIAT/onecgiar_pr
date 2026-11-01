@@ -226,6 +226,27 @@ describe('RdEvidencesComponent', () => {
       expect(result).toContain('Submit a maximum of 6 pieces of evidence per result.');
       expect(result).not.toContain('Please list evidence from most to least important.');
     });
+
+    describe('IRD-T-6 — impact result MELIA line', () => {
+      const MELIA = 'Include the MELIA study or evaluation that documents the impact.';
+      beforeEach(() => {
+        mockApiService.dataControlSE.isKnowledgeProduct = false;
+      });
+
+      it('appends the MELIA li for an impact result', () => {
+        mockApiService.dataControlSE.isP25ImpactResultSignal = () => true;
+        expect(component.alertStatus()).toContain(`<li>${MELIA}</li>`);
+      });
+
+      it('does not append it otherwise (P22 type 9, type 5, others)', () => {
+        mockApiService.dataControlSE.isP25ImpactResultSignal = () => false;
+        expect(component.alertStatus()).not.toContain(MELIA);
+        mockApiService.dataControlSE.currentResult = { result_type_id: 5 };
+        const type5 = component.alertStatus();
+        expect(type5).not.toContain(MELIA);
+        expect(type5).toContain('Capacity sharing for development');
+      });
+    });
   });
 
   // P2-3262: the evidence guidance moves from the grey box into ONE ⓘ on the section heading,

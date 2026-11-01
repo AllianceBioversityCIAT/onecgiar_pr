@@ -26,6 +26,7 @@ import { PortfolioTocCoverage } from '../../interfaces/portfolio-toc-coverage.in
 import { PortfolioBilateralProjects } from '../../interfaces/portfolio-bilateral-projects.interface';
 import { PortfolioResultDimensions } from '../../interfaces/portfolio-result-dimensions.interface';
 import { ReportingApiResponse } from '../../interfaces/reporting-api.response';
+import { ImpactLevelInfo, ImpactPreviousResultsSearchParams, ImpactPreviousResultsSearchResponse, ImpactStudyType, SaveImpactLevelBody } from '../../interfaces/impact-level.interface';
 
 /**
  * @akili-spec notifications/detail-side-panel (DSP-T-2)
@@ -1898,5 +1899,38 @@ export class ResultsApiService {
 
   POST_reminderCampaignSend(id: number) {
     return this.http.post<ReminderEnvelope<ReminderSendOutcome>>(`${this.reminderCampaignsUrl}/${id}/send`, {});
+  }
+
+  // @akili-spec results/impact-results-reporting/result-detail-impact (IRD-T-1, design §5)
+  private get impactLevelUrl() {
+    return `${this.baseApiBaseUrl}results-framework-reporting/impact-level`;
+  }
+
+  GET_impactStudyTypes() {
+    return this.http.get<ReportingApiResponse<ImpactStudyType[]>>(`${this.impactLevelUrl}/study-types`);
+  }
+
+  GET_impactLevelInfo(resultId: number | string) {
+    return this.http.get<ReportingApiResponse<ImpactLevelInfo>>(`${this.impactLevelUrl}/get/result/${resultId}`);
+  }
+
+  PATCH_impactLevelInfo(resultId: number | string, body: SaveImpactLevelBody) {
+    return this.http.patch<ReportingApiResponse<ImpactLevelInfo>>(`${this.impactLevelUrl}/save/result/${resultId}`, body);
+  }
+
+  /** E5. Null/empty params are omitted; `typeIds` goes as a csv. */
+  GET_impactPreviousResultsSearch(params: ImpactPreviousResultsSearchParams = {}) {
+    const query: Record<string, string> = {};
+    const { typeIds, ...rest } = params;
+    Object.entries(rest).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && `${value}`.trim() !== '') query[key] = `${value}`;
+    });
+    if (typeIds?.length) query['typeIds'] = typeIds.join(',');
+    return this.http.get<ReportingApiResponse<ImpactPreviousResultsSearchResponse>>(`${this.impactLevelUrl}/previous-results/search`, { params: query });
+  }
+
+  /** Plain result types catalog (every active `result_type`: `{ id, name, description }`). Picker type filter (IRD-T-4). */
+  GET_resultTypes() {
+    return this.http.get<ReportingApiResponse<Array<{ id: number; name: string; description?: string }>>>(`${this.apiBaseUrl}types/all`);
   }
 }

@@ -205,5 +205,28 @@ describe('PrTextareaComponent — contract (CT)', () => {
       cy.get(TEXTAREA).type('one two three four five');
       cy.get(TEXTAREA).should('have.class', 'warning').and('not.have.class', 'invalid');
     });
+
+    it('[contract] a custom wordCounterFn replaces the default count (IRD-DD-3)', () => {
+      const CUSTOM_TPL = `
+        <app-pr-textarea
+          label="Notes"
+          [maxWords]="maxWords"
+          [wordCounterFn]="counterFn"
+          [(ngModel)]="model">
+        </app-pr-textarea>`;
+      mountCF(CUSTOM_TPL, {
+        editable: true,
+        componentProperties: { model: '', maxWords: 3, counterFn: (t: string) => (t ? t.split(/\s+/).filter(Boolean).length : 0) }
+      });
+      // The default counter splits on ' ' only, so it would read two lines as 1 word; the custom one reads 2.
+      cy.get(TEXTAREA).type('a{enter}b');
+      cy.get('app-pr-word-counter .limitBreaker').should('have.text', '2');
+    });
+
+    it('[contract] without wordCounterFn the default counter is unchanged (line break is not a separator)', () => {
+      mountCF(TPL, { editable: true, componentProperties: props({ model: '', maxWords: 5 }) });
+      cy.get(TEXTAREA).type('a{enter}b');
+      cy.get('app-pr-word-counter .limitBreaker').should('have.text', '1');
+    });
   });
 });

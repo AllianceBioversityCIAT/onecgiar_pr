@@ -173,6 +173,15 @@ describe('ResultsListComponent', () => {
     document.getElementById = originalGetElementById;
   });
 
+  describe('resultTypeLabel() (IRD-T-7)', () => {
+    it('relabels only a P25 type 9 row', () => {
+      expect(component.resultTypeLabel({ result_type_id: 9, acronym: 'P25', result_type: 'Impact contribution' } as any)).toBe('Impact result');
+      expect(component.resultTypeLabel({ result_type_id: 9, acronym: 'P22', result_type: 'Impact contribution' } as any)).toBe('Impact contribution');
+      expect(component.resultTypeLabel({ result_type_id: 6, acronym: 'P25', result_type: 'Knowledge product' } as any)).toBe('Knowledge product');
+      expect(component.resultTypeLabel({} as any)).toBe('');
+    });
+  });
+
   describe('ngOnInit()', () => {
     it('should call unSelectInits if user is admin', () => {
       mockApiService.rolesSE.isAdmin = true;

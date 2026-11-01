@@ -35,6 +35,13 @@
     }
   }
 
+  <!-- IRD-T-5 (IRD-R-8): impact results (P25 type 9) have no ToC alignment — block removed with @if, never CSS. -->
+  @if (isImpactResult()) {
+    <!-- PLACEHOLDER copy (design §6.4) — to be confirmed at IRD-T-8. -->
+    <app-alert-status data-testid="cp-impact-copy" [description]="impactContributorsCopy" [collapsible]="false"></app-alert-status>
+  }
+
+  @if (!isImpactResult()) {
   <app-pr-yes-or-not
     data-testid="cp-field-result_toc_result.planned_result"
     [label]="tocQuestionLabel()"
@@ -92,6 +99,7 @@
         [autogenerate]="true">
       </app-pr-textarea>
     }
+  }
   }
 
   <!-- P2-3201 / P2-4010 (2026): CLARISA-based definition of a contributor, shown once before Contributing CGIAR Centers. -->
@@ -619,7 +627,8 @@
     (this.api.dataControlSE.currentResultSignal().result_type_id == 2 ||
       this.api.dataControlSE.currentResultSignal().result_type_id == 7 ||
       isCP2026()) &&
-    !showsQaInnovationLink()
+    !showsQaInnovationLink() &&
+    !isImpactResult()
   ) {
     @if (
       this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7

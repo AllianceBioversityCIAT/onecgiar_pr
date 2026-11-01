@@ -25,8 +25,12 @@
     "
     [label]="geographicFocusLabel()"
     [body]="this.geographicLocationBody"
+    [allowedScopeIds]="allowedScopeIds()"
     module="reporting">
   </app-geoscope-management>
+  @if (storedScopeOutsideAllowed(this.geographicLocationBody.geo_scope_id)) {
+    <app-alert-status [collapsible]="false" [description]="impactScopeHint" data-testid="impact-scope-hint"></app-alert-status>
+  }
 
   <br />
   @if (this.geographicLocationBody.geo_scope_id != 1 && this.geographicLocationBody.geo_scope_id != 50 && this.geographicLocationBody.geo_scope_id) {
@@ -56,8 +60,12 @@
         label="What is the geographic scope where there may be potential impact in other geographic areas?"
         [body]="this.extraGeographicLocationBody"
         [hideTobeDetermined]="true"
+        [allowedScopeIds]="allowedScopeIds()"
         module="reporting">
       </app-geoscope-management>
+      @if (storedScopeOutsideAllowed(this.extraGeographicLocationBody.geo_scope_id)) {
+        <app-alert-status [collapsible]="false" [description]="impactScopeHint" data-testid="impact-extra-scope-hint"></app-alert-status>
+      }
     }
   }
 

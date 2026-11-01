@@ -61,7 +61,7 @@
 
 ### `WPP-T-3` — Manual verification on PRTest (Santiago)
 
-- **Status:** `[ ]` · **Depends on:** WPP-T-1, WPP-T-2 deployed to PRTest (performance-refactor)
+- **Status:** `[~]` (2026-10-31: #1 #2 #5 verified on PRTest, #3 partial; #3 type-ahead and #4 open, see `execution.md`) · **Depends on:** WPP-T-1, WPP-T-2 deployed to PRTest (performance-refactor)
 - **Implements:** WPP-R-1 (real data), WPP-R-2, WPP-R-3, WPP-NFR-3
 - **Checks (read-only, no Save):**
   1. `by-program?programId=SP09` count ≥ Portfolio Overview `mapped` for SP09 and the ids include every ToC-linked one.

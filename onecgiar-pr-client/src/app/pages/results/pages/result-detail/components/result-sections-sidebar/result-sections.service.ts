@@ -12,6 +12,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { SubmissionModalService } from '../submission-modal/submission-modal.service';
 import { UnsubmitModalService } from '../unsubmit-modal/unsubmit-modal.service';
 import { resultStatusBg, resultStatusFg } from '../../../../../../shared/constants/result-status-tokens';
+import { resultTypeDisplayName } from '../../../../../../shared/utils/impact-result.util';
 
 export type RdSection = PrRoute & { validation?: number };
 
@@ -117,7 +118,10 @@ export class ResultSectionsService {
 
   readonly resultTypeName = computed(() => {
     this.dataControlSE.currentResultSignal();
-    return this.dataControlSE.currentResult?.result_type_name ?? '';
+    const result = this.dataControlSE.currentResult;
+    const name = result?.result_type_name ?? '';
+    // IRD-T-7: only a P25 impact result is relabelled; every other type/portfolio keeps its DB name.
+    return this.dataControlSE.isP25ImpactResultSignal?.() ? resultTypeDisplayName(result?.result_type_id, name) : name;
   });
 
   readonly statusLabel = computed(() => {

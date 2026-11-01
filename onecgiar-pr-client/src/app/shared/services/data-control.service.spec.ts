@@ -19,6 +19,17 @@ describe('DataControlService', () => {
     service = new DataControlService(titleServiceMock, resultsSE);
   });
 
+  describe('isP25ImpactResultSignal', () => {
+    it('is true only for a P25 type 9 result and follows the signal', () => {
+      service.currentResultSignal.set({ result_type_id: 9, portfolio: 'P25' });
+      expect(service.isP25ImpactResultSignal()).toBe(true);
+      service.currentResultSignal.set({ result_type_id: 9, portfolio: 'P22' });
+      expect(service.isP25ImpactResultSignal()).toBe(false);
+      service.currentResultSignal.set({});
+      expect(service.isP25ImpactResultSignal()).toBe(false);
+    });
+  });
+
   describe('myInitiativesList reactivity', () => {
     // A non-admin who opens a Science Program before updateUserData() resolves must still get the
     // "Report emerging result" CTA once the list arrives (EntityAowService.canReportResults).

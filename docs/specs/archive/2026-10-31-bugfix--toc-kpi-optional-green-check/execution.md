@@ -49,3 +49,17 @@
 |---|---|
 | TKG-NFR-3 | Santiago ran `npm run migration:check` locally (local stack points at the prod DB). Output: total 499, executed 498, pending 2: `IRSImpactResultsFoundation1792000000000`, `TKGTocKpiOptionalGreenCheck1792100000000`. TypeORM loads both classes with the right names, so the `export` added to the IRS file does not break migration discovery. Both pending is expected: neither has run on that DB. `migration:run` was **not** run, and must not be run from local against prod |
 | Not Done | None for this task. MySQL compile and real-row behaviour remain TKG-T-3 (PRTest), per the defect-class table |
+
+### TKG-T-3 — Manual verification on PRTest · `[x]` · 2026-10-31
+
+| Field | Value |
+|---|---|
+| Who / how | Leader through Claude in Chrome, at Santiago's request ("puedes validar tu mismo usando claude in chrome?"). Read-only: green checks via `GET /v2/api/results/results-validation/get/green-checks/:id` and `GET /v2/api/contributors-partners/:id`, plus one page view. No Save, no data written |
+| Deploy | `performance-refactor` at `ff95c902a` (pushed 09:24, contains `7227e8d4c`). The migration ran: under the old body every row below with planned_result NULL and no ToC rows would return FALSE, and they return TRUE |
+| #1 S-1.1 | Result 12333 (code 8456, Reporting 2026, SP05): planned_result NULL, no `results_toc_result` row, partners complete → sidebar green check and bottom bar "Section complete" agree (screenshot taken). Of 40 sampled 2026 NULL results: 12 green (12333 + 11 with no_applicable_partner), all with 0 ToC rows |
+| #2 S-1.2 | Answered Yes, 2026, no_applicable_partner: 8 of 10 green, 2 red (12136, 12059) with full rows. The red cause (target vs indicator) was not isolated, so this check is indirect. The Yes branch is unchanged by the static test (b) |
+| #3 S-1.3 | Answered No, 2026, no_applicable_partner: 7 with empty narrative all red; 3 with a narrative green |
+| #4 S-1.4 | Reporting 2025 (version 34), planned_result NULL, no_applicable_partner = TRUE: all 6 red (11013, 11009, 11000, 10064, 8666, 8103), 0 ToC rows. Same shape is green in 2026, so the year gate works |
+| #5 S-1.5 | The 28 red 2026 NULL results in the sample all fail on partners (no partner institution, or one with no delivery type: e.g. 12120, 12065, 12051). Observed on existing data, not by removing a delivery type |
+| #6 | Shape "no ToC row" confirmed (12333). Shape "row with planned_result NULL" not found in the sample; covered by the same `planned_result IS NULL` condition |
+| Not Done | None blocking. #2 and #6 are indirect, as above |
