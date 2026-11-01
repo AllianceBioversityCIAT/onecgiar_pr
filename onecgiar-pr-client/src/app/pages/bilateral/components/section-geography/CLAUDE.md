@@ -1,6 +1,6 @@
 # section-geography (bilateral)
 
-**Verified:** 2026-09-25 · P2-3832 · los países sin catálogo sub-nacional ya no bloquean el Submit; prior: 2026-09-22 · P2-3788 · el candado de solo-lectura alcanza a los controles sub-nacionales; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección; prior: 2026-08-28 · performance-refactor · a9e7ae7c4
+**Verified:** 2026-10-31 · P2-4045 · nota de copy del form clásico actualizada (comilla suelta eliminada); prior: 2026-09-25 · P2-3832 · los países sin catálogo sub-nacional ya no bloquean el Submit; prior: 2026-09-22 · P2-3788 · el candado de solo-lectura alcanza a los controles sub-nacionales; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección; prior: 2026-08-28 · performance-refactor · a9e7ae7c4
 
 ## What it is
 Geographic Focus for the W3/Bilateral result form: the main geo scope (Card 1) and the
@@ -76,9 +76,10 @@ solo el submit exige volver a evaluar una fila stale.
   without a ticket — rewording non-innovation typologies was never asked for.
 - The spec's `creation` mock must carry `resultTypeId`; the wording computeds call it, and a
   missing key fails as `undefined is not a function` only once something evaluates them.
-- The classic form's copy in `FieldsManagerService` has a **double space** ("where  the innovation")
-  and a stray trailing quote in its description. This component uses the corrected text from the
-  P2-3504 ticket, so the two strings are not byte-identical on purpose.
+- The classic form's copy in `FieldsManagerService` has a **double space** ("where  the innovation"),
+  also asserted in the server QA catalog. Its stray trailing quote was removed in P2-4045. This
+  component uses the corrected text from the P2-3504 ticket (description ends with a period), so the
+  two strings are not byte-identical on purpose.
 
 ## Pending / Coming soon
 - P2-3504 — visibility gap (Global focus) and the "No by default" request: both open on the ticket.
