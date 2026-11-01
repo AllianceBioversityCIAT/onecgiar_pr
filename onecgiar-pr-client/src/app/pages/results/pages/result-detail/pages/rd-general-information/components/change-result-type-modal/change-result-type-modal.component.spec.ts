@@ -107,6 +107,22 @@ describe('ChangeResultTypeModalComponent', () => {
     });
   });
 
+  describe('impact type-change warning (IRD-T-7)', () => {
+    it('is shown only for a P25 impact result', () => {
+      mockApiService.dataControlSE.isP25ImpactResultSignal = () => true;
+      expect(component.showImpactTypeChangeWarning).toBe(true);
+      expect(component.impactTypeChangeWarning).toBe("Changing the type deletes this result's Impact level info and its links to previous results.");
+
+      mockApiService.dataControlSE.isP25ImpactResultSignal = () => false;
+      expect(component.showImpactTypeChangeWarning).toBe(false);
+    });
+
+    it('is hidden when the signal is unavailable', () => {
+      delete mockApiService.dataControlSE.isP25ImpactResultSignal;
+      expect(component.showImpactTypeChangeWarning).toBe(false);
+    });
+  });
+
   describe('CGSpaceDesc()', () => {
     it('should generate the correct disclaimer string', () => {
       component.body.result_name = 'result'

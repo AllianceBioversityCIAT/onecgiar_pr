@@ -1,0 +1,60 @@
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()" [appBeforeUnloadWarning]="hasUnsavedChanges.bind(this)">
+  @if (loadError()) {
+    <div role="alert" class="rounded-lg border border-[var(--pr-color-red-300)] bg-white p-4 text-[14px] text-[var(--pr-color-secondary-400)]" data-cy="impact-load-error">
+      We could not load the Impact level info section. Reload the page to try again. Nothing was changed.
+    </div>
+  } @else {
+    <app-pr-select
+      label="Study type"
+      [description]="studyTypeDescription"
+      [showDescriptionLabel]="true"
+      [options]="studyTypes()"
+      optionLabel="name"
+      optionValue="id"
+      placeholder="Select study type"
+      [(ngModel)]="impactStudyTypeId">
+    </app-pr-select>
+    @if (selectedDefinition) {
+      <p class="mb-4 text-[14px] text-[var(--pr-color-secondary-400)]" data-cy="impact-study-definition">{{ selectedDefinition }}</p>
+    }
+
+    <app-pr-textarea
+      label="CGIAR contribution"
+      placeholder="Describe the CGIAR contribution to this impact"
+      [maxWords]="maxWords"
+      [wordCounterFn]="impactWordCount"
+      [(ngModel)]="cgiarContribution">
+    </app-pr-textarea>
+    <span class="sr-only" role="status" aria-live="polite" data-cy="impact-word-announcer">{{ wordCountAnnouncement }}</span>
+
+    <app-pr-yes-or-not label="Already reported in PRMS?" [(ngModel)]="previouslyReported" (selectOptionEvent)="onPreviouslyReportedChange($event)"> </app-pr-yes-or-not>
+
+    @if (previouslyReported === true) {
+      <div class="flex flex-col gap-3" data-cy="impact-previous-results">
+        @if (previousResults.length) {
+          <ul class="flex list-none flex-col gap-2 p-0" aria-label="Previously reported results">
+            @for (result of previousResults; track result.result_id) {
+              <li class="flex items-start justify-between gap-3 rounded-lg border border-[var(--pr-color-neutral-300)] bg-white p-3">
+                <div class="flex min-w-0 flex-col gap-1 text-[12px] text-[var(--pr-color-secondary-400)]">
+                  <span class="pr-code font-mono">{{ result.result_code }}</span>
+                  <span class="text-[14px] font-medium">{{ result.title }}</span>
+                  <span>{{ result.result_type_name }} · {{ result.phase_name }} · {{ result.portfolio_acronym }} · {{ result.status_name }}</span>
+                </div>
+                @if (!readOnly) {
+                  <button hlmBtn type="button" variant="ghost" size="sm" data-cy="impact-remove-result" [attr.aria-label]="'Remove result ' + result.result_code" (click)="removePreviousResult(result.result_id)">Remove</button>
+                }
+              </li>
+            }
+          </ul>
+        }
+        @if (!readOnly) {
+          <div>
+            <button hlmBtn type="button" variant="outline" data-cy="impact-add-results" (click)="openPreviousResultsPicker()">Add results</button>
+          </div>
+        }
+      </div>
+    }
+  }
+</div>
+
+<app-section-bottom-bar [disabled]="saveDisabled" (clickSave)="onSaveSection()" />

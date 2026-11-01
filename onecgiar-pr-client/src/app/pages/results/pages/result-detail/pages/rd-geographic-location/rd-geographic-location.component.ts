@@ -133,6 +133,22 @@ export class RdGeographicLocationComponent implements CanComponentDeactivate {
    * answer) must both read as complete — hence `!= null`, not `!== undefined`.
    */
   hasExtraGeoScopeAnswered = () => this.extraGeographicLocationBody.has_extra_geo_scope != null;
+
+  /**
+   * @akili-spec results/impact-results-reporting/result-detail-impact (IRD-T-6, IRD-R-9).
+   * Impact results (P25 + type 9) only offer Regional (2) or Country (3). Ids per `GeoScopeEnum`.
+   */
+  readonly impactAllowedScopeIds: number[] = [GeoScopeEnum.REGIONAL, GeoScopeEnum.COUNTRY];
+  readonly isImpactResult = computed(() => !!this.dataControlSE.isP25ImpactResultSignal?.());
+  readonly allowedScopeIds = computed<number[] | null>(() => (this.isImpactResult() ? this.impactAllowedScopeIds : null));
+  /** PLACEHOLDER copy, confirmed at IRD-T-8. */
+  readonly impactScopeHint = 'Pick Regional or Country for an impact result.';
+
+  /** True when an impact result stores a scope outside the allowed list; display only, nothing is written. */
+  storedScopeOutsideAllowed(scopeId: number | null | undefined): boolean {
+    return this.isImpactResult() && !!scopeId && !this.impactAllowedScopeIds.includes(scopeId);
+  }
+
   geographic_focus = [
     {
       name: 'Global',

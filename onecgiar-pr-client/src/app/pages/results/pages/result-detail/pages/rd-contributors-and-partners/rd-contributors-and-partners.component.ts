@@ -428,6 +428,18 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
     });
   });
 
+  /**
+   * @akili-spec results/impact-results-reporting/result-detail-impact (IRD-T-5, IRD-R-8, IRD-DD-5).
+   * Impact result = P25 AND type 9. The template takes the ToC block and the generic linked-results block
+   * out with `@if` (never CSS: the mandatory-field DOM scan would still count hidden fields) and
+   * `performSave` omits `has_innovation_link` / `linked_results`. Optional call: hosts/specs stub
+   * `dataControlSE` without the signal.
+   */
+  isImpactResult = computed(() => !!this.api.dataControlSE.isP25ImpactResultSignal?.());
+
+  // PLACEHOLDER copy (design §6.4) — to be confirmed at IRD-T-8.
+  readonly impactContributorsCopy = 'Include contributors to the whole intervention and scaling endeavour';
+
   hideWhyReportedField = computed(() => {
     const initiativeId = this.api.dataControlSE.currentResultSignal?.()?.initiative_id ?? this.api.dataControlSE.currentResult?.initiative_id;
     return initiativeId === 41 && this.fieldsManagerSE.isP25();
@@ -1233,7 +1245,9 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
     // `results_innovations_use.has_innovation_link` (`getInnovationLinkStatus`), and the Innovation Use
     // section writes only the latter. A "Yes" set there, followed by any save here, would arrive as
     // "No" and take the stored `linked_result` rows with it.
-    if (this.showsQaInnovationLink()) {
+    // IRD-T-5: impact results (P25 type 9) show neither the ToC nor the linked-results question, so
+    // the link fields are omitted too (same reasoning as above: not asked => not answered).
+    if (this.showsQaInnovationLink() || this.isImpactResult()) {
       delete sendedData.has_innovation_link;
       delete sendedData.linked_results;
     }

@@ -1,3 +1,4 @@
+import { IMPACT_RESULT_DISPLAY_NAME } from '../../../../../shared/utils/impact-result.util';
 import { computed, Injectable, signal } from '@angular/core';
 import { ProgrammeResultRow } from './programme-results.service';
 import { sectionLabel } from './programme-results-section-labels';
@@ -118,6 +119,16 @@ export const STANDARD_RF_CATEGORIES: readonly string[] = [
  */
 export const PROGRAMME_RESULTS_OTHER_CATEGORY = '__other__';
 
+/** IRD-T-7: category of a P25 impact result row; listed after the RF five and before `Other`, never inside it. */
+export const IMPACT_RESULT_CATEGORY = IMPACT_RESULT_DISPLAY_NAME;
+
+/** Pre-IRD name of the same category. A `category=Impact contribution` deep link still resolves (alias). */
+const IMPACT_CONTRIBUTION_ALIAS = 'impact contribution';
+
+function isImpactResultCategory(value: unknown): boolean {
+  return normalize(value) === normalize(IMPACT_RESULT_CATEGORY);
+}
+
 /** What the "Other" bucket is called in the dropdown and in its chip. */
 export const PROGRAMME_RESULTS_OTHER_CATEGORY_LABEL = 'Other';
 
@@ -134,7 +145,8 @@ export function isStandardRfCategory(value: unknown): boolean {
  */
 export function matchesProgrammeResultCategory(row: ProgrammeResultRow, selectedCategory: string | null): boolean {
   if (!selectedCategory) return true;
-  if (selectedCategory === PROGRAMME_RESULTS_OTHER_CATEGORY) return !isStandardRfCategory(row?.category);
+  if (selectedCategory === PROGRAMME_RESULTS_OTHER_CATEGORY) return !isStandardRfCategory(row?.category) && !isImpactResultCategory(row?.category);
+  if (normalize(selectedCategory) === IMPACT_CONTRIBUTION_ALIAS && isImpactResultCategory(row?.category)) return true;
   return normalize(selectedCategory) === normalize(row?.category);
 }
 
@@ -163,14 +175,21 @@ export function buildCategoryFilterOptions(
     .filter((value): value is string => !!value)
     .map(value => ({ value, label: value }));
 
-  if (selectedCategory && selectedCategory !== PROGRAMME_RESULTS_OTHER_CATEGORY && !isStandardRfCategory(selectedCategory)) {
+  if (present.some(isImpactResultCategory)) options.push({ value: IMPACT_RESULT_CATEGORY, label: IMPACT_RESULT_CATEGORY });
+
+  if (
+    selectedCategory &&
+    selectedCategory !== PROGRAMME_RESULTS_OTHER_CATEGORY &&
+    !isStandardRfCategory(selectedCategory) &&
+    !options.some(option => option.value === selectedCategory)
+  ) {
     // Keep the SELECTED string as the value (that is what `selectedCategory` will be compared
     // against), but prefer the payload's own casing for the label.
     const label = present.find(value => normalize(value) === normalize(selectedCategory)) ?? selectedCategory;
     options.push({ value: selectedCategory, label });
   }
 
-  if (present.some(value => !isStandardRfCategory(value))) {
+  if (present.some(value => !isStandardRfCategory(value) && !isImpactResultCategory(value))) {
     options.push({ value: PROGRAMME_RESULTS_OTHER_CATEGORY, label: PROGRAMME_RESULTS_OTHER_CATEGORY_LABEL });
   }
 

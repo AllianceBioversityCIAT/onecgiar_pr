@@ -7,6 +7,7 @@ import { ModuleTypeEnum, StatusPhaseEnum } from '../enum/api.enum';
 import { ResultsApiService } from './api/results-api.service';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
+import { isP25ImpactResult } from '../utils/impact-result.util';
 
 @Injectable({
   providedIn: 'root'
@@ -230,6 +231,9 @@ export class DataControlService {
   }
 
   isKnowledgeProductSignal = computed(() => this.currentResultSignal()?.result_type_id == 6);
+
+  // @akili-spec results/impact-results-reporting/result-detail-impact (IRD-T-1)
+  isP25ImpactResultSignal = computed(() => isP25ImpactResult(this.currentResultSignal()));
 
   get isInnoDev() {
     return this.currentResult?.result_type_id == 7;
