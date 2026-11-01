@@ -26,10 +26,16 @@
       [(ngModel)]="cgiarContribution">
     </app-pr-textarea>
     <span class="sr-only" role="status" aria-live="polite" data-cy="impact-word-announcer">{{ wordCountAnnouncement }}</span>
+    <!-- IRD-T-8 F-4: the bottom bar reads `.pr-field.mandatory` markers. `app-pr-yes-or-not` renders none and
+         `app-pr-textarea` only checks non-empty, so these hidden reporters add the Yes/No answer, the word limit and
+         the Yes => at least one link rule. -->
+    <div appFeedbackValidation labelText="Already reported in PRMS?" [isComplete]="previouslyReported !== null && previouslyReported !== undefined"></div>
+    <div appFeedbackValidation [labelText]="'CGIAR contribution (up to ' + maxWords + ' words)'" [isComplete]="!contributionOverLimit"></div>
 
     <app-pr-yes-or-not label="Already reported in PRMS?" [(ngModel)]="previouslyReported" (selectOptionEvent)="onPreviouslyReportedChange($event)"> </app-pr-yes-or-not>
 
     @if (previouslyReported === true) {
+      <div appFeedbackValidation labelText="Previously reported results" [isComplete]="previousResults.length > 0"></div>
       <div class="flex flex-col gap-3" data-cy="impact-previous-results">
         @if (previousResults.length) {
           <ul class="flex list-none flex-col gap-2 p-0" aria-label="Previously reported results">

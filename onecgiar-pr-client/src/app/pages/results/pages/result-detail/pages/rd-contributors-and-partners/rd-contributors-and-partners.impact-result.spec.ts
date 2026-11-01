@@ -32,6 +32,9 @@ describe('RdContributorsAndPartnersComponent — impact result without ToC (IRD-
     fixture.detectChanges();
   };
   const q = (testId: string) => (fixture.nativeElement as HTMLElement).querySelector(`[data-testid="${testId}"]`);
+  // app-alert-status is unrendered here (NO_ERRORS_SCHEMA): read the bound [description] property instead of text.
+  const alertDescriptions = (): string[] =>
+    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('app-alert-status')).map(e => String((e as any).description ?? ''));
   const savedPayload = () => patchSpy.mock.calls[0][0];
 
   beforeEach(async () => {
@@ -143,6 +146,18 @@ describe('RdContributorsAndPartnersComponent — impact result without ToC (IRD-
       expect(q('cp-field-linked_results')).toBeNull();
       expect(fixture.nativeElement.querySelector('app-cp-multiple-wps')).toBeNull();
       expect(q('cp-impact-copy')).not.toBeNull();
+    });
+
+    it('hides the "inherited from the HLO/Outcome in the ToC" partners note (IRD-T-8 F-6)', () => {
+      (component as any).fieldsManagerSE.isContributorsPartners2026 = () => true;
+      build({ result_type_id: 9, portfolio: 'P25', phase_year: 2026 });
+      expect(alertDescriptions().some(d => d.includes('Partner information is inherited'))).toBe(false);
+    });
+
+    it('still shows the partners note for a non-impact P25 result (IRD-T-8 F-6)', () => {
+      (component as any).fieldsManagerSE.isContributorsPartners2026 = () => true;
+      build({ result_type_id: 1, portfolio: 'P25', phase_year: 2026 });
+      expect(alertDescriptions().some(d => d.includes('Partner information is inherited'))).toBe(true);
     });
 
     it('omits has_innovation_link and linked_results from the PATCH body', () => {

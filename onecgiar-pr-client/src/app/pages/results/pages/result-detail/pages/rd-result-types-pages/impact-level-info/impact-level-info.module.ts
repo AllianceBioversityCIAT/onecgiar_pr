@@ -8,9 +8,10 @@ import { CustomFieldsModule } from '../../../../../../../custom-fields/custom-fi
 import { SectionBottomBarComponent } from '../../../components/section-bottom-bar/section-bottom-bar.component';
 import { BeforeUnloadWarningDirective } from '../../../../../../../shared/directives/before-unload-warning.directive';
 import { HlmButton } from '@spartan/button';
+import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/directives/feedback-validation-directive.module';
 
 @NgModule({
   declarations: [ImpactLevelInfoComponent],
-  imports: [CommonModule, FormsModule, ImpactLevelInfoRoutingModule, CustomFieldsModule, SectionBottomBarComponent, BeforeUnloadWarningDirective, HlmButton]
+  imports: [CommonModule, FormsModule, ImpactLevelInfoRoutingModule, CustomFieldsModule, SectionBottomBarComponent, BeforeUnloadWarningDirective, HlmButton, FeedbackValidationDirectiveModule]
 })
 export class ImpactLevelInfoModule {}

@@ -9,6 +9,7 @@ import { CanComponentDeactivate } from '../../../../../../../shared/guards/unsav
 import { SectionDirtyTrackerService } from '../../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
 import { ImpactLevelInfo, ImpactPreviousResult, ImpactStudyType, SaveImpactLevelBody } from '../../../../../../../shared/interfaces/impact-level.interface';
 import { PrYesOrNotComponent } from '../../../../../../../custom-fields/pr-yes-or-not/pr-yes-or-not.component';
+import { SaveButtonService } from '../../../../../../../custom-fields/save-button/save-button.service';
 import { countWords } from '../../../../../../../shared/utils/impact-word-count.util';
 
 /** Server limit for the contribution statement (requirements IRD-R-4). */
@@ -27,6 +28,7 @@ export class ImpactLevelInfoComponent implements OnInit, CanComponentDeactivate 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly dirtyTracker = inject(SectionDirtyTrackerService);
   private readonly dialog = inject(HlmDialogService);
+  private readonly saveButtonSE = inject(SaveButtonService);
 
   readonly maxWords = IMPACT_CONTRIBUTION_MAX_WORDS;
   /** Same word definition as the server (IRD-DD-3). */
@@ -219,6 +221,8 @@ export class ImpactLevelInfoComponent implements OnInit, CanComponentDeactivate 
         // Snapshot inside the success tap so `hasUnsavedChanges()` never reads dirty during the round-trip.
         this.dirtyTracker.snapshot(this.dirtyValue());
         this.saving.set(false);
+        // IRD-T-8 F-3: field cards clear their "Unsaved changes" chip on a SUCCESSFUL settle (`savedTick`).
+        this.saveButtonSE.savedTick.update(count => count + 1);
         this.api.alertsFe.show({ id: 'impact-saved', title: 'Impact level info', description: 'Section saved correctly', status: 'success', closeIn: 500 });
       }),
       map(() => true),

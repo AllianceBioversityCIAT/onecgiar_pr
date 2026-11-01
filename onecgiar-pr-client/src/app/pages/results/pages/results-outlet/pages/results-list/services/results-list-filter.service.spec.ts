@@ -189,5 +189,22 @@ describe('ResultsListFilterService', () => {
 
       expect(service.filters.resultLevel).toEqual(resultLevelTypes);
     });
+
+    it('relabels type 9 as "Impact result / Impact contribution" without changing its id (IRD-T-8 F-2)', () => {
+      const resultLevelTypes = [{ id: 3, result_type: [{ id: 9, name: 'Impact contribution' }, { id: 1, name: 'Policy change' }] }];
+      service.setFiltersByResultLevelTypes(resultLevelTypes);
+      const options: any[] = service.filters.resultLevel[0].options;
+      expect(options[0]).toEqual(expect.objectContaining({ id: 9, name: 'Impact result / Impact contribution' }));
+      expect(options[1].name).toBe('Policy change');
+    });
+
+    it('does not mutate the shared catalogue objects when relabelling type 9', () => {
+      const type9 = { id: 9, name: 'Impact contribution' };
+      const resultLevelTypes = [{ id: 3, result_type: [type9] }];
+      service.setFiltersByResultLevelTypes(resultLevelTypes);
+      expect(type9.name).toBe('Impact contribution');
+      expect(service.filters.resultLevel[0].options[0].name).toBe('Impact result / Impact contribution');
+      expect(service.filters.resultLevel[0].options[0].id).toBe(9);
+    });
   });
 });

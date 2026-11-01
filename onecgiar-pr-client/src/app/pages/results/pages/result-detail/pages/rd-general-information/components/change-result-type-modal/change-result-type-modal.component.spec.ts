@@ -107,6 +107,22 @@ describe('ChangeResultTypeModalComponent', () => {
     });
   });
 
+  describe('currentResultTypeLabel (IRD-T-8 F-1)', () => {
+    it('reads "Impact result" for a P25 type 9 result', () => {
+      mockApiService.dataControlSE.isP25ImpactResultSignal = () => true;
+      component.body = { ...component.body, result_type_id: 9, result_type_name: 'Impact contribution' } as any;
+      expect(component.currentResultTypeLabel).toBe('Impact result');
+    });
+
+    it('keeps the DB name for a P22 type 9 result and for other types', () => {
+      mockApiService.dataControlSE.isP25ImpactResultSignal = () => false;
+      component.body = { ...component.body, result_type_id: 9, result_type_name: 'Impact contribution' } as any;
+      expect(component.currentResultTypeLabel).toBe('Impact contribution');
+      component.body = { ...component.body, result_type_id: 1, result_type_name: 'Policy change' } as any;
+      expect(component.currentResultTypeLabel).toBe('Policy change');
+    });
+  });
+
   describe('impact type-change warning (IRD-T-7)', () => {
     it('is shown only for a P25 impact result', () => {
       mockApiService.dataControlSE.isP25ImpactResultSignal = () => true;

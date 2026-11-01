@@ -138,7 +138,7 @@ describe('PreviousResultsPickerComponent', () => {
     expect(q('[data-cy="impact-picker-phase-filter"]')?.getAttribute('aria-labelledby')).toBe('impact-picker-phase-label');
     expect(q('[data-cy="impact-picker-type-filter"]')?.getAttribute('aria-labelledby')).toBe('impact-picker-type-label');
     expect(q('#impact-picker-type-label')?.textContent).toContain('Result type');
-    expect(component.typeOptions()).toEqual([{ value: 9, label: 'Impact contribution' }]);
+    expect(component.typeOptions()).toEqual([{ value: 9, label: 'Impact result / Impact contribution' }]);
   }));
 
   it('an already selected item shows "Selected", is disabled and cannot be added twice', fakeAsync(() => {

@@ -4,6 +4,7 @@ import { GeneralInfoBody } from '../../models/generalInfoBody';
 import { ResultsListFilterService } from '../../../../../../../../pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 import { ChangeResultTypeServiceService } from '../../services/change-result-type-service.service';
 import { Router } from '@angular/router';
+import { resultTypeDisplayName } from '../../../../../../../../shared/utils/impact-result.util';
 
 interface IOption {
   description: string;
@@ -50,6 +51,11 @@ export class ChangeResultTypeModalComponent implements OnChanges {
 
   get showImpactTypeChangeWarning(): boolean {
     return !!this.api.dataControlSE.isP25ImpactResultSignal?.();
+  }
+
+  /** IRD-T-8 F-1: type 9 reads "Impact result" only for a P25 result; P22 keeps the DB name. */
+  get currentResultTypeLabel(): string {
+    return this.showImpactTypeChangeWarning ? resultTypeDisplayName(this.body?.result_type_id, this.body?.result_type_name) : this.body?.result_type_name;
   }
 
   isChagingType: boolean = false;

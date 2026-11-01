@@ -25,6 +25,15 @@ export function resultTypeDisplayName(typeId: number | string | null | undefined
   return Number(typeId) === IMPACT_RESULT_TYPE_ID ? IMPACT_RESULT_DISPLAY_NAME : (dbName ?? '');
 }
 
+/**
+ * Label for type-filter options that span P22 + P25 (Results Center "Indicator category", previous-results picker):
+ * type 9 is an "Impact contribution" in P22 and an "Impact result" in P25, so it reads both. Only the label changes.
+ */
+export function resultTypeFilterLabel(typeId: number | string | null | undefined, dbName: string | null | undefined): string {
+  if (String(dbName ?? '').startsWith(IMPACT_RESULT_DISPLAY_NAME)) return dbName;
+  return Number(typeId) === IMPACT_RESULT_TYPE_ID ? `${IMPACT_RESULT_DISPLAY_NAME} / ${dbName || 'Impact contribution'}` : (dbName ?? '');
+}
+
 /** Names of the impact areas scored Principal (tag level id 3), in impact-area id order. */
 export function principalImpactAreaNames(result: Record<string, any> | null | undefined): string[] {
   return IMPACT_AREAS.filter(area => Number(result?.[IMPACT_AREA_TAG_COLUMN[area.id]]) === TAG_LEVEL_PRINCIPAL).map(area => area.name);
