@@ -11,6 +11,7 @@ import { HlmInput } from '@spartan/input';
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
 import { ImpactPreviousResult, ImpactPreviousResultsSearchParams } from '../../../../../../../../../shared/interfaces/impact-level.interface';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../../../../shared/enum/api.enum';
+import { resultTypeFilterLabel } from '../../../../../../../../../shared/utils/impact-result.util';
 import { PrFilterSelectComponent } from '../../../../../../../../../shared/components/pr-filter-select/pr-filter-select.component';
 import { PrFilterMultiselectModule } from '../../../../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 
@@ -165,7 +166,7 @@ export class PreviousResultsPickerComponent implements OnInit {
         catchError(() => of(null)),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(result => this.typeOptions.set((result?.response ?? []).map(type => ({ value: type.id, label: type.name }))));
+      .subscribe(result => this.typeOptions.set((result?.response ?? []).map(type => ({ value: type.id, label: resultTypeFilterLabel(type.id, type.name) }))));
   }
 
   onQueryInput(value: string): void {

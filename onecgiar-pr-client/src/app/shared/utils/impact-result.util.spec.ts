@@ -1,4 +1,4 @@
-import { isP25ImpactResult, principalImpactAreaNames, resultTypeDisplayName } from './impact-result.util';
+import { isP25ImpactResult, principalImpactAreaNames, resultTypeDisplayName, resultTypeFilterLabel } from './impact-result.util';
 
 describe('isP25ImpactResult', () => {
   it('is true only for type 9 in P25', () => {
@@ -23,6 +23,16 @@ describe('resultTypeDisplayName', () => {
     expect(resultTypeDisplayName(6, 'Knowledge product')).toBe('Knowledge product');
     expect(resultTypeDisplayName(null, 'X')).toBe('X');
     expect(resultTypeDisplayName(1, null)).toBe('');
+  });
+});
+
+describe('resultTypeFilterLabel', () => {
+  it('labels type 9 as both names, idempotently, and leaves others alone', () => {
+    expect(resultTypeFilterLabel(9, 'Impact contribution')).toBe('Impact result / Impact contribution');
+    expect(resultTypeFilterLabel('9', 'Impact contribution')).toBe('Impact result / Impact contribution');
+    expect(resultTypeFilterLabel(9, 'Impact result / Impact contribution')).toBe('Impact result / Impact contribution');
+    expect(resultTypeFilterLabel(1, 'Policy change')).toBe('Policy change');
+    expect(resultTypeFilterLabel(1, null)).toBe('');
   });
 });
 

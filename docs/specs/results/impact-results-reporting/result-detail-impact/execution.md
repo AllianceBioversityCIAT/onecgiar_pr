@@ -405,3 +405,90 @@ Run by the Leader with the user's go-ahead ("Haz los pasos antes del push"). Fir
    - In the same pass, `rd-geographic-location.component.ts` was cleaned up: the `hasExtraGeoScopeAnswered = () =>` spacing is restored and the original JSDoc again sits directly above its method. The diff against HEAD for that file is now additions only, and eslint `--quiet` exits 0.
 
 Commit and push are still waiting for explicit user approval.
+
+---
+
+## IRD-T-8 — PRTest walk-through by the Leader (Claude in Chrome) — 2026-11-01
+
+The user asked the agent to run the walk-through itself ("tu puedes hacer ese test usando claude in chrome, hazlo"). It ran on PRTest after deploy 41ba0dfdd, in the user's session, on result **10039** (internal id 12507, P25 Reporting 2026, phase 36). The agent did **not** click Submit: per the task, that click belongs to the user.
+
+**What passed:**
+
+| Check | Result |
+|---|---|
+| Header and sidebar | Badge `IMPACT RESULT`; header `Impact · Impact Area Climate Adaptation and Mitigation`; 5 sections with no ToC |
+| Impact level info | Study type offers exactly Learning study and Accountability study, each with its definition. 105 words show "105 of 100 words" in red; Save is blocked by a "Contribution is too long" alert and no request is sent. With 18 words it saves and the section turns green. |
+| Previous results | Yes, then Add results; the picker opens with focus on search. Results from P22 and P25 are listed. Searched "drought" and added 7718 and 7719 by keyboard (Tab + Enter); Done returns focus to "Add results". Yes→No shows "Remove linked results?" and Cancel keeps Yes. Data persists after reload. |
+| Contributors | No ToC block. PLACEHOLDER copy shown. CIAT (Alliance) picked, lead center auto-filled, external partners Not applicable; saved, green. |
+| Geography | Only Regional and Country offered (no Global, subnational or TBD). Country + Kenya saved, green. |
+| Evidence | MELIA line present. Public link with the Climate tag saved, green. |
+| General information | Description, lead contact and the Adaptation sub-component saved. **5/5 green, Submit enabled.** |
+| Labels | Results Center row: `Impact result`; SP01 Results: `Impact result` (3 hits, no "Impact contribution") |
+| Type-change modal | The warning "Changing the type deletes this result's Impact level info and its links to previous results." is shown. Closed without changes. |
+| P25 non-impact (7718) | Has `innovation-use-info`; Global, subnational and TBD offered; ToC present; no MELIA line; no Impact level info; no impact hint |
+| P22 type 9 (5874, phase 30) | Badge `IMPACT CONTRIBUTION`; P22 sections (ToC, partners, links); no Impact level info |
+
+**Findings for the user to triage** (none blocks 5/5 or Submit):
+
+- F-1: The change-type modal shows "Current result type: **Impact contribution**" for a P25 impact result. The new label is not applied there.
+- F-2: The Indicator category filter in Results Center, and the type filter in the picker, list "Impact contribution" (the DB name), while rows say "Impact result".
+- F-3: After a successful save of Impact level info, the per-field "Unsaved changes" chips stay until reload.
+- F-4: The Impact level info bottom bar shows "Section complete" while the Yes/No answer is still empty and while the statement is over 100 words.
+- F-5: In the picker, Escape inside the type dropdown closes the whole picker and loses the search. The type checkboxes are unlabeled tab stops (the known `pr-filter-select` gap).
+- F-6: Contributors still shows the note "Partner information is inherited/sourced from the HLO/Outcome level in the ToC" for an impact result.
+- F-7: The study-type definitions appear twice: both in the field description, then the selected one again below the select.
+- F-8: PRTest already has a P25 type-9 result in a 2025 phase (5834), which is the IRD-OQ-4 case.
+
+**Still open for the user:**
+
+- Submit on 10039.
+- Confirm the PLACEHOLDER copy (contributors, MELIA, geography hint, definitions placement).
+- Decide F-1..F-8.
+- Check My results.
+
+PRTest data left behind: 10039 now has a description, lead contact, CIAT, Kenya, a cgiar.org evidence link and links to 7718/7719.
+
+### IRD-T-8 rework — fix F-1, F-2, F-3, F-4, F-6 — 2026-11-01
+
+The user approved fixing these five findings ("Si corrigelos"). F-5, F-7 and F-8 stay open for the user to decide.
+
+**Leader decision on F-2.** The type-9 filter option now reads `Impact result / Impact contribution`, because the Results Center and picker filters list P22 and P25 together. The id and value are unchanged. P22 users also see the combined label. This is a deliberate extension of IRD-R-11/R-13, and should be recorded as a design decision at archive.
+
+**Implementer (attempt 1)**
+
+| Finding | Fix |
+|---|---|
+| F-1 | `currentResultTypeLabel` in the change-type modal, gated on `isP25ImpactResultSignal` |
+| F-2 | New `resultTypeFilterLabel()` in `impact-result.util.ts`, used by `results-list-filter.service.ts` and the picker `typeOptions` |
+| F-3 | The `performSave` success tap bumps `saveButtonSE.savedTick`; a failed save does not |
+| F-4 | Hidden `appFeedbackValidation` markers for: Yes/No unanswered, statement over 100 words, Yes with no links. `FeedbackValidationDirectiveModule` is imported. |
+| F-6 | The external-partners ToC note is gated by `isCP2026() && !isImpactResult()` |
+
+- Both folder `CLAUDE.md` files touched (`impact-level-info`, `rd-contributors-and-partners`) were updated and re-stamped.
+- **Verification:** scoped Jest with `--maxWorkers=1` passed 6/6 suites after two spec expectations were fixed; eslint quiet showed 0; `ngc` showed 0 errors.
+- **Assumptions** (still open): F-3 does not use `isSavingPipe`, so the bar spinner and Next's `saveAndSettle` still do not see this save as in flight. The F-4 statement marker adds 1 to the bar's denominator.
+
+**Reviewer: `STATUS: PASS`**
+
+- **P22 and non-impact P25 safe:** the filter matches on id, and the change-type chips hide level 1, which contains type 9.
+- **F-4 markers:** they do not double-count and do not break the mandatory-field scan.
+
+**ADVISORY:**
+
+- (a) `setFiltersByResultLevelTypes` mutates `name` on the shared `ResultLevelService` catalogue objects. No screen shows it today, but it should copy the options instead.
+- (b) Use `this.body?.` consistently in `currentResultTypeLabel`.
+- (c) Add a positive F-6 test: a non-impact P25 result still shows the note.
+- (d) Next/`saveAndSettle` does not await this section's PATCH. This was a pre-existing limitation; left as is.
+- (e) Record the F-2 P22 label as a design decision.
+
+**Leader follow-up:** advisories (a), (b) and (c) were sent to an Implementer at low effort because they are cheap. (d) is left as a known limitation, and (e) is covered by the Leader decision above.
+
+**Follow-up for advisories (a), (b), (c):**
+
+- (a) `setFiltersByResultLevelTypes` now copies only the type-9 option (`{ ...opt, name }`). The shared catalogue keeps "Impact contribution", and a new spec asserts that it is not mutated.
+- (b) `currentResultTypeLabel` now uses `this.body?.` in both branches.
+- (c) Contributors spec:
+  - The old F-6 negative test passed vacuously, because `NO_ERRORS_SCHEMA` means `app-alert-status` text never renders.
+  - Both tests now read the bound `description` through an `alertDescriptions()` helper.
+  - Positive case added: a non-impact P25 result shows the note.
+- **Verification:** the 3 specs are green with `--maxWorkers=1`; eslint quiet shows 0 errors.

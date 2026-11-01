@@ -1,4 +1,5 @@
 import { computed, Injectable, signal } from '@angular/core';
+import { resultTypeFilterLabel } from '../../../../../../../shared/utils/impact-result.util';
 
 /**
  * Why the full-metadata export is unavailable, or null when it is allowed.
@@ -167,7 +168,13 @@ export class ResultsListFilterService {
 
   setFiltersByResultLevelTypes(resultLevelTypes) {
     this.filters.resultLevel = resultLevelTypes;
-    this.filters.resultLevel.forEach(resultLevel => (resultLevel.options = resultLevel?.result_type));
+    // IRD-T-8 F-2: the list spans P22 + P25, so type 9 gets a filter-only label. A copy is used so the shared
+    // catalogue objects (ResultLevelService.resultLevelList) keep their original name; the option id is unchanged.
+    this.filters.resultLevel.forEach(resultLevel => {
+      resultLevel.options = (resultLevel?.result_type ?? []).map((resultTypeOption: any) =>
+        Number(resultTypeOption.id) === 9 ? { ...resultTypeOption, name: resultTypeFilterLabel(resultTypeOption.id, resultTypeOption.name) } : resultTypeOption
+      );
+    });
     this.filters.resultLevel.forEach((resultLevelOption: any) => {
       resultLevelOption.options.forEach((resultTypeOption: any) => {
         resultTypeOption.resultLevelId = resultLevelOption.id;

@@ -16,6 +16,8 @@ import { GreenChecksService } from '../../../../../../../shared/services/global/
 import { GeneralInterceptorService } from '../../../../../../../shared/interceptors/general-interceptor.service';
 import { IpsrCompletenessStatusService } from '../../../../../../../pages/ipsr/services/ipsr-completeness-status.service';
 import { CustomFieldsModule } from '../../../../../../../custom-fields/custom-fields.module';
+import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/directives/feedback-validation-directive.module';
+import { SaveButtonService } from '../../../../../../../custom-fields/save-button/save-button.service';
 import { BeforeUnloadWarningDirective } from '../../../../../../../shared/directives/before-unload-warning.directive';
 import { environment } from '../../../../../../../../environments/environment';
 
@@ -66,7 +68,7 @@ describe('ImpactLevelInfoComponent', () => {
     };
     await TestBed.configureTestingModule({
       declarations: [ImpactLevelInfoComponent],
-      imports: [HttpClientTestingModule, FormsModule, CustomFieldsModule, HlmButton, BeforeUnloadWarningDirective],
+      imports: [HttpClientTestingModule, FormsModule, CustomFieldsModule, HlmButton, BeforeUnloadWarningDirective, FeedbackValidationDirectiveModule],
       providers: [{ provide: ApiService, useValue: api }],
       schemas: [CUSTOM_ELEMENTS_SCHEMA]
     }).compileComponents();
@@ -192,6 +194,23 @@ describe('ImpactLevelInfoComponent', () => {
       expect(alertsFe.show).toHaveBeenCalledWith(expect.objectContaining({ status: 'success' }));
     });
 
+    it('a successful save bumps savedTick so the field cards clear "Unsaved changes" (IRD-T-8 F-3)', async () => {
+      await setup();
+      const saveSE = TestBed.inject(SaveButtonService);
+      const before = saveSE.savedTick();
+      component.onSaveSection();
+      expect(saveSE.savedTick()).toBe(before + 1);
+    });
+
+    it('a failed save does not bump savedTick (IRD-T-8 F-3)', async () => {
+      await setup();
+      const saveSE = TestBed.inject(SaveButtonService);
+      const before = saveSE.savedTick();
+      resultsSE.PATCH_impactLevelInfo.mockReturnValue(throwError(() => ({ error: { message: 'x' } })));
+      component.onSaveSection();
+      expect(saveSE.savedTick()).toBe(before);
+    });
+
     it('a 400 shows the server message and keeps what the user typed', async () => {
       await setup();
       component.cgiarContribution = 'typed text';
@@ -226,6 +245,38 @@ describe('ImpactLevelInfoComponent', () => {
       component.cgiarContribution = lines(100);
       component.onSaveSection();
       expect(resultsSE.PATCH_impactLevelInfo).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('completeness markers for the bottom bar (IRD-T-8 F-4)', () => {
+    const incomplete = () =>
+      Array.from(fixture.nativeElement.querySelectorAll('[appfeedbackvalidation] .pr-field.mandatory:not(.complete)')).map((el: any) => el.previousSibling.textContent);
+
+    it('reports nothing missing for a complete section', async () => {
+      await setup();
+      expect(incomplete()).toEqual([]);
+    });
+
+    it('reports an unanswered Yes/No', async () => {
+      await setup({ get: of({ response: info({ previously_reported: null, previous_results: [] }) }) });
+      expect(incomplete()).toEqual(['Already reported in PRMS?']);
+    });
+
+    it('reports a statement over the word limit', async () => {
+      await setup();
+      component.cgiarContribution = lines(101);
+      fixture.detectChanges();
+      expect(incomplete()).toEqual(['CGIAR contribution (up to 100 words)']);
+    });
+
+    it('reports Yes with no linked result', async () => {
+      await setup({ get: of({ response: info({ previous_results: [] }) }) });
+      expect(incomplete()).toEqual(['Previously reported results']);
+    });
+
+    it('No with no links is complete', async () => {
+      await setup({ get: of({ response: info({ previously_reported: false, previous_results: [] }) }) });
+      expect(incomplete()).toEqual([]);
     });
   });
 
