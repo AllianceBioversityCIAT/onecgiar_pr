@@ -1,6 +1,6 @@
 # impact-level-info
 
-**Verified:** 2026-11-01 · branch qa-development-2026-ss · (uncommitted) · spec `results/impact-results-reporting/result-detail-impact` IRD-T-8 rework F-2/F-3/F-4: previous-results picker type filter labels type 9 via `resultTypeFilterLabel`; a successful save bumps `SaveButtonService.savedTick` (clears field-card "Unsaved changes"); hidden `appFeedbackValidation` markers feed the bottom bar (Yes/No answered, statement within 100 words, Yes => at least one link); prior: 2026-10-31 · branch qa-development-2026-ss · `docs/specs/results/impact-results-reporting/result-detail-impact` `IRD-T-4` rework 2 (portfolio in phase labels, labelled filter groups, real-keyboard CT; copy/placement to confirm at `IRD-T-8`); prior: `IRD-T-3`
+**Verified:** 2026-11-01 · branch qa-development-2026-ss · (uncommitted) · spec `results/impact-results-reporting/result-detail-impact` IRD-T-8 rework F-5/F-7 (picker Escape closes only an open filter dropdown; study-type definitions only in the field description); prior: IRD-T-8 rework F-2/F-3/F-4: previous-results picker type filter labels type 9 via `resultTypeFilterLabel`; a successful save bumps `SaveButtonService.savedTick` (clears field-card "Unsaved changes"); hidden `appFeedbackValidation` markers feed the bottom bar (Yes/No answered, statement within 100 words, Yes => at least one link); prior: 2026-10-31 · branch qa-development-2026-ss · `docs/specs/results/impact-results-reporting/result-detail-impact` `IRD-T-4` rework 2 (portfolio in phase labels, labelled filter groups, real-keyboard CT; copy/placement to confirm at `IRD-T-8`); prior: `IRD-T-3`
 
 ## What it is
 Section of a **P25 Impact contribution** result (`result_type_id = 9`, portfolio P25 only): study type,
@@ -69,12 +69,10 @@ in `resultDetailRouting`, not in `rdResultTypesPages` — `IRD-DD-1`). Mirrors `
   blurs focus to `<body>` (Tab then resumes from the old position; use `document.activeElement`, not `cy.focused()`).
 - `[disabled]` on `hlmBtn` goes through `BrnButton` (stub under Jest): specs assert `hasPrev()/hasNext()` instead.
 
-## Pending
-- Study-type definitions are listed in the select description AND shown under the selected option; guide
-  placement and exact copy are confirmed at the `IRD-T-8` HITL pause.
-
 ## IRD-T-8 rework (F-2, F-3, F-4)
 
 - F-2: picker type options use `resultTypeFilterLabel(id, name)` (type 9 reads `Impact result / Impact contribution`; value unchanged).
 - F-3: `performSave` success tap does `saveButtonSE.savedTick.update(n => n + 1)`; field cards clear their chip on it. Failure does not bump.
 - F-4: `SectionBottomBarComponent` counts `.pr-field.mandatory:not(.complete)`. `app-pr-yes-or-not` renders no marker and `app-pr-textarea` ignores the word limit, so hidden `appFeedbackValidation` divs report: Yes/No answered, statement not over `maxWords`, and (only when Yes) `previousResults.length > 0`. Module imports `FeedbackValidationDirectiveModule`.
+- F-5: the picker root has `(keydown.escape)="onEscape($event)"`. Shared filter dropdowns (`.custom_select`) are open while focus is inside; if Escape comes from inside one, the picker blurs it and `stopPropagation()`s so the CDK dialog (keydown on body) stays open with search/selection intact. No dropdown focused: Escape propagates and closes the dialog (Cancel). Shared `pr-filter-select` untouched.
+- F-7: study-type definitions appear once, in the select's description (`studyTypeDescription`); the repeated line under the select (`selectedDefinition`, `impact-study-definition`) was removed.

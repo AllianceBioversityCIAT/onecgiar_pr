@@ -211,6 +211,20 @@ export class PreviousResultsPickerComponent implements OnInit {
     this.dialogRef.close(this.selection());
   }
 
+  /**
+   * IRD-T-8 F-5. The shared filter dropdowns (`.custom_select`) are open while focus is inside them, and a
+   * keydown bubbling out of one reaches the CDK dialog's Escape handler on <body>. While one is open, Escape only
+   * closes it (blur) and is swallowed; with none open it propagates and the dialog closes (Cancel semantics).
+   */
+  onEscape(event: Event): void {
+    const active = document.activeElement as HTMLElement | null;
+    const target = event.target as HTMLElement | null;
+    const dropdown = (target?.closest?.('.custom_select') ?? active?.closest?.('.custom_select')) as HTMLElement | null;
+    if (!dropdown) return;
+    event.stopPropagation();
+    if (active && dropdown.contains(active)) active.blur();
+  }
+
   cancel(): void {
     this.dialogRef.close(undefined);
   }

@@ -214,6 +214,24 @@ function tabUntil(selector: string, max = 8): void {
       cy.focused().should('have.attr', 'data-cy', 'impact-add-results');
     });
 
+    it('Escape inside an open filter dropdown closes only the dropdown and keeps the picker, search and selection (F-5)', () => {
+      mountPage();
+      openPicker();
+      cy.get('[data-cy="impact-picker-item"]').eq(1).find('[data-cy="impact-picker-add"]').click();
+      cy.get('[data-cy="impact-picker-search"]').type('rice');
+      tabUntil('[data-cy="impact-picker-type-filter"] .field');
+      cy.focused().closest('.custom_select').should('exist');
+      cy.realPress('Escape');
+      cy.get('.cdk-dialog-container').should('exist');
+      cy.get('[data-cy="impact-picker-search"]').should('have.value', 'rice');
+      cy.get('[data-cy="impact-picker-chip"]').should('have.length', 2);
+      cy.document().then(doc => expect(Cypress.$(doc.activeElement).closest('.custom_select').length, 'dropdown closed').to.equal(0));
+      // no dropdown open: Escape still closes the whole picker
+      cy.get('[data-cy="impact-picker-search"]').focus();
+      cy.realPress('Escape');
+      cy.get('.cdk-dialog-container').should('not.exist');
+    });
+
     it('Escape closes the dialog without keeping changes and focus returns to "Add results"', () => {
       mountPage();
       openPicker();

@@ -65,12 +65,7 @@ export class ImpactLevelInfoComponent implements OnInit, CanComponentDeactivate 
     return this.sectionLoading() || this.loadError() || this.saving();
   }
 
-  /** Definition of the selected study type, shown under the select (Scenario 3.1). */
-  get selectedDefinition(): string {
-    return this.studyTypes().find(type => type.id === this.impactStudyTypeId)?.definition ?? '';
-  }
-
-  /** All definitions, listed in the field description (placement to confirm at IRD-T-8). */
+  /** All definitions, listed in the field description (the only place they appear; IRD-T-8 F-7). */
   get studyTypeDescription(): string {
     return this.studyTypes()
       .map(type => `${type.name}: ${type.definition}`)
