@@ -39,7 +39,7 @@
 - [x] Child #2 `sp-reporting-entry` = `done` (the `IMPACT_AREAS` constant exists).
 - [x] `requirements.md` approved (2026-10-31).
 - [x] `design.md` approved (2026-10-31).
-- [ ] IRD-OQ-1 exact guide copy: does not block; placeholders are confirmed at IRD-T-8.
+- [x] IRD-OQ-1 exact guide copy: placeholders kept as final at IRD-T-8 (Leader decision delegated by the user, 2026-11-01).
 
 ---
 
@@ -253,7 +253,7 @@
   - **Red run:** `npx jest --maxWorkers=2 --testPathPattern="result-sections|result-header|results-list|programme-results|change-result-type-modal"`
 - **Definition of done:** green; lint is clean; Overview finding recorded.
 
-### IRD-T-8 — HITL: visual, copy and PRTest walk-through — `[ ]`
+### IRD-T-8 — HITL: visual, copy and PRTest walk-through — `[x]`
 
 - **Type:** HITL (user)
 - **Description:**

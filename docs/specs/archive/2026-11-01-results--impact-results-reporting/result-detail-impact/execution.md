@@ -567,3 +567,30 @@ An Implementer was spawned for F-5 and F-7.
 - (a) `blur()` sends focus to `<body>` inside the dialog. Move focus to the filter label instead (follow-up).
 - (b) "AC-13" is the Jira ticket's criterion 13, not a spec AC. The citation is corrected above.
 - (c) Edge case: an Escape whose target is inside `.custom_select` while focus is not gets swallowed. Harmless.
+
+### IRD-T-8 — user sign-off — 2026-11-01
+
+The user verified F-5 and F-7 on PRTest after deploy 53a94958c, following the agent's step list (result 10040): "perfecto funciona todo como indicas".
+
+All T-8 points are now covered:
+
+- Visual and copy: the placeholders are kept as final.
+- The picker works by keyboard, and Escape in a filter is fixed.
+- 10039 reached 5/5 and was **SUBMITTED**.
+- Labels are correct in the header, sidebar, Results Center, SP Results, My results and the change-type modal.
+- Non-impact P25 (7718) and P22 type 9 (5874) are unchanged.
+
+**Final status: PASS.** IRD-T-8 is `[x]`. Note: the `[x]` was flipped seconds before this entry was appended; the evidence above was already recorded in the earlier IRD-T-8 sections.
+
+**Carried to archive / kaizen:**
+
+- F-8 / IRD-OQ-4: a 2025-phase dead end on the projects field; known limitation.
+- Reviewer advisory: picker `blur()` sends focus to `<body>`.
+- `pr-filter-select` NFR-1 gaps.
+- Next/`saveAndSettle` does not await the impact-level PATCH.
+- Record the combined "Impact result / Impact contribution" filter label as a design decision.
+- Pending user decisions from earlier:
+  - stored-Global scope;
+  - Excel "Impact Contribution" vs CSV;
+  - whether types 9/10/11 are `is_active`;
+  - the "Climate Adaptation and Mitigation" copy.
