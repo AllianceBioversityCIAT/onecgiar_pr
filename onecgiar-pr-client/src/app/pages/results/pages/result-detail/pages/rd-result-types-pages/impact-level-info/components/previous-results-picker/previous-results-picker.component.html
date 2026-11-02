@@ -1,4 +1,4 @@
-<div class="flex max-h-[85svh] min-w-0 flex-col gap-4" data-cy="impact-picker">
+<div class="flex max-h-[85svh] min-w-0 flex-col gap-4" data-cy="impact-picker" (keydown.escape)="onEscape($event)">
   <div hlmDialogHeader>
     <h2 hlmDialogTitle class="text-[18px]!">Add previously reported results</h2>
     <p hlmDialogDescription class="text-[14px]! leading-[1.5]!">Search results from any phase and portfolio. Nothing is saved until you save the section.</p>

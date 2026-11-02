@@ -165,6 +165,32 @@ describe('PreviousResultsPickerComponent', () => {
     expect(close).toHaveBeenLastCalledWith(undefined);
   }));
 
+  it('Escape inside an open filter dropdown only closes the dropdown; elsewhere it still reaches the dialog (F-5)', fakeAsync(() => {
+    setup();
+    const root = q('[data-cy="impact-picker"]') as HTMLElement;
+    const dropdown = document.createElement('div');
+    dropdown.className = 'custom_select';
+    const trigger = document.createElement('a');
+    trigger.tabIndex = 0;
+    dropdown.appendChild(trigger);
+    root.appendChild(dropdown);
+    trigger.focus();
+    expect(document.activeElement).toBe(trigger);
+
+    const bodySeen = jest.fn();
+    document.body.addEventListener('keydown', bodySeen);
+    trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(bodySeen).not.toHaveBeenCalled();
+    expect(document.activeElement).not.toBe(trigger);
+
+    const search = q('[data-cy="impact-picker-search"]') as HTMLElement;
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(bodySeen).toHaveBeenCalledTimes(1);
+
+    document.body.removeEventListener('keydown', bodySeen);
+    dropdown.remove();
+  }));
+
   it('the context list is copied, never mutated', fakeAsync(() => {
     const initial = [item(1)];
     setup({ context: { resultId: 77, initialSelection: initial } });

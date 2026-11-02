@@ -14,9 +14,6 @@
       placeholder="Select study type"
       [(ngModel)]="impactStudyTypeId">
     </app-pr-select>
-    @if (selectedDefinition) {
-      <p class="mb-4 text-[14px] text-[var(--pr-color-secondary-400)]" data-cy="impact-study-definition">{{ selectedDefinition }}</p>
-    }
 
     <app-pr-textarea
       label="CGIAR contribution"

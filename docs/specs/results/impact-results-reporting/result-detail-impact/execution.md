@@ -492,3 +492,78 @@ The user approved fixing these five findings ("Si corrigelos"). F-5, F-7 and F-8
   - Both tests now read the bound `description` through an `alertDescriptions()` helper.
   - Positive case added: a non-impact P25 result shows the note.
 - **Verification:** the 3 specs are green with `--maxWorkers=1`; eslint quiet shows 0 errors.
+
+### IRD-T-8 — PRTest re-check after ae5940b70 (perf 9c8486377) — 2026-11-01
+
+The user asked the agent to verify ("Prueba tu"). It checked result 10039 on PRTest (phase 36) through Claude in Chrome.
+
+**Test-harness note.** The Chrome tab did not paint: `requestAnimationFrame` never fired and screenshots timed out. Because of that, the bottom-bar scan and pointer clicks did not run. Where needed the agent drove the page through `window.ng.getComponent`, calling the same methods the UI calls, and through DOM `.click()`. The visible state was read back after each step.
+
+| Fix | Check | Result |
+|---|---|---|
+| F-6 | Contributors on 10039: the "Partner information is inherited…" note is absent, and the impact copy is present | PASS |
+| F-4 | Statement set to 108 words. The hidden marker for "CGIAR contribution (up to 100 words)" is not complete. After the result-detail scan, the bar reads "1 field missing" and the list names that field. | PASS |
+| F-3 | Statement edited, then `saveSection()` called. Afterwards there are 0 "Unsaved changes" chips and `hasUnsavedChanges()` is false. After reload the edit persisted, with 2 links intact. | PASS |
+| F-2 | The Results Center Indicator category filter shows "Impact result / Impact contribution", and no plain "Impact contribution" option remains | PASS |
+| F-1 | Change-type modal on 10039: "Current result type Impact result" (the `currentResultTypeLabel` getter returns "Impact result"), and the warning is present. Closed without changes. | PASS |
+
+**Not re-checked:**
+
+- The picker's type-filter label (F-2b). It is covered by Jest and needs pointer interaction in a painting tab.
+- Real pointer-driven Save: the bar's Save button did not fire in the non-painting tab. The user should click Save once with the window visible.
+
+**PRTest data change:** the statement on 10039 now ends with ", verified."
+
+### IRD-T-8 — live re-check, Submit and Leader decisions — 2026-11-01
+
+The user delegated the remaining T-8 actions and decisions to the agent ("Tú haz eso solo tú y valida los otros puntos"). The checks ran in a new tab, which painted normally.
+
+**Live checks with real pointer and keyboard input:**
+
+| Check | Result |
+|---|---|
+| F-4 | 109 words: the bar reads "1 field missing". After restoring the text it reads "Section complete". |
+| F-3 | Clicking Save draft clears the "Unsaved changes" chips (1 → 0) |
+| F-2b | The picker type filter shows "Impact result / Impact contribution" |
+| F-5 | Still reproduces: Escape inside the type dropdown closes the whole picker |
+| My results (SP01 my-work) | The 10039 card shows the `IMPACT RESULT` chip and "5 of 5 sections · ready to submit". No relabel needed. |
+| F-8 / IRD-OQ-4 | 5834 in Reporting 2025 (phase 34, closed) opens with the Impact level info section and no ToC. The W3/bilateral projects field says "Please select a TOC result above…", so it cannot be completed. |
+| **Submit** | 10039 submitted by the agent (empty comment). Status is `SUBMITTED`, the Unsubmit action is available, and the success alert was shown. |
+
+**Leader decisions** (delegated by the user):
+
+- PLACEHOLDER copy kept as final:
+  - "Include contributors to the whole intervention and scaling endeavour" mirrors the ticket wording of BR5.
+  - "Include the MELIA study or evaluation that documents the impact." mirrors ticket section 4.
+  - "Pick Regional or Country for an impact result." mirrors BR6.
+- Definitions placement: the field description shows both definitions, as P2-3901 ticket acceptance criterion 13 requires ("each with its definition available to the user"); the repeated selected-definition line is removed (F-7).
+- F-5 is to be fixed inside the picker: Escape with a filter dropdown open closes only that dropdown.
+- F-8 / IRD-OQ-4 has no code change. Impact results are a 2026 capability per the ticket ("we just need to have it as an option" this year), and the 2025 phase is closed. The 5834 dead end on the pre-2026 projects field is recorded as a known limitation, and is to be raised only if a 2025 phase is reopened.
+
+An Implementer was spawned for F-5 and F-7.
+
+### IRD-T-8 rework 2 — F-5 and F-7 — 2026-11-01
+
+**Implementer:**
+
+- F-5: the picker root gets `(keydown.escape)="onEscape($event)"`. When Escape comes from inside a filter's `.custom_select`, it blurs the focused element and calls `stopPropagation()`; otherwise Escape propagates and the dialog closes as before. The shared `pr-filter-select` is untouched.
+- F-7: the `impact-study-definition` line and the `selectedDefinition` getter are removed. The field description keeps both definitions.
+- Specs: Jest updated, a new picker Jest case, and a new CT real-Escape case.
+- The folder `CLAUDE.md` is re-stamped.
+
+**Verification:**
+
+- Jest `impact-level-info` with `--maxWorkers=1`: 2 suites, 45 tests passed.
+- `ngc`: 0 errors. `ng lint` on the folder: passes.
+- Leader ran the CT `impact-level-info.picker.cy.ts`: **14 passing, 0 failing**.
+
+**Reviewer: `STATUS: PASS`**
+
+- Cancel/Escape semantics, `done()`/`cancel()` and focus restore are unchanged.
+- The Jest case catches the mutation where `stopPropagation` is removed.
+
+**ADVISORY (non-gating):**
+
+- (a) `blur()` sends focus to `<body>` inside the dialog. Move focus to the filter label instead (follow-up).
+- (b) "AC-13" is the Jira ticket's criterion 13, not a spec AC. The citation is corrected above.
+- (c) Edge case: an Escape whose target is inside `.custom_select` while focus is not gets swallowed. Harmless.

@@ -96,9 +96,10 @@ describe('ImpactLevelInfoComponent', () => {
       expect(component.hasUnsavedChanges()).toBe(false);
     });
 
-    it('shows the definition of the selected study type', async () => {
+    it('lists every study type definition once, in the field description (no repeated selected-definition line)', async () => {
       await setup();
-      expect(fixture.nativeElement.querySelector('[data-cy="impact-study-definition"]').textContent).toContain('Learning definition');
+      expect(fixture.nativeElement.querySelector('[data-cy="impact-study-definition"]')).toBeNull();
+      expect(component.studyTypeDescription).toContain('Learning study: Learning definition');
       expect(component.studyTypeDescription).toContain('Accountability study: Accountability definition');
     });
 
