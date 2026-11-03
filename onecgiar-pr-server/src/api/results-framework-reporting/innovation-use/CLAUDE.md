@@ -1,6 +1,6 @@
 # innovation-use (results-framework-reporting)
 
-**Verified:** 2026-10-13 · fix/ai-qa-innovation-use-disaggregation · nivel de uso ausente = NULL; prior: 2026-09-03 · branch performance-refactor
+**Verified:** 2026-11-03 · qa-development-2026-ss · changes/innovation-use-farmer-count-nature (P2-4048) · prior: 2026-10-13 · fix/ai-qa-innovation-use-disaggregation · nivel de uso ausente = NULL; prior: 2026-09-03 · branch performance-refactor
 
 ## Qué es
 El servicio P25 de la sección **Innovation Use** de W1/W2: lee y escribe uso actual, proyección 2030,
@@ -56,6 +56,14 @@ Patrón completo: `innov_use_2030_justification` (P2-3515).
 - ⚠️ Y **el sexto opcional**: la ruta v1 (`summary.service.ts` → `applyOptionalInnovationUseFields` y
   `getInnovationUse`). `innov_use_2030_justification` **no** está ahí; si el campo debe existir en v1,
   hay que añadirlo.
+
+## Seguimiento Farmers: `count_unit` / `use_nature` (P2-4048)
+- Las respuestas viven **por fila** en `result_actors.count_unit` (`households`|`individuals`) y `use_nature` (`information_received`|`innovation_applied`), `varchar(32)` NULL (migración 1793300000000). Constantes y whitelist en `api/results/result-actors/farmer-follow-up.constant.ts` (`FARMERS_ACTOR_TYPE_ID = 1`, por id, nunca por nombre).
+- `buildActorData` guarda solo los 4 códigos vía `toCountUnit`/`toUseNature`; cualquier otro valor → NULL (sin fallar el save).
+- **De-dup de Farmers:** en `saveAnticipatedInnoUser`, una fila Farmers **sin id** se empareja por (tipo, unit, nature), con `IsNull()` cuando falta. Dos filas Farmers con respuestas distintas son dos filas; con respuestas iguales se fusionan. Otros tipos: solo por tipo, como antes.
+- ⚠️ `saveAnticipatedInnoUser` tiene **4 llamadores**: el controlador v2, el handler bilateral `afterCreate` (fuerza ambos campos a NULL en `prepareActors` → bilateral igual que antes), `innovation_dev.service.ts` y la actualización desde revisión (`results.service.ts`). Estos dos últimos no mandan códigos → emparejan por NULL. Consecuencia: una fila Farmers sin id y sin códigos que llega por la ruta de revisión a un resultado 2026 que ya tiene una fila Farmers respondida **inserta** una fila nueva en vez de actualizar (consistente con DD-8).
+- El `update` de una fila existente manda el payload completo: si un cliente omite los campos, se borran las respuestas. El cliente (`innovation-use-info.saveSectionWith`) siempre los envía (`?? null`).
+- Green check: la función viva `validation_innovation_use_P25` exige ambas respuestas en filas Farmers activas de bloques no "TBD", solo si `phase_year >= 2026` y `source <> 'API'`. El cuerpo vigente está en `docs/specs/archive/*innovation-use-farmer-count-nature/sql/`; la copia del repo sigue desactualizada.
 
 ## Trampas (⚠️ = ya rompió algo)
 - ⚠️ **Nivel de uso ausente → NULL, nunca `findOne({ where: { level: null } })`** (13-oct-2026). TypeORM descarta la condición `null` del WHERE y devolvía la PRIMERA fila del catálogo (nivel 0, "Innovation is not used"): todo resultado del API sin nivel quedaba en "No use". `saveInnovationUse` solo consulta el catálogo cuando viene un nivel; 0 sí es respuesta y se busca. Spec: `innovation-use.service.use-level.spec.ts`.

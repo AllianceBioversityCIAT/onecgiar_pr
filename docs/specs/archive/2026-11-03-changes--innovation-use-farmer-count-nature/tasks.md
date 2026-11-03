@@ -110,7 +110,7 @@
   - **Red run:** n/a (manual, recorded with screenshots in `execution.md`)
   - **Disqualifier:** a check needs writing to a real (non-test) result → stop and ask.
   - **Consumers:** none (no shared symbol changed)
-- **Done:** [ ] all checks recorded · [ ] visual approved by Santiago · [ ] CLAUDE.md synced
+- **Done:** [x] all checks recorded (phase duplication covered by the T-2 replicate specs, not run in a browser; 2025/IPSR covered by the T-4 falsifier specs) · [x] visual approved by Santiago (2026-11-03) · [x] CLAUDE.md synced (server `innovation-use/CLAUDE.md`, 2026-11-03)
 
 ## 4. Dependency graph
 

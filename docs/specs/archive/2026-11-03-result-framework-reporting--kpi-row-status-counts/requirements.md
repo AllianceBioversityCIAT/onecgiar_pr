@@ -185,5 +185,5 @@ The breakdown by status of the listed results SHALL be the drawer's **existing**
 
 | ID | Question | Default if unanswered |
 |---|---|---|
-| OQ-1 | Status grouping | **Decided 2026-11-03 #2 (Santiago):** Approved (6) is its own group; Submitted = 2+3. Still open with Nicoleta: whether Quality Assessed (2) should stay under Submitted (copy-only change) |
+| OQ-1 | Status grouping | **Decided 2026-11-03 #2 (Santiago):** Approved (6) is its own group; Submitted = 2+3. **Closed 2026-11-03 (Santiago):** no need to ask Nicoleta; Quality Assessed (2) stays under Submitted and Pending review is not highlighted on the row. |
 | OQ-4 | ~~Cross-phase results~~ **Closed 2026-11-03**: only 2026 versions share the current ToC phase (prdb + test Q-7) | — |
