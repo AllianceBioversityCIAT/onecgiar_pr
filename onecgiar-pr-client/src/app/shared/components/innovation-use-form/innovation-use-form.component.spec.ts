@@ -1707,6 +1707,62 @@ describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
       expect(row.sex_and_age_disaggregation).toBe(false);
     });
 
+    it('Households then unanswered (re-click) brings the grid back and unticks "does not apply" (T-7 finding)', () => {
+      build();
+      const row = farmer();
+      block.set(component, [row]);
+      detect();
+      component.onCountUnitChange(row, 'households');
+      component.onCountUnitChange(row, null);
+      detect();
+
+      expect(row.count_unit).toBeNull();
+      expect(row.sex_and_age_disaggregation).toBe(false);
+      const [rowEl] = rowEls(block.name);
+      expect(rowEl.nativeElement.querySelector('app-pr-input[label="Women"]')).toBeTruthy();
+      // The tick is bound to row.sex_and_age_disaggregation (false above): present and unticked.
+      expect(rowEl.nativeElement.querySelector('app-pr-checkbox[label="Sex and age disaggregation does not apply"]')).toBeTruthy();
+    });
+
+    it('unanswered on a row that was NOT on Households keeps a hand-set single total', () => {
+      build();
+      const row = farmer({ count_unit: 'individuals', sex_and_age_disaggregation: true, how_many: 88, women: null, men: null });
+      block.set(component, [row]);
+      component.onCountUnitChange(row, null);
+      expect(row.sex_and_age_disaggregation).toBe(true);
+      expect(row.how_many).toBe(88);
+    });
+
+    it('a NEW unsaved Farmers row on Households has "How many" required before the first save (IFC-R-5, F-1)', () => {
+      build();
+      const row = farmer({ result_actors_id: undefined, count_unit: 'households', sex_and_age_disaggregation: true, how_many: null });
+      block.set(component, [row]);
+      detect();
+      const [rowEl] = rowEls(block.name);
+      const howMany = rowEl.query(By.css('app-pr-input[label="How many"]'));
+      expect(howMany.properties['required']).toBe(true);
+    });
+
+    it('a NEW unsaved Farmers row on Individuals keeps the pre-existing unsaved behaviour (Women not required)', () => {
+      build();
+      const row = farmer({ result_actors_id: undefined, count_unit: 'individuals', women: null, men: null, how_many: null });
+      block.set(component, [row]);
+      detect();
+      const [rowEl] = rowEls(block.name);
+      expect(rowEl.query(By.css('app-pr-input[label="Women"]')).properties['required']).toBe(false);
+    });
+
+    it('a NEW unsaved non-Farmers row keeps "How many" / Women not required (pre-existing behaviour)', () => {
+      build();
+      const grid = farmer({ actor_type_id: RESEARCHERS, result_actors_id: undefined, women: null, men: null, how_many: null });
+      const single = farmer({ actor_type_id: RESEARCHERS, result_actors_id: undefined, sex_and_age_disaggregation: true, how_many: null });
+      block.set(component, [grid, single]);
+      detect();
+      const [gridEl, singleEl] = rowEls(block.name);
+      expect(gridEl.query(By.css('app-pr-input[label="Women"]')).properties['required']).toBe(false);
+      expect(singleEl.query(By.css('app-pr-input[label="How many"]')).properties['required']).toBe(false);
+    });
+
     it('Households on a row already on a single total keeps its typed total', () => {
       build();
       const row = farmer({ sex_and_age_disaggregation: true, how_many: 500, women: null, men: null });

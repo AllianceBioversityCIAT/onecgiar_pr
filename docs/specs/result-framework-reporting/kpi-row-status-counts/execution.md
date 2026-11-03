@@ -368,3 +368,17 @@ KRC-R-1 (S-1.1/1.2/1.3), KRC-R-4 (Achieved untouched in the UI), KRC-R-6.1, KRC-
 
 - **Final re-review (same Reviewer): `STATUS: PASS`.** Both text fixes are in. The JSDoc is rewritten (comment-only, lint passes). The code had already conformed at the previous review. ADVISORY: the chevron position was described two ways. The Leader aligned `tasks.md` L156 to the rendered order (total, then badge, then `›` at the end, as verified in Chrome). Re-check it at the T-4 visual step.
 - **KRC-T-5 final status: PASS (amendments #2–#4), 2026-11-03.** Requirements covered: KRC-R-1 (amended), S-1.1/1.2/1.3/1.5/3.1, KRC-R-2, KRC-R-6.1 (#4), KRC-R-6.2, KRC-R-7, KRC-R-8 (narrowed). Pending for `/akili-archive`: the stale T-3 bullet in `dashboard-lab/CLAUDE.md` L245, and an English bullet inside a Spanish section.
+
+### KRC-T-4 — PRTest pass (2026-11-03, session onecgiar-pr-41, perf 3b30d1f32, Claude in Chrome)
+- Parity button = drawer, SP03 › AoW01 › HLO 1.1:
+  - Uganda-pigs 8 = 8 (1 pending review, 7 editing)
+  - Tanzania 7 = 7 (4 pending review, 1 approved, 1 submitted, 1 editing)
+  - Kenya-dairy 2 = 2
+- Visual at 1280 px: neutral button and editing badge only. 640 px not done (the maximized window could not be resized) → pending for Santiago with DevTools.
+- Perf of `indicator-result-status-links`, SP03, 3 loads: 290 / 351 / 106 ms. All < 500 ms, once per program load. The spread is > 2×, so inconclusive under the spec rule.
+- Fail-soft not done (needs DevTools request blocking) → pending for Santiago.
+- Step 1 JSON before/after diff: not possible, the deploy had already happened.
+- Observation: twice, a chip click right after closing the drawer with Escape did not reopen it. It works after about 2 s, so it looks like a close-animation race → re-check manually.
+- **Step 3, 640 px (2026-11-03): PASS.** Santiago's DevTools screenshot at 652×913, localhost SP09 › HLO 1.1.1: "1 result reported · 1 editing ›" and "2 results reported · 2 editing ›" wrap onto their own line inside the row, with no overflow. The header overlap at that width (Tour / Report emerging result over the title) is pre-existing page chrome, not KRC.
+- **Step 4, fail-soft (2026-11-03): PASS (KRC-S-5.1).** XHR/fetch were patched in the page so `indicator-result-status-links` fails (1 blocked call), then in-app navigation to SP10 › AoW01. KPI rows rendered (200 "Report" buttons), 0 results-reported chips, 0 toasts or alerts, no console errors. The page was reloaded afterwards to drop the patch.
+- **KRC-T-4 summary:** steps 2–5 done. Step 1 (JSON before/after diff) **not run**: the deploy had already happened. Open: the Escape → chip-click race to re-check manually.
