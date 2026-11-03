@@ -623,6 +623,39 @@ describe('InnovationUseInfoComponent', () => {
       expect(bodyArg.innovation_use_2030.organization).toEqual([]);
     });
 
+    // IFC (innovation-use-farmer-count-nature): the server's existing-row save writes the whole actor payload,
+    // so a row that omits the two follow-up answers would blank what is stored.
+    it('sends count_unit and use_nature on EVERY actor row of both blocks', () => {
+      const unanswered: any = { actor_type_id: 1, result_actors_id: 2 };
+      component.innovationUseInfoBody.innovatonUse = {
+        actors: [
+          { actor_type_id: 1, result_actors_id: 1, count_unit: 'households', use_nature: 'innovation_applied' },
+          unanswered,
+          { actor_type_id: 4, result_actors_id: 3, use_nature: undefined }
+        ],
+        measures: [],
+        organization: []
+      } as any;
+      component.innovationUseInfoBody.innovation_use_2030 = {
+        actors: [{ actor_type_id: 1, result_actors_id: 4, count_unit: 'individuals' }],
+        measures: [],
+        organization: []
+      } as any;
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUse');
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0];
+      expect(bodyArg.actors.map((a: any) => [a.count_unit, a.use_nature])).toEqual([
+        ['households', 'innovation_applied'],
+        [null, null],
+        [null, null]
+      ]);
+      expect(bodyArg.innovation_use_2030.actors.map((a: any) => [a.count_unit, a.use_nature])).toEqual([['individuals', null]]);
+      // the bound rows are not mutated
+      expect('count_unit' in unanswered).toBe(false);
+    });
+
     it('should handle linked_results with id objects and plain values', () => {
       component.innovationUseInfoBody.innovatonUse = {
         actors: [],

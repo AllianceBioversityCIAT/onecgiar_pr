@@ -77,6 +77,13 @@ export class Actor {
   youth_split_applied_by_system: boolean | null;
   how_many: any;
   result_actors_id: number;
+  /**
+   * IFC (innovation-use-farmer-count-nature) — Farmers follow-up answers, per actor row. Exact codes:
+   * `households` | `individuals` and `information_received` | `innovation_applied`; `null` = unanswered.
+   * Declared here because the shared form is typed with THIS model (TS2339 trap, see the note above).
+   */
+  count_unit?: string | null;
+  use_nature?: string | null;
   has_men: any;
   has_men_youth: any;
   has_women: any;
