@@ -834,7 +834,9 @@
         [ngModel]="actorItem.use_nature"
         (ngModelChange)="selectUseNature(actorItem, $event)">
       </app-pr-radio-button>
-      <div role="radiogroup" [attr.aria-label]="farmerFollowUpCopy.useNatureQuestion" class="flex flex-col gap-[16px] px-[8px]">
+      <!-- -mt-[27px]: the Q-b card above renders its options hidden, but its bottom margin, the empty .pr-field
+           padding and the block gap still stack up. Brings header->options to Q-a's 10px (measured IFC-T-7). -->
+      <div role="radiogroup" [attr.aria-label]="farmerFollowUpCopy.useNatureQuestion" class="-mt-[27px] flex flex-col gap-[16px] px-[8px]">
         @for (option of farmerFollowUpCopy.useNatureOptions; track option.value) {
           <label class="flex cursor-pointer items-start gap-[10px]" [class.cursor-not-allowed]="saving || api.rolesSE.readOnly">
             <input

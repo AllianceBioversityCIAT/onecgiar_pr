@@ -1,6 +1,6 @@
 # innovation-use-form
 
-**Verified:** 2026-11-03 · qa-development-2026-ss · IFC-T-4 (changes/innovation-use-farmer-count-nature): Farmers follow-up block, gate and Households coupling (uncommitted); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update rules moved to `shared/utils/current-use-update.util.ts` (shared with the bilateral form); prior: 2026-09-11 · branch performance-refactor · 5791b85b9
+**Verified:** 2026-11-03 · qa-development-2026-ss · IFC-T-7 fixes (Individuals keeps a hand-set single total; Q-b gap); IFC-T-4 (changes/innovation-use-farmer-count-nature): Farmers follow-up block, gate and Households coupling (uncommitted); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update rules moved to `shared/utils/current-use-update.util.ts` (shared with the bilateral form); prior: 2026-09-11 · branch performance-refactor · 5791b85b9
 
 ## What it is
 The shared Innovation Use questionnaire: use level (0-9), narrative/actors blocks, the
@@ -77,7 +77,9 @@ Stored as ...") is NOT copy and is never rendered.
   Every other type, and every out-of-scope result, keeps the one-row rule.
 - **Households** (`onCountUnitChange`) reuses the single-total path: sets `sex_and_age_disaggregation = true`, wipes the
   grid with `cleanActor` (only when the row actually changes shape — a typed single total survives), and
-  `isHouseholdsRow()` hides the "does not apply" tick. **Individuals** after it puts the grid back.
+  `isHouseholdsRow()` hides the "does not apply" tick. **Individuals** puts the grid back ONLY when the previous
+  answer was Households; ⚠️ a row the reporter put on a single total by hand keeps its `how_many` and tick (IFC-T-7:
+  the unconditional version wiped a stored total on the first answer).
 - `onActorTypeChange` (select `ngModelChange`) clears both answers away from Farmers; it never adds keys to rows that
   never had them (IPSR payloads unchanged).
 - ⚠️ **`app-pr-radio-button` cannot draw an option description** (plain `{{ label }}` only). Q-b uses it with
@@ -88,6 +90,8 @@ Stored as ...") is NOT copy and is never rendered.
   (`null` when unanswered): the server's existing-row save writes the whole actor, so omitting them blanks the stored
   answers. Exact lowercase codes; anything else is stored as NULL. The `Actor` model of BOTH `Ipsr-step-1-body.model.ts`
   and `innovationDevInfoBody.ts` declares the two fields (TS2339 trap above).
+- Q-b radiogroup carries `-mt-[27px]`: the hidden-options card still leaves its bottom margin + empty `.pr-field`
+  padding + block gap (41px vs Q-a's 10px, measured IFC-T-7). Re-measure if `app-field-card` spacing changes.
 - Specs: the `Farmers follow-up (IFC-T-4)` describe in `innovation-use-form.component.spec.ts`, run per block.
 - Not provable in jsdom: placement and visual likeness to the mock-up (IFC-T-7 visual check).
 

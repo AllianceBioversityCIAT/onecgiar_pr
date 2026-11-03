@@ -304,3 +304,32 @@
   - V-2: there is an extra empty gap (~40 px) between the Q-b header and the first option. The cause is probably the hidden `app-pr-radio-button [hideOptions]` wrapper (T-4 advisory); Q-a has no such gap.
   - V-3: the Q-b descriptions wrap to 3 lines (left column width); the mockup has 2. Acceptable.
 - Not yet checked: IPSR step 1, save/reload, the red→green transition, Households, and phase duplication. These need writes or extra navigation.
+
+### IFC-T-7 — write pass on 8558 (id 11026), authorised by Santiago in chat (2026-11-03)
+- **BUG found (T-4 rework, fixed):** the first answer "Individual actors" on a Farmers row that the reporter had put on a single total (ticked "does not apply", `how_many = 88`) unticked the box and wiped `how_many`, through `cleanActor`. Nothing was saved: the page was reloaded and the changes discarded.
+  - Cause: `onCountUnitChange` restored the grid on any Individuals answer when `sex_and_age_disaggregation` was true. IFC-R-5 only says "choosing Individuals **again**", i.e. after Households.
+  - Fix: `innovation-use-form.component.ts`, which now restores the grid only when `previous === households`.
+  - Red: 2 new specs ("T-7 finding") failed with `Expected 88 / Received null`. Green: form spec 193/193; `--findRelatedTests` 24 suites / 1022 tests passed. Folder CLAUDE.md updated and re-stamped.
+- **After the fix, in the browser:**
+  - Individuals keeps 88 and the tick ✅
+  - Q-b "Actors who applied" selects ✅ The first attempt's failed click was a stale ref after the row re-rendered, not a code issue.
+  - Save draft → "Section saved successfully" → **Innovation use info turns green, 5 of 5, Submit enabled** (red → green, IFC-R-6 + T-5 end to end) ✅
+  - Reload → both answers persist and `how_many = 88` is kept ✅ (IFC-R-4 save/reload)
+  - The question headers turn green once answered, so V-1 is closed: the orange tone is only the unanswered mandatory state.
+  - Households hides the tick and keeps the single total 88; saved, still green ✅
+  - Re-clicking Households deselects it: the row shows the tick + 88 again, the bottom bar says "1 field missing", nothing is lost ✅ (T-4 advisory, acceptable).
+  - Final saved state of 8558: Farmers row (2030 block) = individuals / innovation_applied / how_many 88, section green.
+- **Still open in T-7:**
+  - V-2: the ~40 px gap under the Q-b header (hidden `app-pr-radio-button`) is still present.
+  - Not exercised in the browser: Individuals-after-Households restoring the grid (unit-tested only, to avoid wiping 88 again); IPSR step 1; phase duplication keeping the answers.
+  - Optional: re-run checks.sql Step 2b for 11026 (expect 1 now).
+
+### Ship status (2026-11-03)
+- qa-dev: 9e7354d4d (server) + 123c068a5 (client, includes the T-7 Individuals fix), pushed.
+- performance-refactor: merge 3b30d1f32 (session onecgiar-pr-41).
+  - Conflict `qa-catalog.en.md`: our row became v1.31, revision 2026.33.
+  - Tests on the merged tree: server 289 suites, client 454 suites green; `nest build` OK.
+  - PRTest deploy pending (~30 min).
+- **Ship note:** real result **34582** (ENABEL, Marc Schut, Editing) turns red with the new function (unanswered Farmers row). Tell users at release.
+- Open: T-7 (V-2 gap, IPSR step 1, phase duplication, catalog vs UI labels, innovation-use server CLAUDE.md line); prod migration + `after.sql` at deploy; this execution.md and the form CLAUDE.md re-stamp are still uncommitted on qa-dev.
+- **V-2 fixed (2026-11-03):** the Q-b radiogroup has `-mt-[27px]`. Header→options is now 10px on both questions, measured in the browser; it was 41px vs 10px. `--findRelatedTests` 24/1022 green; `ng lint` on the template passes.
