@@ -1,6 +1,23 @@
 <!-- IRE-R-1..4 — Impact results card. Sibling of the reporting table cards (same container/tag/button tokens). -->
 <section class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)]" data-testid="impact-results-card">
-  <header class="flex min-h-[52px] flex-wrap items-center gap-x-[10px] gap-y-[4px] border-b border-[var(--pr-border-divider)] px-[12px] py-[8px] sm:px-[20px]">
+  <header
+    class="flex min-h-[52px] cursor-pointer flex-wrap items-center gap-x-[10px] gap-y-[4px] px-[12px] py-[8px] sm:px-[20px]"
+    [class.border-b]="expanded()"
+    [class.border-[var(--pr-border-divider)]]="expanded()"
+    (click)="toggle()">
+    <button
+      type="button"
+      class="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-[6px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-400)]"
+      aria-label="Impact results"
+      [attr.aria-expanded]="expanded()"
+      [attr.aria-controls]="listId"
+      data-testid="impact-toggle">
+      <ng-icon
+        name="lucideChevronDown"
+        aria-hidden="true"
+        class="shrink-0 text-[16px] text-[var(--pr-text-secondary)] transition-transform duration-200"
+        [class.rotate-180]="expanded()" />
+    </button>
     <span
       class="pr-code shrink-0 rounded-[6px] bg-[var(--pr-color-primary-100)] px-[8px] py-[2px] text-[11.5px] font-semibold uppercase tracking-[0.02em] text-[var(--pr-color-primary-400)]"
       data-testid="impact-tag"
@@ -23,7 +40,8 @@
     </span>
   </header>
 
-  <ul class="m-0 list-none p-0">
+  @if (expanded()) {
+  <ul [id]="listId" class="m-0 list-none p-0">
     @for (area of areas; track area.id) {
       <li
         class="flex items-center gap-[10px] border-b border-[var(--pr-border-divider)] px-[12px] py-[8px] last:border-b-0 sm:px-[20px]"
@@ -53,4 +71,5 @@
       </li>
     }
   </ul>
+  }
 </section>

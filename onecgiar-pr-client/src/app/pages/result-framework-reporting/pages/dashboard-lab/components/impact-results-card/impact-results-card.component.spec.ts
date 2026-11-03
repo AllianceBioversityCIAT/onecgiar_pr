@@ -115,11 +115,91 @@ describe('ImpactResultsCardComponent', () => {
     expect(get).toHaveBeenLastCalledWith(2, 37);
   });
 
-  it('has no progress bar, ratio, percent, By AOW or chevron', async () => {
+  it('has no progress bar, ratio, percent or By AOW', async () => {
     await setup();
     const html = fixture.nativeElement as HTMLElement;
     expect(html.querySelector('[role=progressbar], progress')).toBeNull();
     expect(html.textContent).not.toMatch(/%|By AOW| of /);
-    expect(html.querySelector('ng-icon, [aria-expanded]')).toBeNull();
+  });
+
+  describe('collapse toggle (ICC-T-1)', () => {
+    const header = () => q('header')[0];
+    const toggleBtn = () => q('[data-testid=impact-toggle]')[0];
+    const click = (el: HTMLElement) => {
+      el.click();
+      fixture.detectChanges();
+    };
+
+    it('1.2 is expanded on first render', async () => {
+      await setup();
+      expect(q('[data-testid=impact-row]').length).toBe(5);
+      expect(toggleBtn().getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('1.1 header click hides rows and flips aria-expanded; second click shows rows 1-5 with counts', async () => {
+      await setup();
+      click(header());
+      expect(q('[data-testid=impact-row]').length).toBe(0);
+      expect(toggleBtn().getAttribute('aria-expanded')).toBe('false');
+      click(header());
+      expect(toggleBtn().getAttribute('aria-expanded')).toBe('true');
+      expect(q('[data-testid=impact-row]').length).toBe(5);
+      expect(Array.from(q('[data-testid=impact-row-name]')).map(text)).toEqual(IMPACT_AREAS.map(a => a.name));
+      expect(Array.from(q('[data-testid=impact-row-count]')).map(text)).toEqual(['3', '0', '5', '1', '2']);
+    });
+
+    it('1.1 a click on the chevron button toggles exactly once (bubbles to header)', async () => {
+      await setup();
+      click(toggleBtn());
+      expect(toggleBtn().getAttribute('aria-expanded')).toBe('false');
+      expect(q('[data-testid=impact-row]').length).toBe(0);
+    });
+
+    it('1.1 collapsed keeps the header content and an identical Total', async () => {
+      await setup();
+      const before = text(q('[data-testid=impact-total]')[0]);
+      click(header());
+      expect(toggleBtn().getAttribute('aria-expanded')).toBe('false');
+      expect(q('[data-testid=impact-tag]').length).toBe(1);
+      expect(text(q('h3')[0])).toBe('Impact results');
+      expect(q('[data-testid=impact-new-chip]').length).toBe(1);
+      expect(text(fixture.nativeElement)).toContain('5 Impact Areas · no targets');
+      expect(text(q('[data-testid=impact-total]')[0])).toBe(before);
+      expect(before).toBe('99');
+    });
+
+    it('header border-b only while expanded', async () => {
+      await setup();
+      expect(header().classList.contains('border-b')).toBe(true);
+      click(header());
+      expect(header().classList.contains('border-b')).toBe(false);
+    });
+
+    it('1.2 does not persist the state', async () => {
+      await setup();
+      const spy = jest.spyOn(Storage.prototype, 'setItem');
+      click(header());
+      click(header());
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    });
+
+    it('2.1 aria-controls points at the list id while expanded; name contains Impact results; chevron aria-hidden', async () => {
+      await setup();
+      const ul = q('ul')[0];
+      expect(ul.id).toBeTruthy();
+      expect(toggleBtn().getAttribute('aria-controls')).toBe(ul.id);
+      expect(toggleBtn().getAttribute('aria-label')).toMatch(/Impact results/);
+      expect(toggleBtn().querySelector('ng-icon')?.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('3.1 toggling does not issue a new counts request', async () => {
+      await setup();
+      expect(get).toHaveBeenCalledTimes(1);
+      click(header());
+      click(header());
+      await fixture.whenStable();
+      expect(get).toHaveBeenCalledTimes(1);
+    });
   });
 });

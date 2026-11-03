@@ -1,5 +1,7 @@
 // @akili-spec results/impact-results-reporting/sp-reporting-entry
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronDown } from '@ng-icons/lucide';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { of } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -13,6 +15,8 @@ interface ImpactCounts {
   total: number;
 }
 
+let nextListId = 0;
+
 type CountsParams = { initiativeId: number | string; versionId: number | string } | undefined;
 
 /**
@@ -22,7 +26,8 @@ type CountsParams = { initiativeId: number | string; versionId: number | string 
 @Component({
   selector: 'app-impact-results-card',
   standalone: true,
-  imports: [HlmBadgeImports, HlmSkeletonImports],
+  imports: [HlmBadgeImports, HlmSkeletonImports, NgIcon],
+  providers: [provideIcons({ lucideChevronDown })],
   templateUrl: './impact-results-card.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -35,6 +40,14 @@ export class ImpactResultsCardComponent {
   readonly reportArea = output<number>();
 
   readonly areas: ImpactArea[] = IMPACT_AREAS;
+
+  /** ICC-R-1: local, not persisted, expanded on first render. Never read by the counts resource (ICC-R-3). */
+  readonly expanded = signal(true);
+  readonly listId = `impact-results-list-${nextListId++}`;
+
+  toggle() {
+    this.expanded.update(v => !v);
+  }
 
   private readonly counts = rxResource<ImpactCounts, CountsParams>({
     params: () => {
