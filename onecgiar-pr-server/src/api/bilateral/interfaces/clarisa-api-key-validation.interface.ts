@@ -16,6 +16,10 @@ export interface ClarisaApiKeyValidationSuccess {
   mis: ClarisaApiKeyValidationMis;
   environment: string;
   scopes: string[];
+  /** The key's CLARISA endpoint list; `[]` for a key without one. */
+  allowed_endpoints?: string[];
+  /** `true` only when `endpoint_accessed` is in `allowed_endpoints`. */
+  endpoint_allowed?: boolean;
 }
 
 export interface ClarisaApiKeyValidationFailure {

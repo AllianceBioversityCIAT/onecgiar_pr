@@ -19,8 +19,8 @@ export type IneligibleReason =
   | 'type_not_catalogued'
   | 'no_lead_program';
 
-/** QRF-DD-3 (pending OQ-4): a `phase_year` spans Reporting and IPSR versions. Single knob. */
-const PHASE_APP_MODULE_IDS: readonly number[] = [
+/** QRF-DD-3 (pending OQ-4): a `phase_year` spans Reporting and IPSR versions. Single knob (also read by release, QIN-T-3). */
+export const PHASE_APP_MODULE_IDS: readonly number[] = [
   AppModuleIdEnum.REPORTING,
   AppModuleIdEnum.IPSR,
 ];
@@ -29,6 +29,16 @@ const SUBMITTED_STATUS_ID = ResultStatusData.Submitted.value;
 const W1W2_SOURCE = SourceEnum.Result;
 /** Initiative role of the lead program (P-9, `result.repository.ts` exemplar). */
 const LEAD_ROLE_ID = 1;
+
+/**
+ * Anything that runs a parameterized statement: the `DataSource` (default) or a transaction's
+ * `EntityManager`. QIN-DD-2 / P-1: `classify` takes one so the write routes read through the
+ * transaction's own connection (under its row lock), not a second one.
+ */
+export interface QaQueryExecutor {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  query(sql: string, parameters?: any[]): Promise<any>;
+}
 
 export interface EligibilityFilter {
   phaseYear: number;
@@ -183,15 +193,17 @@ ORDER BY r.result_type_id ASC`,
   /**
    * QRF-R-8: every requested id (deduplicated, in request order) with the FIRST failing check in the
    * order not_found, not_submitted, other_phase, not_w1w2, type_not_catalogued, no_lead_program.
-   * Reads without the eligibility predicate, so the failing reason is observable.
+   * Reads without the eligibility predicate, so the failing reason is observable. `executor` defaults to the
+   * `DataSource` (the feed's behavior, unchanged); the write routes pass their transaction's `EntityManager` (QIN-DD-2).
    */
   async classify(
     ids: readonly number[],
     phaseYear: number,
+    executor: QaQueryExecutor = this.dataSource,
   ): Promise<ClassifiedResult[]> {
     const unique = [...new Set(ids)];
     if (unique.length === 0) return [];
-    const rows: ClassifyRow[] = await this.dataSource.query(
+    const rows: ClassifyRow[] = await executor.query(
       `SELECT r.id AS result_id,
   r.result_code AS result_code,
   r.is_active AS is_active,

@@ -9,6 +9,8 @@ import { QaCatalogController } from './qa-catalog.controller';
 import { QaCatalogModule } from './qa-catalog.module';
 import { QaCatalogService } from './qa-catalog.service';
 import { QaCatalogSyncService } from './qa-catalog-sync.service';
+import { QaIntakeRepository } from './qa-intake.repository';
+import { QaIntakeService } from './qa-intake.service';
 import { QaResultsRepository } from './qa-results.repository';
 import { QaResultsService } from './qa-results.service';
 import { QaCatalogField } from './entities/qa-catalog-field.entity';
@@ -79,6 +81,14 @@ describe('QaCatalogModule wiring', () => {
   it('provides QaResultsService with its catalog and repository dependencies (QRF-DD-1)', async () => {
     const moduleRef = await compileModule();
     expect(moduleRef.get(QaResultsService)).toBeInstanceOf(QaResultsService);
+  });
+
+  it('provides QaIntakeService and QaIntakeRepository, and the controller that needs them (QIN-DD-1)', async () => {
+    const moduleRef = await compileModule();
+    expect(moduleRef.get(QaIntakeService)).toBeInstanceOf(QaIntakeService);
+    expect(moduleRef.get(QaIntakeRepository)).toBeInstanceOf(
+      QaIntakeRepository,
+    );
   });
 
   it('is imported by AppModule so the route is served', () => {

@@ -44,7 +44,7 @@
   - [x] `npx tsc --noEmit` green
   - [x] scoped Jest green
 
-### [ ] QIN-T-2 — Intake service and repository
+### [x] QIN-T-2 — Intake service and repository
 
 - **Type:** server
 - **Description:**
@@ -73,11 +73,11 @@
   - **Disqualifier:** a test that stubs `classify` to return eligibility proves nothing about DD-2. Case (a) must run the real `classify` SQL on the fixture runner, or assert the SQL text. A mocked transaction that runs its callback without a `manager` boundary proves nothing about (b).
   - **Consumers:** `qa-results.repository.spec.ts` and `qa-results.service.spec.ts` (the `classify` signature); feed `details`.
 - **Definition of done:**
-  - [ ] Falsifiers (a)–(e) executed, reds quoted
-  - [ ] `npx jest src/api/qa-catalog --maxWorkers=2` green
-  - [ ] `tsc` and eslint green
+  - [x] Falsifiers (a)–(e) executed, reds quoted
+  - [x] `npx jest src/api/qa-catalog --maxWorkers=2` green
+  - [x] `tsc` and eslint green
 
-### [ ] QIN-T-3 — Release service
+### [x] QIN-T-3 — Release service
 
 - **Type:** server
 - **Description:** `QaIntakeService.release(dto, platform)` follows design §7.3:
@@ -101,10 +101,10 @@
   - **Disqualifier:** checking only the response lists without asserting the UPDATE statements and SET clauses.
   - **Consumers:** the readers of `status_id = 2` (design P-7: versioning, ToC KPI coverage, admin panel, AoW, IPSR, delete guard) consume the transition by design. No code change; checked at T-7.
 - **Definition of done:**
-  - [ ] Falsifiers (a)–(e) executed, reds quoted
-  - [ ] scoped Jest, `tsc` and eslint green
+  - [x] Falsifiers (a)–(e) executed, reds quoted
+  - [x] scoped Jest, `tsc` and eslint green
 
-### [ ] QIN-T-4 — Routes, DTOs, auth wiring
+### [x] QIN-T-4 — Routes, DTOs, auth wiring
 
 - **Type:** server
 - **Description:**
@@ -135,10 +135,62 @@
   - **Disqualifier:** a 401 test that stubs `canActivate` proves nothing about the decorator.
   - **Consumers:** `src/app.module.spec.ts` (pins the exclude list); `qa-catalog.controller.spec.ts`; `qa-catalog.module.spec.ts`; `throttler-exclude-bilateral.guard.spec.ts` (re-run).
 - **Definition of done:**
-  - [ ] Falsifiers executed and quoted
-  - [ ] Swagger decorators present
-  - [ ] `npx jest src/api/qa-catalog src/app.module.spec.ts src/shared/guards --maxWorkers=2` green
-  - [ ] `tsc` green
+  - [x] Falsifiers executed and quoted
+  - [x] Swagger decorators present
+  - [x] `npx jest src/api/qa-catalog src/app.module.spec.ts src/shared/guards --maxWorkers=2` green
+  - [x] `tsc` green
+
+### [x] QIN-T-4b — Per-endpoint CLARISA grant on the QA routes (added 2026-11-03, owner order)
+
+- **Type:** server + contract doc
+- **Why:** CLARISA validates a key as `valid: true` for any route; a valid key without the route is not refused. Any valid key, including the bilateral one, can therefore call `/api/qa/*`, the write routes included. CLARISA is adding two fields to the `validate-api-key` response, and the request does not change:
+  - `allowed_endpoints: string[]` — the key's list; `[]` for a key without a list;
+  - `endpoint_allowed: boolean` — `true` only when `endpoint_accessed` is in that list.
+  The owner rules that **Reporting** enforces the grant on the routes it protects. CLARISA only reports it.
+- **Description:**
+  - The validation interface gains optional `allowed_endpoints?: string[]` and `endpoint_allowed?: boolean`.
+  - A new metadata decorator `@RequireClarisaEndpointGrant()`, applied at **class** level on `QaCatalogController`, covers all 5 QA routes: catalog, results, details, intake and release. Any route added there later is covered by default.
+  - `ClarisaApiKeyGuard` reads the metadata with `getAllAndOverride([handler, class])`. When it is required and `validation.endpoint_allowed !== true`, the guard throws 401 with the generic body:
+    - `false` is refused;
+    - a **missing field** is refused, so the guard fails closed;
+    - `"true"` as a string is refused.
+  - The guard's behavior for routes without the metadata (the bilateral controllers) is byte-for-byte unchanged.
+  - `docs/qa-catalog.en.md`: the auth rows of the feed, intake and release sections state that the key must have the route in its CLARISA `allowed_endpoints`, so that CLARISA answers `endpoint_allowed: true`. Plus a change-log row.
+- **Implements:** QIN-R-9 (auth), amends QIN-DD-1 — pivot 2026-11-03 in `execution.md`
+- **Files (expected):**
+  - `src/api/bilateral/interfaces/clarisa-api-key-validation.interface.ts`
+  - `src/api/bilateral/decorators/require-clarisa-endpoint-grant.decorator.ts` (new)
+  - `src/api/bilateral/guards/clarisa-api-key.guard.ts` (+ spec)
+  - `src/api/qa-catalog/qa-catalog.controller.ts` (+ spec)
+  - `docs/qa-catalog.en.md`
+- **Depends on:** T-4, T-6
+- **Blocks:** T-7
+- **Estimate:** S
+- **Review:** lenses — security (auth on write and read routes), regression (bilateral guard path)
+- **Verification:**
+  - **Falsifier:** the 4 fixtures of the CLARISA contract, through the real guard and the real reflector, on a protected handler:
+    - (a) `valid: true, endpoint_allowed: true` → pass, and `mis` is set on the request;
+    - (b) `valid: true, endpoint_allowed: false` → 401;
+    - (c) `valid: true, allowed_endpoints: [], endpoint_allowed: false` (a key without a list) → 401;
+    - (d) `valid: false` → 401, unchanged.
+    Plus:
+    - (e) `valid: true` with **no** `endpoint_allowed` field → 401 on a protected handler, and **pass** on an unprotected handler;
+    - (f) remove `@RequireClarisaEndpointGrant()` from `QaCatalogController` → a test that reads the real class metadata for every one of its 5 handlers fails;
+    - (g) a bilateral controller handler resolves the requirement to `false`/`undefined`.
+  - **Red run:** write (b) first against the current guard → it passes the request, so the test fails. Quote it.
+  - **Disqualifier:**
+    - a test that stubs `reflector.getAllAndOverride` instead of reading real decorator metadata proves nothing for (f) and (g);
+    - a test that stubs `canActivate` proves nothing.
+  - **Consumers:**
+    - `clarisa-api-key.guard.spec.ts`;
+    - `qa-catalog.controller.spec.ts`;
+    - the bilateral controller specs that construct the guard (re-run: `src/api/bilateral`).
+- **Rollout dependency (not a code task):** every PRMS environment validates against CLARISA **prod**. Once this ships, `/api/qa/*` answers 401 to every key in every environment until CLARISA prod returns `endpoint_allowed`. Deploy CLARISA prod first, with the QA key's list loaded, or accept that QA is blocked until then.
+- **Definition of done:**
+  - [x] Falsifiers executed and quoted
+  - [x] `npx jest src/api/bilateral src/api/qa-catalog --maxWorkers=2` green
+  - [x] `tsc --noEmit` green; eslint on the touched files green
+  - [x] Doc rows and change-log updated
 
 ### [x] QIN-T-5 — Unsubmit guard (Reporting and IPSR)
 
@@ -172,7 +224,7 @@
   - [x] Client modal specs green (`npx jest <both spec paths> --no-coverage`) and `ng lint` clean on the changed files
   - [x] `tsc` green
 
-### [ ] QIN-T-6 — Contract documentation
+### [x] QIN-T-6 — Contract documentation
 
 - **Type:** docs
 - **Description:** In `onecgiar-pr-server/docs/qa-catalog.en.md`, add an "Intake and release" part covering:
@@ -198,8 +250,8 @@
   - **Disqualifier:** a doc written from the design instead of the DTOs.
   - **Consumers:** the QA platform team.
 - **Definition of done:**
-  - [ ] The grep check passes
-  - [ ] Change-log row added
+  - [x] The grep check passes
+  - [x] Change-log row added
 
 ### [ ] QIN-T-7 — Live verification (HITL)
 
@@ -233,9 +285,9 @@
 ## 4. Dependency graph
 
 ```
-QIN-T-1 ── QIN-T-2 ── QIN-T-3 ── QIN-T-4 ── QIN-T-6 ──┐
-                                                     ├── QIN-T-7
-QIN-T-5 ─────────────────────────────────────────────┘
+QIN-T-1 ── QIN-T-2 ── QIN-T-3 ── QIN-T-4 ── QIN-T-6 ── QIN-T-4b ──┐
+                                                                  ├── QIN-T-7
+QIN-T-5 ──────────────────────────────────────────────────────────┘
 ```
 
 Parallel-safe: T-5 ∥ T-1..T-4 (different modules).

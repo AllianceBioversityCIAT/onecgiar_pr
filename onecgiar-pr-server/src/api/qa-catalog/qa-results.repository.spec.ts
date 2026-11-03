@@ -329,6 +329,17 @@ describe('QaResultsRepository.classify (QRF-R-8)', () => {
     expect(sqlOf()).not.toMatch(/r\.status_id = 3|r\.source = 'Result'/);
   });
 
+  it('reads through the given executor, not the DataSource (QIN-DD-2); the DataSource stays the default', async () => {
+    const { repo, query } = makeRepo([rows]);
+    const executorQuery = jest.fn().mockResolvedValue(rows);
+    const out = await repo.classify([106], 2026, { query: executorQuery });
+    expect(out.map((o) => o.reason)).toEqual([null]);
+    expect(executorQuery).toHaveBeenCalledTimes(1);
+    expect(query).not.toHaveBeenCalled();
+    await repo.classify([106], 2026);
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
   it('does not query for an empty id list', async () => {
     const { repo, query } = makeRepo();
     await expect(repo.classify([], 2026)).resolves.toEqual([]);

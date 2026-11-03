@@ -15,7 +15,12 @@
 
 ## Pending shared-file items
 
-_(none yet; QIN-T-6 adds the TRD §7 row)_
+- **TRD §7 (QIN-T-6, 2026-10-29):** add a row for the QA write surface:
+  - `POST /api/qa/results/intake` and `POST /api/qa/results/release`, behind the CLARISA key guard (`x-api-key`) and excluded from the JWT middleware;
+  - the write boundary: `result.in_qa`, `result.status_id` 3→2 for `qaed` only, and `result_qa_intake_log`;
+  - the unsubmit guard (409 while In QA in an open phase).
+
+  Apply it on the apply-capable branch (`staging`), not on this spec branch.
 
 ## Pivot Record: QIN-T-5
 
@@ -172,3 +177,235 @@ _(none yet; QIN-T-6 adds the TRD §7 row)_
     - The DoD item "`migration:check` green" is deferred: it reads `Pending: 1` until the pipeline runs.
 - **Final status:** PASS. The apply/revert check is deferred by the owner's decision.
 - **Requirements covered:** QIN-R-5 (storage), QIN-DD-6. P-14 is settled.
+
+### QIN-T-2 — Intake service and repository — PASS (2026-10-29)
+
+- **Final status:** PASS on attempt 1 (effort high). Parallel lens reviewers covered correctness and security.
+- **Files** (all under `onecgiar-pr-server/src/api/qa-catalog/`):
+  - `qa-results.repository.ts`: `classify(ids, phaseYear, executor = this.dataSource)`, plus a `QaQueryExecutor` type.
+  - `qa-results.repository.spec.ts`
+  - New: `qa-intake.constants.ts`, `qa-intake.repository.ts`, `qa-intake.repository.spec.ts`, `qa-intake.service.ts`, `qa-intake.service.spec.ts` and `dto/qa-intake-response.dto.ts` (types only).
+- **Disqualifier route for (a):** an in-memory fixture runner plus the **real** `classify` code, which is not stubbed. The runner applies the statement effects and has a real staged-commit transaction boundary. SQL-text assertions back it up.
+- **Falsifiers (mutation → red, quoted by the Implementer):**
+  - (a) Updating every eligible id → 500, because the CAS matches 1 of 2 rows. With the assertion also off, the UPDATE params are `[1]` vs `+ 2`.
+  - (b) `markInQa` on `dataSource` → committed `- "in_qa": 0 / + "in_qa": 1`, so the UPDATE survived the rollback. The "every statement runs on the manager" test also fails. The variant that moves only the audit INSERT out of the transaction was argued, not observed.
+  - (c) Assertion off → `Received promise resolved instead of rejected`, carrying a lying `changed: true`.
+  - (d) `classify` called without `manager` → `Expected: {"query": [Function query]} / Received: undefined`.
+  - (e) Ids appended to the log → the log-line regex fails.
+- **Implementer verification:** Jest qa-catalog 44 suites, 932 tests. `tsc`: 0. eslint: 0.
+- **Consumers:** `qa-results.repository.spec.ts`, `qa-results.service.spec.ts` and `qa-results.details.spec.ts` are green.
+- **Evidence re-run (Leader inline): VERIFIED.** Jest 44 suites and 932 tests, `tsc` 0, eslint 0.
+- **Reviewer, correctness lens: PASS.**
+  - Classify order and reasons follow QRF-R-8 and come out in request order.
+  - The changed/unchanged split uses the locked `in_qa`.
+  - The snapshot is taken after `FOR UPDATE`.
+  - The `affectedRows` assertion is sound whether or not FOUND_ROWS is set, because `in_qa = 0` is in the WHERE clause.
+  - The call is idempotent, and the feed default is preserved.
+- **Reviewer, security lens: PASS.**
+  - Every value is bound as a parameter.
+  - The write boundary holds (R-7).
+  - The audit row holds the guard's platform and no person or key.
+  - Logs carry only the error class name, and the 500 body is fixed.
+  - Lock order is `ORDER BY id`.
+- **ADVISORY (4R, recorded, does not gate):**
+  - RISK: the service accepts any length of `result_ids`. The ≤50 cap depends on the QIN-T-4 DTO; check it there. A second guard in the service is optional.
+  - RISK and RESILIENCE: `FOR UPDATE` also locks ineligible and unknown ids. An unknown id above max(id) takes a gap lock that briefly blocks `result` INSERTs. A deadlock or lock timeout returns a generic 500. QIN-T-6 could document that a 500 is safe to retry (the batch is atomic and idempotent).
+  - RELIABILITY: a NULL `in_qa` would make the CAS miss and the whole batch return 500. Confirm the column is NOT NULL DEFAULT 0 on prtest and prod with `SHOW CREATE TABLE result` at QIN-T-7.
+  - RISK: `error.constructor.name` goes into the log. It is safe today.
+  - READABILITY: `QaIntakeTaken.result_code` is non-null only by invariant.
+- **Not Done / Assumptions (verbatim summary, no owed item):**
+  - `EntityManager.query` returns the OkPacket for an UPDATE (`MysqlQueryRunner.js:144-186`). It was not run on a real DB.
+  - The CAS predicate is asserted as text only.
+  - All deduped ids are locked.
+  - The service also dedupes.
+  - The wording of `QA_WRITE_FAILED_MESSAGE` was chosen by the Implementer: "The QA change could not be applied".
+- **Requirements covered:** QIN-R-2 (404 and dedupe), R-3, R-5, R-7, R-8, R-9 (intake half). NFR concurrency and observability. DD-2, DD-3, DD-6.
+- **Spawns:**
+  - implementer: not reported by host (32 tool uses, ~171k tokens). Ended: complete.
+  - reviewer, correctness: not reported by host. Ended: pass.
+  - reviewer, security: not reported by host (8 tool uses, ~73k tokens). Ended: pass.
+- **Running totals:**
+  - 3 of 7 tasks closed.
+  - 5 of 10 review rounds.
+  - ≈ 1 380 diff lines including tests and docs (T-1 ≈ 80, T-5 ≈ 370, T-2 ≈ 930) against the ~1 600 LOC budget.
+  - Within budget. The projection crosses the LOC line during QIN-T-3 or T-4, and the tripwire stops there.
+
+### QIN-T-3 — Release service — PASS (2026-10-29)
+
+- **Final status:** PASS on attempt 1 (effort high). Parallel lens reviewers covered correctness and security.
+- **Files** (all under `onecgiar-pr-server/src/api/qa-catalog/`):
+  - `qa-intake.service.ts`: `release`, `applyRelease`, `releaseReason`, `QaReleaseInput`; `guarded` now takes `route`.
+  - `qa-intake.repository.ts`: `lockRowsForRelease`, `releaseQaed`, `releaseNotQaed`, a private `casRelease`.
+  - `dto/qa-intake-response.dto.ts`: the release types.
+  - `qa-results.repository.ts`: `PHASE_APP_MODULE_IDS` is now exported.
+  - New: `qa-release.service.spec.ts` (24 tests), `qa-release.repository.spec.ts` (6 tests).
+  - Intake specs: byte-identical.
+- **SQL:**
+  - `releaseQaed`: `SET status_id = 2, in_qa = 0`.
+  - `releaseNotQaed`: `SET in_qa = 0`.
+  - Both use `WHERE id IN (…) AND is_active = 1 AND status_id = 3 AND in_qa = 1`.
+  - Lock: `SELECT id, in_qa, status_id, EXISTS(version in phase) AS in_phase … ORDER BY id FOR UPDATE`.
+- **Falsifiers (mutation → red, quoted by the Implementer):**
+  - (a) `not_qaed` also sets `status_id` → `Object { "in_qa": 0, + "status_id": 2 }`.
+  - (b) Dropping the service's `not_in_qa` check → the CAS catches it, 500. Dropping the CAS check too → `+ Array [ Object { "outcome": "qaed", "result_id": 3 } ]`.
+  - (c) Dropping `not_submitted` → 500 through the CAS.
+  - (d) Adding `status = 1` to the SET → the SET-columns whitelist test fails.
+  - (e) `qaed` audited as `release_not_qaed` → `- "release_qaed" + "release_not_qaed"`.
+- **Implementer verification:** Jest qa-catalog 46 suites, 962 tests. `tsc`, eslint and prettier: OK.
+- **Evidence re-run (Leader inline): VERIFIED.** Jest 46 suites and 962 tests, `tsc` 0, eslint 0.
+- **Reviewer, correctness lens: PASS.** It ruled on the Implementer's declared gaps:
+  1. Only `not_found` comes from `classify`; the other reasons come from the locked row. **Conforming:** the "(from classify)" in §7.3 qualifies only `not_found`, and DD-2's requirement column is R-3.
+  2. Intake-only reasons do not block a release. **Conforming:** R-4 names exactly three conditions, and §6 names four reasons.
+  3. `is_active = 1` added to the CAS. **Conforming.**
+  4. Duplicate ids fail closed (500 and rollback). **Hand-off to QIN-T-4: the 400 for a duplicate `result_id` (R-2).**
+  5. The duplicated fixture runner: a readability cost only.
+
+  No spec tension was found.
+- **Reviewer, security lens: PASS.**
+  - Every value is bound as a parameter.
+  - Only `releaseQaed` writes `status_id = 2`, and only under the locked conditions plus the CAS.
+  - Phase is enforced by the locked `in_phase` read, which is sound because `version_id` is locked.
+  - DD-11 holds.
+  - The audit and log output are clean.
+  - Only `result` rows are locked.
+- **ADVISORY (4R, recorded, does not gate):**
+  - RISK: optional defense in depth, an `EXISTS(version in phase)` predicate inside `casRelease`.
+  - RESILIENCE: document that `lockRowsForRelease` deliberately does not lock `version`.
+  - READABILITY: narrow the `set` type to a literal union, and simplify the tuple loop in `applyRelease`.
+  - RELIABILITY: `result_code` is non-null only by invariant.
+- **Forward pointer → QIN-T-4:** the DTO must reject a duplicate `result_id` in `items` with 400, and cap both lists at 50. Without that, duplicates become opaque 500s. Raised by both reviewers here and by the T-2 security advisory.
+- **Requirements covered:** QIN-R-4 (all three scenarios), R-5, R-7, R-8, R-9 (release half). DD-3, DD-9, DD-11.
+- **Spawns:**
+  - implementer: not reported by host (28 tool uses, ~174k tokens). Ended: complete.
+  - reviewer, correctness: not reported by host. Ended: pass.
+  - reviewer, security: not reported by host (7 tool uses, ~73k tokens). Ended: pass.
+- **Running totals:**
+  - 4 of 7 tasks closed.
+  - 7 of 10 review rounds.
+  - LOC ≈ 2 530 insertions from `7537b0fd1`: 1 462 committed before T-3, plus T-3's 288 production lines and 777 new spec lines.
+
+## Budget tripwire: QIN-T-3 (2026-10-29)
+
+- **Budget (design §13):** 7 tasks, ~1 600 LOC (≈ 550 production, ≈ 1 050 specs, fixtures and doc), 10 review rounds.
+- **Actual after 4 of 7 tasks:** LOC ≈ 2 530, **about 1.6× the budget**, with T-4 and T-6 still to come. Review rounds 7 of 10, with T-4 (security lens, likely 2) and T-6 and T-7 (checklists) still to come, so rounds will also exceed the budget.
+- **Cause:**
+  - Test volume. The disqualifiers forbid stubbing `classify` and forbid checking only the response, so T-2 and T-3 each built an in-memory SQL fixture runner with a real staged-commit boundary. T-3 duplicated it to keep the intake specs untouched. About 1 450 spec lines came from T-2 and T-3 alone.
+  - T-5 grew by the pivot's client change, about 4 files.
+  - Production code is close to the ≈ 550 estimate.
+- **Action:** the run stops for the owner. No further task starts without approval. This tripwire is never auto-approved.
+- **Owner decision (2026-10-29):** "Si", in answer to "¿Seguimos con T-4 aceptando el exceso, o prefieres pausar aquí?". The overrun is accepted, and the run continues with QIN-T-4. Projection at approval: about 3 100 LOC and 11 review rounds at close.
+
+### QIN-T-4 — Routes, DTOs, auth wiring — PASS (2026-10-29)
+
+- **Final status:** PASS on attempt 1 (effort high). One reviewer: the spec gate with a security lens.
+- **Files:**
+  - New: `onecgiar-pr-server/src/api/qa-catalog/dto/qa-intake.dto.ts` and `dto/qa-release.dto.ts`, each with a spec.
+  - Edited: `qa-catalog.controller.ts`, `qa-catalog.module.ts`, `src/app.module.ts`, and the specs `qa-catalog.controller.spec.ts`, `qa-catalog.module.spec.ts`, `src/app.module.spec.ts`.
+- **Red run (b), observed at task start:** `app.module.spec.ts › should configure middlewares…`, `toHaveBeenCalledWith` with `- {"path": "api/qa/results/intake"}` and `- {"path": "api/qa/results/release"}` missing.
+- **Falsifiers (mutation → red):**
+  - (a) Removing `@BilateralClarisaEndpoint` from release → the metadata test on the real method fails, and 8 tests return 401 through the real guard.
+  - (b) Removing the exclude entry → `app.module.spec` fails.
+  - (c) Adding `approved` to the outcome list → the 400 naming `outcome` fails, in both the DTO and controller specs, and the service is not called.
+  - (d) Removing `@ArrayUnique` → the duplicate-id test fails.
+  - (e) Removing `@ArrayMaxSize` from either DTO → the 51-entries test fails on both routes.
+  - (f) `forbidNonWhitelisted: false` → the platform_id-in-body test fails.
+  - (g) Passing `undefined` as the platform → the platform-from-guard test fails.
+- **Implementer verification:**
+  - Jest (qa-catalog, `app.module.spec`, `shared/guards`): 52 suites, 1028 tests.
+  - `tsc`: 0. eslint: 0. prettier: clean.
+- **Evidence re-run (Leader inline): VERIFIED.** 52 suites and 1028 tests, `tsc` 0.
+- **Reviewer: PASS.**
+  - The class-level `@ApiHeader` meets the per-method wording of §7.1, the same as the feed.
+  - The throttler skips the routes through the `/api/qa/` prefix and the class-level `@SkipThrottle`.
+  - The JWT cannot substitute for the key: the guard reads only `x-api-key`, and a missing decorator fails closed.
+  - Intake duplicates count against the 50 cap as sent, which agrees with R-2.
+  - The forward pointer from T-2 and T-3 is closed: duplicates in release items return 400, and both lists are capped at 50.
+- **ADVISORY (4R, recorded, does not gate):**
+  - RELIABILITY: tasks.md lists a spec for `qa-intake-response.dto.ts`, but none exists. The file holds types only, and the controller tests cover its shape. **Accepted gap.**
+  - READABILITY: `@ArrayUnique` adds a misleading message when the items are not objects. Cosmetic.
+  - RISK: until CLARISA grants the two permission strings, every call returns 401. Tracked in the pre-flight checklist and QIN-T-7.
+- **Not Done / Assumptions (verbatim summary, no owed item):**
+  - Class-level `@ApiHeader`.
+  - `@HttpCode(200)`.
+  - No null-platform handling.
+  - The docs are T-6.
+- **Requirements covered:** QIN-R-1, R-2, R-9 (shape). DD-1, DD-10.
+- **Spawns:**
+  - implementer: not reported by host (21 tool uses, ~149k tokens). Ended: complete.
+  - reviewer: not reported by host. Ended: pass.
+- **Running totals:**
+  - 5 of 7 tasks closed.
+  - 8 of 10 review rounds.
+  - LOC ≈ 3 160, an overrun the owner accepted on 2026-10-29.
+
+### QIN-T-6 — Contract documentation — PASS (2026-10-29)
+
+- **Final status:** PASS on attempt 1 (effort low). Override (a) applies, because the QA team executes against this contract, so a Reviewer was owed.
+- **Files:** `onecgiar-pr-server/docs/qa-catalog.en.md`: a new "Intake and release" part (+140 lines) and the v1.28 change-log row.
+- **Implementer verification:** a grep check (`scratchpad/chk.sh`, not committed) of 31 items over the new part. The items are every DTO property, every reason, outcome and action, both routes, the table name and the audit columns.
+  - Green: `FAIL=0`.
+  - Red: removing `not_in_qa` gave `not_in_qa 0 / FAIL=1`. The doc was then restored.
+- **Evidence re-run (Leader inline): VERIFIED.** `FAIL=0`.
+- **Reviewer: PASS.** Every factual statement matches the code at `d1c3a1fb9`, and the doc follows the code, not the design. The four statements the Implementer flagged were confirmed:
+  - request order (`qa-results.repository.ts:204,227`);
+  - a repeated release answers `not_in_qa`;
+  - `not_in_qa` applies to both outcomes;
+  - a closed phase does not block unsubmit (`result.repository.ts:286`).
+
+  The examples contain no keys or real ids.
+- **ADVISORY (4R, recorded, does not gate):**
+  - The `[advisory-grade]` statement "a 500 changes nothing; repeating is safe" is supported by the code.
+  - READABILITY: line 15, "The calls write nothing else", sits awkwardly next to the audit row. Suggested wording: "nothing else on the result; each change also writes one audit row".
+  - READABILITY: an unsubmit in a closed phase does not clear `in_qa`, so a later release answers `not_submitted`. One sentence in "Unsubmit while In QA" could explain it.
+- **Requirements covered:** QIN-R-10.
+- **Spawns:**
+  - implementer: not reported by host (14 tool uses, ~113k tokens). Ended: complete.
+  - reviewer: not reported by host. Ended: pass.
+- **Running totals:**
+  - 6 of 7 tasks closed.
+  - 9 of 10 review rounds.
+  - LOC ≈ 3 300.
+
+
+---
+
+## Pivot Record — QIN-T-4b added (2026-11-03)
+
+- **Trigger:** 2026-11-03 probe from the Leader of `validate-api-key`, made with the QA test key against CLARISA prod. It returned `valid: true` for every route, including `/zzz/nada` and `/api/bilateral/result/create`. A random key → 401. CLARISA does not refuse a key on a route outside its list. So any valid key, including the bilateral one, passes the guard on `/api/qa/*`, the write routes included.
+- **Context:** every PRMS environment validates against CLARISA **prod**, which centralises the logs; `environment: "TEST"` in the response is the key's. The CLARISA team is adding `allowed_endpoints` and `endpoint_allowed` to the response. The request is unchanged, and the contract was supplied by the owner on 2026-11-03.
+- **Owner decision (2026-11-03):** Reporting enforces the grant. A protected route requires `endpoint_allowed === true`; otherwise it returns 401. Routes without protection (bilateral) are unchanged.
+- **Spec amendment:**
+  - new task QIN-T-4b in `tasks.md`;
+  - QIN-DD-1 amended there: the guard now also checks the grant on the QA controller.
+  - Scope: all 5 `/api/qa/*` routes, protected at class level.
+- **Rollout dependency:** until CLARISA **prod** returns `endpoint_allowed`, every `/api/qa/*` call answers 401, in every environment. The guard fails closed by design.
+
+---
+
+## QIN-T-4b — Per-endpoint CLARISA grant on the QA routes
+
+- **Date:** 2026-11-03 · **Mode:** gated (owner order: "tú debes proteger el servicio acá en Reporting")
+- **Attempt 1 — Implementer (T2, medium):**
+  - Added the optional `allowed_endpoints` / `endpoint_allowed` fields to the interface.
+  - Added `@RequireClarisaEndpointGrant()` (new) and applied it at class level on `QaCatalogController`.
+  - Guard: `getAllAndOverride([handler, class])`; a required grant with `endpoint_allowed !== true` → 401 with the generic body, before `mis` is set.
+  - `qa-catalog.en.md`: auth and 401 rows, plus change-log v1.29.
+- **Red run (quoted by the Implementer):** written against the unchanged guard, with the decorator and interface already present:
+  ```
+  ✕ (b) endpoint_allowed false -> 401 generic body
+    expect(received).rejects.toThrow()
+    Received promise resolved instead of rejected
+    Resolved to value: true
+  ```
+  (c), (e), the `"true"` string case and (f) also failed; (a), (d) and (g) passed, as expected.
+- **Falsifiers after the change:** (a) through (g) and the `"true"` string all PASS through a real `Reflector` and real decorator metadata. (f) with the decorator removed → `Tests: 7 failed, 73 passed, 80 total`; the decorator was then restored.
+- **Evidence re-run (Leader, non-author): VERIFIED**
+  - `npx jest src/api/bilateral src/api/qa-catalog --maxWorkers=2` → Test Suites 93 passed, Tests 2535 passed.
+  - `tsc --noEmit` clean.
+- **Reviewer (T3), attempt 1: PASS.** Lenses: security and regression. Fail-closed confirmed; class-level metadata covers all 5 handlers; no change for routes without the metadata; 401 body is generic; the docs match the code; no secrets.
+- **Advisories (not gating):**
+  - add `BilateralWebhookController` to (g);
+  - a separate undecorated class for the unprotected half of (e);
+  - assert the 401 body end to end on one QA route.
+- **Rollout dependency:** every `/api/qa/*` call is a 401 until CLARISA **prod** returns `endpoint_allowed`.
+- **Totals:** 7 tasks closed of 8 · 10 review rounds.

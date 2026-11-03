@@ -154,6 +154,8 @@ export class AppModule implements NestModule {
         { path: 'api/qa/catalog', method: RequestMethod.ALL },
         { path: 'api/qa/results', method: RequestMethod.ALL },
         { path: 'api/qa/results/details', method: RequestMethod.ALL },
+        { path: 'api/qa/results/intake', method: RequestMethod.ALL },
+        { path: 'api/qa/results/release', method: RequestMethod.ALL },
       )
       .forRoutes(
         { path: 'api/*path', method: RequestMethod.ALL },

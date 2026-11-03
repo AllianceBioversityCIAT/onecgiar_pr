@@ -12,9 +12,18 @@ import {
 import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { BilateralClarisaEndpoint } from '../bilateral/decorators/bilateral-clarisa-endpoint.decorator';
+import { RequireClarisaEndpointGrant } from '../bilateral/decorators/require-clarisa-endpoint-grant.decorator';
+import { ExternalPlatform } from '../bilateral/decorators/external-platform.decorator';
 import { ClarisaApiKeyGuard } from '../bilateral/guards/clarisa-api-key.guard';
+import { ClarisaApiKeyValidationMis } from '../bilateral/interfaces/clarisa-api-key-validation.interface';
 import { QaCatalogQueryDto } from './dto/qa-catalog-query.dto';
 import { QaCatalogResponse } from './dto/qa-catalog-response.dto';
+import { QaIntakeDto } from './dto/qa-intake.dto';
+import {
+  QaIntakeResponse,
+  QaReleaseResponse,
+} from './dto/qa-intake-response.dto';
+import { QaReleaseDto } from './dto/qa-release.dto';
 import { QaResultsDetailsDto } from './dto/qa-results-details.dto';
 import { QaResultsQueryDto } from './dto/qa-results-query.dto';
 import {
@@ -22,6 +31,8 @@ import {
   QaResultsListResponse,
 } from './dto/qa-results-response.dto';
 import { QaCatalogService } from './qa-catalog.service';
+import { QA_INTAKE_ROUTE, QA_RELEASE_ROUTE } from './qa-intake.constants';
+import { QaIntakeService } from './qa-intake.service';
 import { QaResultsService } from './qa-results.service';
 
 /**
@@ -37,11 +48,13 @@ import { QaResultsService } from './qa-results.service';
   description: 'CLARISA API key for the QA platform',
 })
 @UseGuards(ClarisaApiKeyGuard)
+@RequireClarisaEndpointGrant()
 @SkipThrottle()
 export class QaCatalogController {
   constructor(
     private readonly qaCatalogService: QaCatalogService,
     private readonly qaResultsService: QaResultsService,
+    private readonly qaIntakeService: QaIntakeService,
   ) {}
 
   @Get('catalog')
@@ -104,5 +117,53 @@ export class QaCatalogController {
     body: QaResultsDetailsDto,
   ): Promise<QaResultsDetailsResponse> {
     return this.qaResultsService.details(body);
+  }
+
+  /**
+   * QIN-R-1 / R-2 / R-9 (QIN-DD-1). A write that answers 200 with every id in `taken` or `not_taken`. The calling platform
+   * is the one CLARISA resolved from the key (`@ExternalPlatform()`), never a body field: `forbidNonWhitelisted` rejects a
+   * `platform_id` sent by the caller. Same guard as the feed, its own permission string, no `ResponseInterceptor`.
+   */
+  @Post('results/intake')
+  @HttpCode(200)
+  @BilateralClarisaEndpoint(QA_INTAKE_ROUTE)
+  @ApiOperation({
+    summary:
+      'Take a batch of submitted W1/W2 results into QA (marks them In QA)',
+  })
+  intakeResults(
+    @Body(
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      }),
+    )
+    body: QaIntakeDto,
+    @ExternalPlatform() platform: ClarisaApiKeyValidationMis,
+  ): Promise<QaIntakeResponse> {
+    return this.qaIntakeService.intake(body, platform);
+  }
+
+  /** QIN-R-1 / R-2 / R-9 (QIN-DD-1). Ends QA on a batch with an outcome per result (`qaed` / `not_qaed`). */
+  @Post('results/release')
+  @HttpCode(200)
+  @BilateralClarisaEndpoint(QA_RELEASE_ROUTE)
+  @ApiOperation({
+    summary:
+      'End QA on a batch of results: Quality Assessed (qaed) or back to the program (not_qaed)',
+  })
+  releaseResults(
+    @Body(
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      }),
+    )
+    body: QaReleaseDto,
+    @ExternalPlatform() platform: ClarisaApiKeyValidationMis,
+  ): Promise<QaReleaseResponse> {
+    return this.qaIntakeService.release(body, platform);
   }
 }
