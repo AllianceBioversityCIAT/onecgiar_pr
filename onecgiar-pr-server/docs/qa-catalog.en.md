@@ -20,7 +20,7 @@ The catalog describes **which fields exist and how they behave** (type, control 
 |---|---|
 | Method / path | `GET /api/qa/catalog` |
 | Query | `phase_year` (required, integer), for example `2026` |
-| Auth | Header `x-api-key`: a CLARISA API key whose registered permissions include `/api/qa/catalog`. The PRMS user header `auth` is **not** accepted as a substitute. |
+| Auth | Header `x-api-key`: a CLARISA API key whose registered permissions include `/api/qa/catalog`. CLARISA must answer `endpoint_allowed: true` for the route called, which requires the route in the key's CLARISA `allowed_endpoints`; a valid key without that grant is a 401, so a key valid for another platform or for the bilateral routes does not pass. The PRMS user header `auth` is **not** accepted as a substitute. |
 | Body of a 200 | The catalog object below, returned as-is (no `{ response, statusCode }` wrapper). |
 | Caching | Content changes only on a PRMS deploy. `catalog_version` changes with it; use it to detect a new revision. It also changes when the response shape changes for the same catalog (a property added to or removed from what the endpoint returns). `generated_at` changes on every call and is not a revision signal. |
 
@@ -260,7 +260,7 @@ The innovation package (`innovation_package`, IPSR) is validated by the same liv
 | Valid key, `phase_year` with catalog content (e.g. `2026`) | **200** | Body as above. |
 | `phase_year` missing, or not a plain integer (`abc`, empty, `2026.5`) | **400** | Validation error. |
 | Valid key, `phase_year` with no catalog (e.g. `2023`, `2025`) | **404** | **Never an empty 200.** A year is either catalogued with at least one field, or it is a 404. |
-| `x-api-key` missing, unknown, expired, or without permission `/api/qa/catalog` | **401** | Generic body; the reason is never disclosed. |
+| `x-api-key` missing, unknown, expired, or without permission `/api/qa/catalog` (`endpoint_allowed` not `true`) | **401** | Generic body; the reason is never disclosed. |
 
 Notes:
 
@@ -336,7 +336,7 @@ The flow: list (`GET /api/qa/results`), then read the values of the ids you want
 | Permission of the key | `/api/qa/results` | `/api/qa/results/details` |
 | Body of a 200 | Returned as-is (no `{ response, statusCode }` wrapper) | Same |
 
-Each route is registered in CLARISA on its own: a key granted `/api/qa/catalog` only is a **401** on both results routes. The PRMS user header `auth` is not accepted. Neither route is rate limited by PRMS.
+Each route is registered in CLARISA on its own: a key granted `/api/qa/catalog` only is a **401** on both results routes. CLARISA must answer `endpoint_allowed: true` for the route called, which requires the route in the key's CLARISA `allowed_endpoints`; a valid key without that grant is a 401, so a key valid for another platform or for the bilateral routes does not pass. The PRMS user header `auth` is not accepted. Neither route is rate limited by PRMS.
 
 ```
 GET /api/qa/results?phase_year=2026&program_ids=5,7&result_type_keys=policy_change&page=1&page_size=100
@@ -492,7 +492,7 @@ A scalar field that declares subfields (`text`, `date`, `number`, `boolean`, `si
 
 | Case | Status |
 |---|---|
-| `x-api-key` missing, unknown, expired, or without the permission of that route | **401** (generic body). Authentication runs before validation. |
+| `x-api-key` missing, unknown, expired, or without the permission of that route (`endpoint_allowed` not `true`) | **401** (generic body). Authentication runs before validation. |
 | `phase_year` missing, not an integer, or outside **2000 to 2100** | **400** |
 | `page`, `page_size`, `program_ids`, `result_ids` or `field_keys` outside the ranges above | **400** |
 | `result_type_keys` with an unknown key | **400** naming the keys |
@@ -540,7 +540,7 @@ The flow: read the feed, **intake** the results you will review (`POST /api/qa/r
 | Permission of the key | `/api/qa/results/intake` | `/api/qa/results/release` |
 | Body of a 200 | Returned as-is (no `{ response, statusCode }` wrapper) | Same |
 
-Each route is registered in CLARISA on its own: a key granted the feed routes only is a **401** here. The PRMS user header `auth` is not accepted. Neither route is rate limited by PRMS. The calling platform is the one CLARISA resolves from the key; the body never names it.
+Each route is registered in CLARISA on its own: a key granted the feed routes only is a **401** here. CLARISA must answer `endpoint_allowed: true` for the route called, which requires the route in the key's CLARISA `allowed_endpoints`; a valid key without that grant is a 401, so a key valid for another platform or for the bilateral routes does not pass. The PRMS user header `auth` is not accepted. Neither route is rate limited by PRMS. The calling platform is the one CLARISA resolves from the key; the body never names it.
 
 ### Limits
 
@@ -635,7 +635,7 @@ Every requested id is in exactly one list, in request order (for intake, after t
 
 | Case | Status |
 |---|---|
-| `x-api-key` missing, unknown, expired, or without the permission of that route | **401** (generic body). Authentication runs before validation |
+| `x-api-key` missing, unknown, expired, or without the permission of that route (`endpoint_allowed` not `true`) | **401** (generic body). Authentication runs before validation |
 | Body outside the [limits](#limits), unknown key, unknown `outcome`, repeated `result_id` in `items` | **400** |
 | `phase_year` in range with no catalog | **404**, the same as `/api/qa/catalog` |
 | A write failed | **500**, message `The QA change could not be applied` |
@@ -729,3 +729,4 @@ These are deliberate and tracked; each one is **additive** when resolved.
 | 2026-10-28 | **v1.26 — 2026-10-28: results feed documented (spec `quality-assurance/qa-results-feed`, QRF-T-7); `catalog_version` unchanged (2026.30).** New part [Results feed](#results-feed) for two routes, both authenticated with a CLARISA key that has the permission of that route: `GET /api/qa/results` (eligible results of one `phase_year`, filters `program_ids` / `result_type_keys`, order `submitted_at` then `result_id`, `page` 1 to 1 000 000, `page_size` 1 to 200 default 100, `breakdown`) and `POST /api/qa/results/details` (`result_ids` 1 to 50 counted as sent, optional top-level `field_keys`, `not_eligible[].reason` closed list `not_found`, `not_submitted`, `other_phase`, `not_w1w2`, `type_not_catalogued`, `no_lead_program`, a failing read is a whole-batch generic 500). `phase_year` on these routes is 2000 to 2100 (1999 is a 400 here and a 404 on `/api/qa/catalog`). A missing value is `null` (`[]` for `multi_select` and `list`); a scalar field with subfields is `{ value, <subfield key>: … }`. [Known gap 17](#known-gaps) is applied: `capacity_sharing.length_of_training` is returned normalized. Person-bearing keys are listed so the QA Admin chooses them knowingly. Additive only: no catalog key, type or condition changes. |
 | 2026-10-28 | **v1.27 — 2026-10-28: value-binding fixes from the results-feed golden comparison (spec `quality-assurance/qa-results-feed`, QRF-T-9); catalog_version 2026.31; the public shape is unchanged.** The revision is bumped because the catalog content hash covers the value bindings; no key, type, condition, label or response shape changes. The fixes are G-1 (lead center and lead partner) and G-2 (closed-list row filter). (a) `contributors.lead_center` now returns the center code (`center_id`, for example `CENTER-02`) of the active row with `is_leading_result = 1`; it returned the flag (1 or 0). `partners.lead_partner` now returns the `institutions_id` of the active leading row, with the same fix. (b) The innovation development question fields (`innovation_dev.gesi_stage`, `risk_stage`, `ipr_consideration`, `team_diversity` and its `actions`) read only the answers to their own question: closed lists `question_options_gesi_stage` (152..156), `question_options_risk_stage` (157..161) and `question_options_ipr` (163..165) are added and the value read applies a closed list as a row filter (QRF-DD-13). Before, each field returned any answered row of the result. (c) `linked.has_innovation_link` is documented: a stored NULL is sent as `null`, while the form displays "No". (d) Known gap 18 recorded (`policy_change.related_to`). |
 | 2026-10-29 | **v1.28 — 2026-10-29: intake and release documented (spec `quality-assurance/qa-intake`, QIN-T-6); `catalog_version` unchanged (2026.31).** New part [Intake and release](#intake-and-release) for two write routes, each needing the CLARISA key permission of that route: `POST /api/qa/results/intake` (marks eligible Submitted results In QA; `taken` with `changed`, `not_taken` with the feed's reasons) and `POST /api/qa/results/release` (ends QA with `outcome` `qaed` or `not_qaed`; `released`, `not_released` with reasons `not_found`, `other_phase`, `not_in_qa`, `not_submitted`). Limits: 1 to 50 entries, `phase_year` 2000 to 2100. Atomic per call; audit in `result_qa_intake_log`. `qaed` requires a prior intake. Unsubmit (Reporting and IPSR) answers 409 while a result is In QA in an open phase. Additive: no existing route or shape changes. |
+| 2026-11-03 | **v1.29 — 2026-11-03: per-endpoint CLARISA grant enforced on all five `/api/qa/*` routes (spec `quality-assurance/qa-intake`, QIN-T-4b); `catalog_version` unchanged (2026.31).** CLARISA validates a key as `valid: true` for any route, so Reporting now also requires the route grant that CLARISA reports in the `validate-api-key` response (`allowed_endpoints`, `endpoint_allowed`). A call is a **401** (generic body) unless CLARISA answers `endpoint_allowed: true`; a missing field is refused. A key must have the route in its CLARISA `allowed_endpoints`. No request or response shape changes; bilateral routes are unchanged. Until CLARISA returns `endpoint_allowed`, every `/api/qa/*` call is a 401. |

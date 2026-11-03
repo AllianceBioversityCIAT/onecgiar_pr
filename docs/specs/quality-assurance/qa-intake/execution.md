@@ -365,3 +365,47 @@
   - 6 of 7 tasks closed.
   - 9 of 10 review rounds.
   - LOC ≈ 3 300.
+
+
+---
+
+## Pivot Record — QIN-T-4b added (2026-11-03)
+
+- **Trigger:** 2026-11-03 probe from the Leader of `validate-api-key`, made with the QA test key against CLARISA prod. It returned `valid: true` for every route, including `/zzz/nada` and `/api/bilateral/result/create`. A random key → 401. CLARISA does not refuse a key on a route outside its list. So any valid key, including the bilateral one, passes the guard on `/api/qa/*`, the write routes included.
+- **Context:** every PRMS environment validates against CLARISA **prod**, which centralises the logs; `environment: "TEST"` in the response is the key's. The CLARISA team is adding `allowed_endpoints` and `endpoint_allowed` to the response. The request is unchanged, and the contract was supplied by the owner on 2026-11-03.
+- **Owner decision (2026-11-03):** Reporting enforces the grant. A protected route requires `endpoint_allowed === true`; otherwise it returns 401. Routes without protection (bilateral) are unchanged.
+- **Spec amendment:**
+  - new task QIN-T-4b in `tasks.md`;
+  - QIN-DD-1 amended there: the guard now also checks the grant on the QA controller.
+  - Scope: all 5 `/api/qa/*` routes, protected at class level.
+- **Rollout dependency:** until CLARISA **prod** returns `endpoint_allowed`, every `/api/qa/*` call answers 401, in every environment. The guard fails closed by design.
+
+---
+
+## QIN-T-4b — Per-endpoint CLARISA grant on the QA routes
+
+- **Date:** 2026-11-03 · **Mode:** gated (owner order: "tú debes proteger el servicio acá en Reporting")
+- **Attempt 1 — Implementer (T2, medium):**
+  - Added the optional `allowed_endpoints` / `endpoint_allowed` fields to the interface.
+  - Added `@RequireClarisaEndpointGrant()` (new) and applied it at class level on `QaCatalogController`.
+  - Guard: `getAllAndOverride([handler, class])`; a required grant with `endpoint_allowed !== true` → 401 with the generic body, before `mis` is set.
+  - `qa-catalog.en.md`: auth and 401 rows, plus change-log v1.29.
+- **Red run (quoted by the Implementer):** written against the unchanged guard, with the decorator and interface already present:
+  ```
+  ✕ (b) endpoint_allowed false -> 401 generic body
+    expect(received).rejects.toThrow()
+    Received promise resolved instead of rejected
+    Resolved to value: true
+  ```
+  (c), (e), the `"true"` string case and (f) also failed; (a), (d) and (g) passed, as expected.
+- **Falsifiers after the change:** (a) through (g) and the `"true"` string all PASS through a real `Reflector` and real decorator metadata. (f) with the decorator removed → `Tests: 7 failed, 73 passed, 80 total`; the decorator was then restored.
+- **Evidence re-run (Leader, non-author): VERIFIED**
+  - `npx jest src/api/bilateral src/api/qa-catalog --maxWorkers=2` → Test Suites 93 passed, Tests 2535 passed.
+  - `tsc --noEmit` clean.
+- **Reviewer (T3), attempt 1: PASS.** Lenses: security and regression. Fail-closed confirmed; class-level metadata covers all 5 handlers; no change for routes without the metadata; 401 body is generic; the docs match the code; no secrets.
+- **Advisories (not gating):**
+  - add `BilateralWebhookController` to (g);
+  - a separate undecorated class for the unprotected half of (e);
+  - assert the 401 body end to end on one QA route.
+- **Rollout dependency:** every `/api/qa/*` call is a 401 until CLARISA **prod** returns `endpoint_allowed`.
+- **Totals:** 7 tasks closed of 8 · 10 review rounds.

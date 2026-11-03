@@ -12,6 +12,7 @@ import {
 import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { BilateralClarisaEndpoint } from '../bilateral/decorators/bilateral-clarisa-endpoint.decorator';
+import { RequireClarisaEndpointGrant } from '../bilateral/decorators/require-clarisa-endpoint-grant.decorator';
 import { ExternalPlatform } from '../bilateral/decorators/external-platform.decorator';
 import { ClarisaApiKeyGuard } from '../bilateral/guards/clarisa-api-key.guard';
 import { ClarisaApiKeyValidationMis } from '../bilateral/interfaces/clarisa-api-key-validation.interface';
@@ -47,6 +48,7 @@ import { QaResultsService } from './qa-results.service';
   description: 'CLARISA API key for the QA platform',
 })
 @UseGuards(ClarisaApiKeyGuard)
+@RequireClarisaEndpointGrant()
 @SkipThrottle()
 export class QaCatalogController {
   constructor(

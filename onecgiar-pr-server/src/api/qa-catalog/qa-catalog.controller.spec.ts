@@ -3,6 +3,7 @@ import 'reflect-metadata';
 import { INestApplication, Logger, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
+import { REQUIRE_CLARISA_ENDPOINT_GRANT_KEY } from '../bilateral/decorators/require-clarisa-endpoint-grant.decorator';
 import { BILATERAL_CLARISA_ENDPOINT_KEY } from '../bilateral/decorators/bilateral-clarisa-endpoint.decorator';
 import { ClarisaApiKeyGuard } from '../bilateral/guards/clarisa-api-key.guard';
 import { ClarisaApiKeyValidationService } from '../bilateral/services/clarisa-api-key-validation.service';
@@ -64,7 +65,10 @@ describe('QaCatalogController', () => {
       breakdown: { by_program: [], by_result_type: [] },
       items: [],
     });
-    validate.mockResolvedValue({ mis: { acronym: 'QA' } });
+    validate.mockResolvedValue({
+      mis: { acronym: 'QA' },
+      endpoint_allowed: true,
+    });
     const moduleRef = await Test.createTestingModule({
       controllers: [QaCatalogController],
       providers: [
@@ -196,6 +200,35 @@ describe('QaCatalogController', () => {
     });
   });
 
+  describe('per-endpoint CLARISA grant (QIN-T-4b)', () => {
+    it('class carries @RequireClarisaEndpointGrant (covers every route)', () => {
+      expect(
+        Reflect.getMetadata(
+          REQUIRE_CLARISA_ENDPOINT_GRANT_KEY,
+          QaCatalogController,
+        ),
+      ).toBe(true);
+    });
+
+    it.each([
+      ['GET', '/catalog?phase_year=2026'],
+      ['GET', '/results?phase_year=2026'],
+      ['POST', '/results/details'],
+      ['POST', '/results/intake'],
+      ['POST', '/results/release'],
+    ])('%s %s: valid key without the grant -> 401', async (method, route) => {
+      validate.mockResolvedValue({
+        mis: { acronym: 'QA' },
+        endpoint_allowed: false,
+      });
+      const req =
+        method === 'GET'
+          ? request(app.getHttpServer()).get(route)
+          : request(app.getHttpServer()).post(route).send({});
+      const res = await req.set({ 'x-api-key': API_KEY });
+      expect(res.status).toBe(401);
+    });
+  });
   describe('guard metadata (QAC-R-10, DD-6)', () => {
     it("handler declares @BilateralClarisaEndpoint('/api/qa/catalog')", () => {
       expect(
@@ -420,7 +453,7 @@ describe('QaCatalogController', () => {
     const ids = (n: number) => Array.from({ length: n }, (_, i) => i + 1);
 
     beforeEach(() => {
-      validate.mockResolvedValue({ mis: PLATFORM });
+      validate.mockResolvedValue({ mis: PLATFORM, endpoint_allowed: true });
     });
 
     it('intake: 200 (not 201), service body unchanged, no envelope; the guard is asked for the intake permission', async () => {
