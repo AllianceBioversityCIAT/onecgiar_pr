@@ -338,7 +338,7 @@
 - PASS: the existing Farmers row (2030 block) renders the follow-up block under the Actor type, with the copy as in the mock-up, and reloads with Individual actors / received. Researchers and Extension agents rows show no block.
 - PASS IFC-R-4: Add actor → the select keeps Farmers enabled and disables Researchers and Extension agents (already used). Second Farmers row = Households / applied / How many 50; after save + reload, both Farmers rows survive with their own answers (first keeps its grid, total 468).
 - PASS IFC-R-5: Households replaces the grid with a single "How many" and hides the "does not apply" tick.
-  - **Finding F-1 (open):** before the first save, the new row's "How many" did not show REQUIRED and the counter did not count it; after saving it does. To size: likely the field card `required` binding on a new row.
+  - **Finding F-1 (open):** before the first save, the new row's "How many" did not show REQUIRED and the counter did not count it; after saving it does. **Sized → pre-existing, not a regression:** every field of an unsaved actor row (Actor type, Women, Men, How many) binds `[required]="!!actorItem?.result_actors_id"` (since 7a5519f7b, Angular 19 upgrade), so new rows only become mandatory after their first save. Out of scope for P2-4048.
 - PASS IFC-R-6 (server): unit cleared by re-click + save → sidebar not green, "4 of 5"; Households re-selected + save → green, 5 of 5.
 - CONFIRMED T-4 advisory: deselecting Households brings the "does not apply" tick back already ticked and the grid does not return. Acceptable (no data lost, the reporter can untick), documented.
 - Left in place on #8558: the second Farmers row (Households / applied / 50) as evidence.
