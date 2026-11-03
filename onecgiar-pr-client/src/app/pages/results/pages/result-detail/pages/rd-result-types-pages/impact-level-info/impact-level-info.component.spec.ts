@@ -5,10 +5,12 @@ import { FormsModule } from '@angular/forms';
 import { HTTP_INTERCEPTORS, HttpClient } from '@angular/common/http';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
-import { Subject, of, throwError } from 'rxjs';
+import { By } from '@angular/platform-browser';
+import { of, throwError } from 'rxjs';
 import { HlmButton } from '@spartan/button';
 import { HlmDialogService } from '@spartan/dialog';
 import { ImpactLevelInfoComponent } from './impact-level-info.component';
+import { PreviousResultsPickerComponent } from './components/previous-results-picker/previous-results-picker.component';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { AuthService } from '../../../../../../../shared/services/api/auth.service';
 import { RolesService } from '../../../../../../../shared/services/global/roles.service';
@@ -68,7 +70,7 @@ describe('ImpactLevelInfoComponent', () => {
     };
     await TestBed.configureTestingModule({
       declarations: [ImpactLevelInfoComponent],
-      imports: [HttpClientTestingModule, FormsModule, CustomFieldsModule, HlmButton, BeforeUnloadWarningDirective, FeedbackValidationDirectiveModule],
+      imports: [HttpClientTestingModule, FormsModule, CustomFieldsModule, HlmButton, BeforeUnloadWarningDirective, FeedbackValidationDirectiveModule, PreviousResultsPickerComponent],
       providers: [{ provide: ApiService, useValue: api }],
       schemas: [CUSTOM_ELEMENTS_SCHEMA]
     }).compileComponents();
@@ -260,7 +262,7 @@ describe('ImpactLevelInfoComponent', () => {
 
     it('reports an unanswered Yes/No', async () => {
       await setup({ get: of({ response: info({ previously_reported: null, previous_results: [] }) }) });
-      expect(incomplete()).toEqual(['Already reported in PRMS?']);
+      expect(incomplete()).toEqual(['Has this intervention, or a component of it, already been reported in PRMS?']);
     });
 
     it('reports a statement over the word limit', async () => {
@@ -272,7 +274,7 @@ describe('ImpactLevelInfoComponent', () => {
 
     it('reports Yes with no linked result', async () => {
       await setup({ get: of({ response: info({ previous_results: [] }) }) });
-      expect(incomplete()).toEqual(['Previously reported results']);
+      expect(incomplete()).toEqual(['Please select a result']);
     });
 
     it('No with no links is complete', async () => {
@@ -318,7 +320,23 @@ describe('ImpactLevelInfoComponent', () => {
       expect(choices()[1].classList.contains('no')).toBe(true);
       expect(choices()[0].classList.contains('yes')).toBe(false);
       expect(fixture.nativeElement.querySelector('[data-cy="impact-previous-results"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('app-previous-results-picker')).toBeNull();
       expect(component.buildBody()).toEqual(expect.objectContaining({ previously_reported: false, previous_result_ids: [] }));
+    });
+
+    it('clicking "No" and cancelling keeps Yes, the dropdown and both rows (the confirm callback never runs)', async () => {
+      await setup();
+      const choices = Array.from(fixture.nativeElement.querySelectorAll('app-pr-yes-or-not .choice')) as HTMLElement[];
+      choices[1].click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(alertsFe.show).toHaveBeenCalledTimes(1);
+      expect(choices[0].classList.contains('yes')).toBe(true);
+      expect(component.previouslyReported).toBe(true);
+      expect(fixture.nativeElement.querySelector('app-previous-results-picker')).not.toBeNull();
+      expect(fixture.nativeElement.querySelectorAll('[data-cy="impact-selected-item"]')).toHaveLength(2);
+      expect(component.buildBody().previous_result_ids).toEqual([1, 2]);
     });
 
     it('No without links switches without asking', async () => {
@@ -337,53 +355,79 @@ describe('ImpactLevelInfoComponent', () => {
       expect(fixture.nativeElement.querySelector('button[aria-label="Remove result 1001"]')).toBeNull();
     });
 
-    it('after Remove, focus moves to the next row, then the previous one, then "Add results"', async () => {
-      await setup({ get: of({ response: info({ previous_results: [prev(1), prev(2), prev(3)] }) }) });
-      const remove = (code: number) => (fixture.nativeElement.querySelector(`button[aria-label="Remove result ${code}"]`) as HTMLButtonElement).click();
-      remove(1001);
+    it('removing the first of 2 moves focus to the next remove button (IPD-R-3 Sc 3.1)', async () => {
+      await setup();
+      (fixture.nativeElement.querySelector('button[aria-label="Remove result 1001"]') as HTMLButtonElement).click();
+      expect(component.previousResults.map(r => r.result_id)).toEqual([2]);
       expect((document.activeElement as HTMLElement).getAttribute('aria-label')).toBe('Remove result 1002');
-      remove(1003);
-      expect((document.activeElement as HTMLElement).getAttribute('aria-label')).toBe('Remove result 1002');
-      remove(1002);
-      expect(document.activeElement).toBe(fixture.nativeElement.querySelector('[data-cy="impact-add-results"]'));
     });
 
-    describe('picker wiring (IRD-T-4)', () => {
-      function openWith(closed$: Subject<any>) {
-        const open = jest.spyOn(TestBed.inject(HlmDialogService), 'open').mockReturnValue({ closed$ } as any);
-        (fixture.nativeElement.querySelector('[data-cy="impact-add-results"]') as HTMLButtonElement).click();
-        return open;
-      }
+    it('removing the last remaining result moves focus to the dropdown field', async () => {
+      await setup({ get: of({ response: info({ previous_results: [prev(1)] }) }) });
+      (fixture.nativeElement.querySelector('button[aria-label="Remove result 1001"]') as HTMLButtonElement).click();
+      expect(component.previousResults).toEqual([]);
+      expect(document.activeElement).toBe(fixture.nativeElement.querySelector('[data-cy="impact-picker-field"]'));
+    });
 
-      it('"Add results" opens the dialog with the open result id and a copy of the list', async () => {
-        await setup();
-        const open = openWith(new Subject());
-        expect(open).toHaveBeenCalledTimes(1);
-        const options: any = open.mock.calls[0][1];
-        expect(options.context.resultId).toBe(77);
-        expect(options.context.initialSelection.map((r: any) => r.result_id)).toEqual([1, 2]);
-        expect(options.context.initialSelection).not.toBe(component.previousResults);
-      });
+    it('removing the last of 3 focuses the previous one', async () => {
+      await setup({ get: of({ response: info({ previous_results: [prev(1), prev(2), prev(3)] }) }) });
+      (fixture.nativeElement.querySelector('button[aria-label="Remove result 1003"]') as HTMLButtonElement).click();
+      expect((document.activeElement as HTMLElement).getAttribute('aria-label')).toBe('Remove result 1002');
+    });
 
-      it('Done replaces the list and makes the section dirty; the picker never touches the page list before', async () => {
-        await setup();
-        const closed$ = new Subject<any>();
-        openWith(closed$);
-        expect(component.previousResults.map(r => r.result_id)).toEqual([1, 2]);
-        closed$.next([prev(2), prev(5)]);
-        expect(component.previousResults.map(r => r.result_id)).toEqual([2, 5]);
-        expect(component.buildBody().previous_result_ids).toEqual([2, 5]);
-        expect(component.hasUnsavedChanges()).toBe(true);
-      });
+    it('removal builds a new array (never mutates in place), so the dirty check sees it', async () => {
+      await setup();
+      const before = component.previousResults;
+      (fixture.nativeElement.querySelector('button[aria-label="Remove result 1001"]') as HTMLButtonElement).click();
+      expect(component.previousResults).not.toBe(before);
+      expect(before).toHaveLength(2);
+      expect(component.hasUnsavedChanges()).toBe(true);
+      expect(component.buildBody().previous_result_ids).toEqual([2]);
+    });
+  });
 
-      it('Cancel / Escape (closes with undefined) keeps the list', async () => {
-        await setup();
-        const closed$ = new Subject<any>();
-        openWith(closed$);
-        closed$.next(undefined);
-        expect(component.previousResults.map(r => r.result_id)).toEqual([1, 2]);
-        expect(component.hasUnsavedChanges()).toBe(false);
-      });
+  describe('inline dropdown wiring (IPD-R-1, IPD-T-2)', () => {
+    const picker = () => fixture.debugElement.query(By.directive(PreviousResultsPickerComponent));
+
+    it('renders the "Please select a result" header and the dropdown on Yes, wired to the open result and the list', async () => {
+      await setup();
+      expect(fixture.nativeElement.querySelector('[data-cy="impact-add-results"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('app-pr-field-header').textContent).toContain('Please select a result');
+      const instance: PreviousResultsPickerComponent = picker().componentInstance;
+      expect(instance.resultId()).toBe(77);
+      expect(instance.selection().map(r => r.result_id)).toEqual([1, 2]);
+      expect(fixture.nativeElement.querySelector('[data-cy="impact-selected-title"]').textContent.trim()).toBe('Results selected (2)');
+    });
+
+    it('selectionChange replaces the list, marks the section unsaved and the save body carries the ids', async () => {
+      await setup();
+      const before = component.previousResults;
+      picker().componentInstance.selectionChange.emit([prev(2), prev(5)]);
+      fixture.detectChanges();
+      expect(component.previousResults).not.toBe(before);
+      expect(component.previousResults.map(r => r.result_id)).toEqual([2, 5]);
+      expect(component.hasUnsavedChanges()).toBe(true);
+      expect(fixture.nativeElement.querySelector('[data-cy="impact-selected-title"]').textContent.trim()).toBe('Results selected (2)');
+      component.onSaveSection();
+      expect(resultsSE.PATCH_impactLevelInfo.mock.calls[0][1].previous_result_ids).toEqual([2, 5]);
+    });
+
+    it('Clear selection (empty emit) empties the list and hides the selected block', async () => {
+      await setup();
+      picker().componentInstance.selectionChange.emit([]);
+      fixture.detectChanges();
+      expect(component.previousResults).toEqual([]);
+      expect(fixture.nativeElement.querySelector('[data-cy="impact-selected-results"]')).toBeNull();
+    });
+
+    it('no dialog is involved: the TestBed provides no HlmDialogService, the page holds none and no dialog opens on a pick', async () => {
+      await setup();
+      const open = jest.spyOn(HlmDialogService.prototype, 'open');
+      picker().componentInstance.selectionChange.emit([prev(7)]);
+      fixture.detectChanges();
+      expect(open).not.toHaveBeenCalled();
+      expect(Object.values(component).some(value => value instanceof HlmDialogService)).toBe(false);
+      expect(component).toBeTruthy();
     });
   });
 
@@ -392,8 +436,10 @@ describe('ImpactLevelInfoComponent', () => {
       await setup({ readOnly: true });
       const el: HTMLElement = fixture.nativeElement;
       expect(el.querySelector('textarea')).toBeNull();
-      expect(el.querySelector('[data-cy="impact-add-results"]')).toBeNull();
+      expect(el.querySelector('app-previous-results-picker')).toBeNull();
+      expect(el.querySelector('[data-cy="impact-picker-field"]')).toBeNull();
       expect(el.querySelector('button[aria-label^="Remove result"]')).toBeNull();
+      expect(el.querySelectorAll('[data-cy="impact-selected-item"]')).toHaveLength(2);
       expect(el.querySelector('app-pr-select input:not([hidden]), app-pr-select [role="combobox"]')).toBeNull();
     });
   });

@@ -1,9 +1,8 @@
-// @akili-spec results/impact-results-reporting/result-detail-impact (IRD-T-3, design §6.2)
+// @akili-spec results/impact-results-reporting/result-detail-impact (IRD-T-3, design §6.2); impact-previous-results-dropdown (IPD-T-2, design §6.2)
 import { ChangeDetectorRef, Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { Observable, forkJoin, of } from 'rxjs';
-import { catchError, map, take, tap } from 'rxjs/operators';
-import { HlmDialogService } from '@spartan/dialog';
-import { PreviousResultsPickerComponent, PreviousResultsPickerContext, PreviousResultsPickerResult } from './components/previous-results-picker/previous-results-picker.component';
+import { catchError, map, tap } from 'rxjs/operators';
+import { PreviousResultsPickerComponent } from './components/previous-results-picker/previous-results-picker.component';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { CanComponentDeactivate } from '../../../../../../../shared/guards/unsaved-changes.types';
 import { SectionDirtyTrackerService } from '../../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
@@ -27,7 +26,6 @@ export class ImpactLevelInfoComponent implements OnInit, CanComponentDeactivate 
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly dirtyTracker = inject(SectionDirtyTrackerService);
-  private readonly dialog = inject(HlmDialogService);
   private readonly saveButtonSE = inject(SaveButtonService);
 
   readonly maxWords = IMPACT_CONTRIBUTION_MAX_WORDS;
@@ -43,6 +41,8 @@ export class ImpactLevelInfoComponent implements OnInit, CanComponentDeactivate 
 
   /** The Yes/No control, re-written explicitly on revert (see `onPreviouslyReportedChange`). */
   @ViewChild(PrYesOrNotComponent) private yesNoControl?: PrYesOrNotComponent;
+  /** The inline dropdown; only present on Yes and not read-only. Target of the last focus fallback. */
+  @ViewChild(PreviousResultsPickerComponent) private picker?: PreviousResultsPickerComponent;
 
   impactStudyTypeId: number | null = null;
   cgiarContribution: string | null = null;
@@ -150,32 +150,18 @@ export class ImpactLevelInfoComponent implements OnInit, CanComponentDeactivate 
     const index = this.previousResults.findIndex(result => result.result_id === resultId);
     this.previousResults = this.previousResults.filter(result => result.result_id !== resultId);
     // The focused Remove button is destroyed with its row: render now, then move focus to the next row's
-    // Remove button, else the previous one, else "Add results" (IRD-NFR-1).
+    // Remove button, else the previous one, else the dropdown field (IPD-R-3).
     this.cdr.detectChanges();
     const root = this.host.nativeElement;
     const buttons = root.querySelectorAll<HTMLElement>('[data-cy="impact-remove-result"]');
-    const target = buttons.length ? buttons[Math.min(Math.max(index, 0), buttons.length - 1)] : root.querySelector<HTMLElement>('[data-cy="impact-add-results"]');
-    target?.focus();
+    if (buttons.length) buttons[Math.min(Math.max(index, 0), buttons.length - 1)].focus();
+    else this.picker?.focusField();
   }
 
-  /**
-   * Opens the picker (IRD-T-4). The dialog edits its own working copy; the list is replaced only when it
-   * closes with a selection (Done). Cancel/Escape close with `undefined` and change nothing. CDK restores
-   * focus to "Add results" (the element focused before opening).
-   */
-  openPreviousResultsPicker(): void {
-    const context: PreviousResultsPickerContext = { resultId: this.api.resultsSE.currentResultId, initialSelection: [...this.previousResults] };
-    const ref = this.dialog.open<PreviousResultsPickerResult, PreviousResultsPickerContext>(PreviousResultsPickerComponent, {
-      context,
-      // Helm classes are concatenated, not tailwind-merged: the `!` beats `sm:max-w-md`. px, not rem (root is 12px).
-      contentClass: 'sm:max-w-[760px]! overflow-visible',
-      showCloseButton: false
-    });
-    ref.closed$.pipe(take(1)).subscribe(selection => {
-      if (!selection) return;
-      this.previousResults = [...selection];
-      this.cdr.markForCheck();
-    });
+  /** The dropdown applies each pick at once (IPD-A-3): always a NEW array, so the dirty check sees it. */
+  onSelectionChange(selection: ImpactPreviousResult[]): void {
+    this.previousResults = [...selection];
+    this.cdr.markForCheck();
   }
 
   hasUnsavedChanges(): boolean {

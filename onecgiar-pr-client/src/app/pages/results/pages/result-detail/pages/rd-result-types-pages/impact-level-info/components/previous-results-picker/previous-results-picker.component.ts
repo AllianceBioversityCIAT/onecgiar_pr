@@ -1,69 +1,57 @@
-// @akili-spec results/impact-results-reporting/result-detail-impact (IRD-T-4, design §6.3, IRD-DD-4)
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+// @akili-spec results/impact-results-reporting/impact-previous-results-dropdown (IPD-T-1, design §6.1, IPD-DD-1..3)
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
 import { Subject, of } from 'rxjs';
-import { catchError, debounceTime, distinctUntilChanged, switchMap, tap } from 'rxjs/operators';
-import { BrnDialogRef, injectBrnDialogContext } from '@spartan-ng/brain/dialog';
-import { HlmButton } from '@spartan/button';
-import { HlmDialogDescription, HlmDialogFooter, HlmDialogHeader, HlmDialogTitle } from '@spartan/dialog';
-import { HlmInput } from '@spartan/input';
+import { catchError, debounceTime, filter, map, switchMap, tap } from 'rxjs/operators';
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
 import { ImpactPreviousResult, ImpactPreviousResultsSearchParams } from '../../../../../../../../../shared/interfaces/impact-level.interface';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../../../../shared/enum/api.enum';
 import { resultTypeFilterLabel } from '../../../../../../../../../shared/utils/impact-result.util';
-import { PrFilterSelectComponent } from '../../../../../../../../../shared/components/pr-filter-select/pr-filter-select.component';
-import { PrFilterMultiselectModule } from '../../../../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
-
-/** Passed through `HlmDialogService.open(..., { context })` (it cannot bind `@Input()`s). */
-export interface PreviousResultsPickerContext {
-  /** Sent as `excludeResultId`: the current result is never offered. */
-  resultId: number | string | null;
-  /** The page's current list; copied into the dialog's working selection. */
-  initialSelection: ImpactPreviousResult[];
-}
-
-/** Dialog result: the working selection on Done, `undefined` on Cancel / Escape. */
-export type PreviousResultsPickerResult = ImpactPreviousResult[] | undefined;
 
 export const PICKER_PAGE_LIMIT = 20;
 export const PICKER_SEARCH_DEBOUNCE_MS = 300;
-export const PICKER_ALL_PHASES = 'all';
 
-interface FilterOption {
-  value: number | string;
+export interface PickerPortfolio {
+  id: number | string;
+  acronym: string;
+}
+
+export interface PickerTypeOption {
+  id: number | string;
   label: string;
 }
 
-/**
- * Phase option label with its portfolio ("P25 · Reporting 2025 - (Open)"), so the user can see and choose the
- * portfolio (IRD-R-6, IRD-A-3). `obj_portfolio` comes with the versioning rows; without it the plain phase label is kept.
- */
-export function phaseOptionLabel(phase: any): string {
-  const base = phase?.phase_name_status ?? phase?.phase_name;
-  const acronym = phase?.obj_portfolio?.acronym;
-  return acronym ? `${acronym} · ${base}` : base;
+/** One E5 request; `append` travels with it so a stale "Load more" can never be merged into a newer list. */
+interface LoadRequest {
+  page: number;
+  append: boolean;
 }
 
 /**
- * Previous-results picker (R-6). Spartan dialog content: CDK gives the focus trap, autofocus and focus
- * restore. The selection is a working copy; the page list is replaced only on Done.
+ * Inline "Please select a result" dropdown (IPD-R-1..3). Controlled by the page: it reads `selection` and emits
+ * the whole new array on every toggle / Clear selection (IPD-A-3). Filter changes never emit.
  */
 @Component({
   selector: 'app-previous-results-picker',
   standalone: true,
-  imports: [FormsModule, HlmButton, HlmInput, HlmDialogHeader, HlmDialogTitle, HlmDialogDescription, HlmDialogFooter, PrFilterSelectComponent, PrFilterMultiselectModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './previous-results-picker.component.html'
+  templateUrl: './previous-results-picker.component.html',
+  styleUrl: './previous-results-picker.component.scss',
+  host: { '(document:click)': 'onDocumentClick($event)' }
 })
-export class PreviousResultsPickerComponent implements OnInit {
+export class PreviousResultsPickerComponent {
   private readonly api = inject(ApiService);
-  private readonly dialogRef = inject(BrnDialogRef<PreviousResultsPickerResult>);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly context = injectBrnDialogContext<PreviousResultsPickerContext>({ optional: true });
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
-  readonly pageLimit = PICKER_PAGE_LIMIT;
+  /** Sent as `excludeResultId`: the current result is never offered. */
+  readonly resultId = input<number | string | null>(null);
+  readonly selection = input<ImpactPreviousResult[]>([]);
+  readonly selectionChange = output<ImpactPreviousResult[]>();
 
+  readonly field = viewChild<ElementRef<HTMLElement>>('fieldRef');
+
+  readonly open = signal(false);
   readonly items = signal<ImpactPreviousResult[]>([]);
   readonly loading = signal(false);
   readonly error = signal(false);
@@ -71,17 +59,14 @@ export class PreviousResultsPickerComponent implements OnInit {
   readonly total = signal(0);
   readonly totalPages = signal(0);
 
-  readonly phaseOptions = signal<FilterOption[]>([{ value: PICKER_ALL_PHASES, label: 'All phases' }]);
-  readonly typeOptions = signal<FilterOption[]>([]);
-  readonly versionFilter = signal<number | string>(PICKER_ALL_PHASES);
+  readonly searchText = signal('');
+  readonly portfolios = signal<PickerPortfolio[]>([]);
+  readonly typeOptions = signal<PickerTypeOption[]>([]);
+  readonly portfolioFilter = signal<number | string | null>(null);
   readonly typeFilter = signal<Array<number | string>>([]);
 
-  /** Working selection, edited here; emitted on Done. */
-  readonly selection = signal<ImpactPreviousResult[]>([]);
   readonly selectedIds = computed(() => new Set(this.selection().map(item => item.result_id)));
-
-  readonly hasPrev = computed(() => this.page() > 1);
-  readonly hasNext = computed(() => this.page() < this.totalPages());
+  readonly hasMore = computed(() => this.page() < this.totalPages());
   readonly announcement = computed(() => {
     if (this.loading()) return 'Loading results';
     if (this.error()) return 'Results could not be loaded';
@@ -89,65 +74,108 @@ export class PreviousResultsPickerComponent implements OnInit {
   });
 
   private query = '';
+  private loaded = false;
+  private lastRequest: LoadRequest = { page: 1, append: false };
   private readonly typing$ = new Subject<string>();
-  private readonly load$ = new Subject<void>();
+  private readonly load$ = new Subject<LoadRequest>();
 
-  ngOnInit(): void {
-    this.selection.set([...(this.context?.initialSelection ?? [])]);
+  constructor() {
+    // One request per typing burst: debounced, and only when it differs from the query already APPLIED (not from the
+    // last raw string seen), so Reset / clear-search can never leave a later identical query suppressed.
+    this.typing$
+      .pipe(
+        debounceTime(PICKER_SEARCH_DEBOUNCE_MS),
+        filter(query => query.trim() !== this.query),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(query => {
+        this.query = query.trim();
+        this.load(1, false);
+      });
 
-    // One request per typing burst: debounced, distinct, and a new query goes back to page 1.
-    this.typing$.pipe(debounceTime(PICKER_SEARCH_DEBOUNCE_MS), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef)).subscribe(query => {
-      this.query = query.trim();
-      this.page.set(1);
-      this.load$.next();
-    });
-
-    // `switchMap` cancels the in-flight request, so a stale response can never overwrite a newer one.
+    // `switchMap` cancels the in-flight request, so a stale response (append or not) never overwrites a newer one.
     this.load$
       .pipe(
         tap(() => {
           this.loading.set(true);
           this.error.set(false);
         }),
-        switchMap(() =>
-          this.api.resultsSE.GET_impactPreviousResultsSearch(this.buildParams()).pipe(
-            catchError(() => {
-              this.error.set(true);
-              return of(null);
-            })
+        switchMap(request =>
+          this.api.resultsSE.GET_impactPreviousResultsSearch(this.buildParams(request.page)).pipe(
+            map(result => ({ request, result })),
+            catchError(() => of({ request, result: null }))
           )
         ),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(result => {
+      .subscribe(({ request, result }) => {
         this.loading.set(false);
         if (!result) {
-          this.items.set([]);
+          this.error.set(true);
+          if (!request.append) this.items.set([]);
           return;
         }
         const response = result.response;
-        this.items.set(response?.items ?? []);
+        const incoming = response?.items ?? [];
+        this.items.update(list => (request.append ? [...list, ...incoming] : incoming));
+        this.page.set(request.page);
         this.total.set(response?.meta?.total ?? 0);
         this.totalPages.set(response?.meta?.totalPages ?? 0);
       });
-
-    this.loadFilterOptions();
-    this.load$.next();
   }
 
-  buildParams(): ImpactPreviousResultsSearchParams {
-    const version = this.versionFilter();
+  buildParams(page: number): ImpactPreviousResultsSearchParams {
     return {
       q: this.query,
-      versionId: version === PICKER_ALL_PHASES ? null : version,
+      portfolioId: this.portfolioFilter(),
       typeIds: this.typeFilter(),
-      excludeResultId: this.context?.resultId ?? null,
-      page: this.page(),
+      excludeResultId: this.resultId(),
+      page,
       limit: PICKER_PAGE_LIMIT
     };
   }
 
-  /** Phase options come from versioning (IRD-A-3); the type filter from the plain result types catalog. A failure here only empties that filter. */
+  /** Field click toggles; the first open triggers the first E5 call and the filter catalogs (design §6.1). */
+  toggle(): void {
+    if (this.open()) {
+      this.close(true);
+      return;
+    }
+    this.open.set(true);
+    if (this.loaded) return;
+    this.loaded = true;
+    this.loadFilterOptions();
+    this.load(1, false);
+  }
+
+  /** Lets the page park focus on the field when the control that had it is removed (IPD-R-3). */
+  focusField(): void {
+    this.field()?.nativeElement.focus();
+  }
+
+  close(focusField = true): void {
+    if (!this.open()) return;
+    this.open.set(false);
+    if (focusField) this.field()?.nativeElement.focus();
+  }
+
+  onEscape(event: Event): void {
+    if (!this.open()) return;
+    event.stopPropagation();
+    this.close(true);
+  }
+
+  onDocumentClick(event: Event): void {
+    if (!this.open()) return;
+    if (this.host.nativeElement.contains(event.target as Node)) return;
+    // Focus goes back to the field only when it would otherwise be lost (inside the panel, or already on <body>);
+    // a control the user just clicked keeps it.
+    const active = document.activeElement;
+    const focusLost = !active || active === document.body || this.host.nativeElement.contains(active);
+    this.close(focusLost);
+  }
+
+  /** Portfolio segments come from the distinct `obj_portfolio` of the versioning rows (IPD-A-1); types from the catalog (IPD-A-2). */
   private loadFilterOptions(): void {
     this.api.resultsSE
       .GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING)
@@ -156,8 +184,12 @@ export class PreviousResultsPickerComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(result => {
-        const phases: any[] = result?.response ?? [];
-        this.phaseOptions.set([{ value: PICKER_ALL_PHASES, label: 'All phases' }, ...phases.map(phase => ({ value: phase.id, label: phaseOptionLabel(phase) }))]);
+        const seen = new Map<number | string, PickerPortfolio>();
+        ((result?.response ?? []) as any[]).forEach(phase => {
+          const portfolio = phase?.obj_portfolio;
+          if (portfolio?.id !== undefined && portfolio?.id !== null && !seen.has(portfolio.id)) seen.set(portfolio.id, { id: portfolio.id, acronym: portfolio.acronym });
+        });
+        this.portfolios.set([...seen.values()]);
       });
 
     this.api.resultsSE
@@ -166,72 +198,68 @@ export class PreviousResultsPickerComponent implements OnInit {
         catchError(() => of(null)),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(result => this.typeOptions.set((result?.response ?? []).map(type => ({ value: type.id, label: resultTypeFilterLabel(type.id, type.name) }))));
+      .subscribe(result => this.typeOptions.set((result?.response ?? []).map(type => ({ id: type.id, label: resultTypeFilterLabel(type.id, type.name) }))));
   }
 
   onQueryInput(value: string): void {
+    this.searchText.set(value ?? '');
     this.typing$.next(value ?? '');
   }
 
-  onVersionChange(value: number | string): void {
-    this.versionFilter.set(value ?? PICKER_ALL_PHASES);
-    this.reload();
+  clearSearch(): void {
+    this.searchText.set('');
+    this.query = '';
+    this.load(1, false);
   }
 
-  onTypesChange(values: Array<number | string>): void {
-    this.typeFilter.set(values ?? []);
-    this.reload();
+  toggleType(id: number | string): void {
+    this.typeFilter.update(list => (list.includes(id) ? list.filter(value => value !== id) : [...list, id]));
+    this.load(1, false);
+  }
+
+  isTypeActive(id: number | string): boolean {
+    return this.typeFilter().includes(id);
+  }
+
+  setPortfolio(id: number | string | null): void {
+    this.portfolioFilter.set(id);
+    this.load(1, false);
+  }
+
+  resetFilters(): void {
+    this.searchText.set('');
+    this.query = '';
+    this.typeFilter.set([]);
+    this.portfolioFilter.set(null);
+    this.load(1, false);
   }
 
   retry(): void {
-    this.load$.next();
+    if (this.loading()) return;
+    this.load$.next(this.lastRequest);
   }
 
-  goToPage(page: number): void {
-    if (page < 1 || page > this.totalPages() || page === this.page()) return;
-    this.page.set(page);
-    this.load$.next();
+  loadMore(): void {
+    if (!this.hasMore() || this.loading()) return;
+    this.load(this.page() + 1, true);
   }
 
   isSelected(item: ImpactPreviousResult): boolean {
     return this.selectedIds().has(item.result_id);
   }
 
-  /** A result already in the working selection cannot be added again (Scenario 6.4). */
-  add(item: ImpactPreviousResult): void {
-    if (this.isSelected(item)) return;
-    this.selection.update(list => [...list, item]);
+  /** Applies at once (IPD-A-3): emits the new array; nothing is stored until the section Save. */
+  toggleItem(item: ImpactPreviousResult): void {
+    const current = this.selection();
+    this.selectionChange.emit(this.isSelected(item) ? current.filter(entry => entry.result_id !== item.result_id) : [...current, item]);
   }
 
-  remove(resultId: number): void {
-    this.selection.update(list => list.filter(item => item.result_id !== resultId));
+  clearSelection(): void {
+    this.selectionChange.emit([]);
   }
 
-  done(): void {
-    this.dialogRef.close(this.selection());
-  }
-
-  /**
-   * IRD-T-8 F-5. The shared filter dropdowns (`.custom_select`) are open while focus is inside them, and a
-   * keydown bubbling out of one reaches the CDK dialog's Escape handler on <body>. While one is open, Escape only
-   * closes it (blur) and is swallowed; with none open it propagates and the dialog closes (Cancel semantics).
-   */
-  onEscape(event: Event): void {
-    const active = document.activeElement as HTMLElement | null;
-    const target = event.target as HTMLElement | null;
-    const dropdown = (target?.closest?.('.custom_select') ?? active?.closest?.('.custom_select')) as HTMLElement | null;
-    if (!dropdown) return;
-    event.stopPropagation();
-    if (active && dropdown.contains(active)) active.blur();
-  }
-
-  cancel(): void {
-    this.dialogRef.close(undefined);
-  }
-
-  /** A filter change is a new query: back to page 1. */
-  private reload(): void {
-    this.page.set(1);
-    this.load$.next();
+  private load(page: number, append: boolean): void {
+    this.lastRequest = { page, append };
+    this.load$.next(this.lastRequest);
   }
 }

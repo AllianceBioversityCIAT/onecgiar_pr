@@ -1,6 +1,6 @@
 # impact-level-info
 
-**Verified:** 2026-11-01 · branch qa-development-2026-ss · (uncommitted) · spec `results/impact-results-reporting/result-detail-impact` IRD-T-8 rework F-5/F-7 (picker Escape closes only an open filter dropdown; study-type definitions only in the field description); prior: IRD-T-8 rework F-2/F-3/F-4: previous-results picker type filter labels type 9 via `resultTypeFilterLabel`; a successful save bumps `SaveButtonService.savedTick` (clears field-card "Unsaved changes"); hidden `appFeedbackValidation` markers feed the bottom bar (Yes/No answered, statement within 100 words, Yes => at least one link); prior: 2026-10-31 · branch qa-development-2026-ss · `docs/specs/results/impact-results-reporting/result-detail-impact` `IRD-T-4` rework 2 (portfolio in phase labels, labelled filter groups, real-keyboard CT; copy/placement to confirm at `IRD-T-8`); prior: `IRD-T-3`
+**Verified:** 2026-11-03 · branch qa-development-2026-ss · (uncommitted) · spec `results/impact-results-reporting/impact-previous-results-dropdown` IPD-T-2 (page wired to the inline dropdown + selected list; dialog removed); prior: 2026-11-01 · branch qa-development-2026-ss · (uncommitted) · spec `results/impact-results-reporting/result-detail-impact` IRD-T-8 rework F-5/F-7 (picker Escape closes only an open filter dropdown; study-type definitions only in the field description); prior: IRD-T-8 rework F-2/F-3/F-4: previous-results picker type filter labels type 9 via `resultTypeFilterLabel`; a successful save bumps `SaveButtonService.savedTick` (clears field-card "Unsaved changes"); hidden `appFeedbackValidation` markers feed the bottom bar (Yes/No answered, statement within 100 words, Yes => at least one link); prior: 2026-10-31 · branch qa-development-2026-ss · `docs/specs/results/impact-results-reporting/result-detail-impact` `IRD-T-4` rework 2 (portfolio in phase labels, labelled filter groups, real-keyboard CT; copy/placement to confirm at `IRD-T-8`); prior: `IRD-T-3`
 
 ## What it is
 Section of a **P25 Impact contribution** result (`result_type_id = 9`, portfolio P25 only): study type,
@@ -39,40 +39,31 @@ in `resultDetailRouting`, not in `rdResultTypesPages` — `IRD-DD-1`). Mirrors `
 - **Accessibility (IRD-NFR-1).** The shared `pr-word-counter` is not live and stays untouched (21 consumers);
   the page adds an `sr-only` `role="status" aria-live="polite"` span ("N of 100 words", server count). After
   Remove, `removePreviousResult` renders, then focuses the next row's Remove button, else the previous, else
-  "Add results" (the focused button is destroyed with its row).
+  the dropdown field (the focused button is destroyed with its row).
 - Dirty tracking snapshots `buildBody()` (the save shape), so `''` vs `null` statements are not "dirty".
 - `canDeactivate: [UnsavedChangesGuard]` lives on the INNER route in `impact-level-info-routing.module.ts`;
   the component implements `hasUnsavedChanges()` / `saveSection()`.
-- Read-only: the `pr-*` fields render as text on their own; Add/Remove buttons are hidden by `readOnly`.
+- Read-only: the `pr-*` fields render as text on their own; the dropdown field and the Remove buttons are hidden by `readOnly`.
 
-## Previous-results picker (`IRD-T-4`, `components/previous-results-picker/`)
-- Standalone `app-previous-results-picker`, opened by `openPreviousResultsPicker()` through `HlmDialogService.open(...,
-  { context })`. ⚠️ The service cannot bind `@Input()`s: the picker reads `{ resultId, initialSelection }` from
-  `injectBrnDialogContext` (null under Jest, where `@spartan-ng/brain` is a stub — the spec mocks it). CDK gives
-  focus trap, autofocus, Escape and focus restore to "Add results" (the button persists); proven by
-  `impact-level-info.picker.cy.ts` (1280 + 900 px, no horizontal scroll).
-- Working selection is a copy; the dialog closes with the array on Done and `undefined` on Cancel/Escape. The page
-  list is replaced only on Done (`previousResults` is never touched while open — do not call `removePreviousResult` then).
-- One request per typing burst (`debounceTime(300)` + `distinctUntilChanged`), `switchMap` on every load (stale
-  responses dropped), filters/new query reset to page 1; params always carry `excludeResultId` and `limit: 20`.
-- Filters: "Phase / portfolio" = `GET_versioning(ALL, REPORTING)`; each option is labelled by `phaseOptionLabel()`
-  (`P25 · Reporting 2025 - (Open)`, from the row's `obj_portfolio.acronym`; plain label when absent). Only
-  `versionId` (the phase `id`) is sent, never `portfolioId`. Each filter sits in a `role="group"` with
-  `aria-labelledby` on its visible label (the shared selects' triggers are bare `<a tabindex>` with no name).
-  Result type = `GET_resultTypes()` (`GET api/results/types/all`, every active `result_type`,
-  added in `results-api.service.ts`; `GET_TypeByResultLevel` was NOT used: it is level-grouped and unverified for 9/10/11).
-- Keyboard (IRD-NFR-1) is proven with REAL key presses (`cypress-real-events`, `/// <reference types="cypress-real-events" />`
-  needed in the spec) in `impact-level-info.picker.cy.ts`: search -> Tab -> phase trigger -> Tab -> its search box ->
-  type -> Enter (needs exactly ONE matching option) -> Tab to a type checkbox -> Space -> Tab to Add -> Enter -> Tab
-  to Done -> Enter. ⚠️ Shared-component gaps (not edited here): `app-pr-filter-select` options are non-focusable
-  `<div (click)>`, so a phase can be chosen by keyboard only by narrowing the search to one option; and its `pick()`
-  blurs focus to `<body>` (Tab then resumes from the old position; use `document.activeElement`, not `cy.focused()`).
-- `[disabled]` on `hlmBtn` goes through `BrnButton` (stub under Jest): specs assert `hasPrev()/hasNext()` instead.
+## Previous-results dropdown (`IPD-T-1/T-2`, `components/previous-results-picker/`)
+- Inline, controlled, standalone `app-previous-results-picker` (no dialog, no `HlmDialogService`). Page binds
+  `[resultId]`, `[selection]="previousResults"` and `(selectionChange)="onSelectionChange($event)"`; every pick /
+  Clear selection emits the WHOLE next array and the page replaces `previousResults` with a new one (never mutate
+  in place: the dirty check compares `buildBody()`). Nothing is stored until the section Save. Read-only: no
+  dropdown, no remove buttons, the "Results selected (N)" list still renders.
+- Below the field: "Results selected (N)" + one line per result with a remove icon button
+  (`aria-label="Remove result <code>"`, `data-cy="impact-remove-result"`). `removePreviousResult` renders, then
+  focuses the next remove button, else the previous, else the dropdown field via `picker.focusField()`
+  (`@ViewChild(PreviousResultsPickerComponent)`). Field header: `app-pr-field-header` "Please select a result" (required).
+- Picker internals: first open triggers E5 + filter catalogs; one request per typing burst (300 ms debounce),
+  `switchMap` drops stale responses; filters reset to page 1; params carry `excludeResultId` and `limit: 20`.
+  Portfolio segment comes from `GET_versioning(ALL, REPORTING)` rows (`obj_portfolio`), types from `GET_resultTypes()`.
+- Keyboard / Escape closing the panel and focus return are proven in `impact-level-info.picker.cy.ts` (rewritten in IPD-T-3).
 
 ## IRD-T-8 rework (F-2, F-3, F-4)
 
 - F-2: picker type options use `resultTypeFilterLabel(id, name)` (type 9 reads `Impact result / Impact contribution`; value unchanged).
 - F-3: `performSave` success tap does `saveButtonSE.savedTick.update(n => n + 1)`; field cards clear their chip on it. Failure does not bump.
-- F-4: `SectionBottomBarComponent` counts `.pr-field.mandatory:not(.complete)`. `app-pr-yes-or-not` renders no marker and `app-pr-textarea` ignores the word limit, so hidden `appFeedbackValidation` divs report: Yes/No answered, statement not over `maxWords`, and (only when Yes) `previousResults.length > 0`. Module imports `FeedbackValidationDirectiveModule`.
-- F-5: the picker root has `(keydown.escape)="onEscape($event)"`. Shared filter dropdowns (`.custom_select`) are open while focus is inside; if Escape comes from inside one, the picker blurs it and `stopPropagation()`s so the CDK dialog (keydown on body) stays open with search/selection intact. No dropdown focused: Escape propagates and closes the dialog (Cancel). Shared `pr-filter-select` untouched.
+- F-4: `SectionBottomBarComponent` counts `.pr-field.mandatory:not(.complete)`. `app-pr-yes-or-not` renders no marker and `app-pr-textarea` ignores the word limit, so hidden `appFeedbackValidation` divs report: Yes/No answered, statement not over `maxWords`, and (only when Yes) `previousResults.length > 0` (label "Please select a result"). Module imports `FeedbackValidationDirectiveModule`.
+- F-5: superseded by IPD-T-1: the dialog is gone; the inline picker closes its panel on Escape and returns focus to its field.
 - F-7: study-type definitions appear once, in the select's description (`studyTypeDescription`); the repeated line under the select (`selectedDefinition`, `impact-study-definition`) was removed.
