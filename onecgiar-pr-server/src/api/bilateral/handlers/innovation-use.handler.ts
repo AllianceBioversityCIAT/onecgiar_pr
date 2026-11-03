@@ -156,7 +156,14 @@ export class InnovationUseBilateralHandler
       const actorTypeId = await this.resolveActorTypeId(actor, index);
       this.validateYouthWithinGender(actor, index);
 
-      prepared.push({ ...actor, actor_type_id: actorTypeId });
+      // IFC-R-1 out-of-scope / IFC-R-10: the Farmers unit and nature are centre-form only.
+      // Forced to null so bilateral keeps merging same-type actors and storing exactly as before.
+      prepared.push({
+        ...actor,
+        actor_type_id: actorTypeId,
+        count_unit: null,
+        use_nature: null,
+      });
     }
 
     return prepared;

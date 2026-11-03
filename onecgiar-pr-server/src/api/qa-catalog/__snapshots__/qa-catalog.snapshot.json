@@ -1,8 +1,8 @@
 {
   "years": {
     "2026": {
-      "revision": 32,
-      "content_hash": "3fd524754451d8f9144a93cf61bcf268fb656c722c5657a72cbc19ea74f5a5fd"
+      "revision": 33,
+      "content_hash": "1d96e7e229ba14c1e620e6db60772704b441cf07c9538b78a42578acfa0f82e3"
     }
   },
   "keys": [
@@ -263,11 +263,13 @@
     "subfield:innovation_dev.team_diversity/other_text",
     "subfield:innovation_use.current_use.actors/actor_type",
     "subfield:innovation_use.current_use.actors/age_disaggregation_not_available",
+    "subfield:innovation_use.current_use.actors/count_unit",
     "subfield:innovation_use.current_use.actors/how_many",
     "subfield:innovation_use.current_use.actors/men",
     "subfield:innovation_use.current_use.actors/men_youth",
     "subfield:innovation_use.current_use.actors/other_actor_type",
     "subfield:innovation_use.current_use.actors/sex_and_age_disaggregation",
+    "subfield:innovation_use.current_use.actors/use_nature",
     "subfield:innovation_use.current_use.actors/women",
     "subfield:innovation_use.current_use.actors/women_youth",
     "subfield:innovation_use.current_use.actors/youth_split_applied_by_system",
@@ -288,11 +290,13 @@
     "subfield:innovation_use.investment.programs/kind_cash",
     "subfield:innovation_use.investment.programs/program",
     "subfield:innovation_use.projection_2030.actors/actor_type",
+    "subfield:innovation_use.projection_2030.actors/count_unit",
     "subfield:innovation_use.projection_2030.actors/how_many",
     "subfield:innovation_use.projection_2030.actors/men",
     "subfield:innovation_use.projection_2030.actors/men_youth",
     "subfield:innovation_use.projection_2030.actors/other_actor_type",
     "subfield:innovation_use.projection_2030.actors/sex_and_age_disaggregation",
+    "subfield:innovation_use.projection_2030.actors/use_nature",
     "subfield:innovation_use.projection_2030.actors/women",
     "subfield:innovation_use.projection_2030.actors/women_youth",
     "subfield:innovation_use.projection_2030.measures/quantity",

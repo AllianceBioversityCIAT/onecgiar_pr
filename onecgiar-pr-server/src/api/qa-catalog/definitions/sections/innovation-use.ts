@@ -68,6 +68,7 @@ import {
 } from '../types';
 import { FROM_2026, whenEq, whenIn } from './shared';
 import { budgetValue } from './innovation-development';
+import { FARMERS_ACTOR_TYPE_ID } from '../../../results/result-actors/farmer-follow-up.constant';
 
 /** IUF:321 / :713: "# of graduate students" is rendered only for the institution type 50. */
 const GRADUATE_STUDENTS_TYPE = 50;
@@ -146,6 +147,11 @@ const sub = (
 });
 
 const ALWAYS: SubRule = { required: true };
+// IFC-R-9: the Farmers follow-up questions are shown and required only while the row's actor type is Farmers.
+const FARMERS_RULE: SubRule = {
+  required_when: whenEq('actor_type', FARMERS_ACTOR_TYPE_ID),
+  visible_when: whenEq('actor_type', FARMERS_ACTOR_TYPE_ID),
+};
 // Women / Men / Youth: shown (and required, `!!result_actors_id`) only while "Sex and age disaggregation does not apply" is off.
 // QAC-T-25: the four counters are rendered only while that tick is off (IUF:152,:186,:220 current use; :547,:580,:613 2030), so `visible_when` = `required_when`.
 // `how_many` is NOT gated: it is always rendered, read-only (the sum of the breakdown) while the tick is off (IUF:220-232) and typed while it is on (IUF:233).
@@ -246,6 +252,26 @@ function usageLists(
             // IUF:112 (current use) / :527 (2030): the input exists only for the type 5
             visible_when: whenEq('actor_type', 5),
           },
+        ),
+        // IFC-R-9 (changes/innovation-use-farmer-count-nature): the two follow-up questions of a Farmers row, 2026 only (FROM_2026 of the
+        // list). Required and shown only for the actor type Farmers (pinned id, IFC-DD-4); a non-Farmers row may still hold a stored code.
+        sub(
+          'result_actors',
+          'count_unit',
+          'Unit of the reported numbers',
+          'single_select',
+          'count_unit',
+          'actor_count_unit',
+          FARMERS_RULE,
+        ),
+        sub(
+          'result_actors',
+          'use_nature',
+          'Nature of the innovation use number',
+          'single_select',
+          'use_nature',
+          'actor_use_nature',
+          FARMERS_RULE,
         ),
         sub(
           'result_actors',

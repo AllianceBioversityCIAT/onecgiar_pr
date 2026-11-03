@@ -35,6 +35,11 @@ import {
   summarizePreviousPhaseCurrentUse,
 } from '../../results/summary/utils/previous-phase-current-use.util';
 import { ClarisaInnovationUseLevelRepository } from '../../../clarisa/clarisa-innovation-use-levels/clarisa-innovation-use-levels.repository';
+import {
+  FARMERS_ACTOR_TYPE_ID,
+  toCountUnit,
+  toUseNature,
+} from '../../results/result-actors/farmer-follow-up.constant';
 import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
 
 @Injectable()
@@ -483,6 +488,13 @@ export class InnovationUseService {
             whereOptions.other_actor_type = el?.other_actor_type ?? IsNull();
           }
 
+          // IFC-R-4 / IFC-DD-8: Farmers rows are told apart by what they report (unit + nature).
+          // Compared against the whitelisted values, i.e. what buildActorData will store.
+          if (Number(el.actor_type_id) === FARMERS_ACTOR_TYPE_ID) {
+            whereOptions.count_unit = toCountUnit(el?.count_unit) ?? IsNull();
+            whereOptions.use_nature = toUseNature(el?.use_nature) ?? IsNull();
+          }
+
           actorExists = await this._resultActorRepository.findOne({
             where: whereOptions,
           });
@@ -668,6 +680,9 @@ export class InnovationUseService {
       ),
       how_many: el?.how_many,
       addressing_demands: this.isNullData(el?.addressing_demands),
+      // IFC-R-7: only the four codes are stored; anything else is NULL (IFC-DD-3).
+      count_unit: toCountUnit(el?.count_unit),
+      use_nature: toUseNature(el?.use_nature),
     };
   }
 

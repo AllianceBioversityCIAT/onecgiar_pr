@@ -1,4 +1,9 @@
 // @akili-spec quality-assurance/qa-field-catalog
+import {
+  COUNT_UNIT_CODES,
+  USE_NATURE_CODES,
+} from '../../results/result-actors/farmer-follow-up.constant';
+
 /**
  * Amendment v1.9 (D): control lists whose ids are a FIXED, code- or seed-defined set. When a condition
  * compares a select over one of these lists, the shape validator checks every compared id against it.
@@ -113,3 +118,21 @@ export const CLOSED_CONTROL_LISTS: Readonly<Record<string, readonly number[]>> =
      */
     capdev_degrees: [1, 2],
   };
+
+/**
+ * Closed lists whose members are CODES (strings stored in a varchar column), not option ids. Same meaning as `CLOSED_CONTROL_LISTS`
+ * (a fixed set the catalog names by `control_list`), kept apart so the numeric lists keep their `number[]` type.
+ * Declarative only: neither the shape validator nor the read plan uses it, on purpose (a row filter on `result_actors` would drop rows).
+ */
+export const CLOSED_CODE_LISTS: Readonly<Record<string, readonly string[]>> = {
+  /**
+   * `result_actors.count_unit` (IFC-R-9): the unit of the numbers of a Farmers actor row, stored as a CODE (varchar), not an id.
+   * Source: `COUNT_UNIT_CODES` (results/result-actors/farmer-follow-up.constant.ts): households, individuals.
+   */
+  actor_count_unit: [...COUNT_UNIT_CODES],
+  /**
+   * `result_actors.use_nature` (IFC-R-9): the nature of a Farmers actor row's number, stored as a CODE (varchar), not an id.
+   * Source: `USE_NATURE_CODES` (same file): information_received, innovation_applied.
+   */
+  actor_use_nature: [...USE_NATURE_CODES],
+};

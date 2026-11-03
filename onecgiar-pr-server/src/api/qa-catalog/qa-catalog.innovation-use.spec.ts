@@ -4,6 +4,7 @@ import { CATALOG_RESULT_TYPES } from './definitions/result-types';
 import { NOT_FOR_QA } from './definitions/not-for-qa';
 import { validateCatalogShape } from './definitions/shape-validator';
 import { PENDING_CATALOG } from './definitions/pending-catalog';
+import { CLOSED_CODE_LISTS } from './definitions/closed-control-lists';
 import { CatalogField, CatalogSubField, Condition } from './definitions/types';
 
 /**
@@ -293,5 +294,46 @@ describe('QAC-T-20 innovation use (Results)', () => {
         'UNKNOWN_CONDITION_KEY',
       );
     });
+  });
+
+  // IFC-R-9 (changes/innovation-use-farmer-count-nature, IFC-T-6): the Farmers follow-up subfields of the actor rows.
+  describe('IFC-R-9 Farmers follow-up subfields', () => {
+    const FARMERS = { field: 'actor_type', operator: 'eq', value: 1 };
+
+    it('the closed code lists hold exactly the four codes, two each (no fifth code)', () => {
+      expect(CLOSED_CODE_LISTS.actor_count_unit).toEqual([
+        'households',
+        'individuals',
+      ]);
+      expect(CLOSED_CODE_LISTS.actor_use_nature).toEqual([
+        'information_received',
+        'innovation_applied',
+      ]);
+    });
+
+    it.each(BLOCKS)(
+      '%s.actors: count_unit and use_nature are single selects over their closed list, shown and required only for Farmers, from 2026',
+      (block) => {
+        const actors = get(`${block}.actors`);
+        for (const [key, list] of [
+          ['count_unit', 'actor_count_unit'],
+          ['use_nature', 'actor_use_nature'],
+        ]) {
+          const s = sub(actors, key);
+          expect(s.type).toBe('single_select');
+          expect(s.control_list).toBe(list);
+          expect(s.required).toBe(false);
+          expect(s.required_when).toEqual(FARMERS);
+          expect(s.visible_when).toEqual(FARMERS);
+          expect(s.storage).toEqual({
+            kind: 'column',
+            table: 'result_actors',
+            column: key,
+          });
+        }
+        expect(actors.valid_from).toBe(2026);
+        expect(actors.valid_to).toBeNull();
+      },
+    );
   });
 });
