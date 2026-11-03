@@ -454,9 +454,20 @@ export class InnovationUseInfoComponent implements CanComponentDeactivate {
     return (linkedResults || []).map((r: any) => Number(r?.id ?? r));
   }
 
+  /**
+   * IFC (innovation-use-farmer-count-nature) — EVERY actor row leaves with both follow-up answers, as `null`
+   * when unanswered and on non-Farmers rows. The server's existing-row save writes the whole actor payload, so a
+   * row that omits `count_unit` / `use_nature` would blank the stored answers. Payload copy only: the bound rows
+   * are not mutated. Codes are exact-case (`households` | `individuals`, `information_received` |
+   * `innovation_applied`); the server stores anything else as NULL.
+   */
+  private withFarmerFollowUp(actors: any[] | undefined | null): any[] {
+    return (actors || []).map((actor: any) => ({ ...actor, count_unit: actor?.count_unit ?? null, use_nature: actor?.use_nature ?? null }));
+  }
+
   private saveSectionWith(innovationLink: { has_innovation_link: boolean; linked_results: number[] }): Observable<void> {
     const { investment_programs = [], investment_bilateral = [], investment_partners = [] } = this.innovationUseInfoBody as any;
-    const actors = this.innovationUseInfoBody?.innovatonUse?.actors || [];
+    const actors = this.withFarmerFollowUp(this.innovationUseInfoBody?.innovatonUse?.actors);
     const measures = this.innovationUseInfoBody?.innovatonUse?.measures || [];
     // Do not mutate UI-bound state; map payload only
     const organization = (this.innovationUseInfoBody?.innovatonUse?.organization || []).map((item: any) => ({
@@ -467,6 +478,9 @@ export class InnovationUseInfoComponent implements CanComponentDeactivate {
     const innovation_use_2030 = this.innovationUseInfoBody.innovation_use_2030
       ? {
           ...this.innovationUseInfoBody.innovation_use_2030,
+          ...(Array.isArray(this.innovationUseInfoBody.innovation_use_2030.actors)
+            ? { actors: this.withFarmerFollowUp(this.innovationUseInfoBody.innovation_use_2030.actors) }
+            : {}),
           organization: (this.innovationUseInfoBody.innovation_use_2030.organization || []).map((item: any) => ({
             ...item,
             institution_types_id: item?.institution_sub_type_id ?? item?.institution_types_id

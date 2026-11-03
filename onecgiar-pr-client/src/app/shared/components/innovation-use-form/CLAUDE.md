@@ -1,6 +1,6 @@
 # innovation-use-form
 
-**Verified:** 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update rules moved to `shared/utils/current-use-update.util.ts` (shared with the bilateral form); prior: 2026-09-11 · branch performance-refactor · 5791b85b9
+**Verified:** 2026-11-03 · qa-development-2026-ss · IFC-T-4 (changes/innovation-use-farmer-count-nature): Farmers follow-up block, gate and Households coupling (uncommitted); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update rules moved to `shared/utils/current-use-update.util.ts` (shared with the bilateral form); prior: 2026-09-11 · branch performance-refactor · 5791b85b9
 
 ## What it is
 The shared Innovation Use questionnaire: use level (0-9), narrative/actors blocks, the
@@ -60,6 +60,36 @@ The shared Innovation Use questionnaire: use level (0-9), narrative/actors block
   renders a `*` marker in `--pr-field-required-fg` while the value is null. 🛑 That marker is **purely
   visual**: it emits no `.pr-field.mandatory` / `.pr-input.mandatory`, because this field is already
   counted once by the directive above — adding those classes would turn "1 field missing" into "2".
+
+## Farmers follow-up block (IFC, `changes/innovation-use-farmer-count-nature`)
+
+Under the "Actor type" select of every **Farmers** row, in BOTH blocks (current use + 2030), one `<ng-template
+#farmerFollowUp>` (end of the `.html`, rendered through `ngTemplateOutlet`) asks Q-a (households / individual
+actors) and Q-b (information received / innovation applied). Copy, codes and the Farmers id live in
+`farmer-follow-up.ts` — **verbatim from `docs/specs/changes/.../mockup/farmer-follow-up-questions.png`, pinned
+string by string in the spec; never paraphrase** (QA reads it back). The mock-up's developer note ("Single choice.
+Stored as ...") is NOT copy and is never rendered.
+
+- 🛑 **Gate = `isFarmerFollowUpRow(actor)`**: `!isIpsr` + `isPhaseYearAtLeast(2026)` + `source_name !== 'W3/Bilaterals'`
+  + `actor_type_id == 1` + `is_active !== false`. Phase year and `source_name` both come from `currentResultSignal()`
+  (same `GET results/get/:id` row). Never `isP25()` (IFC-DD-5). Unknown year = no block.
+- `removeOther()` stops disabling Farmers when `isFarmerFollowUpResult()` (second Farmers row = split received/applied).
+  Every other type, and every out-of-scope result, keeps the one-row rule.
+- **Households** (`onCountUnitChange`) reuses the single-total path: sets `sex_and_age_disaggregation = true`, wipes the
+  grid with `cleanActor` (only when the row actually changes shape — a typed single total survives), and
+  `isHouseholdsRow()` hides the "does not apply" tick. **Individuals** after it puts the grid back.
+- `onActorTypeChange` (select `ngModelChange`) clears both answers away from Farmers; it never adds keys to rows that
+  never had them (IPSR payloads unchanged).
+- ⚠️ **`app-pr-radio-button` cannot draw an option description** (plain `{{ label }}` only). Q-b uses it with
+  `[hideOptions]="true"` for the field card / REQUIRED pill / `.pr-field.mandatory` marker (what the mandatory scan
+  counts) and draws its own options with the shared `pr-native-radio` class. No Spartan radio-group is installed under
+  `src/app/spartan/` (adding one = helm files + tsconfig/jest paths + `spartanBrainMock` stubs).
+- ⚠️ **Payload:** the host (`innovation-use-info.saveSectionWith`) sends `count_unit` + `use_nature` on EVERY actor row
+  (`null` when unanswered): the server's existing-row save writes the whole actor, so omitting them blanks the stored
+  answers. Exact lowercase codes; anything else is stored as NULL. The `Actor` model of BOTH `Ipsr-step-1-body.model.ts`
+  and `innovationDevInfoBody.ts` declares the two fields (TS2339 trap above).
+- Specs: the `Farmers follow-up (IFC-T-4)` describe in `innovation-use-form.component.spec.ts`, run per block.
+- Not provable in jsdom: placement and visual likeness to the mock-up (IFC-T-7 visual check).
 
 ## Section 7 of P2-3537 — the age-only fallback and the 50/50 split
 

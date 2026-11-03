@@ -581,4 +581,56 @@ describe('ResultsFrameworkReportingController', () => {
       expect(result).toBe(envelope);
     });
   });
+
+  describe('getIndicatorResultStatusLinks (KRC-T-1)', () => {
+    let linksController: ResultsFrameworkReportingController;
+    const getLinks = jest.fn();
+
+    beforeEach(async () => {
+      getLinks.mockReset();
+      const moduleRef = await Test.createTestingModule({
+        controllers: [ResultsFrameworkReportingController],
+        providers: [
+          {
+            provide: ResultsFrameworkReportingService,
+            useValue: { getIndicatorResultStatusLinks: getLinks },
+          },
+          {
+            provide: RoleByUserRepository,
+            useValue: { $_isValidRole: jest.fn() },
+          },
+          { provide: ResultsService, useValue: {} },
+          { provide: ReportingEntryHubService, useValue: {} },
+        ],
+      }).compile();
+      linksController = moduleRef.get(ResultsFrameworkReportingController);
+    });
+
+    it('is a GET on indicator-result-status-links', () => {
+      const handler =
+        ResultsFrameworkReportingController.prototype
+          .getIndicatorResultStatusLinks;
+      expect(Reflect.getMetadata(PATH_METADATA, handler)).toBe(
+        'indicator-result-status-links',
+      );
+      expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(
+        RequestMethod.GET,
+      );
+    });
+
+    it('parses versionId and forwards program', () => {
+      linksController.getIndicatorResultStatusLinks('SP03', '37');
+      expect(getLinks).toHaveBeenCalledWith('SP03', 37);
+    });
+
+    it('forwards undefined when versionId is absent', () => {
+      linksController.getIndicatorResultStatusLinks('SP03');
+      expect(getLinks).toHaveBeenCalledWith('SP03', undefined);
+    });
+
+    it('forwards NaN for a non-numeric versionId so the service rejects it', () => {
+      linksController.getIndicatorResultStatusLinks('SP03', 'abc');
+      expect(getLinks).toHaveBeenCalledWith('SP03', Number.NaN);
+    });
+  });
 });

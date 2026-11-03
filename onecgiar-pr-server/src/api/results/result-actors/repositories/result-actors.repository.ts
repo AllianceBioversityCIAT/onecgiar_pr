@@ -45,7 +45,9 @@ export class ResultActorRepository
           section_id,
           age_disaggregation_not_available,
           youth_split_applied_by_system,
-          addressing_demands
+          addressing_demands,
+          count_unit,
+          use_nature
       FROM
           result_actors
       WHERE
@@ -76,7 +78,9 @@ export class ResultActorRepository
               section_id,
               age_disaggregation_not_available,
               youth_split_applied_by_system,
-              addressing_demands
+              addressing_demands,
+              count_unit,
+              use_nature
           )
       SELECT
           is_active,
@@ -102,7 +106,9 @@ export class ResultActorRepository
           section_id,
           age_disaggregation_not_available,
           youth_split_applied_by_system,
-          addressing_demands
+          addressing_demands,
+          count_unit,
+          use_nature
       FROM
           result_actors
       WHERE
@@ -183,6 +189,8 @@ export class ResultActorRepository
         ,ra.sex_and_age_disaggregation
         ,ra.women
         ,ra.women_youth
+        ,ra.count_unit
+        ,ra.use_nature
          FROM result_actors ra WHERE ra.result_id = ? and ra.is_active > 0`;
         const response = await (<Promise<ResultActor[]>>(
           this.query(queryData, [
@@ -217,6 +225,8 @@ export class ResultActorRepository
           ,sex_and_age_disaggregation
           ,women
           ,women_youth
+          ,count_unit
+          ,use_nature
           )
           SELECT 
           ra.actor_type_id
@@ -239,6 +249,8 @@ export class ResultActorRepository
           ,ra.sex_and_age_disaggregation
           ,ra.women
           ,ra.women_youth
+          ,ra.count_unit
+          ,ra.use_nature
            FROM result_actors ra WHERE ra.result_id = ? and ra.is_active > 0`;
         await (<Promise<{ insertId }>>(
           this.query(queryData, [
@@ -270,6 +282,8 @@ export class ResultActorRepository
         ,ra.sex_and_age_disaggregation
         ,ra.women
         ,ra.women_youth
+        ,ra.count_unit
+        ,ra.use_nature
          FROM result_actors ra WHERE ra.result_id = ? and ra.is_active > 0
         `;
         const temp = await (<Promise<ResultActor[]>>(

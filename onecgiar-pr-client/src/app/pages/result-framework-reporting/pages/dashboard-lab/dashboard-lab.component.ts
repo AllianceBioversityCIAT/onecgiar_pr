@@ -85,6 +85,8 @@ import { ReportingGuideService, TutorialId } from './services/reporting-guide.se
 import { MyWorkCountService } from '../my-work-board/services/my-work-count.service';
 // @akili-spec changes/reporting-favorite-indicators
 import { ReportingFavoritesService, favoriteKeyOf } from './services/reporting-favorites.service';
+import { KpiStatusChipComponent } from './components/kpi-status-chip/kpi-status-chip.component';
+import { IndicatorResultStatusLink, KpiStatusCounts, KpiStatusLinkIndex, countsForRow, indexLinks } from './kpi-status-counts.util';
 import { PT_ACTIVITY_TIMEOUT_MS, PtActivityIndex, buildPtActivityIndex, ptActivityCountOf, ptActivityHasAny } from './pt-activity';
 import { HlmButton } from '@spartan/button';
 // @akili-spec changes/reporting-entry-hub
@@ -447,6 +449,7 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
     HighlightSearchPipe,
     ReportingAowTableComponent,
     ImpactResultsCardComponent,
+    KpiStatusChipComponent,
     ReportingProgramBandComponent,
     ReportingInsightsPanelComponent,
     ReportingQuickTypologyFiltersComponent,
@@ -1159,6 +1162,14 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     effect(() => {
       const code = this.selected()?.initiativeCode || '';
       untracked(() => this.loadPtActivity(code));
+    });
+
+    // @akili-spec result-framework-reporting/kpi-row-status-counts (KRC-T-2, KRC-R-5.2): ONE request per
+    // program + version, never per AoW or KPI. Waits for a resolved version so a late phase cannot cause a second fetch.
+    effect(() => {
+      const code = this.selected()?.initiativeCode || '';
+      const versionId = this.effectiveVersionId();
+      if (code && versionId != null) untracked(() => this.loadKpiStatusLinks(code, versionId));
     });
 
     effect(() => {
@@ -4130,6 +4141,52 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly ptActivityOnly = signal(false);
   private ptActivitySub: Subscription | null = null;
   private ptActivityProgram: string | null = null;
+
+  /** Program-wide result/status links, cached by `program|versionId` (KRC-DD-2). */
+  private readonly kpiStatusLinksByKey = signal<Map<string, KpiStatusLinkIndex>>(new Map());
+  private readonly kpiStatusLinksRequested = new Set<string>();
+
+  private kpiStatusLinksKey(code: string, versionId: number): string {
+    return `${code}|${versionId}`;
+  }
+
+  private loadKpiStatusLinks(code: string, versionId: number): void {
+    const key = this.kpiStatusLinksKey(code, versionId);
+    if (this.kpiStatusLinksRequested.has(key)) return;
+    const call = this.api.resultsSE?.GET_IndicatorResultStatusLinks?.(code, versionId);
+    if (!call) return;
+    this.kpiStatusLinksRequested.add(key);
+    const store = (links: IndicatorResultStatusLink[]) => this.kpiStatusLinksByKey.update(m => new Map(m).set(key, indexLinks(links)));
+    call.subscribe({
+      next: (res: { response?: IndicatorResultStatusLink[] }) => store(Array.isArray(res?.response) ? res.response : []),
+      // KRC-R-5.3: any error (incl. 404 / 500) means "no counts": no toast, no banner.
+      // Fail-soft: the requested-key guard deliberately does not retry after an error.
+      error: (err: { status?: number }) => {
+        console.error('KPI status counts unavailable', err?.status ?? '');
+        store([]);
+      }
+    });
+  }
+
+  /** Per-row status counts for the KPI chip (KRC-R-1/2). All zeros when nothing is linked or the load failed. */
+  statusCountsFor(ind: any): KpiStatusCounts {
+    const code = this.selected()?.initiativeCode || '';
+    const versionId = this.effectiveVersionId();
+    const index = code && versionId != null ? this.kpiStatusLinksByKey().get(this.kpiStatusLinksKey(code, versionId)) : undefined;
+    return index ? countsForRow(index, ind) : { editing: 0, submitted: 0, approved: 0, pendingReview: 0 };
+  }
+
+  /** Stable function reference for the reporting-aow-table `statusCountsFor` input (KRC-T-3, P-7). */
+  readonly statusCountsForRow = (ind: any): KpiStatusCounts => this.statusCountsFor(ind);
+
+  /**
+   * KPI status chip click (KRC-R-7 / KRC-S-7.1): same action as the row menu's "View reported results"
+   * (`onReportingOpenAchieved`). Layouts that render inside an HLO group pass its title so the group's ToC node is resolved.
+   */
+  onKpiChipOpen(ind: any, groupTitle?: string): void {
+    if (groupTitle == null) this.onReportingOpenAchieved(ind);
+    else this.manageIndicator(ind, groupTitle, 'results');
+  }
 
   private loadPtActivity(code: string): void {
     if (code === this.ptActivityProgram) return;

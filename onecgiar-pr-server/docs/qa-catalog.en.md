@@ -37,7 +37,7 @@ x-api-key: <CLARISA key registered for QA>
 {
   "portfolio": "P25",
   "phase": 2026,
-  "catalog_version": "2026.32",
+  "catalog_version": "2026.33",
   "generated_at": "2026-10-06T12:00:00.000Z",
   "result_types": [
     { "key": "innovation_development", "label": "Innovation development", "level": "output" }
@@ -292,19 +292,19 @@ Notes:
 
 ---
 
-## Catalog at revision 32 (2026.32)
+## Catalog at revision 33 (2026.33)
 
-Counts measured on the code catalog on 2026-10-09 (the same data the endpoint returns); revision 31 (QRF-T-9) changes no count, only value bindings:
+Counts measured on the code catalog on 2026-10-09 (the same data the endpoint returns); revision 31 (QRF-T-9) changes no count, only value bindings; revision 33 (IFC-T-6) adds 4 subfields (2 per Innovation Use actor list) and 4 conditional subfield requirements, counts below updated by hand:
 
 | Item | Count |
 |---|---|
 | Result types | 9 |
 | Sections | 25 |
 | Catalogued fields (top level) | 161 |
-| Catalogued subfields | 249 (of which 32 at the second level) |
+| Catalogued subfields | 253 (of which 32 at the second level) |
 | Fields with `required: true` (unconditional) | 54 |
 | Fields with a conditional requirement (`required: false` plus `required_when`) | 47 |
-| Subfields with `required: true` / with a conditional requirement | 64 / 70 |
+| Subfields with `required: true` / with a conditional requirement | 64 / 74 |
 | Fields by type | `single_select` 37 · `multi_select` 16 · `boolean` 25 · `text` 21 · `list` 46 · `number` 13 · `object` 2 · `date` 1 |
 | Fields applying to every type (`["*"]`) | 30 |
 | Fields naming a result type explicitly (the `["*"]` fields above are not repeated here) | `innovation_development` 40 · `innovation_use` 40 · `innovation_package` 35 · `knowledge_product` 39 · `capacity_sharing` 21 · `policy_change` 20 · `other_outcome` 13 · `other_output` 13 · `impact_contribution` 13 |
@@ -425,7 +425,7 @@ An unknown property of the body is ignored.
 ```json
 {
   "phase": 2026,
-  "catalog_version": "2026.32",
+  "catalog_version": "2026.33",
   "results": [
     {
       "result_id": 900001,
@@ -731,3 +731,4 @@ These are deliberate and tracked; each one is **additive** when resolved.
 | 2026-10-31 | **v1.28 — 2026-10-31: revision reconciliation; catalog_version 2026.32; the public shape is unchanged.** Two independent changes had both bumped 2026 from revision 30 to 31 with different content: P2-4037 (QRF-T-9 value-binding fixes, v1.27) and P2-4061 (spec `bugfix/toc-kpi-optional-green-check`: `toc.planned_result` is no longer required for 2026, the 2026 green check no longer blocks on an unanswered planned-result question). Revision 32 is the merged content of both; nothing else changes. Consumers holding `2026.31` re-read the catalog. |
 | 2026-10-29 | **v1.29 — 2026-10-29: intake and release documented (spec `quality-assurance/qa-intake`, QIN-T-6); `catalog_version` unchanged (2026.32).** New part [Intake and release](#intake-and-release) for two write routes, each needing the CLARISA key permission of that route: `POST /api/qa/results/intake` (marks eligible Submitted results In QA; `taken` with `changed`, `not_taken` with the feed's reasons) and `POST /api/qa/results/release` (ends QA with `outcome` `qaed` or `not_qaed`; `released`, `not_released` with reasons `not_found`, `other_phase`, `not_in_qa`, `not_submitted`). Limits: 1 to 50 entries, `phase_year` 2000 to 2100. Atomic per call; audit in `result_qa_intake_log`. `qaed` requires a prior intake. Unsubmit (Reporting and IPSR) answers 409 while a result is In QA in an open phase. Additive: no existing route or shape changes. |
 | 2026-11-03 | **v1.30 — 2026-11-03: per-endpoint CLARISA grant enforced on all five `/api/qa/*` routes (spec `quality-assurance/qa-intake`, QIN-T-4b); `catalog_version` unchanged (2026.32).** CLARISA validates a key as `valid: true` for any route, so Reporting now also requires the route grant that CLARISA reports in the `validate-api-key` response (`allowed_endpoints`, `endpoint_allowed`). A call is a **401** (generic body) unless CLARISA answers `endpoint_allowed: true`; a missing field is refused. A key must have the route in its CLARISA `allowed_endpoints`. No request or response shape changes; bilateral routes are unchanged. Until CLARISA returns `endpoint_allowed`, every `/api/qa/*` call is a 401. |
+| 2026-11-03 | **v1.31 — 2026-11-03: Farmers follow-up subfields in Innovation Use; catalog_version 2026.33.** The actor list of both Innovation Use blocks (`innovation_use.current_use.actors` and `innovation_use.projection_2030.actors`) gains two optional-by-shape subfields, `count_unit` (single_select over the closed list `households` / `individuals`) and `use_nature` (single_select over `information_received` / `innovation_applied`), both stored as codes in `result_actors` (varchar), valid from 2026, shown and required (`visible_when` / `required_when`) only when the row's `actor_type` equals 1 (Farmers). The values are codes (strings), not option ids; a row of another actor type may still hold a stored code. Additive only: no key is renamed or removed. Consumers holding `2026.32` re-read the catalog. Spec `changes/innovation-use-farmer-count-nature`, IFC-T-6. |

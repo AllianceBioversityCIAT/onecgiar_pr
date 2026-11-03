@@ -6,6 +6,7 @@ import type { ReportingTocContext } from '../../../results-framework-reporting/r
 import { ProgressRollup, rollUpIndicators } from './toc-progress-rollup';
 import { W1_W2_RESULT_SOURCE_FILTER } from '../../../../shared/constants/w1-w2-result-source-filter.constant';
 import { TOC_KPI_COVERAGE_STATUS_IDS } from '../../../../shared/constants/toc-kpi-coverage-status.constant';
+import { ResultStatusData } from '../../../../shared/constants/result-status.enum';
 
 /**
  * @akili-spec changes/center-results-kpi-chips CRK-R-5 / CRK-DD-0.
@@ -190,6 +191,16 @@ export interface PortfolioTocCoverageRow {
   covered: number;
   /** TND-T-1: distinct in-scope KPIs with no target for the year (not in total). */
   noTarget: number;
+}
+
+/** KRC-T-1 / design §6: one linked result of one indicator node, with its status and anchors. */
+export interface IndicatorResultStatusLink {
+  toc_result_id: number;
+  related_node_id: string;
+  result_id: number;
+  status_id: number;
+  anchors: number[];
+  has_unanchored: boolean;
 }
 
 @Injectable()
@@ -1413,6 +1424,93 @@ export class AoWBilateralRepository {
           covered: Number(row.covered),
           noTarget: Number(row.no_target),
         }),
+      );
+    } catch (error) {
+      // debug: false: with true the handler logs the query text and bound params.
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: AoWBilateralRepository.name,
+        debug: false,
+      });
+    }
+  }
+
+  /**
+   * @akili-spec result-framework-reporting/kpi-row-status-counts (KRC-T-1, KRC-DD-1/2/3/4/6)
+   * Every result linked to an indicator node of one program + ToC phase, per status, with the
+   * anchors of its active target rows. The population mirrors the indicator drawer
+   * (`ExistingResultContributorsLoaderService`, scope 'all'): active rtr/rtri/rit/result,
+   * `is_not_aplicable = 0`, INNER active target row, status set of ALL_SCOPE; and, like the
+   * drawer, NO `contributing_indicator`, `target_date`, type or level filter. The client applies
+   * the per-row anchor rule. SELECT only; the phase comes from `resolveContext` (no version ids).
+   */
+  async findIndicatorResultStatusLinks(
+    program: string,
+    contextOrYear?: ReportingTocContext | number,
+  ): Promise<IndicatorResultStatusLink[]> {
+    try {
+      const context = await this.resolveContext(contextOrYear);
+      const statusIds = [
+        ResultStatusData.Editing.value,
+        ResultStatusData.QualityAssessed.value,
+        ResultStatusData.Submitted.value,
+        ResultStatusData.PendingReview.value,
+        ResultStatusData.Approved.value,
+      ];
+
+      const query = `
+        SELECT
+          rtr.toc_result_id AS toc_result_id,
+          rtri.toc_results_indicator_id AS related_node_id,
+          r.id AS result_id,
+          r.status_id AS status_id,
+          -- GROUP_CONCAT is capped at group_concat_max_len (1024 chars default); negligible for anchor id lists.
+          GROUP_CONCAT(DISTINCT rit.toc_indicator_target_id) AS anchors,
+          MAX(CASE WHEN rit.toc_indicator_target_id IS NULL THEN 1 ELSE 0 END) AS has_unanchored
+        FROM ${env.DB_NAME}.result r
+        JOIN ${env.DB_NAME}.results_toc_result rtr ON rtr.results_id = r.id
+          AND rtr.is_active = 1
+        JOIN ${env.DB_NAME}.results_toc_result_indicators rtri ON rtri.results_toc_results_id = rtr.result_toc_result_id
+          AND rtri.is_active = 1
+          AND rtri.is_not_aplicable = 0
+        JOIN ${env.DB_NAME}.result_indicators_targets rit ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+          AND rit.is_active = 1
+        JOIN ${env.DB_TOC}.toc_results tr ON tr.id = rtr.toc_result_id
+        WHERE tr.official_code = ?
+          AND tr.phase = ?
+          AND r.is_active = 1
+          AND r.status_id IN (${statusIds.map(() => '?').join(', ')})
+        GROUP BY
+          rtr.toc_result_id,
+          rtri.toc_results_indicator_id,
+          r.id,
+          r.status_id
+      `;
+
+      const rows = await this.dataSource.query(query, [
+        program,
+        context.phaseUuid,
+        ...statusIds,
+      ]);
+
+      return (rows ?? []).map(
+        (row: Record<string, unknown>): IndicatorResultStatusLink => {
+          const anchors = new Set<number>();
+          for (const raw of `${row.anchors ?? ''}`.split(',')) {
+            const trimmed = raw.trim();
+            if (trimmed === '') continue;
+            const parsed = Number(trimmed);
+            if (Number.isFinite(parsed)) anchors.add(parsed);
+          }
+          return {
+            toc_result_id: Number(row.toc_result_id),
+            related_node_id: `${row.related_node_id}`,
+            result_id: Number(row.result_id),
+            status_id: Number(row.status_id),
+            anchors: [...anchors],
+            has_unanchored: Number(row.has_unanchored) === 1,
+          };
+        },
       );
     } catch (error) {
       // debug: false: with true the handler logs the query text and bound params.
