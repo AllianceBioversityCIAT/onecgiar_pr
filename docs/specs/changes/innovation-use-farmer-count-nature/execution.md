@@ -370,3 +370,10 @@
   - **Clear the unit:** re-click Individual actors (unit cleared) → save → stored `null/innovation_applied`, `innovation-use-info: false`, submit false ✅ (IFC-R-6 server, section 1).
   - **Answer again:** re-select + save → individuals, green, submit true ✅.
   - **Final state of #8558:** the current-use block is no longer TBD and holds that Farmers row.
+
+### IFC-T-7 — PRTest re-check of the session-41 fixes (2026-11-03, onecgiar-pr-02, perf d4f1fdbbd deployed, nothing saved)
+- Deploy confirmed in the served page: the Q-b radiogroup carries `-mt-[27px]`. #8558 shows 3 Farmers follow-up blocks (current use row 1962 = 10/2, 20/3, total 30, persisted).
+- Current use → Add actor → Farmers. A second Farmers row is allowed. The bottom bar shows "2 fields missing" (Q-a, Q-b).
+- Households: the single "How many" shows **REQUIRED** on the unsaved row and the bar stays at **2 fields missing** (Q-b + How many) → F-1 fix ✅
+- Re-click Households (deselect): the **grid comes back** with "does not apply" unticked → deselect fix ✅
+- The unsaved row was left unsaved (not persisted).
