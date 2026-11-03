@@ -333,3 +333,13 @@
 - **Ship note:** real result **34582** (ENABEL, Marc Schut, Editing) turns red with the new function (unanswered Farmers row). Tell users at release.
 - Open: T-7 (V-2 gap, IPSR step 1, phase duplication, catalog vs UI labels, innovation-use server CLAUDE.md line); prod migration + `after.sql` at deploy; this execution.md and the form CLAUDE.md re-stamp are still uncommitted on qa-dev.
 - **V-2 fixed (2026-11-03):** the Q-b radiogroup has `-mt-[27px]`. Header→options is now 10px on both questions, measured in the browser; it was 41px vs 10px. `--findRelatedTests` 24/1022 green; `ng lint` on the template passes.
+
+### IFC-T-7 — PRTest pass (2026-11-03, session onecgiar-pr-41, perf 3b30d1f32, Claude in Chrome; writes on test result #8558 approved by Santiago)
+- PASS: the existing Farmers row (2030 block) renders the follow-up block under the Actor type, with the copy as in the mock-up, and reloads with Individual actors / received. Researchers and Extension agents rows show no block.
+- PASS IFC-R-4: Add actor → the select keeps Farmers enabled and disables Researchers and Extension agents (already used). Second Farmers row = Households / applied / How many 50; after save + reload, both Farmers rows survive with their own answers (first keeps its grid, total 468).
+- PASS IFC-R-5: Households replaces the grid with a single "How many" and hides the "does not apply" tick.
+  - **Finding F-1 (open):** before the first save, the new row's "How many" did not show REQUIRED and the counter did not count it; after saving it does. To size: likely the field card `required` binding on a new row.
+- PASS IFC-R-6 (server): unit cleared by re-click + save → sidebar not green, "4 of 5"; Households re-selected + save → green, 5 of 5.
+- CONFIRMED T-4 advisory: deselecting Households brings the "does not apply" tick back already ticked and the grid does not return. Acceptable (no data lost, the reporter can untick), documented.
+- Left in place on #8558: the second Farmers row (Households / applied / 50) as evidence.
+- Covered elsewhere: 2025 / bilateral no-block was checked locally by onecgiar-pr-02 (6324 and 8596). Not run: IPSR step 1 (jsdom falsifier specs only), phase duplication, Santiago visual approval.
