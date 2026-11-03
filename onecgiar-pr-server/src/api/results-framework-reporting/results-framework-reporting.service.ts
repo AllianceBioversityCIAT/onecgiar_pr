@@ -621,6 +621,43 @@ export class ResultsFrameworkReportingService {
     }
   }
 
+  /**
+   * @akili-spec result-framework-reporting/kpi-row-status-counts (KRC-T-1, KRC-DD-6)
+   * Read-only links (result, status, anchors) of every indicator node of a program in one ToC
+   * phase. The phase comes from `versionId` (or the active phase), never a literal.
+   */
+  async getIndicatorResultStatusLinks(program?: string, versionId?: number) {
+    try {
+      const normalizedProgram = program?.trim();
+
+      if (!normalizedProgram) {
+        throwServiceError(
+          'The program identifier is required in the query params.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      // Unknown program -> 404, same contract as the sibling `toc-results` reads (design.md §6).
+      const { initiative } = await this.resolveInitiative(normalizedProgram);
+
+      const tocContext = await this.resolveTocContextForRequest(versionId);
+
+      const links =
+        await this._tocResultsRepository.findIndicatorResultStatusLinks(
+          initiative.official_code,
+          tocContext,
+        );
+
+      return {
+        response: links,
+        message: 'Indicator result status links retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   async getIntermediateOutcomes(programId?: string, versionId?: number) {
     try {
       const normalizedProgram = programId?.trim();

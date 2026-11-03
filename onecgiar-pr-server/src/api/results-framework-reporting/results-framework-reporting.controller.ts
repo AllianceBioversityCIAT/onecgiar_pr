@@ -195,6 +195,45 @@ export class ResultsFrameworkReportingController {
     );
   }
 
+  // @akili-spec result-framework-reporting/kpi-row-status-counts (KRC-T-1)
+  @Get('indicator-result-status-links')
+  @ApiOperation({
+    summary:
+      'List the results linked to each KPI of a program, with their status',
+    description:
+      'Read-only. For one program and ToC phase, returns every active result linked to an indicator node (same population the indicator drawer lists), with its status id and the anchors of its target rows. Ids and statuses only.',
+  })
+  @ApiQuery({
+    name: 'program',
+    type: String,
+    required: true,
+    description: 'Program identifier (e.g. SP01).',
+  })
+  @ApiQuery({
+    name: 'versionId',
+    type: Number,
+    required: false,
+    description:
+      'Optional phase/version identifier. Defaults to the active reporting phase when absent.',
+  })
+  @ApiOkResponse({
+    description: 'Indicator result status links retrieved successfully.',
+  })
+  getIndicatorResultStatusLinks(
+    @Query('program') program: string,
+    @Query('versionId') versionId?: string,
+  ) {
+    const parsedVersion =
+      versionId !== undefined && versionId !== null
+        ? Number(versionId)
+        : undefined;
+
+    return this.resultsFrameworkReportingService.getIndicatorResultStatusLinks(
+      program,
+      parsedVersion,
+    );
+  }
+
   @Get('toc-results/intermediate-outcomes')
   @ApiOperation({
     summary: 'List intermediate ToC outcomes by program',

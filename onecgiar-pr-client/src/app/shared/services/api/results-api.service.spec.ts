@@ -5281,6 +5281,23 @@ describe('ResultsApiService', () => {
     });
   });
 
+  // @akili-spec result-framework-reporting/kpi-row-status-counts (KRC-T-2)
+  describe('GET_IndicatorResultStatusLinks', () => {
+    const base = `${environment.apiBaseUrl}api/results-framework-reporting/indicator-result-status-links`;
+
+    it('sends program and versionId', () => {
+      service.GET_IndicatorResultStatusLinks('SP03', 8).subscribe();
+      const req = httpMock.expectOne(`${base}?program=SP03&versionId=8`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('omits versionId when absent', () => {
+      service.GET_IndicatorResultStatusLinks('SP03').subscribe();
+      httpMock.expectOne(`${base}?program=SP03`).flush(mockResponse);
+    });
+  });
+
   describe('GET_ExistingResultsContributors', () => {
     it('should call GET_ExistingResultsContributors and return expected data', done => {
       service.GET_ExistingResultsContributors('rtr1', 'tri1').subscribe(response => {

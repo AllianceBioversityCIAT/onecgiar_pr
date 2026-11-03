@@ -128,6 +128,10 @@
                     <span class="sr-only">{{ ptLabelOf(ptCount) }}. {{ ptTooltip }}</span>
                   </span>
                 }
+                @let krcCounts = statusCountsFor()?.(row);
+                @if (krcCounts) {
+                  <app-kpi-status-chip [editing]="krcCounts.editing" [submitted]="krcCounts.submitted" [approved]="krcCounts.approved" [pendingReview]="krcCounts.pendingReview" (open)="openAchieved.emit(row)" />
+                }
               </div>
             </div>
           </td>
@@ -1122,6 +1126,10 @@
             <span class="min-[640px]:hidden" aria-hidden="true" data-testid="pt-activity-badge-short">{{ ptShortLabelOf(ptCount) }}</span>
             <span class="sr-only">{{ ptLabelOf(ptCount) }}. {{ ptTooltip }}</span>
           </span>
+        }
+        @let krcCounts = statusCountsFor()?.(row);
+        @if (krcCounts) {
+          <app-kpi-status-chip [editing]="krcCounts.editing" [submitted]="krcCounts.submitted" [approved]="krcCounts.approved" [pendingReview]="krcCounts.pendingReview" (open)="openAchieved.emit(row)" />
         }
       </div>
     </div>

@@ -101,4 +101,25 @@ describe('DashboardLabComponent — "View reported results" lands on the Reporte
     component.manageIndicator(ROW, 'HL04');
     expect(component.manageTab()).toBe('report');
   });
+
+  // @akili-spec result-framework-reporting/kpi-row-status-counts (KRC-T-3, KRC-R-7 / KRC-S-7.1)
+  it('KRC-S-7.1: the KPI status chip opens the same Reported results view as the row menu', async () => {
+    const component = await createComponent();
+    const viewReported = jest.spyOn(component, 'onReportingOpenAchieved');
+
+    component.onKpiChipOpen(ROW);
+
+    expect(viewReported).toHaveBeenCalledWith(ROW);
+    expect(component.manageTab()).toBe('results');
+    expect(component.managed()?.indicator?.indicator_id).toBe(12);
+  });
+
+  it('KRC-S-7.1: inside an HLO group the chip keeps the group title and still lands on Reported results', async () => {
+    const component = await createComponent();
+
+    component.onKpiChipOpen(ROW, 'HL04 group');
+
+    expect(component.manageTab()).toBe('results');
+    expect(component.managed()?.groupTitle).toBe('HL04 group');
+  });
 });

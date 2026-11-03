@@ -4491,4 +4491,96 @@ describe('ResultsFrameworkReportingService', () => {
       expect(indicator.center_id).toBe(3);
     });
   });
+
+  describe('getIndicatorResultStatusLinks (KRC-T-1)', () => {
+    const linksRepo = mockTocResultsRepository as any;
+
+    beforeEach(() => {
+      linksRepo.findIndicatorResultStatusLinks = jest.fn();
+      mockReportingTocContextService.resolve.mockReset();
+      mockReportingTocContextService.resolveByVersionId.mockReset();
+    });
+
+    it('passes the versionId-resolved context and the upper-cased program to the repository', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 3,
+        official_code: 'SP03',
+        name: 'Program 3',
+      });
+      const tocContext = { reportingYear: 2026, phaseUuid: 'PHASE-X' };
+      mockReportingTocContextService.resolveByVersionId.mockResolvedValueOnce(
+        tocContext,
+      );
+      const links = [
+        {
+          toc_result_id: 1,
+          related_node_id: 'N1',
+          result_id: 9,
+          status_id: 1,
+          anchors: [],
+          has_unanchored: true,
+        },
+      ];
+      linksRepo.findIndicatorResultStatusLinks.mockResolvedValueOnce(links);
+
+      const result: any = await service.getIndicatorResultStatusLinks(
+        ' sp03 ',
+        77,
+      );
+
+      expect(
+        mockReportingTocContextService.resolveByVersionId,
+      ).toHaveBeenCalledWith(77);
+      expect(linksRepo.findIndicatorResultStatusLinks).toHaveBeenCalledWith(
+        'SP03',
+        tocContext,
+      );
+      expect(result.status).toBe(200);
+      expect(result.response).toBe(links);
+    });
+
+    it('falls back to the active phase and returns an empty list with 200', async () => {
+      const tocContext = { reportingYear: 2026, phaseUuid: 'PHASE-ACTIVE' };
+      mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
+      linksRepo.findIndicatorResultStatusLinks.mockResolvedValueOnce([]);
+
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 1,
+        official_code: 'SP01',
+        name: 'Program 1',
+      });
+
+      const result: any = await service.getIndicatorResultStatusLinks('SP01');
+
+      expect(mockReportingTocContextService.resolve).toHaveBeenCalled();
+      expect(result.status).toBe(200);
+      expect(result.response).toEqual([]);
+    });
+
+    it('returns a 404 handler error when the initiative is unknown', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce(null);
+
+      const result: any = await service.getIndicatorResultStatusLinks('ZZ99');
+
+      expect(result.status).toBe(404);
+      expect(linksRepo.findIndicatorResultStatusLinks).not.toHaveBeenCalled();
+    });
+
+    it('returns a 400 handler error when the program is missing', async () => {
+      const result: any = await service.getIndicatorResultStatusLinks('  ');
+
+      expect(result.status).toBe(400);
+      expect(linksRepo.findIndicatorResultStatusLinks).not.toHaveBeenCalled();
+    });
+
+    it('returns a 400 handler error when versionId is not a number', async () => {
+      const result: any = await service.getIndicatorResultStatusLinks(
+        'SP01',
+        Number.NaN,
+      );
+
+      expect(result.status).toBe(400);
+      expect(linksRepo.findIndicatorResultStatusLinks).not.toHaveBeenCalled();
+    });
+  });
 });

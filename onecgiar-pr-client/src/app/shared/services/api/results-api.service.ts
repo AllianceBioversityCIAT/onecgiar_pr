@@ -1799,6 +1799,15 @@ export class ResultsApiService {
       `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=${resultTocResultId}&tocResultIndicatorId=${tocResultIndicatorId}${scope ? `&scope=${scope}` : ''}${targetParam}`
     );
   }
+  // @akili-spec result-framework-reporting/kpi-row-status-counts (KRC-T-2)
+  // /api/results-framework-reporting/indicator-result-status-links: program-wide result/status links, read once per program + version.
+  GET_IndicatorResultStatusLinks(program: string, versionId?: number | null) {
+    const versionParam = versionId != null ? `&versionId=${encodeURIComponent(`${versionId}`)}` : '';
+    return this.http.get<any>(
+      `${environment.apiBaseUrl}api/results-framework-reporting/indicator-result-status-links?program=${encodeURIComponent(program)}${versionParam}`
+    );
+  }
+
   // /api/results-framework-reporting/dashboard
   GET_DashboardData(entityId: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/dashboard?programId=${entityId}`);

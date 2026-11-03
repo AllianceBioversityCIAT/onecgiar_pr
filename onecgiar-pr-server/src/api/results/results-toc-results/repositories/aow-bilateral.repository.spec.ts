@@ -2336,4 +2336,108 @@ describe('AoWBilateralRepository', () => {
       }
     });
   });
+
+  describe('findIndicatorResultStatusLinks (KRC-T-1)', () => {
+    it('queries the drawer population: 5 statuses, no drawer-excluded filter, read-only', async () => {
+      mockResolveContext();
+      dataSourceQueryMock.mockResolvedValueOnce([]);
+
+      await repository.findIndicatorResultStatusLinks('SP03', defaultContext);
+
+      const [query, params] = dataSourceQueryMock.mock.calls[0];
+      expect(params).toEqual(['SP03', 'PHASE-1', 1, 2, 3, 5, 6]);
+      expect(query).toContain('r.status_id IN (?, ?, ?, ?, ?)');
+      expect(query).toContain('rtri.is_not_aplicable = 0');
+      expect(query).toContain('tr.phase = ?');
+      expect(query).toContain('JOIN main_test.result_indicators_targets rit');
+      expect(query).not.toContain('LEFT JOIN');
+      expect(query).not.toContain('contributing_indicator');
+      expect(query).not.toContain('target_date');
+      expect(query).not.toContain('result_type_id');
+      expect(query).not.toContain('result_level_id');
+      expect(query).not.toMatch(/INSERT|UPDATE|DELETE/i);
+      expect(query).not.toMatch(/version_id\s*=\s*\d/);
+    });
+
+    it('forwards the context argument to resolveContext', async () => {
+      const spy = mockResolveContext();
+      dataSourceQueryMock.mockResolvedValueOnce([]);
+      const ctx: ReportingTocContext = {
+        phaseUuid: 'PHASE-9',
+        reportingYear: 2026,
+      };
+
+      await repository.findIndicatorResultStatusLinks('SP01', ctx);
+
+      expect(spy).toHaveBeenCalledWith(ctx);
+    });
+
+    it('maps rows: dedups anchors, drops NULL, flags unanchored, numbers the ids', async () => {
+      mockResolveContext();
+      dataSourceQueryMock.mockResolvedValueOnce([
+        {
+          toc_result_id: '5',
+          related_node_id: 'NODE-A',
+          result_id: '11',
+          status_id: '1',
+          anchors: '340657,340657, 340658',
+          has_unanchored: '0',
+        },
+        {
+          toc_result_id: 5,
+          related_node_id: 'NODE-A',
+          result_id: 12,
+          status_id: 3,
+          anchors: null,
+          has_unanchored: 1,
+        },
+      ]);
+
+      const rows = await repository.findIndicatorResultStatusLinks(
+        'SP03',
+        defaultContext,
+      );
+
+      expect(rows).toEqual([
+        {
+          toc_result_id: 5,
+          related_node_id: 'NODE-A',
+          result_id: 11,
+          status_id: 1,
+          anchors: [340657, 340658],
+          has_unanchored: false,
+        },
+        {
+          toc_result_id: 5,
+          related_node_id: 'NODE-A',
+          result_id: 12,
+          status_id: 3,
+          anchors: [],
+          has_unanchored: true,
+        },
+      ]);
+    });
+
+    it('returns an empty array when there are no links', async () => {
+      mockResolveContext();
+      dataSourceQueryMock.mockResolvedValueOnce([]);
+
+      await expect(
+        repository.findIndicatorResultStatusLinks('SP03', defaultContext),
+      ).resolves.toEqual([]);
+    });
+
+    it('routes query errors through returnErrorRepository', async () => {
+      mockResolveContext();
+      const boom = new Error('db down');
+      dataSourceQueryMock.mockRejectedValueOnce(boom);
+
+      await expect(
+        repository.findIndicatorResultStatusLinks('SP03', defaultContext),
+      ).rejects.toBe(boom);
+      expect(mockHandlersError.returnErrorRepository).toHaveBeenCalledWith(
+        expect.objectContaining({ error: boom }),
+      );
+    });
+  });
 });
