@@ -240,7 +240,7 @@
               placeholder="Write some..."
               label="How many"
               type="number"
-              [required]="!!actorItem?.result_actors_id"
+              [required]="!!actorItem?.result_actors_id || isHouseholdsRow(actorItem)"
               [disabled]="saving"
               [(ngModel)]="actorItem.how_many"
               (ngModelChange)="validateYouth(i, true, actorItem)">
@@ -636,7 +636,7 @@
                   placeholder="Write some..."
                   label="How many"
                   type="number"
-                  [required]="!!actorItem?.result_actors_id"
+                  [required]="!!actorItem?.result_actors_id || isHouseholdsRow(actorItem)"
                   [(ngModel)]="actorItem.how_many"
                   (ngModelChange)="validateYouth(i, true, actorItem)">
                 </app-pr-input>

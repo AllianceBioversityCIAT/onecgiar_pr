@@ -1,6 +1,6 @@
 # innovation-use-form
 
-**Verified:** 2026-11-03 · qa-development-2026-ss · IFC-T-7 fixes (Individuals keeps a hand-set single total; Q-b gap); IFC-T-4 (changes/innovation-use-farmer-count-nature): Farmers follow-up block, gate and Households coupling (uncommitted); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update rules moved to `shared/utils/current-use-update.util.ts` (shared with the bilateral form); prior: 2026-09-11 · branch performance-refactor · 5791b85b9
+**Verified:** 2026-11-03 · qa-development-2026-ss · T-7 findings (re-click Households restores the grid; unsaved Households "How many" required); IFC-T-7 fixes (Individuals keeps a hand-set single total; Q-b gap); IFC-T-4 (changes/innovation-use-farmer-count-nature): Farmers follow-up block, gate and Households coupling (uncommitted); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update rules moved to `shared/utils/current-use-update.util.ts` (shared with the bilateral form); prior: 2026-09-11 · branch performance-refactor · 5791b85b9
 
 ## What it is
 The shared Innovation Use questionnaire: use level (0-9), narrative/actors blocks, the
@@ -80,6 +80,7 @@ Stored as ...") is NOT copy and is never rendered.
   `isHouseholdsRow()` hides the "does not apply" tick. **Individuals** puts the grid back ONLY when the previous
   answer was Households; ⚠️ a row the reporter put on a single total by hand keeps its `how_many` and tick (IFC-T-7:
   the unconditional version wiped a stored total on the first answer).
+- Households re-clicked (unit -> null) restores the grid like Individuals; an unsaved Households row's "How many" is `[required]` via `isHouseholdsRow` (every other unsaved field keeps `!!result_actors_id`).
 - `onActorTypeChange` (select `ngModelChange`) clears both answers away from Farmers; it never adds keys to rows that
   never had them (IPSR payloads unchanged).
 - ⚠️ **`app-pr-radio-button` cannot draw an option description** (plain `{{ label }}` only). Q-b uses it with

@@ -595,7 +595,11 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     if (value === FARMER_COUNT_UNIT.HOUSEHOLDS) {
       if (!actorItem.sex_and_age_disaggregation) this.cleanActor(actorItem);
       actorItem.sex_and_age_disaggregation = true;
-    } else if (value === FARMER_COUNT_UNIT.INDIVIDUALS && previous === FARMER_COUNT_UNIT.HOUSEHOLDS && actorItem.sex_and_age_disaggregation) {
+    } else if (
+      (value === FARMER_COUNT_UNIT.INDIVIDUALS || !value) &&
+      previous === FARMER_COUNT_UNIT.HOUSEHOLDS &&
+      actorItem.sex_and_age_disaggregation
+    ) {
       this.cleanActor(actorItem);
       actorItem.sex_and_age_disaggregation = false;
     }
