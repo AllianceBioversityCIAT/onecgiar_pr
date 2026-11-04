@@ -818,6 +818,109 @@ describe('BilateralResultsListComponent', () => {
   });
 
 
+  // @akili-spec bilateral/center-overview-pa-contribution (CPA-T-7, CPA-R-4, CPA-AC-4)
+  describe('CPA-T-7 — category on the Results tab (CPA-R-4, CPA-AC-4)', () => {
+    const CHIP = 'Category: W1/W2 tagging';
+    /** 10 scoped rows: 2 tagging rows of SP05 (W1/W2, no lead), the rest W3 / other programs. */
+    const scopedRows = () =>
+      of({
+        response: [
+          result({ id: 1, result_code: '1', source: 'Result', is_leading_result: 0, submitter: 'SP05', overview_category: 'w1w2_tagging' }),
+          result({ id: 2, result_code: '2', source: 'Result', is_leading_result: 0, submitter: 'SP05', overview_category: 'w1w2_tagging' }),
+          result({ id: 3, result_code: '3', source: 'Result', is_leading_result: 0, submitter: 'SP09', overview_category: 'w1w2_tagging' }),
+          ...[4, 5, 6, 7, 8].map(id => result({ id, result_code: String(id), submitter: 'SP05', overview_category: 'new_w3' })),
+          ...[9, 10].map(id => result({ id, result_code: String(id), submitter: 'SP09', overview_category: 'replicated_w3' })),
+        ],
+      });
+
+    it('falsifier: ?category=w1w2-tagging&program=SP05 lists exactly 2 rows and one category chip; removing it shows the scoped SP05 rows', fakeAsync(() => {
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(scopedRows());
+      recreateOn({ phase: '36', scope: 'bilateral', category: 'w1w2-tagging', program: 'SP05' });
+
+      expect(component.filteredResults().map(r => r.id)).toEqual([1, 2]);
+      expect(chipTexts().filter(text => text.includes('Category:') && text.includes('tagging')).length).toBe(1);
+
+      chipRemoveButton(CHIP)!.click();
+      tick();
+      fixture.detectChanges();
+
+      expect(component.category()).toBeNull();
+      expect('category' in queryParams$.value).toBe(false);
+      expect(queryParams$.value['scope']).toBe('bilateral');
+      expect(component.filteredResults().map(r => r.id)).toEqual([1, 2, 4, 5, 6, 7, 8]);
+      expect(chipTexts().some(text => text.includes(CHIP))).toBe(false);
+    }));
+
+    it('category alone fetches the scope=bilateral row set; removing the chip drops the key and refetches unscoped', fakeAsync(() => {
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(scopedRows());
+      recreateOn({ phase: '36', category: 'w1w2-tagging' });
+
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 36, { scope: 'bilateral' });
+      // The scope CHIP is not shown: the user did not ask for scope, only the fetch path uses it.
+      expect(component.scope()).toBeNull();
+      expect(chipTexts().some(text => text.includes('Scope:'))).toBe(false);
+      expect(component.filteredResults().map(r => r.id)).toEqual([1, 2, 3]);
+      bilateralApiService.GET_bilateralCenterResults.mockClear();
+
+      chipRemoveButton(CHIP)!.click();
+      tick();
+      fixture.detectChanges();
+
+      expect('category' in queryParams$.value).toBe(false);
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 36);
+    }));
+
+    it('category=w3 keeps replicated and new W3 rows only', () => {
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(scopedRows());
+      recreateOn({ phase: '36', scope: 'bilateral', category: 'w3' });
+
+      expect(component.filteredResults().map(r => r.id)).toEqual([4, 5, 6, 7, 8, 9, 10]);
+      expect(chipTexts().some(text => text.includes('Category: W3 bilateral'))).toBe(true);
+    });
+
+    it('a deep link carrying category does not get the W3 + Lead default added on top', () => {
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(scopedRows());
+      recreateOn({ phase: '36', category: 'w1w2-tagging' });
+
+      expect(component.showW3()).toBe(true);
+      expect(component.showW1W2()).toBe(true);
+      expect(component.showLead()).toBe(true);
+      expect(component.showContributing()).toBe(true);
+      // Tagging rows are W1/W2 with no lead: the default would have emptied the list.
+      expect(component.filteredResults().length).toBe(3);
+    });
+
+    it('Disqualifier: without category or scope the request stays unscoped (no options argument)', () => {
+      recreateOn({ phase: '36' });
+
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 36);
+      expect(component.category()).toBeNull();
+    });
+
+    it('is not sticky and ignores an unknown value', () => {
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(scopedRows());
+      recreateOn({ phase: '36', scope: 'bilateral', category: 'w1w2-tagging' });
+      queryParams$.next({ phase: '36', scope: 'bilateral', role: 'all', source: 'all' });
+      fixture.detectChanges();
+      expect(component.category()).toBeNull();
+
+      recreateOn({ phase: '36', category: 'foo' });
+      expect(component.category()).toBeNull();
+    });
+
+    it('Clear filters resets category', fakeAsync(() => {
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(scopedRows());
+      recreateOn({ phase: '36', scope: 'bilateral', category: 'w1w2-tagging' });
+
+      component.clearAllFilters();
+      tick();
+
+      expect('category' in queryParams$.value).toBe(false);
+      expect(component.category()).toBeNull();
+    }));
+  });
+
+
   /**
    * `COV-R-13` BUT — the regression this file could not see before: `onSearch` writes every keystroke
    * to the URL and the same component re-hydrates from it, while `parseBilateralQueryParams` trims

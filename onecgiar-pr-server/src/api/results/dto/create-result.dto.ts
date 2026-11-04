@@ -54,4 +54,14 @@ export class CreateResultDto {
       'Ids of the linked results. The UI caps this at one, but the storage is a list because Contributors & Partners allows several.',
   })
   public linked_results?: number[];
+
+  /**
+   * IRS-R-1: CLARISA Impact Area id (1-5). Required when creating an impact result
+   * (level 1 / type 9) through the framework create; ignored for every other level/type.
+   */
+  @ApiPropertyOptional({
+    description:
+      'Impact Area id (1-5). Required for impact results (level 1, type 9); ignored otherwise.',
+  })
+  public impact_area_id?: number;
 }

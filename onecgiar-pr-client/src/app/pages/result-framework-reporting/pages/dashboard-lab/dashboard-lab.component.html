@@ -283,6 +283,8 @@
                             <span class="rounded-full border border-[rgba(30,32,47,0.1)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--pr-color-accents-6)]">{{ ind.center_acronym }}</span>
                           }
                           <span class="rounded-full border border-[rgba(30,32,47,0.1)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--pr-color-accents-6)]">Target: <b class="tabular-nums text-[var(--pr-color-secondary-400)]">{{ ind.target_value_sum ?? 0 }}</b></span>
+                          @let counts = statusCountsFor(ind);
+                          <app-kpi-status-chip [editing]="counts.editing" [submitted]="counts.submitted" [approved]="counts.approved" [pendingReview]="counts.pendingReview" (open)="onKpiChipOpen(ind)" />
                         </div>
                         <div class="mt-auto flex items-center justify-between gap-2 pt-1">
                           <span class="text-[11.5px] text-[var(--pr-color-accents-5)]">Achieved <b class="tabular-nums text-[var(--pr-color-secondary-400)]">{{ ind.actual_achieved_value_sum ?? 0 }}</b> of {{ ind.target_value_sum ?? 0 }}</span>
@@ -596,6 +598,8 @@
                               <span class="line-clamp-2 text-[13px] font-medium leading-snug text-[var(--pr-color-secondary-400)]" [title]="ind.indicator_description">
                                 {{ ind.indicator_description }}
                               </span>
+                              @let counts = statusCountsFor(ind);
+                              <div class="mt-1"><app-kpi-status-chip [editing]="counts.editing" [submitted]="counts.submitted" [approved]="counts.approved" [pendingReview]="counts.pendingReview" (open)="onKpiChipOpen(ind, group.result_title)" /></div>
                             </td>
                             <td class="px-3 py-2.5 text-[12px] text-[var(--pr-color-primary-400)]">{{ ind.type_name || '—' }}</td>
                             <td class="px-3 py-2.5 text-[12px] text-[var(--pr-color-accents-6)]">{{ ind.center_acronym || '—' }}</td>
@@ -676,6 +680,8 @@
                             {{ ind.location }}
                           </span>
                         }
+                        @let counts = statusCountsFor(ind);
+                        <app-kpi-status-chip [editing]="counts.editing" [submitted]="counts.submitted" [approved]="counts.approved" [pendingReview]="counts.pendingReview" (open)="onKpiChipOpen(ind, group.result_title)" />
                       </div>
 
                       <div class="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">
@@ -1596,7 +1602,17 @@
                 [favoritesOnly]="favoritesOnly()"
                 (toggleFavorite)="toggleFavorite($event)"
                 (exitFavoritesOnly)="setFavoritesOnly(false)"
-                [ptActivity]="ptActivity()" />
+                [ptActivity]="ptActivity()"
+                [statusCountsFor]="statusCountsForRow" />
+              <!-- Impact results card (IRE-R-1/3/4): sibling AFTER the table, outside its filter pipeline; no
+                   search/filter signal is passed so filters cannot hide it. Grouped view only. -->
+              @if (reportingViewMode() === 'grouped') {
+                <app-impact-results-card
+                  [initiativeId]="selected()?.initiativeId ?? null"
+                  [versionId]="effectiveVersionId()"
+                  [canReport]="entityAowService.canReportResults()"
+                  (reportArea)="openImpactReport($event)" />
+              }
               <!-- Intermediate Outcomes + 2030 Outcomes are top-level cards inside the table
                    (siblings of AoWs). The old "open 2030 detail" jump button is gone. -->
             } @else if (plannedBrowseView() === 'byAow') {
@@ -1927,6 +1943,8 @@
                                                   {{ ind.center_acronym }}
                                                 </span>
                                               }
+                                              @let counts = statusCountsFor(ind);
+                                              <app-kpi-status-chip [editing]="counts.editing" [submitted]="counts.submitted" [approved]="counts.approved" [pendingReview]="counts.pendingReview" (open)="onKpiChipOpen(ind)" />
                                             </div>
                                           </div>
 
@@ -2045,9 +2063,11 @@
                     <tbody>
                       @for (ind of plannedFilteredIndicators(); track ind.indicator_id + '::' + ind.__aowCode) {
                         <tr class="border-t border-[rgba(30,32,47,0.06)] hover:bg-[var(--pr-color-accents-1)]/60 cursor-pointer" (click)="openReportAside(ind)">
-                          <td
-                            class="px-3 py-2.5 font-medium text-[var(--pr-color-secondary-400)]"
-                            [innerHTML]="ind.indicator_description | highlightSearch: plannedSearch()"></td>
+                          <td class="px-3 py-2.5 font-medium text-[var(--pr-color-secondary-400)]">
+                            <span [innerHTML]="ind.indicator_description | highlightSearch: plannedSearch()"></span>
+                            @let counts = statusCountsFor(ind);
+                            <div class="mt-1 font-normal"><app-kpi-status-chip [editing]="counts.editing" [submitted]="counts.submitted" [approved]="counts.approved" [pendingReview]="counts.pendingReview" (open)="onKpiChipOpen(ind)" /></div>
+                          </td>
                           <td
                             class="whitespace-nowrap px-3 py-2.5 tabular-nums text-[var(--pr-color-accents-6)]"
                             [innerHTML]="ind.__aowCode | highlightSearch: plannedSearch()"></td>
@@ -2092,6 +2112,8 @@
                               [innerHTML]="ind.type_name | highlightSearch: plannedSearch()"></span>
                           }
                           <span class="text-[10px] text-[var(--pr-color-accents-5)]">{{ ind.actual_achieved_value_sum ?? 0 }}/{{ ind.target_value_sum ?? 0 }}</span>
+                          @let counts = statusCountsFor(ind);
+                          <app-kpi-status-chip [editing]="counts.editing" [submitted]="counts.submitted" [approved]="counts.approved" [pendingReview]="counts.pendingReview" (open)="onKpiChipOpen(ind)" />
                         </div>
                       </div>
                       <button type="button" (click)="$event.stopPropagation(); openReportAside(ind)" class="shrink-0 appearance-none rounded-md border border-[var(--pr-color-primary-300)] bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">Report</button>
@@ -2220,6 +2242,7 @@
   <app-indicator-drawer
     [indicator]="m.indicator"
     [emerging]="!!m.emerging"
+    [impactArea]="m.impactArea ?? null"
     [tocNode]="m.node"
     [initiativeId]="selected()?.initiativeId || 0"
     [groupTitle]="m.groupTitle"

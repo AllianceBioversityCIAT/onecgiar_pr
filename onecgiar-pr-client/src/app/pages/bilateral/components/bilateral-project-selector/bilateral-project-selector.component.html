@@ -27,9 +27,38 @@
             (click)="$event.stopPropagation()"
           />
         </div>
+        @if (showProgramChips()) {
+          <div class="bps-chips" role="group" aria-label="Filter by Science Program">
+            @for (chip of programChips(); track chip.code) {
+              <button
+                type="button"
+                hlmBtn
+                size="xs"
+                class="bps-chip"
+                [variant]="selectedProgramCodes().has(chip.code) ? 'brandSoft' : 'outline'"
+                [attr.aria-pressed]="selectedProgramCodes().has(chip.code)"
+                [title]="chip.name"
+                (click)="$event.stopPropagation(); toggleProgram(chip.code)"
+              >
+                {{ chip.code }} · {{ chip.shortName }}
+                <span hlmBadge variant="secondary">{{ chip.count }}</span>
+              </button>
+            }
+            @if (selectedProgramCodes().size > 0) {
+              <button type="button" hlmBtn variant="link" size="xs" class="bps-chips-clear" (click)="$event.stopPropagation(); clearPrograms()">Clear</button>
+            }
+          </div>
+        }
         <div class="bps-options">
           @if (filteredProjects().length === 0) {
-            <div class="bps-no-results">No projects found</div>
+            @if (showProgramChips() && selectedProgramCodes().size > 0) {
+              <div class="bps-no-results">
+                No projects for the selected programs
+                <button type="button" hlmBtn variant="link" size="xs" (click)="$event.stopPropagation(); clearPrograms()">Clear filters</button>
+              </div>
+            } @else {
+              <div class="bps-no-results">No projects found</div>
+            }
           }
           @for (project of filteredProjects(); track project.id) {
             <div

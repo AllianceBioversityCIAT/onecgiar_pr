@@ -422,9 +422,9 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     section: SECTION,
     order: 2,
     result_types: ALL_TYPES,
-    // CP.html:38-46 (always shown). FUNCTION-STATED in 2026: the form marks it required only before 2026 (`[required]="!isAvisaInitiative() && !isCP2026()"`,
-    // CP.html:41), but V-CP:11-27 a NULL answer falls into the "mapped" branch, so the function effectively requires it. Kept (never weakened).
-    required: true,
+    // CP.html:38-46 (always shown). Optional in 2026 when unanswered: the live function `validation_contributor_partner_P25` treats a NULL answer as optional
+    // from 2026 (P2-4061, migration 1792100000000); Yes still requires `toc.entries`, No still requires the narrative (see their required_when).
+    required: false,
     required_confirmed: true,
     ...FROM_2026,
     // the submitter's answer: one value (see SUBMITTER_ROW_STEP)
@@ -503,7 +503,9 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
       kind: 'relation',
       table: 'results_center',
       fk_to_result: 'result_id',
-      value_column: 'is_leading_result',
+      // QRF-T-9 (T-8 golden G-1): the CENTER of the active leading row (`center_id`, e.g. 'CENTER-02'), not the flag
+      value_column: 'center_id',
+      filter: { is_leading_result: 1, is_active: 1 },
     },
   },
   {
@@ -781,7 +783,9 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
       kind: 'relation',
       table: 'results_by_institution',
       fk_to_result: 'result_id',
-      value_column: 'is_leading_result',
+      // QRF-T-9 (T-8 golden G-1): the INSTITUTION of the active leading row (`institutions_id`, as `partners.*` list it), not the flag
+      value_column: 'institutions_id',
+      filter: { is_leading_result: 1, is_active: 1 },
     },
   },
   // Linked-result question (former `linked_results` section, QAC-T-8 · inventory C-6). On the client it lives

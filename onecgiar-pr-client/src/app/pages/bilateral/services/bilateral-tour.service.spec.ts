@@ -13,6 +13,7 @@ import {
   BILATERAL_TOUR_STORAGE_KEY,
   tabBadgeHtml
 } from './bilateral-tour.service';
+import { DraftSpotlightService } from './draft-spotlight.service';
 
 const driverMock = driver as unknown as jest.Mock;
 
@@ -430,6 +431,26 @@ describe('BilateralTourService', () => {
       inst.config.onPrevClick(undefined, inst.config.steps[0], { driver: inst as any, index: 0 });
 
       expect(inst.drive).not.toHaveBeenCalled();
+    });
+  });
+
+  // @akili-spec bilateral/ai-draft-spotlight (ADS-T-2, JD-14): the two driver.js overlays never stack.
+  describe('draft spotlight clash guard (ADS-D6, test 21)', () => {
+    it('does not create a driver instance while the draft spotlight is active', () => {
+      jest.spyOn(TestBed.inject(DraftSpotlightService), 'isActive').mockReturnValue(true);
+
+      service.startBilateralTour({ activeTab: 'drafts' });
+
+      expect(driverMock).not.toHaveBeenCalled();
+      expect(instances).toHaveLength(0);
+    });
+
+    it('still starts the tour when the spotlight is not active', () => {
+      jest.spyOn(TestBed.inject(DraftSpotlightService), 'isActive').mockReturnValue(false);
+
+      service.startBilateralTour({ activeTab: 'drafts' });
+
+      expect(driverMock).toHaveBeenCalledTimes(1);
     });
   });
 });

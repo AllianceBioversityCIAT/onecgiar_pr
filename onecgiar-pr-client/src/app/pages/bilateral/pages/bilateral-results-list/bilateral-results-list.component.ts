@@ -59,12 +59,14 @@ import type { BilateralCenterResult } from '../../services/bilateral-center-resu
 // Lead) this list shipped before this spec.
 import {
   applyResultsTabDefaults,
+  BilateralCategory,
   BilateralGroup,
   BilateralMethod,
   BilateralQueryParams,
   BilateralRole,
   BilateralScope,
   BilateralSource,
+  BILATERAL_CATEGORY_QUERY_PARAM,
   BILATERAL_GROUP_QUERY_PARAM,
   BILATERAL_METHOD_QUERY_PARAM,
   BILATERAL_PHASE_QUERY_PARAM,
@@ -110,10 +112,12 @@ const RESULTS_TAB_MANAGED_QUERY_PARAMS = [
   BILATERAL_SCOPE_QUERY_PARAM,
   // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-4, CNP-R-2 B)
   BILATERAL_GROUP_QUERY_PARAM,
+  // @akili-spec bilateral/center-overview-pa-contribution (CPA-T-7, CPA-R-4)
+  BILATERAL_CATEGORY_QUERY_PARAM,
 ] as const;
 
 /** `status_id` key → display label for the new **Status** chip group (`COV-R-14`). */
-type BilateralFilterChipDimension = 'phase' | 'source' | 'role' | 'status' | 'project' | 'program' | 'createdBy' | 'type' | 'search' | 'scope' | 'group';
+type BilateralFilterChipDimension = 'phase' | 'source' | 'role' | 'status' | 'project' | 'program' | 'createdBy' | 'type' | 'search' | 'scope' | 'group' | 'category';
 
 interface BilateralFilterChip {
   dimension: BilateralFilterChipDimension;
@@ -485,6 +489,7 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
       multi: false,
       scope: this.scope(),
       group: this.group(),
+      category: this.category(),
     };
   });
 
@@ -502,6 +507,27 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
    * pipeline. Hydrated from the URL only, so removing the chip clears it and it is never sticky.
    */
   readonly group = signal<BilateralGroup | null>(null);
+
+  // @akili-spec bilateral/center-overview-pa-contribution (CPA-T-7, CPA-R-4, CPA-AC-4)
+  /**
+   * `'w3' | 'w1w2-tagging'` when the URL carries `category=` (the Overview's Science Program
+   * contribution deep link). Applied client-side by `filterCenterResults` on the raw
+   * `overview_category`, so the row set must be the `scope=bilateral` one (that is where
+   * `w1w2_tagging` rows exist) — see `fetchScope`. Hydrated from the URL only: never sticky.
+   *
+   * Default-suppression (stated + tested): `category` is a contract key, so a Results-tab URL that
+   * carries it counts as "has a contract param" and `applyResultsTabDefaults` does NOT layer the
+   * W3 + Lead default on top. That is intended: tagging rows are W1/W2 with a null lead, so the
+   * default would drop them and the count would stop matching the Overview bar.
+   */
+  readonly category = signal<BilateralCategory | null>(null);
+
+  /**
+   * The scope sent to the server. `category` forces the `bilateral` row set (same path as the CWS
+   * `scope` key); without `scope` AND without `category` it stays `null`, so the request is
+   * byte-identical to the unscoped one. The visible `scope` chip still follows `scope()` only.
+   */
+  private readonly fetchScope = computed<BilateralScope | null>(() => this.scope() ?? (this.category() ? 'bilateral' : null));
 
   /** Distinct creator display names from loaded rows — powers the Created by multiselect. */
   readonly createdByOptions = computed(() => {
@@ -714,6 +740,12 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-4, CNP-R-2 A)
     if (this.group()) chips.push({ dimension: 'group', value: 'updated-no-project', label: 'Updated innovations with no project' });
 
+    // @akili-spec bilateral/center-overview-pa-contribution (CPA-T-7, CPA-R-4)
+    const category = this.category();
+    if (category) {
+      chips.push({ dimension: 'category', value: category, label: category === 'w3' ? 'Category: W3 bilateral' : 'Category: W1/W2 tagging' });
+    }
+
     return chips;
   });
 
@@ -748,7 +780,7 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
         filter(ids => ids.length > 0),
         distinctUntilChanged((a, b) => a.length === b.length && a.every((id, index) => id === b[index])),
       ),
-      toObservable(this.scope).pipe(distinctUntilChanged()),
+      toObservable(this.fetchScope).pipe(distinctUntilChanged()),
     ])
       .pipe(
         takeUntilDestroyed(),
@@ -971,6 +1003,7 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     this.createdByFilter.set(params.createdBy);
     this.scope.set(params.scope);
     this.group.set(params.group);
+    this.category.set(params.category);
 
     const urlPhaseIds = parsePhaseIdsFromUrl(map.get(BILATERAL_PHASE_QUERY_PARAM));
     if (urlPhaseIds.length) {
@@ -1213,6 +1246,7 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     this.searchQuery.set('');
     this.scope.set(null);
     this.group.set(null);
+    this.category.set(null);
     this.syncUrlParams();
   }
 
@@ -1256,6 +1290,9 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
         break;
       case 'group':
         this.group.set(null);
+        break;
+      case 'category':
+        this.category.set(null);
         break;
     }
     this.syncUrlParams();

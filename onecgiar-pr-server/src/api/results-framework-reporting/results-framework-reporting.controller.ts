@@ -30,6 +30,7 @@ import { ValidRoleGuard } from '../../shared/guards/valid-role.guard';
 import { RoleEnum, RoleTypeEnum } from '../../shared/constants/role-type.enum';
 import { PortfolioTocCoverageResponseDto } from './dto/portfolio-toc-coverage.dto';
 import { PortfolioBilateralProjectsResponseDto } from './dto/portfolio-bilateral-projects.dto';
+import { PortfolioContributionRequestsResponseDto } from './dto/portfolio-contribution-requests.dto';
 import { PortfolioResultDimensionsResponseDto } from './dto/portfolio-result-dimensions.dto';
 
 @Controller()
@@ -195,6 +196,45 @@ export class ResultsFrameworkReportingController {
     );
   }
 
+  // @akili-spec result-framework-reporting/kpi-row-status-counts (KRC-T-1)
+  @Get('indicator-result-status-links')
+  @ApiOperation({
+    summary:
+      'List the results linked to each KPI of a program, with their status',
+    description:
+      'Read-only. For one program and ToC phase, returns every active result linked to an indicator node (same population the indicator drawer lists), with its status id and the anchors of its target rows. Ids and statuses only.',
+  })
+  @ApiQuery({
+    name: 'program',
+    type: String,
+    required: true,
+    description: 'Program identifier (e.g. SP01).',
+  })
+  @ApiQuery({
+    name: 'versionId',
+    type: Number,
+    required: false,
+    description:
+      'Optional phase/version identifier. Defaults to the active reporting phase when absent.',
+  })
+  @ApiOkResponse({
+    description: 'Indicator result status links retrieved successfully.',
+  })
+  getIndicatorResultStatusLinks(
+    @Query('program') program: string,
+    @Query('versionId') versionId?: string,
+  ) {
+    const parsedVersion =
+      versionId !== undefined && versionId !== null
+        ? Number(versionId)
+        : undefined;
+
+    return this.resultsFrameworkReportingService.getIndicatorResultStatusLinks(
+      program,
+      parsedVersion,
+    );
+  }
+
   @Get('toc-results/intermediate-outcomes')
   @ApiOperation({
     summary: 'List intermediate ToC outcomes by program',
@@ -348,6 +388,45 @@ export class ResultsFrameworkReportingController {
     );
   }
 
+  // @akili-spec changes/portfolio-overview-feedback-round/contribution-requests-by-pa (CRP-T-2)
+  @Get('portfolio/contribution-requests')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
+  @ApiOperation({
+    summary: 'Portfolio contribution requests by Program / Accelerator',
+    description:
+      'Counts the live contribution requests (pending, accepted, declined; never drafts) on active results of a reporting phase. Each request is counted once in totals; under every Program / Accelerator of the open portfolio it is counted as sent (requester) and as received (approving side), zeros included. A request whose Program / Accelerator is outside the open portfolio still counts in totals and in the pending list. The pending list carries only requests still waiting for an answer (request id, result code and title, requesting and approving codes, ISO request date); no user data. Restricted to the Admin application role. Items are unordered; the client sorts.',
+  })
+  @ApiQuery({
+    name: 'versionId',
+    type: Number,
+    required: false,
+    description:
+      'Optional reporting version (phase) identifier; a closed phase is accepted. A missing, non-numeric or non-positive value falls back to the open reporting phase, else the newest one.',
+  })
+  @ApiOkResponse({
+    description: 'Portfolio contribution requests retrieved successfully.',
+    type: PortfolioContributionRequestsResponseDto,
+  })
+  getPortfolioContributionRequests(@Query('versionId') versionId?: string) {
+    // Same coercion as portfolio-coverage: empty, non-numeric or non-positive means absent.
+    const parsedVersion =
+      typeof versionId === 'string' && versionId.trim() !== ''
+        ? Number(versionId)
+        : undefined;
+
+    const normalizedVersion =
+      typeof parsedVersion === 'number' &&
+      Number.isFinite(parsedVersion) &&
+      parsedVersion > 0
+        ? parsedVersion
+        : undefined;
+
+    return this.resultsFrameworkReportingService.getPortfolioContributionRequests(
+      normalizedVersion,
+    );
+  }
+
   // @akili-spec changes/portfolio-overview-revamp/global-filters (GLF-T-1)
   @Get('portfolio/result-dimensions')
   @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
@@ -489,7 +568,7 @@ export class ResultsFrameworkReportingController {
   @ApiOperation({
     summary: 'List bilateral projects for a science program',
     description:
-      'Returns all bilateral projects registered in the Project Registry for the given science program (official code) in the active reporting phase, without filtering by ToC result or indicator.',
+      'Returns the bilateral projects for the given science program (official code) in the active reporting phase: those linked in its Theory of Change plus those CLARISA approves for the program (union, deduplicated, ToC first), without filtering by ToC result or indicator.',
   })
   @ApiQuery({
     name: 'programId',

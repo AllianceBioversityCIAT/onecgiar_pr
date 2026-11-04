@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, inject } from '@angular/core';
+import { Component, Input, OnInit, inject, input } from '@angular/core';
 import { DisableOptionsSubNa } from './interfaces/subnational.interface';
 import { RegionsCountriesService } from '../../services/global/regions-countries.service';
 import { GeoScopeEnum } from '../../enum/geo-scope.enum';
@@ -21,6 +21,12 @@ export class GeoscopeManagementComponent implements OnInit {
   @Input() label: string;
   @Input() hideTobeDetermined: boolean = false;
   @Input() description: string;
+  /**
+   * @akili-spec results/impact-results-reporting/result-detail-impact (IRD-T-6, IRD-DD-6).
+   * Optional allow-list of geoscope ids for the radio options (main and extra instance alike).
+   * `null` (default) keeps today's options for every caller; when set, "To be determined" is not appended.
+   */
+  allowedScopeIds = input<number[] | null>(null);
   fieldsManagerS = inject(FieldsManagerService);
   public internalModule: AppModuleEnum;
   public selectedItems: DisableOptionsSubNa[] = [];
@@ -33,6 +39,22 @@ export class GeoscopeManagementComponent implements OnInit {
     { full_name: 'Country', id: GeoScopeEnum.COUNTRY },
     { full_name: 'Sub-national', id: GeoScopeEnum.SUB_NATIONAL }
   ];
+
+  private filteredSource: { full_name: string; id: number }[] | null = null;
+  private filteredKey: number[] | null = null;
+  private filteredOptions: { full_name: string; id: number }[] = [];
+
+  /** The options the radio renders: `geoscopeOptions` untouched unless `allowedScopeIds` is set (memoized by reference). */
+  get visibleGeoscopeOptions() {
+    const allowed = this.allowedScopeIds();
+    if (!allowed) return this.geoscopeOptions;
+    if (this.filteredSource !== this.geoscopeOptions || this.filteredKey !== allowed) {
+      this.filteredSource = this.geoscopeOptions;
+      this.filteredKey = allowed;
+      this.filteredOptions = this.geoscopeOptions.filter(o => allowed.includes(o.id));
+    }
+    return this.filteredOptions;
+  }
 
   get labelRadioButtons(): string {
     return this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING
@@ -180,7 +202,7 @@ export class GeoscopeManagementComponent implements OnInit {
 
   ngOnInit(): void {
     this.internalModule = AppModuleEnum.getFromName(this.module);
-    if (this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING && !this.hideTobeDetermined)
+    if (this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING && !this.hideTobeDetermined && !this.allowedScopeIds())
       this.geoscopeOptions = [...this.geoscopeOptions, { full_name: 'This is yet to be determined', id: GeoScopeEnum.DETERMINED }];
 
     // Initialize extra arrays if they don't exist

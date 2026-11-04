@@ -50,6 +50,8 @@ import { EvidencesRepository } from '../../api/results/evidences/evidences.repos
 import { ResultsCapacityDevelopmentsRepository } from '../../api/results/summary/repositories/results-capacity-developments.repository';
 import { ResultsImpactAreaIndicatorRepository } from '../../api/results/results-impact-area-indicators/results-impact-area-indicators.repository';
 import { ResultsPolicyChangesRepository } from '../../api/results/summary/repositories/results-policy-changes.repository';
+import { ResultImpactLevelRepository } from '../../api/results-framework-reporting/impact-level/repositories/result-impact-level.repository';
+import { ResultImpactPreviousResultRepository } from '../../api/results-framework-reporting/impact-level/repositories/result-impact-previous-result.repository';
 import { ResultsInnovationsDevRepository } from '../../api/results/summary/repositories/results-innovations-dev.repository';
 import { ResultsInnovationsUseRepository } from '../../api/results/summary/repositories/results-innovations-use.repository';
 import { ResultsInnovationsUseMeasuresRepository } from '../../api/results/summary/repositories/results-innovations-use-measures.repository';
@@ -123,6 +125,8 @@ describe('TocResultsModule', () => {
       ResultsCapacityDevelopmentsRepository,
       ResultsImpactAreaIndicatorRepository,
       ResultsPolicyChangesRepository,
+      ResultImpactLevelRepository,
+      ResultImpactPreviousResultRepository,
       ResultsInnovationsDevRepository,
       ResultsInnovationsUseRepository,
       ResultsInnovationsUseMeasuresRepository,

@@ -106,7 +106,7 @@ describe('toDetailRows', () => {
     expect(r.program).toBe('—');
     expect(r.leadCenter).toBe('—');
     expect(r.source).toBe('W3/Bilateral');
-    expect(r.status).toBe('In QA');
+    expect(r.status).toBe('Quality Assessed');
     expect(r.origin).toBe('Replicated');
   });
 

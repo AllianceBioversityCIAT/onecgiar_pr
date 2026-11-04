@@ -328,8 +328,8 @@
                     [routerLink]="getResultLink(subResult)"
                     [queryParams]="getResultQueryParams(subResult)"
                     (click)="onResultLinkClick($event, subResult)"
-                    [attr.title]="subResult.result_type || ''">
-                    {{ subResult.result_type || '—' }}
+                    [attr.title]="resultTypeLabel(subResult)">
+                    {{ resultTypeLabel(subResult) || '—' }}
                   </a>
                 } @else if (column.attr === 'source_name') {
                   <!-- A chip, not plain text: funding is the column a reader scans for a PATTERN

@@ -302,6 +302,30 @@ describe('InnovationUseBilateralHandler', () => {
       ]);
     });
 
+    it('forces count_unit and use_nature to null and leaves other fields as sent (IFC-R-10)', async () => {
+      await handler.afterCreate(
+        withActors([
+          {
+            actor_type_id: 1,
+            count_unit: 'households',
+            use_nature: 'innovation_applied',
+            sex_and_age_disaggregation: true,
+            how_many: 5,
+          },
+        ]),
+      );
+
+      expect(actorsSentToService()).toEqual([
+        {
+          actor_type_id: 1,
+          count_unit: null,
+          use_nature: null,
+          sex_and_age_disaggregation: true,
+          how_many: 5,
+        },
+      ]);
+    });
+
     it('matches the catalogue name regardless of case and spacing around slashes', async () => {
       await handler.afterCreate(
         withActors([

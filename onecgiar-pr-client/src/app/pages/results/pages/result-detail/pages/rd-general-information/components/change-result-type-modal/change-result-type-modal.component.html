@@ -20,9 +20,13 @@
         type="text"
         [required]="false"
         [readOnly]="true"
-        [(ngModel)]="this.body.result_type_name"
+        [ngModel]="currentResultTypeLabel"
         InlineStyles="box-shadow: none;">
       </app-pr-input>
+
+      @if (showImpactTypeChangeWarning) {
+        <app-alert-status status="warning" [collapsible]="false" [description]="impactTypeChangeWarning" data-testid="change-type-impact-warning"></app-alert-status>
+      }
 
       <app-pr-field-header label="Select the type of result you want to change to" [required]="true"></app-pr-field-header>
 

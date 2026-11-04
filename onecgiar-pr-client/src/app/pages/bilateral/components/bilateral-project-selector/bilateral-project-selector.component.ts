@@ -1,12 +1,24 @@
-import { Component, inject, input, output, effect, signal, computed } from '@angular/core';
+import { Component, inject, input, output, effect, signal, computed, linkedSignal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
+import { HlmButtonImports } from '@spartan/button';
+import { HlmBadgeImports } from '@spartan/badge';
+
+/** PSC-DD-2 — program identity is the code (trimmed, case-insensitive), never the id (P2-3807). */
+const normalizeCode = (code: string | null | undefined): string => String(code ?? '').trim().toUpperCase();
+
+export interface ProgramChip {
+  code: string;
+  shortName: string;
+  name: string;
+  count: number;
+}
 
 @Component({
   selector: 'app-bilateral-project-selector',
-  imports: [CommonModule],
+  imports: [CommonModule, ...HlmButtonImports, ...HlmBadgeImports],
   templateUrl: './bilateral-project-selector.component.html',
   styleUrl: './bilateral-project-selector.component.scss'
 })
@@ -34,12 +46,47 @@ export class BilateralProjectSelectorComponent {
   showDropdown = signal(false);
   searchText = signal('');
 
+  /** PSC-R-1 — one chip per Science Program present in the catalogue, deduped by code, sorted by code. */
+  readonly programChips = computed<ProgramChip[]>(() => {
+    const byCode = new Map<string, ProgramChip>();
+    for (const project of this.creationService.projects()) {
+      const seen = new Set<string>();
+      for (const sp of project.sciencePrograms ?? []) {
+        const code = normalizeCode(sp.programCode);
+        if (!code) continue;
+        const chip = byCode.get(code) ?? { code, shortName: sp.spShortName, name: sp.spName, count: 0 };
+        if (!seen.has(code)) {
+          chip.count++;
+          seen.add(code);
+        }
+        byCode.set(code, chip);
+      }
+    }
+    return [...byCode.values()].sort((a, b) => a.code.localeCompare(b.code));
+  });
+
+  readonly showProgramChips = computed(() => this.isInline() && this.creationService.isReplicated() && this.programChips().length > 0);
+
+  /** PSC-R-2 — stored primary code, only when the catalogue has a chip for it. */
+  readonly defaultProgramCode = computed<string | null>(() => {
+    const code = normalizeCode(this.creationService.selectedPrimarySp()?.programCode);
+    return code && this.programChips().some(c => c.code === code) ? code : null;
+  });
+
+  /** PSC-DD-3 — re-seeds only when the default code changes; user toggles persist otherwise. */
+  readonly selectedProgramCodes = linkedSignal<string | null, Set<string>>({
+    source: this.defaultProgramCode,
+    computation: code => new Set(code ? [code] : [])
+  });
+
   filteredProjects = computed(() => {
     const text = this.searchText().toLowerCase();
-    if (!text) return this.creationService.projects();
-    return this.creationService.projects().filter(
-      p => p.shortName.toLowerCase().includes(text) || p.fullName.toLowerCase().includes(text)
-    );
+    const selected = this.selectedProgramCodes();
+    const byProgram = this.showProgramChips() && selected.size > 0;
+    return this.creationService.projects().filter(p => {
+      const matchesText = !text || p.shortName.toLowerCase().includes(text) || p.fullName.toLowerCase().includes(text);
+      return matchesText && (!byProgram || (p.sciencePrograms ?? []).some(sp => selected.has(normalizeCode(sp.programCode))));
+    });
   });
 
   constructor() {
@@ -74,6 +121,18 @@ export class BilateralProjectSelectorComponent {
 
   closeDropdown(): void {
     this.showDropdown.set(false);
+  }
+
+  toggleProgram(code: string): void {
+    this.selectedProgramCodes.update(current => {
+      const next = new Set(current);
+      if (!next.delete(code)) next.add(code);
+      return next;
+    });
+  }
+
+  clearPrograms(): void {
+    this.selectedProgramCodes.set(new Set());
   }
 
   onSearchInput(event: Event): void {

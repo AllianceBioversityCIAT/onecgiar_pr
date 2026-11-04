@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideExternalLink } from '@ng-icons/lucide';
@@ -13,6 +13,7 @@ import { STATUS_GUIDE_URL } from '../../../../shared/constants/portfolio-links.c
 import { PortfolioCentersBlockComponent } from './components/centers-block/centers-block.component';
 import { FilterBarComponent } from './components/filter-bar/filter-bar.component';
 import { PortfolioResultsDetailComponent } from './components/results-detail/results-detail.component';
+import { PortfolioContributionRequestsBlockComponent } from './components/contribution-requests-block/contribution-requests-block.component';
 import { PortfolioProjectsBlockComponent } from './components/projects-block/projects-block.component';
 import { PortfolioTocKpiBlockComponent } from './components/toc-kpi-block/toc-kpi-block.component';
 import { PortfolioTypologyBlockComponent } from './components/typology-block/typology-block.component';
@@ -94,6 +95,7 @@ export function getCategoryShortName(category: string): string {
     PrVizChartComponent,
     PortfolioCentersBlockComponent,
     PortfolioProjectsBlockComponent,
+    PortfolioContributionRequestsBlockComponent,
     PortfolioResultsDetailComponent,
     PortfolioTocKpiBlockComponent,
     PortfolioTypologyBlockComponent,
@@ -133,6 +135,7 @@ export function getCategoryShortName(category: string): string {
   ]
 })
 export class PortfolioOverviewComponent {
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute, { optional: true });
   private readonly dataControlSE = inject(DataControlService);
@@ -225,8 +228,14 @@ export class PortfolioOverviewComponent {
   readonly resultsCenterLinkable = computed(() => resultsCenterLinkable(this.data.selection()));
   readonly tocNotAffected = computed(() => notAffectedBy('toc', this.data.selection()));
   readonly projectsNotAffected = computed(() => notAffectedBy('projects', this.data.selection()));
+  /** CRP-DD-5: honours Program only; Funding has no SECTION_SOURCE entry, so it is listed through `extra`. */
+  readonly contributionsNotAffected = computed(() => notAffectedBy('contributions', this.data.selection(), ['funding']));
   /** The Centers block honours Project only once the map is ready (DD-5): until then it says "Not affected by: Project". */
   readonly centersDimensionsVersionId = computed(() => (this.data.dimensionIndex() ? this.data.versionId() : null));
+  /** V-1 gate: the deck's W3 total for the Centers block's no-Center note; null while the deck cannot say (loading, error, partial, filters pending). */
+  readonly centersDeckW3Total = computed(() =>
+    this.hasFigures() && !this.data.isPartial() && !this.data.filtersPending() ? this.data.kpiTotals().bilateralCount : null
+  );
 
   /** One entry per active dimension: its label and the labels of the chosen values (the strip's text). */
   readonly activeSummary = computed(() => {
@@ -263,7 +272,13 @@ export class PortfolioOverviewComponent {
     const selection = this.data.selection();
     const status = [...selection.status][0];
     const program = [...selection.program][0];
-    this.navigateToResultsCenter('all', { ...(status ? { status } : {}), ...(program ? { program } : {}) });
+    const funding = [...selection.funding][0] as 'w1w2' | 'bilateral' | undefined;
+    this.navigateToResultsCenter('all', { ...(status ? { status } : {}), ...(program ? { program } : {}), ...(funding ? { funding } : {}) });
+  }
+
+  /** The strip's jump link: the filtered list is the last block of a long page, so a status click alone never shows it. */
+  scrollToResultsDetail(): void {
+    this.host.nativeElement.querySelector('app-portfolio-results-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   readonly categoryOriginOption = computed(() =>
@@ -314,7 +329,7 @@ export class PortfolioOverviewComponent {
 
   navigateToResultsCenter(
     filter?: 'all' | 'w1w2' | 'bilateral',
-    extra?: { status?: number | string; search?: string; category?: string; program?: string }
+    extra?: { status?: number | string; search?: string; category?: string; program?: string; funding?: 'w1w2' | 'bilateral' }
   ): void {
     if (filter === 'bilateral') {
       this.router.navigate(['/result-framework-reporting/bilateral-results']);
@@ -322,8 +337,10 @@ export class PortfolioOverviewComponent {
     }
 
     if (this.resultsListFilterSE) {
-      if (filter === 'w1w2') {
+      if (filter === 'w1w2' || extra?.funding === 'w1w2') {
         this.resultsListFilterSE.selectedFundingSource.set([{ id: 1, name: 'W1/W2' }]);
+      } else if (extra?.funding === 'bilateral') {
+        this.resultsListFilterSE.selectedFundingSource.set([{ id: 2, name: 'W3/Bilaterals' }]);
       } else {
         this.resultsListFilterSE.selectedFundingSource.set([]);
       }
@@ -352,7 +369,12 @@ export class PortfolioOverviewComponent {
     }
 
     const queryParams: Record<string, string | number> = {};
+    // This page counts the open phase only; without it Results Center lists every phase of the portfolio
+    // and shows a different number for the same click.
+    const phase = this.data.versionId();
+    if (phase) queryParams['phase'] = phase;
     if (filter === 'w1w2') queryParams['funding'] = 'w1w2';
+    else if (extra?.funding) queryParams['funding'] = extra.funding;
     if (extra?.status) {
       const sId =
         typeof extra.status === 'number'

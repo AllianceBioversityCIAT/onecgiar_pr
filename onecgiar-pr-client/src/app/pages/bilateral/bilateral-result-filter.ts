@@ -54,7 +54,13 @@ export function filterCenterResults(
     if (typeIds && !typeIds.has(Number(row.result_type_id))) return false;
 
     if (params.role === 'lead' && Number(row.is_leading_result) !== 1) return false;
-    if (params.role === 'contributing' && Number(row.is_leading_result) !== 0) return false;
+    // `CPA-R-5`: a `source='Result'` row with a null lead flag (center tagged via its project) counts as
+    // contributing; a W3 null-lead row does not. `Number(null)` is 0, so null must be tested explicitly.
+    if (params.role === 'contributing' && !isContributingRow(row)) return false;
+
+    // `CPA-R-4`/`CPA-DD-4`: category applies to the server-resolved `overview_category`, not `source`.
+    if (params.category === 'w3' && row.overview_category !== 'replicated_w3' && row.overview_category !== 'new_w3') return false;
+    if (params.category === 'w1w2-tagging' && row.overview_category !== 'w1w2_tagging') return false;
 
     if (params.source === 'w3' && row.source !== 'API') return false;
     if (params.source === 'w1w2' && row.source !== 'Result') return false;
@@ -76,6 +82,11 @@ export function filterCenterResults(
 
     return true;
   });
+}
+
+function isContributingRow(row: BilateralCenterResult): boolean {
+  if (row.is_leading_result === null || row.is_leading_result === undefined) return row.source === 'Result';
+  return Number(row.is_leading_result) === 0;
 }
 
 /** `true` when a result was AI-assisted: `creation_method === 'AI'` OR `Number(is_ai_generated)

@@ -79,6 +79,24 @@ describe('RdGeographicLocationComponent', () => {
     component.loaded.set(true);
   });
 
+  describe('IRD-T-6 — impact result scope list', () => {
+    it('allows only Regional and Country for P25 type 9, and flags a stored Global without changing it', () => {
+      component.dataControlSE.currentResultSignal.set({ result_type_id: 9, portfolio: 'P25' } as any);
+      expect(component.allowedScopeIds()).toEqual([2, 3]);
+      expect(component.storedScopeOutsideAllowed(1)).toBe(true);
+      expect(component.storedScopeOutsideAllowed(2)).toBe(false);
+      expect(component.storedScopeOutsideAllowed(null)).toBe(false);
+      component.geographicLocationBody.geo_scope_id = 1;
+      expect(component.geographicLocationBody.geo_scope_id).toBe(1);
+    });
+
+    it('leaves every other result untouched (null list, no hint)', () => {
+      component.dataControlSE.currentResultSignal.set({ result_type_id: 9, portfolio: 'P22' } as any);
+      expect(component.allowedScopeIds()).toBeNull();
+      expect(component.storedScopeOutsideAllowed(1)).toBe(false);
+    });
+  });
+
   describe('Component Initialization', () => {
     it('should create the component', () => {
       expect(component).toBeTruthy();

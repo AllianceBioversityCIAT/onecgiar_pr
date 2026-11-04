@@ -2447,6 +2447,64 @@ describe('BilateralCenterService', () => {
       expect(resultRepository.manager.transaction).toHaveBeenCalled();
     });
 
+    // BIL-CTJ-R-2: the review-history comment is the payload (2nd arg of manager.save),
+    // never `save.mock.calls[n][0]` (that is the entity class).
+    describe('review-history comment (justification optional)', () => {
+      const prefix =
+        'Result type changed from level 3, type 2 to level 4, type 7.';
+
+      const captureComment = async (justification?: string) => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          promotedDraft,
+        );
+        const save = jest.fn().mockResolvedValue({});
+        const fakeManager = {
+          update: jest.fn().mockResolvedValue({}),
+          save,
+          create: jest.fn((_entity: any, payload: any) => payload),
+          getRepository: jest.fn(() => ({
+            find: jest.fn().mockResolvedValue([]),
+            update: jest.fn().mockResolvedValue({}),
+            delete: jest.fn().mockResolvedValue({}),
+            createQueryBuilder: jest.fn(),
+          })),
+          query: jest.fn().mockResolvedValue([]),
+          delete: jest.fn().mockResolvedValue({}),
+          find: jest.fn().mockResolvedValue([]),
+          findOne: jest.fn().mockResolvedValue(null),
+        };
+        (
+          resultRepository.manager.transaction as jest.Mock
+        ).mockImplementationOnce(async (callback: any) =>
+          callback(fakeManager),
+        );
+        const dto: any = { result_level_id: 4, result_type_id: 7 };
+        if (justification !== undefined) dto.justification = justification;
+        await service.changeResultType(user, 77, dto);
+        const historyCall = save.mock.calls.find(
+          (c) => c[0] === ResultReviewHistory,
+        );
+        return historyCall?.[1]?.comment;
+      };
+
+      it.each([
+        ['absent', undefined],
+        ['empty', ''],
+        ['blank', '   '],
+      ])(
+        'has no reason, undefined or trailing space when %s',
+        async (_n, v) => {
+          expect(await captureComment(v as string | undefined)).toBe(prefix);
+        },
+      );
+
+      it('appends the reason after one space when given', async () => {
+        expect(await captureComment('Classification corrected')).toBe(
+          `${prefix} Classification corrected`,
+        );
+      });
+    });
+
     it('refuses a manual bilateral result', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue({
         ...promotedDraft,

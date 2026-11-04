@@ -16,6 +16,7 @@ import { TerminologyService } from '../../../internationalization/terminology.se
 import { FieldsManagerService } from '../../services/fields-manager.service';
 import { InnovationControlListService } from '../../services/global/innovation-control-list.service';
 import { InnovationUseResultsService } from '../../services/global/innovation-use-results.service';
+import { FARMERS_ACTOR_TYPE_ID, FARMER_FOLLOW_UP_COPY } from './farmer-follow-up';
 
 /** P2-3295 — verbatim tooltip from the SIDS revision; must match `FieldsManagerService` character for character. */
 const TOOLTIP_2030 =
@@ -1435,6 +1436,385 @@ describe('InnovationUseFormComponent — 2030 projection review (P2-3295 §3)', 
 
       expect(component.projection2030Changed).toBe(true);
       expect(component.projection2030JustificationRequired).toBe(false);
+    });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// IFC-T-4 (changes/innovation-use-farmer-count-nature) — Farmers follow-up block, gate, duplicates,
+// Households coupling. One falsifier case per clause, run against BOTH blocks (current use + 2030).
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
+  let fixture: ComponentFixture<InnovationUseFormComponent>;
+  let component: InnovationUseFormComponent;
+  let currentResult: any;
+
+  const FARMERS = 1;
+  const RESEARCHERS = 4;
+
+  const farmer = (over: Record<string, unknown> = {}) =>
+    Object.assign(new Actor(), { actor_type_id: FARMERS, is_active: true, result_actors_id: 11, women: 3, men: 4, how_many: 7, ...over }) as any;
+
+  function build(opts: { phase?: number | null; source?: string; isIpsr?: boolean } = {}) {
+    const { phase = 2026, source = 'W1/W2', isIpsr = false } = opts;
+    currentResult = { phase_year: phase, source_name: source };
+    fixture = TestBed.createComponent(InnovationUseFormComponent);
+    component = fixture.componentInstance;
+    component.isIpsr = isIpsr;
+    component.saving = false;
+    component.body = new IpsrStep1Body();
+    detect();
+  }
+
+  /** The rows of each block. */
+  const BLOCKS = [
+    { name: 'current use', rows: (c: any) => c.body.innovatonUse.actors, set: (c: any, rows: any[]) => (c.body.innovatonUse.actors = rows) },
+    {
+      name: '2030 projection',
+      rows: (c: any) => c.body.innovation_use_2030.actors,
+      set: (c: any, rows: any[]) => (c.body.innovation_use_2030.actors = rows)
+    }
+  ];
+
+  /** `changeDetectorRef` skips the dev-mode checkNoChanges pass that trips on this template on its own (see the scaling-studies describe above). */
+  const detect = () => {
+    fixture.changeDetectorRef.detectChanges();
+    fixture.changeDetectorRef.detectChanges();
+  };
+
+  const blockEls = () => fixture.debugElement.queryAll(By.css('[data-testid="iu-farmer-follow-up"]'));
+  /** Row elements of ONE block: the 2030 block sits inside the `inert` wrapper, the current block does not. */
+  const rowEls = (blockName: string) =>
+    blockName === 'current use'
+      ? fixture.debugElement.queryAll(By.css('.fields')).filter(el => !el.nativeElement.closest('[data-block="2030"]'))
+      : fixture.debugElement.queryAll(By.css('[data-block="2030"] .fields'));
+
+  beforeEach(async () => {
+    const apiMock: any = {
+      resultsSE: {
+        GETAllActorsTypes: jest.fn().mockReturnValue(of({ response: [] })),
+        GETInstitutionsTypeTree: jest.fn().mockReturnValue(of({ response: [] }))
+      },
+      rolesSE: { readOnly: false },
+      dataControlSE: { currentResultSignal: () => currentResult, reportingCurrentPhase: { phaseYear: null } }
+    };
+    const fieldsMock: any = {
+      // The 2030 block only exists under `isP25() && !isIpsr`; the gate under test never reads the portfolio.
+      isP25: jest.fn().mockReturnValue(true),
+      isInnovationUse2030Projection2026: jest.fn().mockReturnValue(false),
+      innovationUse2030ProjectionTooltip: jest.fn().mockReturnValue(''),
+      isInnovationUseAgeFallback2026: jest.fn().mockReturnValue(false),
+      fields: jest.fn().mockReturnValue({
+        '[innovation-use-form]-core-innovation': { description: '' },
+        '[innovation-use-form]-2030-to-be-determined': { description: '' }
+      })
+    };
+    await TestBed.configureTestingModule({
+      declarations: [InnovationUseFormComponent],
+      providers: [
+        { provide: ApiService, useValue: apiMock },
+        { provide: TerminologyService, useValue: { t: jest.fn().mockReturnValue('x') } },
+        { provide: FieldsManagerService, useValue: fieldsMock },
+        { provide: InnovationControlListService, useValue: { readinessLevelsList: [], useLevelsList: [] } },
+        { provide: InnovationUseResultsService, useValue: { resultsList: [] } }
+      ],
+      imports: [TermPipe, HttpClientTestingModule],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+  });
+
+  describe('copy (IFC-R-1..3) — verbatim from the mock-up', () => {
+    it('pins every string exactly', () => {
+      expect(FARMER_FOLLOW_UP_COPY.title).toBe('Follow-up questions for actor type Farmers/(agro)pastoralists/herders/fishers');
+      expect(FARMER_FOLLOW_UP_COPY.countUnitQuestion).toBe('Do the reported numbers refer to households or individual actors?');
+      expect(FARMER_FOLLOW_UP_COPY.countUnitOptions.map(o => o.label)).toEqual(['Households', 'Individual actors']);
+      expect(FARMER_FOLLOW_UP_COPY.countUnitOptions.map(o => o.value)).toEqual(['households', 'individuals']);
+      expect(FARMER_FOLLOW_UP_COPY.useNatureQuestion).toBe('What best characterises the nature of this innovation use number?');
+      expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[0].label).toBe('Actors who received information, advice or inputs');
+      expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[0].value).toBe('information_received');
+      expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[0].description).toBe(
+        'Advisories delivered face-to-face, by SMS, radio/media or a digital platform; climate advisories; market information; dietary guidelines; starter kits, vouchers or other incentives. Receipt is documented; application of the innovation is not confirmed.'
+      );
+      expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[1].label).toBe('Actors who applied the innovation');
+      expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[1].value).toBe('innovation_applied');
+      expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[1].description).toBe(
+        'Grew a variety, applied a practice, actively used a digital tool or service, took up a product. Application is supported by the attached evidence (survey, plot observation, purchase records, platform logs).'
+      );
+      expect(FARMER_FOLLOW_UP_COPY.helper).toBe(
+        'If your numbers include both groups, add the actor type a second time and report each group separately. Receiving and applying are not the same as benefiting; benefit is reported as impact evidence.'
+      );
+      expect(FARMERS_ACTOR_TYPE_ID).toBe(1);
+    });
+  });
+
+  describe.each(BLOCKS)('$name block', block => {
+    it('shows the block, with the verbatim copy, under the Actor type select of a Farmers row (2026, W1/W2)', () => {
+      build();
+      block.set(component, [farmer()]);
+      detect();
+
+      const els = blockEls();
+      expect(els.length).toBe(1);
+      const text = els[0].nativeElement.textContent as string;
+      expect(text).toContain(FARMER_FOLLOW_UP_COPY.title);
+      expect(text).toContain(FARMER_FOLLOW_UP_COPY.useNatureOptions[0].label);
+      expect(text).toContain(FARMER_FOLLOW_UP_COPY.useNatureOptions[0].description);
+      expect(text).toContain(FARMER_FOLLOW_UP_COPY.useNatureOptions[1].label);
+      expect(text).toContain(FARMER_FOLLOW_UP_COPY.useNatureOptions[1].description);
+      expect(text).toContain(FARMER_FOLLOW_UP_COPY.helper);
+      // Q-a and Q-b are the required radio groups, with the verbatim questions.
+      const radios = els[0].queryAll(By.css('app-pr-radio-button'));
+      expect(radios.map(r => r.properties['label'])).toEqual([FARMER_FOLLOW_UP_COPY.countUnitQuestion, FARMER_FOLLOW_UP_COPY.useNatureQuestion]);
+      expect(radios.every(r => r.properties['required'] !== false)).toBe(true);
+      // Placement: same left column as the select, after it.
+      const leftColumn = els[0].nativeElement.parentElement as HTMLElement;
+      const select = leftColumn.querySelector('app-pr-select') as HTMLElement;
+      expect(select).toBeTruthy();
+      expect(select.compareDocumentPosition(els[0].nativeElement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('does NOT render the mock-up developer note', () => {
+      build();
+      block.set(component, [farmer()]);
+      detect();
+      const text = blockEls()[0].nativeElement.textContent as string;
+      expect(text).not.toContain('Single choice');
+      expect(text).not.toContain('Stored as');
+      expect(text).not.toContain('information_received');
+      expect(text).not.toContain('do not appear on screen');
+    });
+
+    it('is NOT visible for Researchers (any other actor type)', () => {
+      build();
+      block.set(component, [farmer({ actor_type_id: RESEARCHERS })]);
+      detect();
+      expect(blockEls().length).toBe(0);
+    });
+
+    it('is NOT visible with isIpsr = true', () => {
+      build({ isIpsr: true });
+      block.set(component, [farmer()]);
+      detect();
+      expect(blockEls().length).toBe(0);
+    });
+
+    it.each([[2025], [null]])('is NOT visible for phase_year = %s', phase => {
+      build({ phase });
+      block.set(component, [farmer()]);
+      detect();
+      expect(blockEls().length).toBe(0);
+    });
+
+    it("is NOT visible for source_name = 'W3/Bilaterals'", () => {
+      build({ source: 'W3/Bilaterals' });
+      block.set(component, [farmer()]);
+      detect();
+      expect(blockEls().length).toBe(0);
+    });
+
+    it('is NOT visible for an inactive Farmers row', () => {
+      build();
+      block.set(component, [farmer({ is_active: false })]);
+      detect();
+      expect(blockEls().length).toBe(0);
+    });
+
+    it('is NOT visible while the result is still loading (empty currentResult)', () => {
+      build();
+      currentResult = {};
+      block.set(component, [farmer()]);
+      detect();
+      expect(blockEls().length).toBe(0);
+    });
+
+    it('renders one block per Farmers row, each keeping its own answers (IFC-R-4)', () => {
+      build();
+      block.set(component, [
+        farmer({ count_unit: 'individuals', use_nature: 'information_received' }),
+        farmer({ result_actors_id: 12, use_nature: 'innovation_applied' })
+      ]);
+      detect();
+      expect(blockEls().length).toBe(2);
+      expect(block.rows(component)[0].use_nature).toBe('information_received');
+      expect(block.rows(component)[1].use_nature).toBe('innovation_applied');
+    });
+
+    it('Households: single total, grid and the "does not apply" checkbox are gone (IFC-R-5)', () => {
+      build();
+      const row = farmer({ women: 3, men: 4, women_youth: 1, men_youth: 2, how_many: 7 });
+      block.set(component, [row, farmer({ actor_type_id: RESEARCHERS, result_actors_id: 12, women: 5 })]);
+      detect();
+      component.onCountUnitChange(row, 'households');
+      detect();
+
+      expect(row.count_unit).toBe('households');
+      expect(row.sex_and_age_disaggregation).toBe(true);
+      expect(row.women).toBeNull();
+      expect(row.men_youth).toBeNull();
+      const [farmerRow, otherRow] = rowEls(block.name);
+      expect(farmerRow.nativeElement.querySelector('app-pr-input[label="Women"]')).toBeNull();
+      expect(farmerRow.nativeElement.querySelector('app-pr-input[label="How many"]')).toBeTruthy();
+      expect(farmerRow.nativeElement.querySelector('app-pr-checkbox[label="Sex and age disaggregation does not apply"]')).toBeNull();
+      // Other actor types are untouched: grid and checkbox still there.
+      expect(otherRow.nativeElement.querySelector('app-pr-input[label="Women"]')).toBeTruthy();
+      expect(otherRow.nativeElement.querySelector('app-pr-checkbox[label="Sex and age disaggregation does not apply"]')).toBeTruthy();
+      const other = block.rows(component)[1];
+      expect(other.women).toBe(5);
+      expect(other.sex_and_age_disaggregation).toBeFalsy();
+    });
+
+    it('Individuals after Households brings the grid back (IFC-R-5)', () => {
+      build();
+      const row = farmer();
+      block.set(component, [row]);
+      detect();
+      component.onCountUnitChange(row, 'households');
+      component.onCountUnitChange(row, 'individuals');
+      detect();
+
+      expect(row.count_unit).toBe('individuals');
+      expect(row.sex_and_age_disaggregation).toBe(false);
+      const [rowEl] = rowEls(block.name);
+      expect(rowEl.nativeElement.querySelector('app-pr-input[label="Women"]')).toBeTruthy();
+      expect(rowEl.nativeElement.querySelector('app-pr-checkbox[label="Sex and age disaggregation does not apply"]')).toBeTruthy();
+    });
+
+    it('Individuals on a row that still has its grid does not wipe the typed numbers', () => {
+      build();
+      const row = farmer({ women: 3, men: 4 });
+      block.set(component, [row]);
+      component.onCountUnitChange(row, 'individuals');
+      expect(row.women).toBe(3);
+      expect(row.men).toBe(4);
+    });
+
+    it('Individuals on a row the user put on a single total keeps the total and the checkbox (T-7 finding)', () => {
+      build();
+      const row = farmer({ sex_and_age_disaggregation: true, how_many: 88, women: null, men: null });
+      block.set(component, [row]);
+      component.onCountUnitChange(row, 'individuals');
+      expect(row.count_unit).toBe('individuals');
+      expect(row.how_many).toBe(88);
+      expect(row.sex_and_age_disaggregation).toBe(true);
+    });
+
+    it('Individuals after a saved Households answer brings the grid back (T-7 finding)', () => {
+      build();
+      const row = farmer({ count_unit: 'households', sex_and_age_disaggregation: true, how_many: 40 });
+      block.set(component, [row]);
+      component.onCountUnitChange(row, 'individuals');
+      expect(row.count_unit).toBe('individuals');
+      expect(row.sex_and_age_disaggregation).toBe(false);
+    });
+
+    it('Households then unanswered (re-click) brings the grid back and unticks "does not apply" (T-7 finding)', () => {
+      build();
+      const row = farmer();
+      block.set(component, [row]);
+      detect();
+      component.onCountUnitChange(row, 'households');
+      component.onCountUnitChange(row, null);
+      detect();
+
+      expect(row.count_unit).toBeNull();
+      expect(row.sex_and_age_disaggregation).toBe(false);
+      const [rowEl] = rowEls(block.name);
+      expect(rowEl.nativeElement.querySelector('app-pr-input[label="Women"]')).toBeTruthy();
+      // The tick is bound to row.sex_and_age_disaggregation (false above): present and unticked.
+      expect(rowEl.nativeElement.querySelector('app-pr-checkbox[label="Sex and age disaggregation does not apply"]')).toBeTruthy();
+    });
+
+    it('unanswered on a row that was NOT on Households keeps a hand-set single total', () => {
+      build();
+      const row = farmer({ count_unit: 'individuals', sex_and_age_disaggregation: true, how_many: 88, women: null, men: null });
+      block.set(component, [row]);
+      component.onCountUnitChange(row, null);
+      expect(row.sex_and_age_disaggregation).toBe(true);
+      expect(row.how_many).toBe(88);
+    });
+
+    it('a NEW unsaved Farmers row on Households has "How many" required before the first save (IFC-R-5, F-1)', () => {
+      build();
+      const row = farmer({ result_actors_id: undefined, count_unit: 'households', sex_and_age_disaggregation: true, how_many: null });
+      block.set(component, [row]);
+      detect();
+      const [rowEl] = rowEls(block.name);
+      const howMany = rowEl.query(By.css('app-pr-input[label="How many"]'));
+      expect(howMany.properties['required']).toBe(true);
+    });
+
+    it('a NEW unsaved Farmers row on Individuals keeps the pre-existing unsaved behaviour (Women not required)', () => {
+      build();
+      const row = farmer({ result_actors_id: undefined, count_unit: 'individuals', women: null, men: null, how_many: null });
+      block.set(component, [row]);
+      detect();
+      const [rowEl] = rowEls(block.name);
+      expect(rowEl.query(By.css('app-pr-input[label="Women"]')).properties['required']).toBe(false);
+    });
+
+    it('a NEW unsaved non-Farmers row keeps "How many" / Women not required (pre-existing behaviour)', () => {
+      build();
+      const grid = farmer({ actor_type_id: RESEARCHERS, result_actors_id: undefined, women: null, men: null, how_many: null });
+      const single = farmer({ actor_type_id: RESEARCHERS, result_actors_id: undefined, sex_and_age_disaggregation: true, how_many: null });
+      block.set(component, [grid, single]);
+      detect();
+      const [gridEl, singleEl] = rowEls(block.name);
+      expect(gridEl.query(By.css('app-pr-input[label="Women"]')).properties['required']).toBe(false);
+      expect(singleEl.query(By.css('app-pr-input[label="How many"]')).properties['required']).toBe(false);
+    });
+
+    it('Households on a row already on a single total keeps its typed total', () => {
+      build();
+      const row = farmer({ sex_and_age_disaggregation: true, how_many: 500, women: null, men: null });
+      block.set(component, [row]);
+      component.onCountUnitChange(row, 'households');
+      expect(row.how_many).toBe(500);
+      expect(row.sex_and_age_disaggregation).toBe(true);
+    });
+
+    it('switching the type away from Farmers clears both answers and restores the grid (IFC-R-1)', () => {
+      build();
+      const row = farmer({ count_unit: 'households', use_nature: 'innovation_applied', sex_and_age_disaggregation: true });
+      block.set(component, [row]);
+      row.actor_type_id = RESEARCHERS;
+      component.onActorTypeChange(row, RESEARCHERS);
+      detect();
+
+      expect(row.count_unit).toBeNull();
+      expect(row.use_nature).toBeNull();
+      expect(row.sex_and_age_disaggregation).toBe(false);
+      expect(blockEls().length).toBe(0);
+    });
+
+    it('switching type never invents keys on rows that never had the answers', () => {
+      build();
+      const row: any = Object.assign(new Actor(), { actor_type_id: 4, is_active: true });
+      block.set(component, [row]);
+      component.onActorTypeChange(row, FARMERS);
+      component.onActorTypeChange(row, RESEARCHERS);
+      expect('count_unit' in row).toBe(false);
+      expect('use_nature' in row).toBe(false);
+    });
+
+    it('the Farmers option is NOT disabled in a second row on a 2026 W1/W2 result; Researchers stays disabled (IFC-R-4)', () => {
+      build();
+      const rows = [farmer(), farmer({ actor_type_id: RESEARCHERS, result_actors_id: 12 }), farmer({ actor_type_id: 5, result_actors_id: 13 })];
+      block.set(component, rows);
+      const disabled = component.removeOther(block.rows(component)).map((a: any) => a.actor_type_id);
+      expect(disabled).not.toContain(FARMERS);
+      expect(disabled).toContain(RESEARCHERS);
+      expect(disabled).not.toContain(5);
+    });
+
+    it.each([
+      ['phase 2025', { phase: 2025 }],
+      ['unknown phase', { phase: null }],
+      ['W3/Bilaterals', { source: 'W3/Bilaterals' }],
+      ['IPSR', { isIpsr: true }]
+    ])('keeps disabling Farmers in a second row on %s (rule as before)', (_label, opts) => {
+      build(opts as any);
+      block.set(component, [farmer(), farmer({ result_actors_id: 12 })]);
+      expect(component.removeOther(block.rows(component)).map((a: any) => a.actor_type_id)).toContain(FARMERS);
     });
   });
 });

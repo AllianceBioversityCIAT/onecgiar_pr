@@ -95,6 +95,30 @@ export class ResultActor extends BaseEntity {
   })
   how_many: number;
 
+  /**
+   * Innovation Use, Farmers rows only — what the number counts: `households` | `individuals`.
+   * varchar + service whitelist (`farmer-follow-up.constant.ts`), NULL until answered.
+   */
+  @Column({
+    name: 'count_unit',
+    type: 'varchar',
+    length: 32,
+    nullable: true,
+  })
+  count_unit: string | null;
+
+  /**
+   * Innovation Use, Farmers rows only — `information_received` | `innovation_applied`.
+   * varchar + service whitelist (`farmer-follow-up.constant.ts`), NULL until answered.
+   */
+  @Column({
+    name: 'use_nature',
+    type: 'varchar',
+    length: 32,
+    nullable: true,
+  })
+  use_nature: string | null;
+
   @Column({
     name: 'has_women',
     type: 'boolean',

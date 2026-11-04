@@ -732,3 +732,144 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
     expect(scan().labels).not.toContain(PLAIN_LABEL);
   });
 });
+
+/**
+ * WPP-R-2 / WPP-R-3 (`docs/specs/bugfix/w3-projects-by-program`) — real template, real `app-alert-status` / `app-pr-button`.
+ * - S-2.1: a failed (or empty) centres catalogue is visible with a Retry, never a silent "No information found".
+ * - S-3.1 / S-3.2: "No CGIAR Centers related…" waits for an explicit "Yes" on the ToC KPI question.
+ */
+describe('RdContributorsAndPartnersComponent — centres catalogue error + Retry, and the no-centres note (WPP-R-2 / WPP-R-3)', () => {
+  let fixture: ComponentFixture<RdContributorsAndPartnersComponent>;
+  let rdPartnersSE: RdContributorsAndPartnersService;
+  let getData: jest.Mock;
+  let centersMock: any;
+
+  const CATALOG = [{ code: 'AAA', name: 'Alliance', full_name: 'Alliance of Bioversity and CIAT', acronym: 'ABC', institutionId: 11 }];
+  const NOTE = 'No CGIAR Centers related to the established HLO/Outcomes were found';
+
+  const errorEl = () => fixture.nativeElement.querySelector('[data-testid="cp-centers-load-error"]');
+  const retryDe = () => fixture.debugElement.query(By.css('[data-testid="cp-centers-retry"]'));
+  const text = () => (fixture.nativeElement.textContent as string).replace(/\s+/g, ' ');
+  const settle = async () => {
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  };
+
+  const build = async (getDataImpl: jest.Mock, catalogue: any[] = []) => {
+    const currentResult = { id: 8675, result_code: 'R-8675', version_id: 1, portfolio: 'P26', initiative_id: 5, initiative_official_code: 'INIT-05', status: null };
+    const apiMock = {
+      dataControlSE: {
+        currentResult,
+        currentResultSignal: signal(currentResult),
+        currentResultSectionName: signal(''),
+        findClassTenSeconds: jest.fn().mockResolvedValue(true),
+        isKnowledgeProduct: false,
+        showPartnersRequest: false
+      },
+      resultsSE: {
+        GET_resultById: jest.fn().mockReturnValue(of({ response: currentResult })),
+        GET_generalInformationByResultId: jest.fn().mockReturnValue(of({ response: {} })),
+        GET_AllWithoutResults: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] }))
+      },
+      rolesSE: { readOnly: false, isAdmin: false, platformIsClosed: false }
+    };
+    getData = getDataImpl;
+    centersMock = { centersList: catalogue, centers: signal<any[]>(catalogue), loadedCenters: new BehaviorSubject<boolean>(false), getData };
+
+    await TestBed.configureTestingModule({
+      declarations: [RdContributorsAndPartnersComponent],
+      imports: [CommonModule, FormsModule, HttpClientTestingModule, TermPipe, CustomFieldsModule, FeedbackValidationDirectiveModule],
+      providers: [
+        provideZonelessChangeDetection(),
+        RdContributorsAndPartnersService,
+        { provide: ApiService, useValue: apiMock },
+        { provide: RolesService, useValue: { readOnly: false } },
+        { provide: InstitutionsService, useValue: { loadedInstitutions: new BehaviorSubject<boolean>(false), institutionsList: [], institutionsWithoutCentersList: [] } },
+        { provide: CentersService, useValue: centersMock },
+        { provide: CustomizedAlertsFeService, useValue: { show: jest.fn() } },
+        { provide: ResultLevelService, useValue: { currentResultLevelId: 2 } },
+        { provide: InnovationUseResultsService, useValue: { resultsList: [] } },
+        {
+          provide: FieldsManagerService,
+          useValue: { isContributorsPartners2026: () => true, isLeadContactPersonMandatory2026: () => false, fields: () => ({}), isP25: () => false, activeIndicatorsLength: () => 0, hasSelectedIndicator: () => false }
+        }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+
+    rdPartnersSE = TestBed.inject(RdContributorsAndPartnersService);
+    jest.spyOn(rdPartnersSE, 'getSectionInformation').mockImplementation(() => undefined as any);
+    jest.spyOn(rdPartnersSE, 'loadFilteredBilateralProjects').mockImplementation(() => undefined as any);
+
+    fixture = TestBed.createComponent(RdContributorsAndPartnersComponent);
+    await settle();
+  };
+
+  describe('S-2.1 — catalogue failure is visible and recoverable', () => {
+    it('shows the error and a Retry when getData rejects, and Retry recovers once centres arrive', async () => {
+      await build(jest.fn().mockRejectedValueOnce(new Error('503')));
+      expect(errorEl()).toBeTruthy();
+      expect(text()).toContain('The CGIAR Centers list could not be loaded.');
+      expect(retryDe()).toBeTruthy();
+
+      getData.mockResolvedValueOnce(CATALOG);
+      retryDe().triggerEventHandler('clickEvent', {});
+      await settle();
+
+      expect(getData).toHaveBeenCalledTimes(2);
+      expect(errorEl()).toBeNull();
+    });
+
+    it('also shows the error when getData resolves with an empty list', async () => {
+      await build(jest.fn().mockResolvedValue([]));
+      expect(errorEl()).toBeTruthy();
+    });
+
+    it('keeps the error when Retry fails again', async () => {
+      await build(jest.fn().mockRejectedValue(new Error('503')));
+      retryDe().triggerEventHandler('clickEvent', {});
+      await settle();
+      expect(getData).toHaveBeenCalledTimes(2);
+      expect(errorEl()).toBeTruthy();
+    });
+
+    it('shows NO error while getData is still pending', async () => {
+      await build(jest.fn().mockReturnValue(new Promise(() => undefined)));
+      expect(errorEl()).toBeNull();
+      expect(retryDe()).toBeNull();
+    });
+
+    it('shows NO error when the catalogue loaded', async () => {
+      await build(jest.fn().mockResolvedValue(CATALOG), CATALOG);
+      expect(errorEl()).toBeNull();
+    });
+  });
+
+  describe('S-3.1 / S-3.2 — the no-centres note waits for a "Yes"', () => {
+    it('S-3.1: planned_result null + no reference centres → no note, the Contributing CGIAR Centers dropdown stays', async () => {
+      await build(jest.fn().mockResolvedValue(CATALOG), CATALOG);
+      rdPartnersSE.partnersBody.result_toc_result.planned_result = null as any;
+      rdPartnersSE.tocReferenceCenterInstitutionIds.set([]);
+      await settle();
+
+      expect(text()).not.toContain(NOTE);
+      const dropdown = fixture.nativeElement.querySelector('[data-testid="toc-other-centers"]');
+      expect(dropdown).toBeTruthy();
+      expect(dropdown.querySelector('.fch_title, .pr_label')?.textContent?.trim()).toBe('Contributing CGIAR Centers:');
+      expect(fixture.nativeElement.querySelector('[data-testid="cp-centers-mandatory-marker"] .pr-field.mandatory')).toBeTruthy();
+    });
+
+    it('S-3.2: planned_result true + no reference centres → the note is shown', async () => {
+      await build(jest.fn().mockResolvedValue(CATALOG), CATALOG);
+      rdPartnersSE.partnersBody.result_toc_result.planned_result = true;
+      rdPartnersSE.tocReferenceCenterInstitutionIds.set([]);
+      await settle();
+
+      expect(text()).toContain(NOTE);
+    });
+  });
+});

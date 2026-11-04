@@ -26,8 +26,10 @@ import { BilateralContextService } from '../../services/bilateral-context.servic
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralOverviewService, BilateralOverviewEntry } from '../../services/bilateral-overview.service';
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
+import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
 import { resolveChartTokens } from '../../../../shared/utils/chart-tokens.util';
 import {
+  BILATERAL_CATEGORY_QUERY_PARAM,
   BILATERAL_METHOD_QUERY_PARAM,
   BILATERAL_PHASE_QUERY_PARAM,
   BILATERAL_PROGRAM_QUERY_PARAM,
@@ -44,6 +46,7 @@ import {
 } from '../../bilateral-query-params';
 import { filterCenterResults } from '../../bilateral-result-filter';
 import {
+  NO_PA_CODE,
   OVERVIEW_CATEGORIES,
   OverviewAttentionRow,
   OverviewDisplayCategory,
@@ -54,18 +57,19 @@ import {
   buildOverviewModel,
 } from './bilateral-overview.aggregate';
 import {
+  NO_PA_LABEL,
   NO_PROJECT_CATEGORY_LABEL,
   OVERVIEW_PROJECT_BAR_LIMIT,
   OverviewChartOptions,
   STATUS_TILE_LABELS,
+  byPaOption,
+  byPaTable,
   byProjectOption,
   byProjectTable,
-  bySpOption,
-  bySpTable,
   byTypeOption,
   byTypeTable,
-  paceOption,
-  paceTable,
+  projectsByPaOption,
+  projectsByPaTable,
   resolveChartClick,
   statusMeterOption,
   statusMeterTable,
@@ -74,8 +78,9 @@ import {
 } from './bilateral-overview.charts';
 import { OverviewControlsComponent, OverviewFilterOption } from './components/overview-controls/overview-controls.component';
 
-/** The nine contract keys the Overview reads and writes (`multi` is Reporting-only). */
+/** The ten contract keys the Overview reads and writes (`multi` is Reporting-only; `category` is CPA-R-3/R-4). */
 const OVERVIEW_MANAGED_QUERY_PARAMS = [
+  BILATERAL_CATEGORY_QUERY_PARAM,
   BILATERAL_PHASE_QUERY_PARAM,
   BILATERAL_STATUS_QUERY_PARAM,
   BILATERAL_PROJECT_QUERY_PARAM,
@@ -110,6 +115,7 @@ function emptyParams(): BilateralQueryParams {
     multi: false,
     scope: null,
     group: null,
+    category: null,
   };
 }
 
@@ -169,6 +175,13 @@ const STATUS_TILE_META: Record<OverviewStatusTile['key'], { hint: string; pillCl
   rejected: { hint: 'rework required', pillClass: 'bg-[var(--pr-danger-soft)] text-[var(--pr-danger)]' },
 };
 
+/** INC-166545 — "code — title" when the title adds something; else whichever of the two exists. */
+export function projectDisplayLabel(project: Pick<BilateralProject, 'id' | 'shortName' | 'fullName'>): string {
+  return project.shortName && project.fullName && project.fullName !== project.shortName
+    ? `${project.shortName} — ${project.fullName}`
+    : project.shortName || project.fullName || `Project ${project.id}`;
+}
+
 /**
  * The Bilateral Center **Overview** tab (`design.md` §6.2). It owns the URL ↔ state sync, calls
  * `BilateralOverviewService`, derives the scoped row set through the SHARED `filterCenterResults`
@@ -195,6 +208,7 @@ export class BilateralOverviewComponent implements OnInit {
   private readonly phasesService = inject(PhasesService);
   private readonly overviewService = inject(BilateralOverviewService);
   private readonly aiService = inject(BilateralAiService);
+  private readonly initiativesService = inject(InitiativesService);
   readonly ctx = inject(BilateralContextService);
 
   private readonly controls = viewChild(OverviewControlsComponent);
@@ -325,10 +339,11 @@ export class BilateralOverviewComponent implements OnInit {
   // ── Labels ────────────────────────────────────────────────────────────────────────────────
 
   readonly projectLabels = computed<Map<number, string>>(
-    () => new Map(this.allProjects().map(project => [Number(project.id), project.shortName || project.fullName])),
+    () => new Map(this.allProjects().map(project => [Number(project.id), projectDisplayLabel(project)])),
   );
 
-  readonly programLabels = computed<Map<string, string>>(() => {
+  /** P/A code → name as the center's own projects spell it (their approved mappings). */
+  private readonly mappedProgramLabels = computed<Map<string, string>>(() => {
     const labels = new Map<string, string>();
     for (const project of this.allProjects()) {
       for (const mapping of project.sciencePrograms ?? []) {
@@ -337,6 +352,23 @@ export class BilateralOverviewComponent implements OnInit {
         }
       }
     }
+    return labels;
+  });
+
+  /**
+   * `CPA-DD-6` — P/A label fallback chain: the projects' mapping name → the initiatives catalog
+   * (`InitiativesService`, loaded once at bootstrap, grouped `entities[]` with `official_code` + `name`) →
+   * the raw code (applied by `programLabel` / the chart builders when a code is absent here). A P/A that
+   * reports tagging results but is mapped to none of the center's projects therefore still gets a name.
+   */
+  readonly programLabels = computed<Map<string, string>>(() => {
+    const labels = new Map<string, string>();
+    for (const group of this.initiativesService.allInitiatives() ?? []) {
+      for (const entity of group?.entities ?? []) {
+        if (entity?.official_code && entity?.name) labels.set(String(entity.official_code), String(entity.name));
+      }
+    }
+    for (const [code, name] of this.mappedProgramLabels()) labels.set(code, name);
     return labels;
   });
 
@@ -351,7 +383,8 @@ export class BilateralOverviewComponent implements OnInit {
   // ── Controls option lists ─────────────────────────────────────────────────────────────────
 
   readonly programOptions = computed<OverviewFilterOption<string>[]>(() => {
-    const codes = new Set<string>(this.programLabels().keys());
+    // Codes present in the center's projects or rows only — never the whole catalogue (it only names them).
+    const codes = new Set<string>(this.mappedProgramLabels().keys());
     for (const row of this.entry().results ?? []) if (row.submitter) codes.add(row.submitter);
     return [...codes]
       .map(code => ({ value: code, label: this.programLabel(code) }))
@@ -362,9 +395,7 @@ export class BilateralOverviewComponent implements OnInit {
     this.allProjects()
       .map(project => ({
         value: Number(project.id),
-        label: project.fullName && project.fullName !== project.shortName
-          ? `${project.shortName} — ${project.fullName}`
-          : project.shortName || project.fullName || `Project ${project.id}`,
+        label: projectDisplayLabel(project),
       }))
       .sort((a, b) => a.label.localeCompare(b.label)),
   );
@@ -408,14 +439,38 @@ export class BilateralOverviewComponent implements OnInit {
   );
   readonly byProjectChartTable = computed(() => byProjectTable(this.model().byProject, this.chartOptions()));
 
-  readonly bySpChartOption = computed(() => bySpOption(this.model().bySp, this.chartTokens(), this.chartOptions()));
-  readonly bySpChartTable = computed(() => bySpTable(this.model().bySp, this.chartOptions()));
+  /**
+   * `CPA-R-1` A — "sort by (W3 + tagging) desc, then P/A label asc". The aggregate cannot resolve labels, so it ties
+   * by code; the page owns the label map and re-sorts HERE, once, and the SAME sorted model feeds the option builder,
+   * the a11y table AND `resolveChartClick` (a click's `dataIndex` addresses the rendered order). The no-P/A group
+   * stays last whatever its label sorts to (`CPA-R-1` B).
+   */
+  readonly chartModel = computed<OverviewModel>(() => {
+    const model = this.model();
+    const labels = this.chartOptions().programLabels;
+    const labelOf = (code: string) => (code === NO_PA_CODE ? NO_PA_LABEL : (labels?.get(code) ?? code));
+    const rows = [...model.byPa.rows].sort((a, b) => {
+      if (a.programCode === NO_PA_CODE || b.programCode === NO_PA_CODE) {
+        return a.programCode === b.programCode ? 0 : a.programCode === NO_PA_CODE ? 1 : -1;
+      }
+      return b.w3Count + b.taggingCount - (a.w3Count + a.taggingCount) || labelOf(a.programCode).localeCompare(labelOf(b.programCode));
+    });
+    return { ...model, byPa: { rows } };
+  });
+
+  readonly byPaChartOption = computed(() => byPaOption(this.chartModel().byPa, this.chartTokens(), this.chartOptions()));
+  readonly byPaChartTable = computed(() => byPaTable(this.chartModel().byPa, this.chartOptions()));
+
+  readonly projectsByPaChartOption = computed(() => projectsByPaOption(this.model().projectsByPa, this.chartTokens(), this.chartOptions()));
+  readonly projectsByPaChartTable = computed(() => projectsByPaTable(this.model().projectsByPa, this.chartOptions()));
+  /** `CPA-R-2` C — empty means no P/A has any value in any of the three series. */
+  readonly projectsByPaEmpty = computed(
+    () => !this.model().projectsByPa.rows.some(row => row.mappedCount + row.withW3Count + row.taggedCount > 0),
+  );
 
   readonly byTypeChartOption = computed(() => byTypeOption(this.model().byType, this.chartTokens()));
   readonly byTypeChartTable = computed(() => byTypeTable(this.model().byType));
 
-  readonly paceChartOption = computed(() => paceOption(this.model().pace, this.chartTokens(), this.chartOptions()));
-  readonly paceChartTable = computed(() => paceTable(this.model().pace));
 
   /** Bars actually drawn — the card's link chips mirror exactly what the chart shows. */
   readonly visibleBars = computed<OverviewProjectBar[]>(() =>
@@ -432,7 +487,11 @@ export class BilateralOverviewComponent implements OnInit {
     return `${Math.min(Math.max(rows * 26 + 56, 180), 420)}px`;
   });
 
-  readonly bySpChartHeight = computed(() => `${Math.min(Math.max(this.model().bySp.rows.length * 30 + 48, 180), 320)}px`);
+  /** Two bars per P/A group (~34px), bounded 180–420px like the by-project card. */
+  readonly byPaChartHeight = computed(() => `${Math.min(Math.max(this.model().byPa.rows.length * 34 + 48, 180), 420)}px`);
+
+  /** Vertical grouped bars: a fixed height, the P/A axis grows horizontally. */
+  readonly projectsByPaChartHeight = '380px';
 
   readonly byTypeChartHeight = computed(() => `${Math.min(Math.max(this.visibleTypes().length * 26 + 56, 180), 320)}px`);
 
@@ -455,7 +514,8 @@ export class BilateralOverviewComponent implements OnInit {
   deepLinkParams(dimension: Partial<BilateralQueryParams> = {}): Params {
     return serializeBilateralQueryParams(
       // CNP-T-3 — Reporting and Draft tabs never read `group`, so it is never emitted here.
-      { ...this.params(), ...dimension, phase: this.effectiveVersionId(), scope: null, group: null },
+      // CPA-T-6 — nor `category`: Reporting / Drafts do not read it, and the Overview's own category must not leak.
+      { ...this.params(), ...dimension, phase: this.effectiveVersionId(), scope: null, group: null, category: null },
       { explicitDefaults: true },
     );
   }
@@ -581,7 +641,17 @@ export class BilateralOverviewComponent implements OnInit {
     // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-3, CNP-DD-3)
     // `group` belongs to the Results tab: a pasted `?group=` must never narrow an Overview card,
     // or the line that links to it would equal the Total.
-    this.params.set({ ...parsed.params, group: null });
+    // INC-166545: the Overview has no Source control (Category covers it on this row set: W3 rows are
+    // exactly `source=w3`, tagging rows exactly `source=w1w2`). A pasted `?source=` becomes the matching
+    // category, or it would filter invisibly; an explicit `?category=` wins.
+    const source = parsed.params.source;
+    const category = parsed.params.category ?? (source === 'w3' ? 'w3' : source === 'w1w2' ? 'w1w2-tagging' : null);
+    this.params.set({ ...parsed.params, group: null, source: null, category });
+
+    if (source !== null) {
+      this.navigate({ [BILATERAL_SOURCE_QUERY_PARAM]: null, [BILATERAL_CATEGORY_QUERY_PARAM]: category });
+      return;
+    }
 
     if (parsed.params.phase !== null && parsed.params.phase !== this.ctx.selectedVersionId()) {
       this.ctx.selectedVersionId.set(parsed.params.phase);
@@ -671,17 +741,25 @@ export class BilateralOverviewComponent implements OnInit {
   }
 
   /**
-   * `COV-R-10` — the two `bySp` series mean different destinations: *projects mapped* opens the
-   * Reporting tab for that SP, *results reported* opens Results.
+   * `CPA-R-1` C — both Results-by-P/A series open Results: `program` + `category` (w3 | w1w2-tagging) come from
+   * `resolveChartClick`; the no-P/A group resolves to nothing, so it does not navigate.
    */
-  onSpChartClick(event: ECElementEvent): void {
-    const toReporting = typeof event.seriesId === 'string' && event.seriesId.endsWith(':projects');
-    this.navigateFromChart(event, toReporting ? this.reportingLink() : this.resultsLink(), !toReporting);
+  onPaChartClick(event: ECElementEvent): void {
+    this.navigateFromChart(event, this.resultsLink(), true);
+  }
+
+  /**
+   * `CPA-R-2` D / `CPA-DD-7` — Projects by P/A: *Mapped* and *with W3* open the Reporting tab for that P/A (the
+   * old "Projects mapped" drill, no scope); *tagged* opens Results with `category=w1w2-tagging` (with scope).
+   */
+  onProjectsByPaChartClick(event: ECElementEvent): void {
+    const toResults = typeof event.seriesId === 'string' && event.seriesId.endsWith(':tagged');
+    this.navigateFromChart(event, toResults ? this.resultsLink() : this.reportingLink(), toResults);
   }
 
   /** `CWS-R-8` — only a click that lands on the Results tab carries the scope. */
   private navigateFromChart(event: ECElementEvent, commands: unknown[], toResults: boolean): void {
-    const dimension = resolveChartClick(event, this.model(), this.chartOptions());
+    const dimension = resolveChartClick(event, this.chartModel(), this.chartOptions());
     if (!dimension) return;
     const queryParams = toResults ? this.resultsLinkParams(dimension) : this.deepLinkParams(dimension);
     void this.router.navigate(commands as string[], { queryParams });

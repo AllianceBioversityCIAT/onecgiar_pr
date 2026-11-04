@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   HttpStatus,
   Injectable,
   Logger,
@@ -19,6 +20,8 @@ import { ResultRegionRepository } from '../../results/result-regions/result-regi
 import { ResultCountryRepository } from '../../results/result-countries/result-countries.repository';
 import { ResultCountry } from '../../results/result-countries/entities/result-country.entity';
 import { SourceEnum } from '../../results/entities/result.entity';
+import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
+import { P25_PORTFOLIO_ACRONYM } from '../../../shared/constants/portfolio.constant';
 import { BilateralAccessService } from '../../results/bilateral-access/bilateral-access.service';
 
 @Injectable()
@@ -66,11 +69,45 @@ export class GeographicLocationService {
     );
   }
 
+  /**
+   * IRS-DD-6 / IRS-R-9 — an impact result (type 9) created in PRMS only takes Regional (2) or
+   * Country (3). Mirrors the SQL gate in `validation_geographic_location_P25`: a NULL `source`
+   * counts as non-API; bilateral (`source = 'API'`) type-9 results and every other type are
+   * untouched. Runs before any write, so a rejection leaves nothing behind.
+   */
+  private async _assertImpactGeoScope(
+    createResultGeo: CreateGeographicLocationDto,
+  ): Promise<void> {
+    const result = await this._resultRepository.findOne({
+      where: { id: createResultGeo.result_id },
+      select: {
+        id: true,
+        result_type_id: true,
+        source: true,
+        obj_version: { id: true, obj_portfolio: { id: true, acronym: true } },
+      },
+      relations: { obj_version: { obj_portfolio: true } },
+    });
+    // Post-decision (2026-10-30): the Regional/Country rule is P25-only; other phases
+    // (e.g. P22) keep every scope.
+    if (
+      result?.result_type_id === ResultTypeEnum.IMPACT_CONTRIBUTION &&
+      result.obj_version?.obj_portfolio?.acronym === P25_PORTFOLIO_ACRONYM &&
+      result.source !== SourceEnum.Bilateral &&
+      ![2, 3].includes(Number(createResultGeo.geo_scope_id))
+    ) {
+      throw new BadRequestException(
+        'Impact results only accept Regional (2) or Country (3) geographic scope.',
+      );
+    }
+  }
+
   async saveGeoScopeV2(
     createResultGeo: CreateGeographicLocationDto,
     user: TokenDto,
   ) {
     try {
+      await this._assertImpactGeoScope(createResultGeo);
       await this._resultRegionsService.createV2(createResultGeo);
       await this._resultCountriesService.createV2(createResultGeo, user);
 

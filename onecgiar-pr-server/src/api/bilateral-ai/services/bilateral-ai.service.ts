@@ -9,6 +9,7 @@ import {
   Logger,
   NotFoundException,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
@@ -83,6 +84,9 @@ const TYPE_BY_INDICATOR: Record<string, { type: number; level: number }> = {
   'Innovation Development': { type: 7, level: 4 },
   'Other Output': { type: 8, level: 4 },
 };
+
+/** Why one id of a bulk discard did not get discarded (`ABD-R-5`, design.md §6). */
+export type BulkDiscardFailureReason = 'not_found' | 'forbidden' | 'error';
 
 @Injectable()
 export class BilateralAiService {
@@ -933,15 +937,81 @@ export class BilateralAiService {
     };
   }
 
-  async discardDraft(draftId: number, userId: number) {
+  /**
+   * `ABD-T-1` (`docs/specs/bilateral/ai-drafts-bulk-discard`, `ABD-S-5.3`): the draft's
+   * `is_discarded` and its result's `is_active` are written in ONE transaction, through the
+   * transactional manager's repositories — a draft is never discarded with its result left
+   * active, or the reverse. Entitlement and existence run first, unchanged (`'act'` mode, so a
+   * platform admin who is not a member of the centre is still refused, `ASC-R-15`).
+   */
+  private async discardOne(draftId: number, userId: number) {
     const draft = await this.getDraftRaw(draftId, userId, 'act');
-    await this.draftRepository.update(draft.id, { is_discarded: true });
-    await this.resultRepository.update(draft.result_id, { is_active: false });
+    await this.draftRepository.manager.transaction(async (manager) => {
+      await manager
+        .getRepository(BilateralAiDraft)
+        .update(draft.id, { is_discarded: true });
+      await manager
+        .getRepository(Result)
+        .update(draft.result_id, { is_active: false });
+    });
+    return draft;
+  }
+
+  async discardDraft(draftId: number, userId: number) {
+    const draft = await this.discardOne(draftId, userId);
     return {
       response: { id: draft.id, discarded: true },
       message: 'AI draft discarded',
       status: 200,
     };
+  }
+
+  /**
+   * `ABD-R-5` bulk discard. Each id gets exactly the single-discard rules (`discardOne`) and its
+   * own transaction, so one stale or foreign id never rolls back the others (`ABD-DD-2`). The loop
+   * is sequential on purpose (`ABD-DD-3`): at most 100 small writes, one connection at a time, and
+   * predictable error mapping. Duplicate ids are processed once. A per-id failure is data, not an
+   * error: the call still answers 200 and the caller reads `failed` (`ABD-DD-4`).
+   */
+  async discardDrafts(draftIds: number[], userId: number) {
+    const uniqueIds = [...new Set(draftIds)];
+    const discarded: number[] = [];
+    const failed: { id: number; reason: BulkDiscardFailureReason }[] = [];
+
+    for (const draftId of uniqueIds) {
+      try {
+        await this.discardOne(draftId, userId);
+        discarded.push(draftId);
+      } catch (error) {
+        const reason = this.toBulkDiscardFailureReason(error);
+        if (reason === 'error') {
+          // Draft id only: no error message (it can echo SQL/user data), no user data (`.cursorrules`).
+          this.logger.error(`Bulk discard failed for draft ${draftId}`);
+        }
+        failed.push({ id: draftId, reason });
+      }
+    }
+
+    this.logger.log(
+      `AI drafts bulk discard: requested=${uniqueIds.length} discarded=${discarded.length} failed=${failed.length}`,
+    );
+
+    return {
+      response: { discarded, failed },
+      message: `${discarded.length} AI drafts discarded`,
+      status: 200,
+    };
+  }
+
+  private toBulkDiscardFailureReason(error: unknown): BulkDiscardFailureReason {
+    if (error instanceof NotFoundException) return 'not_found';
+    if (
+      error instanceof ForbiddenException ||
+      error instanceof UnauthorizedException
+    ) {
+      return 'forbidden';
+    }
+    return 'error';
   }
 
   /**

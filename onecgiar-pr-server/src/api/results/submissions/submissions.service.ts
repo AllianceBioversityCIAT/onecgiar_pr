@@ -34,6 +34,10 @@ import { AdUserRepository } from '../../ad_users/repository/ad-users.repository'
  */
 const IP_EMAIL_2026_WORDING_YEAR = 2026;
 
+/** QIN-R-6 / design §6: fixed refusal text; the client shows it as the alert description. */
+const UNSUBMIT_UNDER_QA_REVIEW_MESSAGE =
+  'This result is under QA review and cannot be unsubmitted until QA releases it.';
+
 @Injectable()
 export class SubmissionsService {
   private readonly _logger: Logger = new Logger(SubmissionsService.name);
@@ -209,10 +213,18 @@ export class SubmissionsService {
         };
       }
 
-      const data = await this._resultRepository.update(result.id, {
-        status: 0,
-        status_id: 1,
-      });
+      // QIN-R-6: the QA guard is the WHERE clause of this UPDATE. Refuse before any write below.
+      const affected = await this._resultRepository.unsubmitUnlessUnderQaReview(
+        result.id,
+      );
+      if (affected === 0) {
+        return {
+          response: {},
+          message: UNSUBMIT_UNDER_QA_REVIEW_MESSAGE,
+          status: HttpStatus.CONFLICT,
+        };
+      }
+      const data = { affected };
       const newSubmissions = new Submission();
       newSubmissions.user_id = user.id;
       newSubmissions.status = false;
@@ -266,10 +278,18 @@ export class SubmissionsService {
         };
       }
 
-      const data = await this._resultRepository.update(result.id, {
-        status: 0,
-        status_id: 1,
-      });
+      // QIN-R-6: the QA guard is the WHERE clause of this UPDATE. Refuse before any write below.
+      const affected = await this._resultRepository.unsubmitUnlessUnderQaReview(
+        result.id,
+      );
+      if (affected === 0) {
+        return {
+          response: {},
+          message: UNSUBMIT_UNDER_QA_REVIEW_MESSAGE,
+          status: HttpStatus.CONFLICT,
+        };
+      }
+      const data = { affected };
       const newSubmissions = new Submission();
       newSubmissions.user_id = user.id;
       newSubmissions.status = false;

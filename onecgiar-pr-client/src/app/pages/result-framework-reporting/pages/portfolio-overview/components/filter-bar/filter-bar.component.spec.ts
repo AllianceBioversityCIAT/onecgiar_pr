@@ -18,7 +18,11 @@ const OPTIONS: PortfolioFilterOptions = {
     { level: 'output', value: 'output', label: 'Output', types: [{ value: 'innovation development', label: 'Innovation development' }] },
     { level: 'outcome', value: 'outcome', label: 'Outcome', types: [{ value: 'policy change', label: 'Policy change' }] }
   ],
-  status: [{ value: 'approved', label: 'Approved' }]
+  status: [{ value: 'approved', label: 'Approved' }],
+  funding: [
+    { value: 'w1w2', label: 'W1/W2' },
+    { value: 'bilateral', label: 'W3/Bilateral' }
+  ]
 };
 
 type MapStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -54,9 +58,9 @@ describe('FilterBarComponent (GLF-T-4)', () => {
     fixture.detectChanges();
   });
 
-  it('renders the five controls in bar order', () => {
+  it('renders the six controls in bar order', () => {
     const order = [...root().querySelectorAll('[data-testid^="filter-trigger-"]:not([data-testid="filter-trigger-count"])')].map(el => el.getAttribute('data-testid'));
-    expect(order).toEqual(['filter-trigger-program', 'filter-trigger-project', 'filter-trigger-center', 'filter-trigger-typology', 'filter-trigger-status']);
+    expect(order).toEqual(['filter-trigger-program', 'filter-trigger-project', 'filter-trigger-center', 'filter-trigger-typology', 'filter-trigger-status', 'filter-trigger-funding']);
   });
 
   it('with nothing selected: no chips, no Clear all, and the plain count', () => {
@@ -74,6 +78,26 @@ describe('FilterBarComponent (GLF-T-4)', () => {
     expect(chip.querySelector('button')!.getAttribute('aria-label')).toBe('Remove CIAT');
     expect(q('[data-testid="filter-count"]')!.textContent!.trim()).toBe('1,284 of 6,094 results');
     expect(q('[data-testid="filter-clear-all"]')).not.toBeNull();
+  });
+
+  it('PFF-R-1: funding = bilateral shows the chip "W3/Bilateral"; Funding is enabled with the map loading', () => {
+    stub.dimensions.set({ status: 'loading', map: null });
+    select({ funding: ['bilateral'] });
+    fixture.detectChanges();
+    expect(q('[data-testid="filter-chip-funding-bilateral"]')!.textContent).toContain('W3/Bilateral');
+    expect(q<HTMLButtonElement>('[data-testid="filter-trigger-funding"]')!.disabled).toBe(false);
+    select({ funding: ['w1w2'] });
+    fixture.detectChanges();
+    expect(q('[data-testid="filter-chip-funding-w1w2"]')!.textContent).toContain('W1/W2');
+  });
+
+  it('PFF-R-1: selecting a funding item toggles it, and Clear all calls clearAll (which empties funding)', () => {
+    q('[data-testid="filter-item-funding-bilateral"]')!.dispatchEvent(new CustomEvent('selected'));
+    expect(stub.toggleValue).toHaveBeenCalledWith('funding', 'bilateral');
+    select({ funding: ['bilateral'] });
+    fixture.detectChanges();
+    q<HTMLButtonElement>('[data-testid="filter-clear-all"]')!.click();
+    expect(stub.clearAll).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the count in a polite live region', () => {
@@ -109,8 +133,8 @@ describe('FilterBarComponent (GLF-T-4)', () => {
     expect(q('[data-testid="filter-map-retry"]')).toBeNull();
   });
 
-  it('with the map ready: all five enabled and no map line', () => {
-    for (const d of ['program', 'project', 'center', 'typology', 'status']) {
+  it('with the map ready: all six enabled and no map line', () => {
+    for (const d of ['program', 'project', 'center', 'typology', 'status', 'funding']) {
       expect(q<HTMLButtonElement>(`[data-testid="filter-trigger-${d}"]`)!.disabled).toBe(false);
     }
     expect(q('[data-testid="filter-map-loading"]')).toBeNull();
@@ -136,7 +160,7 @@ describe('FilterBarComponent (GLF-T-4)', () => {
     expect(q('[data-testid="filter-count"]')!.textContent!.trim()).toBe('Applying filters…');
   });
 
-  it('the Filters (n) sheet trigger counts selected values and opens the sheet with the same five controls', () => {
+  it('the Filters (n) sheet trigger counts selected values and opens the sheet with the same six controls', () => {
     select({ program: ['SP01', 'SP02'], center: ['CENTER-03'] });
     fixture.detectChanges();
     const trigger = q<HTMLButtonElement>('[data-testid="filter-sheet-trigger"]')!;
@@ -146,6 +170,6 @@ describe('FilterBarComponent (GLF-T-4)', () => {
     fixture.detectChanges();
     const sheet = q('[data-testid="filter-sheet"]')!;
     expect(sheet).not.toBeNull();
-    expect(sheet.querySelectorAll('app-filter-multi-select').length).toBe(5);
+    expect(sheet.querySelectorAll('app-filter-multi-select').length).toBe(6);
   });
 });

@@ -20,6 +20,13 @@ import {
   Organization,
   Measure
 } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/model/innovationDevInfoBody';
+import {
+  FARMERS_ACTOR_TYPE_ID,
+  FARMER_COUNT_UNIT,
+  FARMER_FOLLOW_UP_COPY,
+  FARMER_FOLLOW_UP_MIN_PHASE_YEAR,
+  W3_BILATERALS_SOURCE_NAME
+} from './farmer-follow-up';
 import { IpsrStep1Body } from '../../../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
 
 @Component({
@@ -363,7 +370,17 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     organizationItem.hide = false;
   }
   addActor() {
-    this.body.innovatonUse.actors.push(new Actor());
+    this.body.innovatonUse.actors.push(this.newActor());
+  }
+
+  /** IFC: a new row of the Innovation Use host starts with both follow-up answers at `null` (never `undefined`). */
+  private newActor(): Actor {
+    const actor = new Actor();
+    if (!this.isIpsr) {
+      actor.count_unit = null;
+      actor.use_nature = null;
+    }
+    return actor;
   }
   addOrganization() {
     this.body.innovatonUse.organization.push(new Organization());
@@ -449,7 +466,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     if (!body.innovation_use_2030.actors) {
       body.innovation_use_2030.actors = [];
     }
-    body.innovation_use_2030.actors.push(new Actor());
+    body.innovation_use_2030.actors.push(this.newActor());
   }
   addOrganization2030() {
     const body = this.body as any;
@@ -484,8 +501,108 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     return list;
   }
 
+  /**
+   * IFC-R-4 / IFC-DD-7 — the actors whose type is disabled in the "Actor type" select of the other rows.
+   *
+   * "Other" (5) is always allowed twice. From the follow-up scope on, so is Farmers: a second Farmers row is
+   * how a reporter splits "received" from "applied" (each row carries its own answers). Every other type keeps
+   * today's one-row rule. Outside the scope (2025, bilateral, IPSR, unknown phase) nothing changes.
+   */
   removeOther(actors) {
-    return actors.filter(item => item.actor_type_id != 5);
+    const farmersRepeatable = this.isFarmerFollowUpResult();
+    return actors.filter(item => item.actor_type_id != 5 && !(farmersRepeatable && item.actor_type_id == FARMERS_ACTOR_TYPE_ID));
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // IFC (changes/innovation-use-farmer-count-nature) — Farmers follow-up questions
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /** Copy + codes of the block, exposed to the template. Verbatim from the mock-up (see `farmer-follow-up.ts`). */
+  readonly farmerFollowUpCopy = FARMER_FOLLOW_UP_COPY;
+  readonly farmerCountUnit = FARMER_COUNT_UNIT;
+
+  /**
+   * Result-level half of the gate: not IPSR, phase year >= 2026, and not a bilateral result.
+   *
+   * 🛑 Phase year, never portfolio (IFC-DD-5; prtest holds 2025 results inside P25). `isPhaseYearAtLeast` fails
+   * toward the legacy form while the result's own year is unknown, so an in-flight load shows no block.
+   * `source_name` comes from the same `GET /api/results/get/:id` row as `phase_year` (`'W1/W2'` or
+   * `'W3/Bilaterals'`, always set), so once the year is known the source is too.
+   */
+  isFarmerFollowUpResult(): boolean {
+    if (this.isIpsr) return false;
+    if (!this.isPhaseYearAtLeast(FARMER_FOLLOW_UP_MIN_PHASE_YEAR)) return false;
+    return this.api?.dataControlSE?.currentResultSignal?.()?.source_name !== W3_BILATERALS_SOURCE_NAME;
+  }
+
+  /** The gate of the block: the result is in scope AND this row is an active Farmers row. */
+  isFarmerFollowUpRow(actorItem): boolean {
+    return this.isFarmerFollowUpResult() && actorItem?.is_active !== false && actorItem?.actor_type_id == FARMERS_ACTOR_TYPE_ID;
+  }
+
+  /** Households row: the grid and the "does not apply" tick are hidden, the single total is implied (IFC-DD-2). */
+  isHouseholdsRow(actorItem): boolean {
+    return this.isFarmerFollowUpRow(actorItem) && actorItem?.count_unit === FARMER_COUNT_UNIT.HOUSEHOLDS;
+  }
+
+  private farmerRowKeys = new WeakMap<object, number>();
+  private farmerRowSeq = 0;
+
+  /** A stable, unique radio-group name per actor row (several Farmers rows may coexist on a page). */
+  farmerRowKey(actorItem): string {
+    if (!this.farmerRowKeys.has(actorItem)) this.farmerRowKeys.set(actorItem, this.farmerRowSeq++);
+    return `iu-farmer-${this.farmerRowKeys.get(actorItem)}`;
+  }
+
+  /** Q-b: the answer is written straight on the row (the group is native radios, see the template). */
+  selectUseNature(actorItem, value: string) {
+    actorItem.use_nature = value;
+  }
+
+  /**
+   * Actor type changed. Away from Farmers both answers go (IFC-R-1), and a row that was forced onto a single
+   * total by "Households" gets its grid back — that tick was implied by the answer, not chosen by the reporter.
+   * Rows that never carried the answers are left alone, so no key appears on them (IPSR payloads stay as today).
+   */
+  onActorTypeChange(actorItem, newTypeId) {
+    actorItem.other_actor_type = null;
+    if (newTypeId == FARMERS_ACTOR_TYPE_ID) return;
+    const hadAnswers = !!actorItem.count_unit || !!actorItem.use_nature;
+    if (actorItem.count_unit === FARMER_COUNT_UNIT.HOUSEHOLDS) {
+      this.cleanActor(actorItem);
+      actorItem.sex_and_age_disaggregation = false;
+    }
+    if (hadAnswers) {
+      actorItem.count_unit = null;
+      actorItem.use_nature = null;
+    }
+  }
+
+  /**
+   * Q-a answered (IFC-R-5). Households reuses the existing single-total path end to end: it ticks "Sex and age
+   * disaggregation does not apply" for the row and wipes the grid. Individuals gives the grid back.
+   *
+   * The grid is wiped only when the row actually changes shape: a row already on a single total keeps its typed
+   * total on "Households", and a row that still has its grid keeps its numbers on "Individuals".
+   *
+   * "Individuals" gives the grid back ONLY when the previous answer was Households (IFC-R-5 "choosing Individuals
+   * again"). A row the reporter put on a single total by ticking "does not apply" keeps that total and the tick:
+   * IFC-T-7 found the unconditional version wiping a stored `how_many` on the first answer.
+   */
+  onCountUnitChange(actorItem, value) {
+    const previous = actorItem.count_unit;
+    actorItem.count_unit = value ?? null;
+    if (value === FARMER_COUNT_UNIT.HOUSEHOLDS) {
+      if (!actorItem.sex_and_age_disaggregation) this.cleanActor(actorItem);
+      actorItem.sex_and_age_disaggregation = true;
+    } else if (
+      (value === FARMER_COUNT_UNIT.INDIVIDUALS || !value) &&
+      previous === FARMER_COUNT_UNIT.HOUSEHOLDS &&
+      actorItem.sex_and_age_disaggregation
+    ) {
+      this.cleanActor(actorItem);
+      actorItem.sex_and_age_disaggregation = false;
+    }
   }
 
   removeOtherInOrg(disableOrganizations) {

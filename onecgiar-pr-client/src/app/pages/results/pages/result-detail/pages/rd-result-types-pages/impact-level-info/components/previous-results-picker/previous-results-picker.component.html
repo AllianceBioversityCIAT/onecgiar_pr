@@ -1,0 +1,121 @@
+<div class="picker custom_select" data-cy="impact-picker" (keydown.escape)="onEscape($event)">
+  <button
+    #fieldRef
+    type="button"
+    class="field picker-field"
+    data-cy="impact-picker-field"
+    aria-haspopup="true"
+    aria-controls="impact-picker-panel"
+    [attr.aria-expanded]="open()"
+    (click)="toggle()">
+    <span class="text select_placeholder">Please select a result</span>
+    <i class="pi pi-chevron-down icon_dropdown" aria-hidden="true"></i>
+  </button>
+
+  @if (open()) {
+    <div class="custom-dropdown-panel" id="impact-picker-panel" data-cy="impact-picker-panel">
+      <div class="search-bar">
+        <i class="pi pi-search search-icon" aria-hidden="true"></i>
+        <input
+          type="text"
+          data-cy="impact-picker-search"
+          aria-label="Search by code or title"
+          placeholder="Search by code or title…"
+          autocomplete="off"
+          [value]="searchText()"
+          (input)="onQueryInput(search.value)"
+          #search />
+        @if (searchText()) {
+          <button type="button" class="clear-search" data-cy="impact-picker-clear-search" aria-label="Clear search" (click)="clearSearch()">
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+        }
+      </div>
+
+      <div class="filter-group-title" id="impact-picker-typology-label">FILTER BY RESULT TYPOLOGY</div>
+      <div class="filters-row typology-row" role="group" aria-labelledby="impact-picker-typology-label" data-cy="impact-picker-types">
+        @for (type of typeOptions(); track type.id) {
+          <button type="button" class="filter-chip" data-cy="impact-picker-type" [class.active]="isTypeActive(type.id)" [attr.aria-pressed]="isTypeActive(type.id)" (click)="toggleType(type.id)">
+            {{ type.label }}
+          </button>
+        }
+      </div>
+
+      <div class="flex-row-align">
+        <div class="left-filters">
+          <div class="filter-group">
+            <span class="filter-label" id="impact-picker-portfolio-label">PORTFOLIO:</span>
+            <div class="filter-chip-group segmented" role="group" aria-labelledby="impact-picker-portfolio-label" data-cy="impact-picker-portfolios">
+              <button type="button" class="grouped-chip" data-cy="impact-picker-portfolio" [class.active]="portfolioFilter() === null" [attr.aria-pressed]="portfolioFilter() === null" (click)="setPortfolio(null)">All</button>
+              @for (portfolio of portfolios(); track portfolio.id) {
+                <button
+                  type="button"
+                  class="grouped-chip"
+                  data-cy="impact-picker-portfolio"
+                  [class.active]="portfolioFilter() === portfolio.id"
+                  [attr.aria-pressed]="portfolioFilter() === portfolio.id"
+                  (click)="setPortfolio(portfolio.id)">
+                  {{ portfolio.acronym }}
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-and-reset">
+          <span class="summary-text" data-cy="impact-picker-summary">Showing {{ total() }} results</span>
+          <button type="button" class="reset-link" data-cy="impact-picker-reset" (click)="resetFilters()">Reset filters</button>
+        </div>
+      </div>
+
+      <span class="sr-only" role="status" aria-live="polite" data-cy="impact-picker-announcer">{{ announcement() }}</span>
+
+      <div class="results-list compact-list" [attr.aria-busy]="loading()" data-cy="impact-picker-results">
+        @if (error()) {
+          <div class="state-message error" role="alert" data-cy="impact-picker-error">
+            <span>Results could not be loaded</span>
+            <button type="button" class="close-btn" data-cy="impact-picker-retry" (click)="retry()">Retry</button>
+          </div>
+        }
+        @if (loading() && !items().length) {
+          <p class="state-message" data-cy="impact-picker-loading">Loading results...</p>
+        } @else if (!items().length && !error()) {
+          <p class="state-message" data-cy="impact-picker-empty">No results match your search</p>
+        }
+        @for (item of items(); track item.result_id) {
+          <label class="result-list-item" data-cy="impact-picker-item">
+            <span class="item-left">
+              <input type="checkbox" class="pr-native-check" data-cy="impact-picker-check" [checked]="isSelected(item)" [attr.aria-label]="'Select result ' + item.result_code" (change)="toggleItem(item)" />
+            </span>
+            <span class="item-right">
+              <span class="item-header">
+                <span class="item-code">[{{ item.portfolio_acronym }} · {{ item.phase_name }}] {{ item.result_code }}</span>
+                <span class="item-dot">·</span>
+                <span class="item-typology">{{ item.result_type_name }}</span>
+                <span class="item-funding-badge">{{ item.status_name }}</span>
+              </span>
+              <span class="item-title">{{ item.title }}</span>
+            </span>
+          </label>
+        }
+        @if (hasMore()) {
+          <div class="load-more-row">
+            <button type="button" class="close-btn" data-cy="impact-picker-load-more" [disabled]="loading()" (click)="loadMore()">Load more</button>
+          </div>
+        }
+      </div>
+
+      <div class="panel-footer">
+        <div class="footer-left">
+          <span class="selection-count" data-cy="impact-picker-count">{{ selection().length }} results selected</span>
+          @if (selection().length) {
+            <button type="button" class="clear-btn" data-cy="impact-picker-clear" (click)="clearSelection()">Clear selection</button>
+          }
+        </div>
+        <div class="footer-right">
+          <button type="button" class="close-btn" data-cy="impact-picker-close" (click)="close(true)">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

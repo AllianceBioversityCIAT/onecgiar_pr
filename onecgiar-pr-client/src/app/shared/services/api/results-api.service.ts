@@ -25,7 +25,9 @@ import { toDisplayBasis } from '../../constants/achieved-display-basis';
 import { PortfolioTocCoverage } from '../../interfaces/portfolio-toc-coverage.interface';
 import { PortfolioBilateralProjects } from '../../interfaces/portfolio-bilateral-projects.interface';
 import { PortfolioResultDimensions } from '../../interfaces/portfolio-result-dimensions.interface';
+import { PortfolioContributionRequests } from '../../interfaces/portfolio-contribution-requests.interface';
 import { ReportingApiResponse } from '../../interfaces/reporting-api.response';
+import { ImpactLevelInfo, ImpactPreviousResultsSearchParams, ImpactPreviousResultsSearchResponse, ImpactStudyType, SaveImpactLevelBody } from '../../interfaces/impact-level.interface';
 
 /**
  * @akili-spec notifications/detail-side-panel (DSP-T-2)
@@ -1725,6 +1727,16 @@ export class ResultsApiService {
     return this.http.get<ReportingApiResponse<PortfolioBilateralProjects>>(url);
   }
 
+  // @akili-spec changes/portfolio-overview-feedback-round/contribution-requests-by-pa (CRP-T-3) — contribution
+  // requests of the phase by P/A (sent / received, Pending / Accepted / Declined) + the pending list. Admin only.
+  GET_PortfolioContributionRequests(versionId?: number) {
+    let url = `${environment.apiBaseUrl}api/results-framework-reporting/portfolio/contribution-requests`;
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      url += `?versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    return this.http.get<ReportingApiResponse<PortfolioContributionRequests>>(url);
+  }
+
   // @akili-spec changes/portfolio-overview-revamp/global-filters (GLF-T-2) — result <-> project and
   // result <-> Center links of the phase, for the Portfolio overview global filters. Admin only (server-side).
   GET_PortfolioResultDimensions(versionId?: number) {
@@ -1772,6 +1784,11 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/reporting-entry-hub/projects?programId=${programId}`);
   }
 
+  // IRE-R-2 (impact results card): per impact-area counts for the program + version.
+  GET_impactLevelCounts(initiativeId: string | number, versionId: string | number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/impact-level/counts?initiativeId=${initiativeId}&versionId=${versionId}`);
+  }
+
   POST_createResult(body: any) {
     return this.http.post<any>(`${environment.apiBaseUrl}api/results-framework-reporting/create`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }
@@ -1793,6 +1810,15 @@ export class ResultsApiService {
       `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=${resultTocResultId}&tocResultIndicatorId=${tocResultIndicatorId}${scope ? `&scope=${scope}` : ''}${targetParam}`
     );
   }
+  // @akili-spec result-framework-reporting/kpi-row-status-counts (KRC-T-2)
+  // /api/results-framework-reporting/indicator-result-status-links: program-wide result/status links, read once per program + version.
+  GET_IndicatorResultStatusLinks(program: string, versionId?: number | null) {
+    const versionParam = versionId != null ? `&versionId=${encodeURIComponent(`${versionId}`)}` : '';
+    return this.http.get<any>(
+      `${environment.apiBaseUrl}api/results-framework-reporting/indicator-result-status-links?program=${encodeURIComponent(program)}${versionParam}`
+    );
+  }
+
   // /api/results-framework-reporting/dashboard
   GET_DashboardData(entityId: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/dashboard?programId=${entityId}`);
@@ -1893,5 +1919,38 @@ export class ResultsApiService {
 
   POST_reminderCampaignSend(id: number) {
     return this.http.post<ReminderEnvelope<ReminderSendOutcome>>(`${this.reminderCampaignsUrl}/${id}/send`, {});
+  }
+
+  // @akili-spec results/impact-results-reporting/result-detail-impact (IRD-T-1, design §5)
+  private get impactLevelUrl() {
+    return `${this.baseApiBaseUrl}results-framework-reporting/impact-level`;
+  }
+
+  GET_impactStudyTypes() {
+    return this.http.get<ReportingApiResponse<ImpactStudyType[]>>(`${this.impactLevelUrl}/study-types`);
+  }
+
+  GET_impactLevelInfo(resultId: number | string) {
+    return this.http.get<ReportingApiResponse<ImpactLevelInfo>>(`${this.impactLevelUrl}/get/result/${resultId}`);
+  }
+
+  PATCH_impactLevelInfo(resultId: number | string, body: SaveImpactLevelBody) {
+    return this.http.patch<ReportingApiResponse<ImpactLevelInfo>>(`${this.impactLevelUrl}/save/result/${resultId}`, body);
+  }
+
+  /** E5. Null/empty params are omitted; `typeIds` goes as a csv. */
+  GET_impactPreviousResultsSearch(params: ImpactPreviousResultsSearchParams = {}) {
+    const query: Record<string, string> = {};
+    const { typeIds, ...rest } = params;
+    Object.entries(rest).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && `${value}`.trim() !== '') query[key] = `${value}`;
+    });
+    if (typeIds?.length) query['typeIds'] = typeIds.join(',');
+    return this.http.get<ReportingApiResponse<ImpactPreviousResultsSearchResponse>>(`${this.impactLevelUrl}/previous-results/search`, { params: query });
+  }
+
+  /** Plain result types catalog (every active `result_type`: `{ id, name, description }`). Picker type filter (IRD-T-4). */
+  GET_resultTypes() {
+    return this.http.get<ReportingApiResponse<Array<{ id: number; name: string; description?: string }>>>(`${this.apiBaseUrl}types/all`);
   }
 }

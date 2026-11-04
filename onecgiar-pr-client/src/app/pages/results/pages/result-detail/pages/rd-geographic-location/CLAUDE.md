@@ -1,6 +1,6 @@
 # rd-geographic-location
 
-**Verified:** 2026-09-15 · branch yzuniga/qa-bugs-2026-09 · el `0` de "sin ámbito" viaja como NULL (barrido 15-sep); prior: 2026-09-10 · branch qa-development-2026-ss · UCA-T-7 rework attempt 2 (`docs/specs/changes/unsaved-changes-alert/`); prior: 2026-09-10 attempt 1 (FAILed) · 2026-08-26 · branch performance-refactor · 75d56f2cd
+**Verified:** 2026-11-01 · qa-development-2026-ss · (uncommitted) · spec `results/impact-results-reporting/result-detail-impact` IRD-T-6 (P2-3901): impact results (`isP25ImpactResultSignal`) pass `allowedScopeIds=[REGIONAL, COUNTRY]` to `geoscope-management`; see § IRD-T-6; prior: 2026-09-15 · branch yzuniga/qa-bugs-2026-09 · el `0` de "sin ámbito" viaja como NULL (barrido 15-sep); prior: 2026-09-10 · branch qa-development-2026-ss · UCA-T-7 rework attempt 2 (`docs/specs/changes/unsaved-changes-alert/`); prior: 2026-09-10 attempt 1 (FAILed) · 2026-08-26 · branch performance-refactor · 75d56f2cd
 
 ## Qué es
 Sección "Geographic location" del detalle de un resultado: alcance geográfico (global / regional /
@@ -75,6 +75,10 @@ el flujo "unsaved changes" de `docs/specs/changes/unsaved-changes-alert/`:
   tautológica (round-trip de un literal armado en el mismo test) y su hallazgo ("solo primitivos y
   arrays de números") no describía la forma real. El test corregido carga una fixture anidada real
   vía `getSectionInformation()` antes de round-trip-earla.
+
+## IRD-T-6 — impact results offer only Regional/Country (2026-11-01, P2-3901)
+- `isImpactResult` / `allowedScopeIds` (computed, `null` for every other result) feed the NEW `allowedScopeIds` input of shared `geoscope-management` (both bodies); when set, the TBD option is not appended. `GeoScopeEnum` ids 2/3.
+- `storedScopeOutsideAllowed(id)` shows an `app-alert-status` hint (`impact-scope-hint` / `impact-extra-scope-hint`, PLACEHOLDER copy, confirmed at IRD-T-8) when a stored scope (e.g. Global) is outside the list; display only, nothing is rewritten.
 
 ## Trampas (⚠️ = ya rompió algo)
 - 🛑 **Fase ≠ portafolio.** `isP25()` decide de qué endpoint se lee; `isGeographicLocation2026()`

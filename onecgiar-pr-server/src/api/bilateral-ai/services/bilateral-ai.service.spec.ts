@@ -4,11 +4,14 @@ import {
   HttpException,
   NotFoundException,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { BilateralAiService } from './bilateral-ai.service';
 import { BilateralAiJobStatus } from '../entities/bilateral-ai-job.entity';
 import { DraftEvidenceSourceType } from '../entities/draft-evidence.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { BilateralAiDraft } from '../entities/bilateral-ai-draft.entity';
+import { Result } from '../../results/entities/result.entity';
 
 describe('BilateralAiService (unit)', () => {
   const makeService = (overrides: Partial<any> = {}) => {
@@ -34,12 +37,36 @@ describe('BilateralAiService (unit)', () => {
       update: jest.fn().mockResolvedValue({ affected: 1 }),
       count: jest.fn(),
     };
+    // `ABD-T-1`: discard writes `bilateral_ai_drafts.is_discarded` and `result.is_active` through
+    // ONE transactional manager (`draftRepository.manager.transaction`). The mock hands the
+    // callback a manager whose repositories are separate stubs from the root ones, so a spec can
+    // tell a transactional write from a write that bypassed the transaction. A mock cannot prove
+    // a real MySQL rollback — it proves both writes share the one manager the transaction owns.
+    const txDraftRepository = {
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+    };
+    const txResultRepository = {
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+    };
+    const txManager = {
+      getRepository: jest.fn((entity: unknown) => {
+        if (entity === BilateralAiDraft) return txDraftRepository;
+        if (entity === Result) return txResultRepository;
+        throw new Error('unexpected entity in transactional manager');
+      }),
+    };
+    const manager = {
+      transaction: jest.fn(async (work: (m: unknown) => Promise<unknown>) =>
+        work(txManager),
+      ),
+    };
     const draftRepository = {
       create: jest.fn((x) => x),
       save: jest.fn(async (x) => ({ ...x, id: 1 })),
       find: jest.fn().mockResolvedValue([]),
       findOne: jest.fn(),
       update: jest.fn(),
+      manager,
     };
     const evidenceRepository = {
       find: jest.fn().mockResolvedValue([]),
@@ -157,6 +184,10 @@ describe('BilateralAiService (unit)', () => {
         jobRepository,
         jobQueryBuilder,
         draftRepository,
+        manager,
+        txManager,
+        txDraftRepository,
+        txResultRepository,
         evidenceRepository,
         resultRepository,
         versioningService,
@@ -1954,6 +1985,8 @@ describe('BilateralAiService (unit)', () => {
   });
 
   describe('discardDraft', () => {
+    // ABD-S-8.1 — behavior, response shape and message unchanged; both writes now go through
+    // one transaction (ABD-S-5.3 rule).
     it('should mark draft as discarded and deactivate result', async () => {
       const { service, stubs } = makeService();
       stubs.draftRepository.findOne.mockResolvedValue({
@@ -1966,17 +1999,283 @@ describe('BilateralAiService (unit)', () => {
 
       const result = await service.discardDraft(5, 42);
 
-      expect(stubs.draftRepository.update).toHaveBeenCalledWith(5, {
+      expect(stubs.manager.transaction).toHaveBeenCalledTimes(1);
+      expect(stubs.txDraftRepository.update).toHaveBeenCalledWith(5, {
         is_discarded: true,
       });
-      expect(stubs.resultRepository.update).toHaveBeenCalledWith(100, {
+      expect(stubs.txResultRepository.update).toHaveBeenCalledWith(100, {
         is_active: false,
       });
+      // neither write may bypass the transactional manager
+      expect(stubs.draftRepository.update).not.toHaveBeenCalled();
+      expect(stubs.resultRepository.update).not.toHaveBeenCalled();
       expect(result).toEqual({
         response: { id: 5, discarded: true },
         message: 'AI draft discarded',
         status: 200,
       });
+    });
+  });
+
+  describe('discardDrafts (ABD-R-5 bulk discard)', () => {
+    const CENTER_OK = 7;
+    const CENTER_OTHER = 99;
+
+    // Drafts keyed by id; a draft id absent from the map behaves as missing/already discarded
+    // (real `getDraftRaw` filters `is_discarded: false` and throws NotFoundException).
+    const wireDrafts = (
+      stubs: any,
+      drafts: Record<number, { result_id: number; center_id: number }>,
+    ) => {
+      stubs.draftRepository.findOne.mockImplementation(
+        async ({ where }: any) => {
+          const d = drafts[where.id];
+          return d
+            ? {
+                id: where.id,
+                is_discarded: false,
+                result_id: d.result_id,
+                job: { center_id: d.center_id },
+              }
+            : null;
+        },
+      );
+      stubs.clarisaCentersRepository.findOne.mockImplementation(
+        async ({ where }: any) => ({ code: `C${where.institutionId}` }),
+      );
+      // the caller is a member of CENTER_OK only
+      stubs.roleByUserRepository.validationCenterPermissions.mockImplementation(
+        async (_userId: number, code: string) =>
+          code === `C${CENTER_OK}` ? 1 : 0,
+      );
+    };
+
+    // ABD-S-5.1
+    it('ABD-S-5.1 — discards every id and writes draft + result on the transactional manager per id', async () => {
+      const { service, stubs } = makeService();
+      wireDrafts(stubs, {
+        11: { result_id: 101, center_id: CENTER_OK },
+        12: { result_id: 102, center_id: CENTER_OK },
+        13: { result_id: 103, center_id: CENTER_OK },
+      });
+
+      const out = await service.discardDrafts([11, 12, 13], 42);
+
+      expect(out).toEqual({
+        response: { discarded: [11, 12, 13], failed: [] },
+        message: '3 AI drafts discarded',
+        status: 200,
+      });
+      expect(stubs.manager.transaction).toHaveBeenCalledTimes(3);
+      expect(stubs.txDraftRepository.update).toHaveBeenCalledTimes(3);
+      expect(stubs.txResultRepository.update).toHaveBeenCalledTimes(3);
+      for (const [draftId, resultId] of [
+        [11, 101],
+        [12, 102],
+        [13, 103],
+      ]) {
+        expect(stubs.txDraftRepository.update).toHaveBeenCalledWith(draftId, {
+          is_discarded: true,
+        });
+        expect(stubs.txResultRepository.update).toHaveBeenCalledWith(resultId, {
+          is_active: false,
+        });
+      }
+      expect(stubs.draftRepository.update).not.toHaveBeenCalled();
+      expect(stubs.resultRepository.update).not.toHaveBeenCalled();
+    });
+
+    // ABD-S-5.2
+    it('ABD-S-5.2 — partial failure: missing -> not_found, other centre -> forbidden; successes are kept and failing ids write nothing', async () => {
+      const { service, stubs } = makeService();
+      wireDrafts(stubs, {
+        21: { result_id: 201, center_id: CENTER_OK },
+        // 22 is absent: already discarded / does not exist -> NotFoundException
+        23: { result_id: 203, center_id: CENTER_OTHER }, // not entitled
+        24: { result_id: 204, center_id: CENTER_OK },
+      });
+
+      const out = await service.discardDrafts([21, 22, 23, 24], 42);
+
+      expect(out.response.discarded).toEqual([21, 24]);
+      expect(out.response.failed).toEqual([
+        { id: 22, reason: 'not_found' },
+        { id: 23, reason: 'forbidden' },
+      ]);
+      expect(out.message).toBe('2 AI drafts discarded');
+      expect(out.status).toBe(200);
+      // exactly the two successes were written (and in their own transactions)
+      expect(stubs.manager.transaction).toHaveBeenCalledTimes(2);
+      const writtenDrafts = stubs.txDraftRepository.update.mock.calls.map(
+        (c: any[]) => c[0],
+      );
+      const writtenResults = stubs.txResultRepository.update.mock.calls.map(
+        (c: any[]) => c[0],
+      );
+      expect(writtenDrafts).toEqual([21, 24]);
+      expect(writtenResults).toEqual([201, 204]);
+      // the other centre's draft/result are untouched
+      expect(writtenDrafts).not.toContain(23);
+      expect(writtenResults).not.toContain(203);
+    });
+
+    // ABD-S-5.3
+    it('ABD-S-5.3 — a failing result write inside the transaction fails that id as "error"; the draft write was issued on the transactional manager, never the root repository; other ids still commit', async () => {
+      const { service, stubs } = makeService();
+      wireDrafts(stubs, {
+        31: { result_id: 301, center_id: CENTER_OK },
+        32: { result_id: 302, center_id: CENTER_OK },
+      });
+      stubs.txResultRepository.update.mockImplementation(
+        async (resultId: number) => {
+          if (resultId === 301) throw new Error('result write failed');
+          return { affected: 1 };
+        },
+      );
+
+      const out = await service.discardDrafts([31, 32], 42);
+
+      expect(out.response.failed).toEqual([{ id: 31, reason: 'error' }]);
+      expect(out.response.discarded).toEqual([32]);
+      // the first write of the failing id ran on the transactional manager ...
+      expect(stubs.txManager.getRepository).toHaveBeenCalledWith(
+        BilateralAiDraft,
+      );
+      expect(stubs.txDraftRepository.update).toHaveBeenCalledWith(31, {
+        is_discarded: true,
+      });
+      // ... so the transaction (not a bare repository) owns it and can roll it back
+      expect(stubs.draftRepository.update).not.toHaveBeenCalled();
+      expect(stubs.resultRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('ABD-S-5.3 — an unexpected error is logged with the draft id only (no error message, no user data)', async () => {
+      const { service, stubs } = makeService();
+      wireDrafts(stubs, { 41: { result_id: 401, center_id: CENTER_OK } });
+      stubs.txResultRepository.update.mockRejectedValue(
+        new Error('secret-ish detail user@cgiar.org'),
+      );
+      const warn = jest
+        .spyOn((service as any).logger, 'warn')
+        .mockImplementation(() => undefined);
+      const error = jest
+        .spyOn((service as any).logger, 'error')
+        .mockImplementation(() => undefined);
+
+      await service.discardDrafts([41], 42);
+
+      const logged = [...warn.mock.calls, ...error.mock.calls]
+        .map((c) => String(c[0]))
+        .join('\n');
+      expect(logged).toContain('41');
+      expect(logged).not.toContain('secret-ish');
+      expect(logged).not.toContain('user@cgiar.org');
+    });
+
+    // ABD-S-5.4
+    it('ABD-S-5.4 — duplicate ids are processed once', async () => {
+      const { service, stubs } = makeService();
+      wireDrafts(stubs, { 5: { result_id: 500, center_id: CENTER_OK } });
+
+      const out = await service.discardDrafts([5, 5], 42);
+
+      expect(stubs.manager.transaction).toHaveBeenCalledTimes(1);
+      expect(stubs.txDraftRepository.update).toHaveBeenCalledTimes(1);
+      expect(out.response).toEqual({ discarded: [5], failed: [] });
+      expect(out.message).toBe('1 AI drafts discarded');
+    });
+
+    // ABD-S-5.5
+    it('ABD-S-5.5 — a platform admin who is not a member of the centre gets every id as forbidden and nothing is written', async () => {
+      const { service, stubs } = makeService();
+      wireDrafts(stubs, {
+        51: { result_id: 501, center_id: CENTER_OTHER },
+        52: { result_id: 502, center_id: CENTER_OTHER },
+      });
+      stubs.roleByUserRepository.isUserAdmin.mockResolvedValue(true);
+
+      const out = await service.discardDrafts([51, 52], 42);
+
+      expect(out.response).toEqual({
+        discarded: [],
+        failed: [
+          { id: 51, reason: 'forbidden' },
+          { id: 52, reason: 'forbidden' },
+        ],
+      });
+      expect(out.message).toBe('0 AI drafts discarded');
+      expect(stubs.manager.transaction).not.toHaveBeenCalled();
+    });
+
+    it('ABD-S-5.5 — the entitlement check rejecting (Unauthorized) maps to forbidden for every id', async () => {
+      const { service, stubs } = makeService();
+      wireDrafts(stubs, {
+        61: { result_id: 601, center_id: CENTER_OK },
+        62: { result_id: 602, center_id: CENTER_OK },
+      });
+      stubs.clarisaCentersRepository.findOne.mockResolvedValue({ code: 'C7' });
+      stubs.roleByUserRepository.validationCenterPermissions.mockRejectedValue(
+        new UnauthorizedException(),
+      );
+
+      const out = await service.discardDrafts([61, 62], 42);
+
+      expect(out.response.discarded).toEqual([]);
+      expect(out.response.failed).toEqual([
+        { id: 61, reason: 'forbidden' },
+        { id: 62, reason: 'forbidden' },
+      ]);
+      expect(stubs.manager.transaction).not.toHaveBeenCalled();
+    });
+
+    // ABD-DD-3 — sequential, one transaction at a time
+    it('ABD-DD-3 — processes ids sequentially (never two transactions in flight) and reports in request order', async () => {
+      const { service, stubs } = makeService();
+      wireDrafts(stubs, {
+        71: { result_id: 701, center_id: CENTER_OK },
+        72: { result_id: 702, center_id: CENTER_OK },
+        73: { result_id: 703, center_id: CENTER_OK },
+      });
+      let inFlight = 0;
+      let maxInFlight = 0;
+      stubs.manager.transaction.mockImplementation(
+        async (work: (m: unknown) => Promise<unknown>) => {
+          inFlight += 1;
+          maxInFlight = Math.max(maxInFlight, inFlight);
+          await new Promise((resolve) => setImmediate(resolve));
+          try {
+            return await work(stubs.txManager);
+          } finally {
+            inFlight -= 1;
+          }
+        },
+      );
+
+      const out = await service.discardDrafts([73, 71, 72], 42);
+
+      expect(maxInFlight).toBe(1);
+      expect(out.response.discarded).toEqual([73, 71, 72]);
+    });
+
+    it('logs one summary line per batch with requested / discarded / failed counts', async () => {
+      const { service, stubs } = makeService();
+      wireDrafts(stubs, {
+        81: { result_id: 801, center_id: CENTER_OK },
+        83: { result_id: 803, center_id: CENTER_OTHER },
+      });
+      const log = jest
+        .spyOn((service as any).logger, 'log')
+        .mockImplementation(() => undefined);
+
+      await service.discardDrafts([81, 82, 83], 42);
+
+      const summaries = log.mock.calls
+        .map((c) => String(c[0]))
+        .filter((line) => line.includes('requested='));
+      expect(summaries).toHaveLength(1);
+      expect(summaries[0]).toContain('requested=3');
+      expect(summaries[0]).toContain('discarded=1');
+      expect(summaries[0]).toContain('failed=2');
     });
   });
 

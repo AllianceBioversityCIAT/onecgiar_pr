@@ -598,3 +598,70 @@ describe('composeApprovalChain (DSP-T-1, pure composition)', () => {
     expect(dto.steps.some((s) => s.official_code === 'SP04')).toBe(false);
   });
 });
+
+// @akili-spec changes/portfolio-overview-feedback-round/contribution-requests-by-pa CRP-T-1
+describe('ShareResultRequestRepository.getPortfolioContributionRequestFacts (CRP-T-1)', () => {
+  let repository: ShareResultRequestRepository;
+  const mockQuery = jest.fn();
+  const handledError = new Error('handled');
+  const returnErrorRepository = jest.fn(() => {
+    throw handledError;
+  });
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ShareResultRequestRepository,
+        { provide: DataSource, useValue: { createEntityManager: jest.fn() } },
+        { provide: HandlersError, useValue: { returnErrorRepository } },
+      ],
+    }).compile();
+    repository = module.get(ShareResultRequestRepository);
+    repository.query = mockQuery;
+  });
+
+  it('filters by every CRP-R-1 rule and binds versionId as a parameter', async () => {
+    const rows = [{ requestId: 1, statusId: 1 }];
+    mockQuery.mockResolvedValueOnce(rows);
+
+    const result = await repository.getPortfolioContributionRequestFacts(77);
+
+    expect(result).toBe(rows);
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    const [sql, params] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/srr\.is_active\s*>\s*0/);
+    expect(sql).toMatch(/srr\.request_type\s*=\s*'contribution'/);
+    expect(sql).toMatch(
+      /srr\.request_status_id\s+IN\s*\(\s*1\s*,\s*2\s*,\s*3\s*\)/,
+    );
+    const statusClause = sql.match(
+      /srr\.request_status_id\s+IN\s*\([^)]*\)/,
+    )?.[0];
+    expect(statusClause).toBeDefined();
+    expect(statusClause).not.toMatch(/4/);
+    expect(sql).toMatch(/r\.is_active\s*>\s*0/);
+    expect(sql).toMatch(/r\.version_id\s*=\s*\?/);
+    expect(sql).not.toContain('77');
+    expect(params).toEqual([77]);
+  });
+
+  it('reads the received side from approving_inititiative_id and left-joins both P/A', async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    await repository.getPortfolioContributionRequestFacts(1);
+    const [sql] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/srr\.requester_initiative_id/);
+    expect(sql).toMatch(/srr\.approving_inititiative_id/);
+    expect(sql.match(/LEFT JOIN clarisa_initiatives/g)).toHaveLength(2);
+  });
+
+  it('rethrows the handled error when the query fails', async () => {
+    mockQuery.mockRejectedValueOnce(new Error('db down'));
+    await expect(
+      repository.getPortfolioContributionRequestFacts(1),
+    ).rejects.toBe(handledError);
+    expect(returnErrorRepository).toHaveBeenCalledWith(
+      expect.objectContaining({ className: 'ShareResultRequestRepository' }),
+    );
+  });
+});

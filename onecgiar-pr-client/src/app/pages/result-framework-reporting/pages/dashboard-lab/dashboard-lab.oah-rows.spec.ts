@@ -228,12 +228,12 @@ describe('DashboardLabComponent — overviewAowProgressRich + continueReporting 
     });
 
     expect(component.overviewAowProgress().map(r => r.code)).toEqual(['AOW02', 'AOW01']);
-    // KPC-DD-7 — the rich rows keep their remaining-work order: AOW01 has 3 left, AOW02 has 2.
+    // The rich rows sort by AoW code ASC (quick/overview-aow-code-order).
     expect(component.overviewAowProgressRich().map(r => r.code)).toEqual(['AOW01', 'AOW02']);
   });
 
-  // ── Sort: remaining DESC, tie code ASC ───────────────────────────────────────────────────────
-  it('sorts rows by remaining DESC, breaking ties by code ASC', async () => {
+  // ── Sort: AoW code ASC (quick/overview-aow-code-order), regardless of remaining ──────────────
+  it('sorts rows by AoW code ASC regardless of remaining', async () => {
     const component = await createComponent();
     seedAows(component, {
       // remaining = 5 (0 reported of 5) — ties with AOW04, code ASC must place this one first.
@@ -255,7 +255,7 @@ describe('DashboardLabComponent — overviewAowProgressRich + continueReporting 
     });
 
     const order = component.overviewAowProgressRich().map(r => r.code);
-    expect(order).toEqual(['AOW03', 'AOW04', 'AOW01', 'AOW02']);
+    expect(order).toEqual(['AOW01', 'AOW02', 'AOW03', 'AOW04']);
   });
 
   // ── continueReporting() ───────────────────────────────────────────────────────────────────────

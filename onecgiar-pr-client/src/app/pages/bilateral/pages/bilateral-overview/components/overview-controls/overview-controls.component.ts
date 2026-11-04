@@ -14,10 +14,10 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { CdkOverlayOrigin, ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { Phases } from '../../../../../../shared/interfaces/phasesList.interface';
 import {
+  BilateralCategory,
   BilateralMethod,
   BilateralQueryParams,
   BilateralRole,
-  BilateralSource,
 } from '../../../../bilateral-query-params';
 
 /** One selectable value in a filter dimension (`COV-R-3`'s table). */
@@ -26,18 +26,28 @@ export interface OverviewFilterOption<T> {
   label: string;
 }
 
-/** The six filter dimensions, in the order `COV-R-3` lists them. */
-export type OverviewFilterDimension = 'program' | 'project' | 'type' | 'role' | 'source' | 'method';
+/**
+ * The popover's filter dimensions. Program and Source are not here: the visible P/A and Category controls
+ * already cover them, and a second copy in the popover could contradict them (INC-166545: Category
+ * "W1/W2 tagging" + Source "W3/Bilateral" emptied every card).
+ */
+export type OverviewFilterDimension = 'project' | 'type' | 'role' | 'method';
 
-/** One rendered chip next to the Filter button — `Program: SP03`, `Source: W3/Bilateral`, … */
+/** One rendered chip next to the Filter button — `Project: …`, `Role: Lead`, … */
 export interface OverviewFilterChip {
   dimension: OverviewFilterDimension;
   label: string;
   value: string;
 }
 
+/** `CPA-R-3` - the visible single-select; `null` = All (key absent from the URL). */
+const CATEGORY_CHOICES: OverviewFilterOption<BilateralCategory | null>[] = [
+  { value: null, label: 'All' },
+  { value: 'w3', label: 'W3/Bilat reported' },
+  { value: 'w1w2-tagging', label: 'W1/W2 tagging a center project' },
+];
+
 const ROLE_LABELS: Record<BilateralRole, string> = { lead: 'Lead', contributing: 'Contributing' };
-const SOURCE_LABELS: Record<BilateralSource, string> = { w3: 'W3/Bilateral', w1w2: 'W1/W2' };
 const METHOD_LABELS: Record<BilateralMethod, string> = { ai: 'AI-assisted', manual: 'Manual' };
 
 /** One row of the phase listbox (`COV-R-2` A: `«phase_name» · «phase_year»` + an "Open" badge). */
@@ -104,6 +114,18 @@ export class OverviewControlsComponent {
 
   readonly popoverOpen = signal(false);
 
+  // Visible filters, outside the popover (`CPA-R-3`): P/A multi-select + Result category select.
+  // Both are the same token-styled `role="combobox"` + `cdkConnectedOverlay` listbox as the phase control
+  // (the project's `pr-select`/`pr-multi-select` field cards are form chrome and were already rejected on this
+  // row at COV-T-8 H-3; Spartan `select` is not generated in this client). They apply immediately - no draft.
+  readonly paOpen = signal(false);
+  readonly activePaIndex = signal(0);
+  readonly paListboxId = 'overview-pa-listbox';
+  readonly categoryOpen = signal(false);
+  readonly activeCategoryIndex = signal(0);
+  readonly categoryListboxId = 'overview-category-listbox';
+  readonly categoryChoices = CATEGORY_CHOICES;
+
   /** Phase listbox open state (`COV-R-2` B) — same overlay mechanism as the Filter popover. */
   readonly phaseOpen = signal(false);
   /** The option the arrow keys are currently on (`aria-activedescendant`), not the selection. */
@@ -115,6 +137,10 @@ export class OverviewControlsComponent {
   private readonly filterOrigin = viewChild<CdkOverlayOrigin>('filterOrigin');
   private readonly phaseTriggerRef = viewChild<ElementRef<HTMLButtonElement>>('phaseTrigger');
   private readonly phaseListRef = viewChild<ElementRef<HTMLDivElement>>('phaseList');
+  private readonly paTriggerRef = viewChild<ElementRef<HTMLButtonElement>>('paTrigger');
+  private readonly paListRef = viewChild<ElementRef<HTMLDivElement>>('paList');
+  private readonly categoryTriggerRef = viewChild<ElementRef<HTMLButtonElement>>('categoryTrigger');
+  private readonly categoryListRef = viewChild<ElementRef<HTMLDivElement>>('categoryList');
 
   constructor() {
     // Moves DOM focus into the listbox once the overlay's content is actually in the DOM — the
@@ -125,23 +151,29 @@ export class OverviewControlsComponent {
         queueMicrotask(() => this.phaseListRef()?.nativeElement.focus());
       }
     });
+    effect(() => {
+      if (this.paOpen()) queueMicrotask(() => this.paListRef()?.nativeElement.focus());
+    });
+    effect(() => {
+      if (this.categoryOpen()) queueMicrotask(() => this.categoryListRef()?.nativeElement.focus());
+    });
   }
 
   /** The popover's in-progress edit; committed only by `Apply`. */
   private readonly draft = signal<BilateralQueryParams | null>(null);
 
+  // Left-aligned first; right-aligned fallbacks for a trigger near the right edge (INC-166545: with P/A and
+  // Category before it, the Filter button sits far right and the 560px popover ran off-screen, Apply hidden).
   readonly popoverPositions: ConnectedPosition[] = [
     { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 6 },
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 6 },
     { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -6 },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 },
   ];
 
   readonly roleChoices: OverviewFilterOption<BilateralRole>[] = [
     { value: 'lead', label: ROLE_LABELS.lead },
     { value: 'contributing', label: ROLE_LABELS.contributing },
-  ];
-  readonly sourceChoices: OverviewFilterOption<BilateralSource>[] = [
-    { value: 'w3', label: SOURCE_LABELS.w3 },
-    { value: 'w1w2', label: SOURCE_LABELS.w1w2 },
   ];
   readonly methodChoices: OverviewFilterOption<BilateralMethod>[] = [
     { value: 'ai', label: METHOD_LABELS.ai },
@@ -176,9 +208,7 @@ export class OverviewControlsComponent {
     const params = this.params();
     const chips: OverviewFilterChip[] = [];
 
-    if (params.program.length) {
-      chips.push({ dimension: 'program', label: 'Program', value: this.joinLabels(params.program, this.programOptions()) });
-    }
+    // No Program/Source chips: the visible P/A and Category triggers already show those selections.
     if (params.project.length) {
       chips.push({ dimension: 'project', label: 'Project', value: this.joinLabels(params.project, this.projectOptions()) });
     }
@@ -186,11 +216,27 @@ export class OverviewControlsComponent {
       chips.push({ dimension: 'type', label: 'Result type', value: this.joinLabels(params.type, this.typeOptions()) });
     }
     if (params.role) chips.push({ dimension: 'role', label: 'Role', value: ROLE_LABELS[params.role] });
-    if (params.source) chips.push({ dimension: 'source', label: 'Source', value: SOURCE_LABELS[params.source] });
     if (params.method) chips.push({ dimension: 'method', label: 'Creation method', value: METHOD_LABELS[params.method] });
 
     return chips;
   });
+
+  /** `CPA-R-3` - Clear must show for ANY active filter, including P/A and category (which have no chip). */
+  readonly hasActiveFilters = computed(
+    () => this.chips().length > 0 || this.params().program.length > 0 || this.params().category !== null,
+  );
+
+  /** What the closed P/A trigger reads: All, the one label, or "N selected". */
+  readonly paTriggerLabel = computed<string>(() => {
+    const selected = this.params().program;
+    if (!selected.length) return 'All';
+    if (selected.length === 1) return this.programOptions().find(option => option.value === selected[0])?.label ?? selected[0];
+    return `${selected.length} selected`;
+  });
+
+  readonly categoryTriggerLabel = computed<string>(
+    () => CATEGORY_CHOICES.find(choice => choice.value === this.params().category)?.label ?? 'All',
+  );
 
   /** The draft the popover binds to — falls back to the applied params before the first open. */
   readonly draftParams = computed<BilateralQueryParams>(() => this.draft() ?? this.params());
@@ -359,8 +405,167 @@ export class OverviewControlsComponent {
     this.phaseChange.emit(id);
   }
 
-  isProgramChecked(code: string): boolean {
-    return this.draftParams().program.includes(code);
+  // Visible P/A multi-select (`CPA-R-3`)
+
+  paOptionId(code: string): string {
+    return `overview-pa-option-${code}`;
+  }
+
+  isPaSelected(code: string): boolean {
+    return this.params().program.includes(code);
+  }
+
+  /** Variable half of an option row's class list - whole strings so Tailwind's scan sees them. */
+  listOptionClass(active: boolean): string {
+    return active ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-surface-subtle)]' : 'border-transparent';
+  }
+
+  togglePaListbox(): void {
+    if (this.paOpen()) {
+      this.closePaListbox();
+      return;
+    }
+    const first = this.programOptions().findIndex(option => this.isPaSelected(option.value));
+    this.activePaIndex.set(Math.max(first, 0));
+    this.paOpen.set(true);
+  }
+
+  closePaListbox(refocusTrigger = true): void {
+    if (!this.paOpen()) return;
+    this.paOpen.set(false);
+    if (refocusTrigger) queueMicrotask(() => this.paTriggerRef()?.nativeElement.focus());
+  }
+
+  /** Toggles one P/A and applies at once; the list stays open so several can be ticked. */
+  togglePaOption(code: string): void {
+    this.filtersChange.emit({ ...this.params(), program: toggleValue(this.params().program, code) });
+  }
+
+  clearPaSelection(): void {
+    if (this.params().program.length) this.filtersChange.emit({ ...this.params(), program: [] });
+  }
+
+  onPaTriggerKeydown(event: KeyboardEvent): void {
+    if (this.paOpen()) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.togglePaListbox();
+    }
+  }
+
+  onPaListKeydown(event: KeyboardEvent): void {
+    const options = this.programOptions();
+    const last = Math.max(options.length - 1, 0);
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.activePaIndex.set(Math.min(this.activePaIndex() + 1, last));
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.activePaIndex.set(Math.max(this.activePaIndex() - 1, 0));
+        break;
+      case 'Home':
+        event.preventDefault();
+        this.activePaIndex.set(0);
+        break;
+      case 'End':
+        event.preventDefault();
+        this.activePaIndex.set(last);
+        break;
+      case 'Enter':
+      case ' ': {
+        event.preventDefault();
+        const active = options[this.activePaIndex()];
+        if (active) this.togglePaOption(active.value);
+        break;
+      }
+      case 'Escape':
+        event.preventDefault();
+        event.stopPropagation();
+        this.closePaListbox();
+        break;
+    }
+  }
+
+  onPaOverlayKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      this.closePaListbox();
+    }
+  }
+
+  // Visible Result category select (`CPA-R-3`)
+
+  categoryOptionId(index: number): string {
+    return `overview-category-option-${index}`;
+  }
+
+  toggleCategoryListbox(): void {
+    if (this.categoryOpen()) {
+      this.closeCategoryListbox();
+      return;
+    }
+    this.activeCategoryIndex.set(Math.max(CATEGORY_CHOICES.findIndex(choice => choice.value === this.params().category), 0));
+    this.categoryOpen.set(true);
+  }
+
+  closeCategoryListbox(refocusTrigger = true): void {
+    if (!this.categoryOpen()) return;
+    this.categoryOpen.set(false);
+    if (refocusTrigger) queueMicrotask(() => this.categoryTriggerRef()?.nativeElement.focus());
+  }
+
+  selectCategory(category: BilateralCategory | null): void {
+    this.closeCategoryListbox();
+    if (category !== this.params().category) this.filtersChange.emit({ ...this.params(), category });
+  }
+
+  onCategoryTriggerKeydown(event: KeyboardEvent): void {
+    if (this.categoryOpen()) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.toggleCategoryListbox();
+    }
+  }
+
+  onCategoryListKeydown(event: KeyboardEvent): void {
+    const last = CATEGORY_CHOICES.length - 1;
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.activeCategoryIndex.set(Math.min(this.activeCategoryIndex() + 1, last));
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.activeCategoryIndex.set(Math.max(this.activeCategoryIndex() - 1, 0));
+        break;
+      case 'Home':
+        event.preventDefault();
+        this.activeCategoryIndex.set(0);
+        break;
+      case 'End':
+        event.preventDefault();
+        this.activeCategoryIndex.set(last);
+        break;
+      case 'Enter':
+      case ' ':
+        event.preventDefault();
+        this.selectCategory(CATEGORY_CHOICES[this.activeCategoryIndex()].value);
+        break;
+      case 'Escape':
+        event.preventDefault();
+        event.stopPropagation();
+        this.closeCategoryListbox();
+        break;
+    }
+  }
+
+  onCategoryOverlayKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      this.closeCategoryListbox();
+    }
   }
 
   isProjectChecked(id: number): boolean {
@@ -369,10 +574,6 @@ export class OverviewControlsComponent {
 
   isTypeChecked(id: number): boolean {
     return this.draftParams().type.includes(id);
-  }
-
-  toggleProgram(code: string): void {
-    this.draft.set({ ...this.draftParams(), program: toggleValue(this.draftParams().program, code) });
   }
 
   toggleProject(id: number): void {
@@ -388,10 +589,6 @@ export class OverviewControlsComponent {
     this.draft.set({ ...this.draftParams(), role: this.draftParams().role === role ? null : role });
   }
 
-  selectSource(source: BilateralSource | null): void {
-    this.draft.set({ ...this.draftParams(), source: this.draftParams().source === source ? null : source });
-  }
-
   selectMethod(method: BilateralMethod | null): void {
     this.draft.set({ ...this.draftParams(), method: this.draftParams().method === method ? null : method });
   }
@@ -400,17 +597,17 @@ export class OverviewControlsComponent {
   removeChip(dimension: OverviewFilterDimension): void {
     const params = this.params();
     const next: BilateralQueryParams = { ...params };
-    if (dimension === 'program') next.program = [];
     if (dimension === 'project') next.project = [];
     if (dimension === 'type') next.type = [];
     if (dimension === 'role') next.role = null;
-    if (dimension === 'source') next.source = null;
     if (dimension === 'method') next.method = null;
     this.filtersChange.emit(next);
   }
 
   onClear(): void {
     this.closePopover();
+    this.closePaListbox(false);
+    this.closeCategoryListbox(false);
     this.clearFilters.emit();
   }
 

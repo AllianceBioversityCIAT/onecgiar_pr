@@ -35,6 +35,7 @@ describe('parseBilateralQueryParams', () => {
       multi: false,
       scope: null,
       group: null,
+      category: null,
     });
     expect(stripped).toEqual([]);
     expect(present).toEqual([]);
@@ -74,6 +75,32 @@ describe('parseBilateralQueryParams', () => {
   });
 
   // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-1, CNP-R-2, CNP-AC-4)
+  describe('category (CPA-R-4)', () => {
+    it('parses category=w3 and w1w2-tagging, marks present, serializes back', () => {
+      for (const value of ['w3', 'w1w2-tagging'] as const) {
+        const parsed = parseBilateralQueryParams(convertToParamMap({ category: value }));
+        expect(parsed.params.category).toBe(value);
+        expect(parsed.stripped).toEqual([]);
+        expect(parsed.present).toEqual(['category']);
+        expect(serializeBilateralQueryParams(parsed.params)['category']).toBe(value);
+      }
+    });
+
+    it('treats an unknown category as absent (null), stripped, never throws', () => {
+      const parsed = parseBilateralQueryParams(convertToParamMap({ category: 'foo' }));
+      expect(parsed.params.category).toBeNull();
+      expect(parsed.stripped).toEqual(['category=foo']);
+      expect(parsed.present).toEqual([]);
+    });
+
+    it('treats empty/absent as null and omits it from serialization, even with explicitDefaults', () => {
+      expect(parseBilateralQueryParams(convertToParamMap({ category: '' })).stripped).toEqual([]);
+      const defaults = parseBilateralQueryParams(emptyMap).params;
+      expect(defaults.category).toBeNull();
+      expect('category' in serializeBilateralQueryParams(defaults, { explicitDefaults: true })).toBe(false);
+    });
+  });
+
   describe('group (CNP-R-2)', () => {
     it('parses group=updated-no-project, marks it present and serializes it back', () => {
       const parsed = parseBilateralQueryParams(convertToParamMap({ group: 'updated-no-project' }));
@@ -433,6 +460,7 @@ describe('serializeBilateralQueryParams', () => {
       multi: true,
       scope: 'bilateral',
       group: 'updated-no-project',
+      category: 'w3',
     });
 
     expect(result).toEqual({
@@ -449,6 +477,7 @@ describe('serializeBilateralQueryParams', () => {
       multi: '1',
       scope: 'bilateral',
       group: 'updated-no-project',
+      category: 'w3',
     });
   });
 
@@ -491,6 +520,7 @@ describe('serializeBilateralQueryParams', () => {
       multi: true,
       scope: 'bilateral' as const,
       group: 'updated-no-project' as const,
+      category: 'w1w2-tagging' as const,
     };
     const serialized = serializeBilateralQueryParams(original);
     const { params, stripped } = parseBilateralQueryParams(convertToParamMap(serialized));

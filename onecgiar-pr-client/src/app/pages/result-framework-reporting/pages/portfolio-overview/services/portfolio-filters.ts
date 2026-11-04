@@ -2,6 +2,7 @@
 //
 // Pure logic of the Portfolio overview global filters. No Angular, no HTTP, no state: types only from
 // the service and the interface, so any block or service can import it without a cycle.
+import { PORTFOLIO_OVERVIEW_COPY } from '../../../../../internationalization/portfolio-overview.copy';
 import type { PortfolioResultDimensions } from '../../../../../shared/interfaces/portfolio-result-dimensions.interface';
 import { naturalCodeCompare } from '../components/toc-kpi-block/toc-kpi.format';
 import { TYPOLOGY_LEVELS, levelOf, type TypologyLevel } from '../components/typology-block/typology.aggregate';
@@ -12,13 +13,13 @@ import { PORTFOLIO_STATUS_SLOTS, resolveStatusSlot } from './portfolio-status-sl
 export type FilterRow = RawResult & { id?: number | string | null };
 
 /** Dimensions in bar order (GLF-R-1). Every list of dimensions in this file follows it. */
-export const FILTER_DIMENSIONS = ['program', 'project', 'center', 'typology', 'status'] as const;
+export const FILTER_DIMENSIONS = ['program', 'project', 'center', 'typology', 'status', 'funding'] as const;
 export type FilterDimension = (typeof FILTER_DIMENSIONS)[number];
 
 /**
  * The selection, one set per dimension. Values: `program` = P/A code, `project` = project id as a string,
  * `center` = CLARISA Center code, `typology` = a level key (`output`/`outcome`/`impact`/`unclassified`) or a
- * normalized type name, `status` = status slot key.
+ * normalized type name, `status` = status slot key, `funding` = `w1w2` | `bilateral`.
  */
 export type PortfolioFilterSelection = { readonly [D in FilterDimension]: ReadonlySet<string> };
 
@@ -27,7 +28,8 @@ export const EMPTY_SELECTION: PortfolioFilterSelection = {
   project: new Set<string>(),
   center: new Set<string>(),
   typology: new Set<string>(),
-  status: new Set<string>()
+  status: new Set<string>(),
+  funding: new Set<string>()
 };
 
 /** With a dimension: that dimension has a value. Without: any dimension has one. */
@@ -52,6 +54,14 @@ export interface DimensionIndex {
 export type MatchResult = 'match' | 'miss' | 'unknown';
 
 const text = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
+
+/** Funding source of a row: the deck's rule (PFF-DD-1). Exact name `W3/Bilaterals` (trimmed) = W3, anything else = W1/W2. */
+export type FundingSource = 'w1w2' | 'bilateral';
+export const FUNDING_OPTIONS: readonly FundingSource[] = ['w1w2', 'bilateral'];
+export const W3_SOURCE_NAME = 'W3/Bilaterals';
+export function fundingOf(row: { source_name?: unknown }): FundingSource {
+  return text(row.source_name) === W3_SOURCE_NAME ? 'bilateral' : 'w1w2';
+}
 
 /** Same normalisation `typology.aggregate.ts` applies to type names (kept local: it is a string rule, not the level map). */
 const normalizeType = (value: unknown): string => text(value).replace(/\s+/g, ' ').toLowerCase();
@@ -98,6 +108,8 @@ export function matchesRow(row: FilterRow, selection: PortfolioFilterSelection, 
 
   if (selection.status.size > 0 && !selection.status.has(resolveStatusSlot(row))) return 'miss';
 
+  if (selection.funding.size > 0 && !selection.funding.has(fundingOf(row))) return 'miss';
+
   if (selection.center.size === 0 && selection.project.size === 0) return 'match';
   if (!index) return 'unknown';
 
@@ -131,6 +143,7 @@ export interface PortfolioFilterOptions {
   center: FilterOption[];
   typology: TypologyOptionGroup[];
   status: FilterOption[];
+  funding: FilterOption[];
 }
 
 export const TYPOLOGY_LEVEL_LABELS: Record<TypologyLevel, string> = {
@@ -210,7 +223,8 @@ export function buildOptions(rows: readonly FilterRow[], map?: PortfolioResultDi
     project,
     center,
     typology,
-    status: PORTFOLIO_STATUS_SLOTS.map(slot => ({ value: slot.key, label: slot.label }))
+    status: PORTFOLIO_STATUS_SLOTS.map(slot => ({ value: slot.key, label: slot.label })),
+    funding: FUNDING_OPTIONS.map(value => ({ value, label: PORTFOLIO_OVERVIEW_COPY.filters.fundingOptions[value] }))
   };
 }
 
@@ -227,7 +241,8 @@ export function sanitize(selection: PortfolioFilterSelection, options: Portfolio
     project: keep(selection.project, new Set(options.project.map(o => o.value))),
     center: keep(selection.center, new Set(options.center.map(o => o.value))),
     typology: keep(selection.typology, typologyValues),
-    status: keep(selection.status, new Set(options.status.map(o => o.value)))
+    status: keep(selection.status, new Set(options.status.map(o => o.value))),
+    funding: keep(selection.funding, new Set(options.funding.map(o => o.value)))
   };
 }
 
@@ -294,22 +309,31 @@ export function parseQueryParams(input: string | Readonly<Record<string, ParamVa
     params = { ...input };
   }
   const read = (dimension: FilterDimension): ReadonlySet<string> => new Set(pieces(params[dimension]));
-  return { program: read('program'), project: read('project'), center: read('center'), typology: read('typology'), status: read('status') };
+  return { program: read('program'), project: read('project'), center: read('center'), typology: read('typology'), status: read('status'), funding: read('funding') };
 }
 
 // ---------------------------------------------------------------------------------------------
 // Which section honours which dimension (GLF-R-9, R-5)
 // ---------------------------------------------------------------------------------------------
 
-export type FilterSection = 'kpi' | 'status' | 'typology' | 'centers' | 'toc' | 'projects';
+export type FilterSection = 'kpi' | 'status' | 'typology' | 'centers' | 'toc' | 'projects' | 'contributions';
 
 export const SECTION_HONOURS: Readonly<Record<FilterSection, readonly FilterDimension[]>> = {
   kpi: FILTER_DIMENSIONS,
   status: FILTER_DIMENSIONS,
   typology: FILTER_DIMENSIONS,
   centers: FILTER_DIMENSIONS,
-  toc: ['program'],
-  projects: ['program', 'center']
+  toc: ['program', 'funding'],
+  projects: ['program', 'center', 'funding'],
+  // Own data path; Program only. No SECTION_SOURCE entry: callers pass `['funding']` as `extra` (CRP-DD-4).
+  contributions: ['program']
+};
+
+/** Sections whose data is ONE funding source by rule (PFF-R-4). Others have none and honour funding as a row filter. */
+export const SECTION_SOURCE: Readonly<Partial<Record<FilterSection, FundingSource>>> = {
+  centers: 'bilateral',
+  projects: 'bilateral',
+  toc: 'w1w2'
 };
 
 /**
@@ -318,10 +342,16 @@ export const SECTION_HONOURS: Readonly<Record<FilterSection, readonly FilterDime
  */
 export function notAffectedBy(section: FilterSection, selection: PortfolioFilterSelection, extra: readonly FilterDimension[] = []): FilterDimension[] {
   const honoured = SECTION_HONOURS[section];
-  return activeDimensions(selection).filter(d => !honoured.includes(d) || extra.includes(d));
+  const source = SECTION_SOURCE[section];
+  return activeDimensions(selection).filter(d => {
+    if (extra.includes(d)) return true;
+    // Funding (PFF-DD-3): a single-source block is not affected only when the selection excludes its source.
+    if (d === 'funding') return !!source && !selection.funding.has(source);
+    return !honoured.includes(d);
+  });
 }
 
-/** True when the Results Center can apply the selection: only Program and Status, at most one value each. */
+/** True when the Results Center can apply the selection: only Program, Status and Funding, at most one value each. */
 export function resultsCenterLinkable(selection: PortfolioFilterSelection): boolean {
-  return activeDimensions(selection).every(d => (d === 'program' || d === 'status') && selection[d].size <= 1);
+  return activeDimensions(selection).every(d => (d === 'program' || d === 'status' || d === 'funding') && selection[d].size <= 1);
 }

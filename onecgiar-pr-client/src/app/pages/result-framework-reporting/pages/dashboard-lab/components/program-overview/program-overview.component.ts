@@ -90,11 +90,13 @@ export interface StatusSegment {
 export interface OverviewTotalBreakdown {
   replicated: number;
   new: number;
+  /** W3/Bilateral rows with status 5/6/7 (changes/sp-overview-w3-received, SWR-R-1). */
+  received: number;
   pendingReview: number;
 }
 
-/** Total General composition kinds (changes/sp-overview-total-drilldown, STD-R-2/R-3). */
-export type TotalSegmentKind = 'replicated' | 'new' | 'pendingReview';
+/** Total General composition kinds (changes/sp-overview-total-drilldown, STD-R-2/R-3; + 'received' by sp-overview-w3-received). */
+export type TotalSegmentKind = 'replicated' | 'new' | 'received' | 'pendingReview';
 
 /** View model of one composition-bar segment; widthPct is computed here, never in the template. */
 export interface TotalSegment {
@@ -265,7 +267,7 @@ export class ProgramOverviewComponent {
   /** Long About copy. Empty → short stand-in using the program name. */
   readonly programDescription = input<string>('');
   readonly statusSegments = input<StatusSegment[]>([]);
-  readonly totalBreakdown = input<OverviewTotalBreakdown>({ replicated: 0, new: 0, pendingReview: 0 });
+  readonly totalBreakdown = input<OverviewTotalBreakdown>({ replicated: 0, new: 0, received: 0, pendingReview: 0 });
   /** AoW rows already sorted ascending by completion (least complete first). */
   readonly aowProgress = input<AowProgressRow[]>([]);
 
@@ -709,7 +711,8 @@ export class ProgramOverviewComponent {
   // @akili-spec changes/sp-overview-total-drilldown STD-R-1
   readonly programResultsTotal = computed(() => {
     const b = this.totalBreakdown();
-    return b.replicated + b.new + b.pendingReview;
+    // @akili-spec changes/sp-overview-w3-received (SWR-R-1): headline adds `received`, never `pendingReview`.
+    return b.replicated + b.new + b.received;
   });
 
   /** STD-R-2: one segment per non-zero row, in row order; widths are TS-computed (DD-4 colors). */
@@ -719,7 +722,8 @@ export class ProgramOverviewComponent {
     const all: Omit<TotalSegment, 'widthPct'>[] = [
       { kind: 'replicated', count: b.replicated, label: 'innovations replicated for update', colorClass: 'bg-white' },
       { kind: 'new', count: b.new, label: 'new results', colorClass: 'bg-cyan-300' },
-      { kind: 'pendingReview', count: b.pendingReview, label: 'W3/Bilateral results awaiting review', colorClass: 'bg-amber-300' }
+      // @akili-spec changes/sp-overview-w3-received (SWR-R-1, S-1.2)
+      { kind: 'received', count: b.received, label: 'W3/Bilateral results received', colorClass: 'bg-amber-300' }
     ];
     return all.filter(s => s.count > 0).map(s => ({ ...s, widthPct: (s.count / total) * 100 }));
   });

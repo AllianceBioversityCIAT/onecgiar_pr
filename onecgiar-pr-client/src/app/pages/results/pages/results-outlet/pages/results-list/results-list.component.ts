@@ -17,6 +17,7 @@ import {
   usesBilateralReviewFlow as usesBilateralReviewFlowUtil
 } from '../../../../../../shared/routing/bilateral-result-open-route.util';
 import { ResultsListFiltersComponent } from './components/results-list-filters/results-list-filters.component';
+import { isP25ImpactResult, resultTypeDisplayName } from '../../../../../../shared/utils/impact-result.util';
 import { ReportingGuideService } from '../../../../../result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 
 interface ResultRoute {
@@ -401,7 +402,15 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
         if (params['status']) {
           const statusId = Number(params['status']);
           if (!isNaN(statusId)) {
-            this.resultsListFilterSE.selectedStatus.set([{ status_id: statusId }]);
+            const option = this.resultsListFilterSE.statusOptions().find(s => s.status_id == statusId);
+            this.resultsListFilterSE.selectedStatus.set([option ?? { status_id: statusId }]);
+          }
+        }
+
+        if (params['phase']) {
+          const phaseId = Number(params['phase']);
+          if (!isNaN(phaseId)) {
+            this.resultsListFilterSE.requestedPhaseId.set(phaseId);
           }
         }
 
@@ -495,6 +504,12 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     const digits = code.match(/\d+/)?.[0];
     const index = digits ? Number(digits) : [...code].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 0);
     return this.programDotPalette[index % this.programDotPalette.length];
+  }
+
+  /** IRD-T-7: type cell label. Rows carry `result_type_id` + `acronym`/`portfolio`, so only a P25 type-9 row reads "Impact result". */
+  resultTypeLabel(result: CurrentResult): string {
+    const name = String(result?.result_type ?? '');
+    return isP25ImpactResult({ result_type_id: result?.result_type_id, portfolio: result?.acronym ?? result?.portfolio }) ? resultTypeDisplayName(result?.result_type_id, name) : name;
   }
 
   /** CURRENT short phase: `2026 · P25` from longer phase_name / year + acronym. */

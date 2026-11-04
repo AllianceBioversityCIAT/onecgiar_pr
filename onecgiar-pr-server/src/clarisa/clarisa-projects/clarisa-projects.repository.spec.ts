@@ -41,6 +41,38 @@ describe('ClarisaProjectsRepository', () => {
     expect(repository).toBeDefined();
   });
 
+  describe('findApprovedProjectsByProgramCode', () => {
+    it('binds [programCode, approvedStatuses, phaseYear] and keeps the approval filters', async () => {
+      mockDataSource.query.mockResolvedValue([{ project_id: 10 }]);
+
+      const result = await repository.findApprovedProjectsByProgramCode(
+        'SP09',
+        2026,
+      );
+
+      const [sql, params] = mockDataSource.query.mock.calls[0];
+      const squashed = sql.replace(/\s+/g, ' ');
+      expect(result).toEqual([{ project_id: 10 }]);
+      expect(params).toEqual(['SP09', ['Confirmed'], 2026]);
+      expect(squashed).toContain('cpm.allocation > 0');
+      expect(squashed).toContain('cp.phase = ?');
+      expect(squashed).toContain('BINARY TRIM(cpm.status) IN (?)');
+      expect(squashed).toContain('cp.is_active IS NULL OR cp.is_active <> 0');
+      expect(squashed).not.toContain('SP09');
+    });
+
+    it('routes failures through returnErrorRepository', async () => {
+      const boom = new Error('db down');
+      const mapped = { status: 500 };
+      mockDataSource.query.mockRejectedValue(boom);
+      mockHandlersError.returnErrorRepository.mockReturnValue(mapped);
+
+      await expect(
+        repository.findApprovedProjectsByProgramCode('SP09', 2026),
+      ).rejects.toBe(mapped);
+    });
+  });
+
   describe('getPortfolioProjectFacts', () => {
     const squash = (sql: string) => sql.replace(/\s+/g, ' ').trim();
 

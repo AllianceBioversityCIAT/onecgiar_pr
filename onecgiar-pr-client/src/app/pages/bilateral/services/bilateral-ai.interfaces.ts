@@ -45,6 +45,12 @@ export interface BilateralAiDraft {
   job: BilateralAiJob;
 }
 
+/** `ABD-R-6`: body of `POST …/ai/drafts/discard`; partial failure is still HTTP 200. */
+export interface BulkDiscardDraftsResponse {
+  discarded: number[];
+  failed: { id: number; reason: string }[];
+}
+
 export interface BilateralAiUploadState {
   jobId: string | null;
   status:

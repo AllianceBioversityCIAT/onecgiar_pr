@@ -173,6 +173,15 @@ describe('ResultsListComponent', () => {
     document.getElementById = originalGetElementById;
   });
 
+  describe('resultTypeLabel() (IRD-T-7)', () => {
+    it('relabels only a P25 type 9 row', () => {
+      expect(component.resultTypeLabel({ result_type_id: 9, acronym: 'P25', result_type: 'Impact contribution' } as any)).toBe('Impact result');
+      expect(component.resultTypeLabel({ result_type_id: 9, acronym: 'P22', result_type: 'Impact contribution' } as any)).toBe('Impact contribution');
+      expect(component.resultTypeLabel({ result_type_id: 6, acronym: 'P25', result_type: 'Knowledge product' } as any)).toBe('Knowledge product');
+      expect(component.resultTypeLabel({} as any)).toBe('');
+    });
+  });
+
   describe('ngOnInit()', () => {
     it('should call unSelectInits if user is admin', () => {
       mockApiService.rolesSE.isAdmin = true;
@@ -1327,6 +1336,16 @@ describe('ResultsListComponent', () => {
       expect(mockResultsListFilterService.selectedFundingSource()).toEqual([{ id: 1, name: 'W1/W2' }]);
       expect(mockResultsListFilterService.selectedStatus()).toEqual([{ status_id: 2 }]);
       expect(mockResultsListFilterService.text_to_search()).toBe('SP01');
+    });
+
+    it('keeps the ?phase= of a Portfolio overview link and names the status when its options are loaded', () => {
+      mockResultsListFilterService.statusOptions.set([{ status_id: 2, name: 'Quality Assessed' }]);
+      component.activatedRoute = { queryParams: of({ status: '2', phase: '36' }) } as any;
+
+      component.ngOnInit();
+
+      expect(mockResultsListFilterService.requestedPhaseId()).toBe(36);
+      expect(mockResultsListFilterService.selectedStatus()).toEqual([{ status_id: 2, name: 'Quality Assessed' }]);
     });
   });
 

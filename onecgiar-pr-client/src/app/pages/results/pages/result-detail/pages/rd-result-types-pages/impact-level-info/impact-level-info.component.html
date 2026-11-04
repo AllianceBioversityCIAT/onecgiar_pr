@@ -1,0 +1,66 @@
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()" [appBeforeUnloadWarning]="hasUnsavedChanges.bind(this)">
+  @if (loadError()) {
+    <div role="alert" class="rounded-lg border border-[var(--pr-color-red-300)] bg-white p-4 text-[14px] text-[var(--pr-color-secondary-400)]" data-cy="impact-load-error">
+      We could not load the Impact level info section. Reload the page to try again. Nothing was changed.
+    </div>
+  } @else {
+    <app-pr-select
+      label="Study type"
+      [description]="studyTypeDescription"
+      [showDescriptionLabel]="true"
+      [options]="studyTypes()"
+      optionLabel="name"
+      optionValue="id"
+      placeholder="Select study type"
+      [(ngModel)]="impactStudyTypeId">
+    </app-pr-select>
+
+    <app-pr-textarea
+      label="CGIAR contribution"
+      placeholder="Describe the CGIAR contribution to this impact"
+      [maxWords]="maxWords"
+      [wordCounterFn]="impactWordCount"
+      [(ngModel)]="cgiarContribution">
+    </app-pr-textarea>
+    <span class="sr-only" role="status" aria-live="polite" data-cy="impact-word-announcer">{{ wordCountAnnouncement }}</span>
+    <!-- IRD-T-8 F-4: the bottom bar reads `.pr-field.mandatory` markers. `app-pr-yes-or-not` renders none and
+         `app-pr-textarea` only checks non-empty, so these hidden reporters add the Yes/No answer, the word limit and
+         the Yes => at least one link rule. -->
+    <div appFeedbackValidation labelText="Has this intervention, or a component of it, already been reported in PRMS?" [isComplete]="previouslyReported !== null && previouslyReported !== undefined"></div>
+    <div appFeedbackValidation [labelText]="'CGIAR contribution (up to ' + maxWords + ' words)'" [isComplete]="!contributionOverLimit"></div>
+
+    <app-pr-yes-or-not label="Has this intervention, or a component of it, already been reported in PRMS?" [(ngModel)]="previouslyReported" (selectOptionEvent)="onPreviouslyReportedChange($event)"> </app-pr-yes-or-not>
+
+    @if (previouslyReported === true) {
+      <div appFeedbackValidation labelText="Please select a result" [isComplete]="previousResults.length > 0"></div>
+      <div class="previous-results" data-cy="impact-previous-results">
+        @if (!readOnly) {
+          <app-pr-field-header label="Please select a result" [required]="true"></app-pr-field-header>
+          <app-previous-results-picker [resultId]="api.resultsSE.currentResultId" [selection]="previousResults" (selectionChange)="onSelectionChange($event)"></app-previous-results-picker>
+        }
+        @if (previousResults.length) {
+          <div class="selected-results" data-cy="impact-selected-results">
+            <div class="selected-title" data-cy="impact-selected-title">Results selected ({{ previousResults.length }})</div>
+            <ul class="selected-list" aria-label="Previously reported results">
+              @for (result of previousResults; track result.result_id) {
+                <li class="selected-item" data-cy="impact-selected-item">
+                  <div class="selected-info">
+                    <span class="selected-head"><span class="pr-code">{{ result.result_code }}</span> · {{ result.result_type_name }} · {{ result.phase_name }} · {{ result.portfolio_acronym }} · {{ result.status_name }}</span>
+                    <span class="selected-result-title">{{ result.title }}</span>
+                  </div>
+                  @if (!readOnly) {
+                    <button type="button" class="remove-btn" data-cy="impact-remove-result" [attr.aria-label]="'Remove result ' + result.result_code" (click)="removePreviousResult(result.result_id)">
+                      <i class="pi pi-times" aria-hidden="true"></i>
+                    </button>
+                  }
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+    }
+  }
+</div>
+
+<app-section-bottom-bar [disabled]="saveDisabled" (clickSave)="onSaveSection()" />

@@ -1,6 +1,5 @@
 <!-- @akili-spec bilateral/center-overview-tab (COV-T-5, COV-R-2, COV-R-3, COV-R-18) -->
 <div class="flex flex-wrap items-center gap-[10px] px-[16px] sm:px-[32px] py-[10px]">
-  <span class="text-[11px] font-semibold tracking-[0.08em] uppercase text-[var(--pr-text-subtle)] flex-none">Phase</span>
 
   <!--
     Phase selector (`COV-R-2`) — a token-styled `role="combobox"` trigger over a hand-rolled ARIA 1.2
@@ -8,29 +7,32 @@
     dismiss (backdrop / `Escape`) and restore focus identically. Replaces the legacy `pr-select`
     primitive, whose grey-input + solid-chevron look was rejected on the live page (`COV-T-8` H-3).
   -->
-  <div class="w-full min-[640px]:w-auto min-[640px]:min-w-[210px] flex-none" data-testid="overview-phase-select">
-    <button
-      #phaseTrigger
-      type="button"
-      cdkOverlayOrigin
-      #phaseOrigin="cdkOverlayOrigin"
-      role="combobox"
-      aria-haspopup="listbox"
-      aria-label="Phase"
-      data-testid="overview-phase-trigger"
-      class="flex h-[30px] w-full items-center justify-between gap-[8px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none transition-colors duration-150 motion-reduce:transition-none hover:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
-      [attr.aria-expanded]="phaseOpen() ? 'true' : 'false'"
-      [attr.aria-controls]="phaseListboxId"
-      (click)="togglePhaseListbox()"
-      (keydown)="onPhaseTriggerKeydown($event)">
-      <span class="truncate" [title]="selectedPhaseLabel()">{{ selectedPhaseLabel() }}</span>
-      <i
-        class="material-icons-round flex-none text-[16px] text-[var(--pr-text-subtle)] transition-transform duration-200 motion-reduce:transition-none"
-        [class.rotate-180]="phaseOpen()"
-        aria-hidden="true"
-        >expand_more</i
-      >
-    </button>
+  <div class="flex flex-none items-center gap-[10px] whitespace-nowrap max-[639px]:w-full" data-testid="overview-phase-group">
+    <span class="text-[11px] font-semibold tracking-[0.08em] uppercase text-[var(--pr-text-subtle)] flex-none">Phase</span>
+    <div class="min-w-0 flex-1 min-[640px]:flex-none min-[640px]:w-auto min-[640px]:min-w-[210px]" data-testid="overview-phase-select">
+      <button
+        #phaseTrigger
+        type="button"
+        cdkOverlayOrigin
+        #phaseOrigin="cdkOverlayOrigin"
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-label="Phase"
+        data-testid="overview-phase-trigger"
+        class="flex h-[30px] w-full items-center justify-between gap-[8px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none transition-colors duration-150 motion-reduce:transition-none hover:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+        [attr.aria-expanded]="phaseOpen() ? 'true' : 'false'"
+        [attr.aria-controls]="phaseListboxId"
+        (click)="togglePhaseListbox()"
+        (keydown)="onPhaseTriggerKeydown($event)">
+        <span class="truncate" [title]="selectedPhaseLabel()">{{ selectedPhaseLabel() }}</span>
+        <i
+          class="material-icons-round flex-none text-[16px] text-[var(--pr-text-subtle)] transition-transform duration-200 motion-reduce:transition-none"
+          [class.rotate-180]="phaseOpen()"
+          aria-hidden="true"
+          >expand_more</i
+        >
+      </button>
+    </div>
   </div>
 
   @if (selectedPhase(); as phase) {
@@ -42,6 +44,69 @@
       </span>
     }
   }
+
+  <span class="hidden min-[900px]:block w-[1px] h-[22px] bg-[var(--pr-border-divider)] flex-none"></span>
+
+  <!--
+    Visible filters (`CPA-R-3`): Program / Accelerator multi-select + Result category select, OUTSIDE the popover and
+    always rendered (they wrap onto the next line below 900px, never hide). Same token-styled combobox + listbox
+    mechanism as the phase control above; they apply at once (no draft) and the popover keeps working unchanged.
+  -->
+  <div class="flex flex-none items-center gap-[10px] whitespace-nowrap max-[639px]:w-full" data-testid="overview-pa-group">
+    <span class="text-[11px] font-semibold tracking-[0.08em] uppercase text-[var(--pr-text-subtle)] flex-none">P/A</span>
+    <div class="min-w-0 flex-1 min-[640px]:flex-none min-[640px]:w-auto min-[640px]:min-w-[190px] min-[640px]:max-w-[260px]" data-testid="overview-pa-select">
+      <button
+        #paTrigger
+        type="button"
+        cdkOverlayOrigin
+        #paOrigin="cdkOverlayOrigin"
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-label="Program / Accelerator"
+        data-testid="overview-pa-trigger"
+        class="flex h-[30px] w-full items-center justify-between gap-[8px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none transition-colors duration-150 motion-reduce:transition-none hover:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+        [attr.aria-expanded]="paOpen() ? 'true' : 'false'"
+        [attr.aria-controls]="paListboxId"
+        (click)="togglePaListbox()"
+        (keydown)="onPaTriggerKeydown($event)">
+        <span class="truncate" [title]="paTriggerLabel()">{{ paTriggerLabel() }}</span>
+        <i
+          class="material-icons-round flex-none text-[16px] text-[var(--pr-text-subtle)] transition-transform duration-200 motion-reduce:transition-none"
+          [class.rotate-180]="paOpen()"
+          aria-hidden="true"
+          >expand_more</i
+        >
+      </button>
+    </div>
+  </div>
+
+  <div class="flex flex-none items-center gap-[10px] whitespace-nowrap max-[639px]:w-full" data-testid="overview-category-group">
+    <span class="text-[11px] font-semibold tracking-[0.08em] uppercase text-[var(--pr-text-subtle)] flex-none">Category</span>
+    <div class="min-w-0 flex-1 min-[640px]:flex-none min-[640px]:w-auto min-[640px]:min-w-[210px]" data-testid="overview-category-select">
+      <button
+        #categoryTrigger
+        type="button"
+        cdkOverlayOrigin
+        #categoryOrigin="cdkOverlayOrigin"
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-label="Result category"
+        data-testid="overview-category-trigger"
+        class="flex h-[30px] w-full items-center justify-between gap-[8px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none transition-colors duration-150 motion-reduce:transition-none hover:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+        [attr.aria-expanded]="categoryOpen() ? 'true' : 'false'"
+        [attr.aria-controls]="categoryListboxId"
+        (click)="toggleCategoryListbox()"
+        (keydown)="onCategoryTriggerKeydown($event)">
+        <span class="truncate" [title]="categoryTriggerLabel()">{{ categoryTriggerLabel() }}</span>
+        <i
+          class="material-icons-round flex-none text-[16px] text-[var(--pr-text-subtle)] transition-transform duration-200 motion-reduce:transition-none"
+          [class.rotate-180]="categoryOpen()"
+          aria-hidden="true"
+          >expand_more</i
+        >
+      </button>
+    </div>
+  </div>
 
   <span class="hidden min-[900px]:block w-[1px] h-[22px] bg-[var(--pr-border-divider)] flex-none"></span>
 
@@ -87,7 +152,9 @@
         </span>
       }
     </div>
+  }
 
+  @if (hasActiveFilters()) {
     <button
       type="button"
       data-testid="overview-clear-filters"
@@ -115,33 +182,8 @@
     cdkTrapFocus
     cdkTrapFocusAutoCapture
     class="w-[min(560px,calc(100vw-32px))] max-h-[min(70vh,520px)] overflow-y-auto custom_scroll rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] shadow-[var(--pr-shadow-2)]">
+    <!-- Science Program and Source live only in the visible P/A and Category controls (INC-166545: never twice). -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-[16px] p-[16px]">
-      <!-- Science Program (multi) -->
-      <div role="group" aria-label="Science Program" class="flex flex-col gap-[6px] min-w-0">
-        <span class="text-[11px] font-semibold tracking-[0.06em] uppercase text-[var(--pr-text-subtle)]">Science Program</span>
-        <div class="flex flex-col max-h-[160px] overflow-y-auto custom_scroll">
-          @for (option of programOptions(); track option.value) {
-            <button
-              type="button"
-              role="checkbox"
-              [attr.aria-checked]="isProgramChecked(option.value)"
-              class="flex h-[30px] items-center gap-[8px] rounded-[6px] border border-transparent px-[6px] text-left text-[12.5px] text-[var(--pr-text)] hover:bg-[var(--pr-surface-subtle)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
-              (click)="toggleProgram(option.value)">
-              <span
-                class="inline-flex h-[15px] w-[15px] flex-none items-center justify-center rounded-[4px] border"
-                [class]="checkboxBoxClass(isProgramChecked(option.value))">
-                @if (isProgramChecked(option.value)) {
-                  <i class="material-icons-round text-[11px] text-white" aria-hidden="true">check</i>
-                }
-              </span>
-              <span class="truncate">{{ option.label }}</span>
-            </button>
-          } @empty {
-            <span class="px-[6px] py-[6px] text-[12px] text-[var(--pr-text-secondary)]">No Science Programs in this phase</span>
-          }
-        </div>
-      </div>
-
       <!-- Project (multi) -->
       <div role="group" aria-label="Project" class="flex flex-col gap-[6px] min-w-0">
         <span class="text-[11px] font-semibold tracking-[0.06em] uppercase text-[var(--pr-text-subtle)]">Project</span>
@@ -194,7 +236,7 @@
         </div>
       </div>
 
-      <!-- Role · Source · Creation method (single, default both) -->
+      <!-- Role · Creation method (single, default both) -->
       <div class="flex flex-col gap-[12px] min-w-0">
         <div role="radiogroup" aria-label="Role" class="flex flex-col gap-[6px]">
           <span class="text-[11px] font-semibold tracking-[0.06em] uppercase text-[var(--pr-text-subtle)]">Role</span>
@@ -216,32 +258,6 @@
                 class="inline-flex h-[26px] items-center rounded-[13px] border px-[10px] text-[12px] font-medium cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
                 [class]="choiceChipClass(draftParams().role === choice.value)"
                 (click)="selectRole(choice.value)">
-                {{ choice.label }}
-              </button>
-            }
-          </div>
-        </div>
-
-        <div role="radiogroup" aria-label="Source" class="flex flex-col gap-[6px]">
-          <span class="text-[11px] font-semibold tracking-[0.06em] uppercase text-[var(--pr-text-subtle)]">Source</span>
-          <div class="flex flex-wrap gap-[6px]">
-            <button
-              type="button"
-              role="radio"
-              [attr.aria-checked]="draftParams().source === null"
-              class="inline-flex h-[26px] items-center rounded-[13px] border px-[10px] text-[12px] font-medium cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
-              [class]="choiceChipClass(draftParams().source === null)"
-              (click)="selectSource(null)">
-              Both
-            </button>
-            @for (choice of sourceChoices; track choice.value) {
-              <button
-                type="button"
-                role="radio"
-                [attr.aria-checked]="draftParams().source === choice.value"
-                class="inline-flex h-[26px] items-center rounded-[13px] border px-[10px] text-[12px] font-medium cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
-                [class]="choiceChipClass(draftParams().source === choice.value)"
-                (click)="selectSource(choice.value)">
                 {{ choice.label }}
               </button>
             }
@@ -320,6 +336,7 @@
       <button
         type="button"
         role="option"
+        tabindex="-1"
         [id]="phaseOptionId(option.id)"
         [attr.data-testid]="'overview-phase-option-' + option.id"
         [attr.aria-selected]="selectedPhaseId() === option.id"
@@ -338,6 +355,110 @@
       </button>
     } @empty {
       <span class="px-[10px] py-[7px] text-[12px] text-[var(--pr-text-secondary)]">No phases available</span>
+    }
+  </div>
+</ng-template>
+
+<!-- P/A listbox (`CPA-R-3`) - multi-select; stays open while ticking, Escape / backdrop closes. -->
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="paOrigin"
+  [cdkConnectedOverlayOpen]="paOpen()"
+  [cdkConnectedOverlayPositions]="popoverPositions"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  (backdropClick)="closePaListbox()"
+  (overlayKeydown)="onPaOverlayKeydown($event)"
+  (detach)="closePaListbox()">
+  <!-- "Clear selection" is a sibling of the listbox, not a child: a listbox owns only options, and an Enter/Space on the button must not reach the listbox key handler. -->
+  <div
+    class="flex w-[300px] max-w-[calc(100vw-32px)] max-h-[min(60vh,320px)] flex-col gap-[2px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[5px] shadow-[var(--pr-shadow-2)]">
+  <div
+    #paList
+    [id]="paListboxId"
+    role="listbox"
+    aria-multiselectable="true"
+    tabindex="0"
+    aria-label="Program / Accelerator"
+    data-testid="overview-pa-listbox"
+    [attr.aria-activedescendant]="programOptions()[activePaIndex()] ? paOptionId(programOptions()[activePaIndex()].value) : null"
+    (keydown)="onPaListKeydown($event)"
+    class="flex min-h-0 flex-col gap-[2px] overflow-y-auto custom_scroll outline-none">
+    @for (option of programOptions(); track option.value; let index = $index) {
+      <button
+        type="button"
+        role="option"
+        tabindex="-1"
+        [id]="paOptionId(option.value)"
+        [attr.data-testid]="'overview-pa-option-' + option.value"
+        [attr.aria-selected]="isPaSelected(option.value)"
+        (click)="togglePaOption(option.value)"
+        (mouseenter)="activePaIndex.set(index)"
+        class="flex w-full items-center gap-[8px] rounded-[6px] border-2 px-[8px] py-[6px] text-left text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none"
+        [class]="listOptionClass(activePaIndex() === index)">
+        <span
+          class="inline-flex h-[15px] w-[15px] flex-none items-center justify-center rounded-[4px] border"
+          [class]="checkboxBoxClass(isPaSelected(option.value))">
+          @if (isPaSelected(option.value)) {
+            <i class="material-icons-round text-[11px] text-white" aria-hidden="true">check</i>
+          }
+        </span>
+        <span class="truncate" [title]="option.label">{{ option.label }}</span>
+      </button>
+    } @empty {
+      <span class="px-[10px] py-[7px] text-[12px] text-[var(--pr-text-secondary)]">No Programs / Accelerators in this phase</span>
+    }
+  </div>
+    @if (params().program.length) {
+      <button
+        type="button"
+        data-testid="overview-pa-clear"
+        class="mt-[2px] self-start rounded-[6px] border border-transparent bg-transparent px-[8px] py-[4px] text-[12px] font-semibold text-[var(--pr-color-primary-300)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+        (click)="clearPaSelection()">
+        Clear selection
+      </button>
+    }
+  </div>
+</ng-template>
+
+<!-- Result category listbox (`CPA-R-3`) - single select, picks and closes. -->
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="categoryOrigin"
+  [cdkConnectedOverlayOpen]="categoryOpen()"
+  [cdkConnectedOverlayPositions]="popoverPositions"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  (backdropClick)="closeCategoryListbox()"
+  (overlayKeydown)="onCategoryOverlayKeydown($event)"
+  (detach)="closeCategoryListbox()">
+  <div
+    #categoryList
+    [id]="categoryListboxId"
+    role="listbox"
+    tabindex="0"
+    aria-label="Result category"
+    data-testid="overview-category-listbox"
+    [attr.aria-activedescendant]="categoryOptionId(activeCategoryIndex())"
+    (keydown)="onCategoryListKeydown($event)"
+    class="flex w-[260px] max-w-[calc(100vw-32px)] flex-col gap-[2px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[5px] shadow-[var(--pr-shadow-2)] outline-none">
+    @for (choice of categoryChoices; track $index; let index = $index) {
+      <button
+        type="button"
+        role="option"
+        tabindex="-1"
+        [id]="categoryOptionId(index)"
+        [attr.data-testid]="'overview-category-option-' + (choice.value ?? 'all')"
+        [attr.aria-selected]="params().category === choice.value"
+        (click)="selectCategory(choice.value)"
+        (mouseenter)="activeCategoryIndex.set(index)"
+        class="flex w-full items-center justify-between gap-[8px] rounded-[6px] border-2 px-[10px] py-[7px] text-left text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none"
+        [class]="listOptionClass(activeCategoryIndex() === index)">
+        <span class="truncate">{{ choice.label }}</span>
+        @if (params().category === choice.value) {
+          <i class="material-icons-round flex-none text-[16px] text-[var(--pr-color-primary-300)]" aria-hidden="true">check</i>
+        }
+      </button>
     }
   </div>
 </ng-template>

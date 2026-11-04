@@ -8,6 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { BILATERAL_UNAUTHORIZED_MESSAGE } from '../constants/bilateral-auth.constants';
 import { BILATERAL_CLARISA_ENDPOINT_KEY } from '../decorators/bilateral-clarisa-endpoint.decorator';
+import { REQUIRE_CLARISA_ENDPOINT_GRANT_KEY } from '../decorators/require-clarisa-endpoint-grant.decorator';
 import { ClarisaApiKeyValidationService } from '../services/clarisa-api-key-validation.service';
 import { EXTERNAL_PLATFORM_REQUEST_KEY } from '../constants/external-platform.constants';
 
@@ -42,6 +43,18 @@ export class ClarisaApiKeyGuard implements CanActivate {
     );
 
     if (!validation) {
+      throw new UnauthorizedException(BILATERAL_UNAUTHORIZED_MESSAGE);
+    }
+
+    // QIN-T-4b: CLARISA answers `valid: true` for any route; the per-endpoint grant is the separate
+    // `endpoint_allowed` flag. Fails closed: only a literal `true` passes (a missing field,
+    // `false` or the string "true" are all refused).
+    const requiresGrant = this.reflector.getAllAndOverride<boolean | undefined>(
+      REQUIRE_CLARISA_ENDPOINT_GRANT_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
+    if (requiresGrant && validation.endpoint_allowed !== true) {
       throw new UnauthorizedException(BILATERAL_UNAUTHORIZED_MESSAGE);
     }
 

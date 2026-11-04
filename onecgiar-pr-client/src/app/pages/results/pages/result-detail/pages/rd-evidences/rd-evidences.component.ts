@@ -97,6 +97,9 @@ export class RdEvidencesComponent implements OnInit, OnDestroy, CanComponentDeac
     if (this.api.dataControlSE?.currentResult?.result_type_id === 5)
       mainText +=
         '<li>Capacity sharing for development does not currently require evidence submission for quality assurance due to the time/resource burden and potential unresolved General Data Protection Regulation (GDPR) issues.</li><li>By submitting a capacity sharing for development result it is understood that you have evidence to support the result submission, and that should a sub-sample be required this evidence could be made available.</li>';
+    // @akili-spec results/impact-results-reporting/result-detail-impact (IRD-T-6, IRD-R-10). PLACEHOLDER copy, confirmed at IRD-T-8.
+    if (this.api.dataControlSE?.isP25ImpactResultSignal?.())
+      mainText += '<li>Include the MELIA study or evaluation that documents the impact.</li>';
     mainText += '</ul> ';
     return mainText;
   }

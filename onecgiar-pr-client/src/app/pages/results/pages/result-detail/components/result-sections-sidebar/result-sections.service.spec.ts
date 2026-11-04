@@ -141,6 +141,38 @@ describe('ResultSectionsService', () => {
     });
   });
 
+  // IRD-T-2 · Impact level info (type 9, P25 only) is placed by array order in `resultDetailRouting`
+  // (IRD-DD-1): no sort or special case in the service. Lists for the other combinations are the
+  // pre-change behaviour, computed from the routing data before the entry was added.
+  describe('impact level section order (IRD-T-2)', () => {
+    const paths = () => service.sections().map(s => s.path);
+    const setup = (portfolio: 'P22' | 'P25', typeId: number) => {
+      dataControl.currentResult.result_type_id = typeId;
+      fieldsManager = { portfolioAcronym: signal(portfolio), isP25: signal(portfolio === 'P25'), isP22: signal(portfolio === 'P22') };
+      build();
+    };
+
+    it('lists exactly General, Contributors, Geo, Impact level info, Evidence for P25 type 9', () => {
+      setup('P25', 9);
+      expect(paths()).toEqual(['general-information', 'contributor-partners', 'geographic-location', 'impact-level-info', 'evidences']);
+    });
+
+    it('exposes the exact path impact-level-info', () => {
+      setup('P25', 9);
+      expect(service.sections().some(s => s.path === 'impact-level-info')).toBe(true);
+    });
+
+    it('does not list Impact level info for P25 type 1 and keeps its pre-change list', () => {
+      setup('P25', 1);
+      expect(paths()).toEqual(['general-information', 'contributor-partners', 'geographic-location', 'policy-change1-info', 'evidences']);
+    });
+
+    it('does not list Impact level info for P22 type 9 and keeps its pre-change list', () => {
+      setup('P22', 9);
+      expect(paths()).toEqual(['general-information', 'theory-of-change', 'partners', 'geographic-location', 'links-to-results', 'evidences']);
+    });
+  });
+
   describe('progress', () => {
     it('is 0% with no green checks', () => {
       build();
@@ -176,6 +208,33 @@ describe('ResultSectionsService', () => {
       expect(service.statusLabel()).toBe('Editing');
       expect(service.statusFg()).toBe('var(--pr-status-in-progress-fg)');
       expect(service.statusBg()).toBe('var(--pr-status-in-progress-bg)');
+    });
+
+    describe('impact result type label (IRD-T-7)', () => {
+      it('reads "Impact result" for a P25 type 9 result', () => {
+        dataControl.currentResult.result_type_id = 9;
+        dataControl.currentResult.result_type_name = 'Impact contribution';
+        dataControl.isP25ImpactResultSignal = () => true;
+        build();
+
+        expect(service.resultTypeName()).toBe('Impact result');
+      });
+
+      it('keeps the DB name for a P22-P24 type 9 result', () => {
+        dataControl.currentResult.result_type_id = 9;
+        dataControl.currentResult.result_type_name = 'Impact contribution';
+        dataControl.isP25ImpactResultSignal = () => false;
+        build();
+
+        expect(service.resultTypeName()).toBe('Impact contribution');
+      });
+
+      it('keeps the DB name for a non-9 type', () => {
+        dataControl.isP25ImpactResultSignal = () => false;
+        build();
+
+        expect(service.resultTypeName()).toBe('Policy change');
+      });
     });
 
     it('uses the in-qa pair for a quality assessed result', () => {

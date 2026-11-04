@@ -53,6 +53,8 @@ import { DynamodbLogsModule } from '../../../connection/dynamodb-logs/dynamodb-l
 import { ResultsInvestmentDiscontinuedOptionsModule } from '../results-investment-discontinued-options/results-investment-discontinued-options.module';
 import { DeleteRecoverDataModule } from '../../delete-recover-data/delete-recover-data.module';
 import { DeleteRecoverDataService } from '../../delete-recover-data/delete-recover-data.service';
+import { ResultImpactLevelRepository } from '../../results-framework-reporting/impact-level/repositories/result-impact-level.repository';
+import { ResultImpactPreviousResultRepository } from '../../results-framework-reporting/impact-level/repositories/result-impact-previous-result.repository';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initiative_entity_map.repository';
 import { ImpactAreasScoresComponentsModule } from '../impact_areas_scores_components/impact_areas_scores_components.module';
@@ -129,6 +131,9 @@ import { BilateralAccessModule } from '../bilateral-access/bilateral-access.modu
     ResultsCenterRepository,
     ClarisaInstitutionsRepository,
     DeleteRecoverDataService,
+    // IRS-R-13 — DeleteRecoverDataService is provided here too, so it needs the impact repositories.
+    ResultImpactLevelRepository,
+    ResultImpactPreviousResultRepository,
     GlobalParameterRepository,
     InitiativeEntityMapRepository,
     AoWBilateralRepository,

@@ -4,7 +4,10 @@ import {
   RESULT_TYPE_GROUPS,
   buildAttentionModel,
   buildByProjectModel,
+  buildByPaModel,
   buildBySpModel,
+  buildProjectsByPaModel,
+  NO_PA_CODE,
   buildByTypeModel,
   buildOverviewKpis,
   buildOverviewModel,
@@ -16,15 +19,18 @@ import {
   resolveResultTypeGroup,
 } from './bilateral-overview.aggregate';
 import {
+  FIXTURE_CPA_PROJECTS,
+  FIXTURE_CPA_ROWS,
+  FIXTURE_CPA_ROWS_TAGGING_OUTSIDE_MAPPING,
   FIXTURE_D1_ROWS,
   FIXTURE_DRAFTS,
   FIXTURE_PACE_FALLBACK_ROWS,
   FIXTURE_PHASE,
   FIXTURE_PROJECTS,
   FIXTURE_ROWS_NO_APPROVALS,
-  FIXTURE_SP_TWO_PROJECTS,
   FIXTURE_SP_TWO_PROJECTS_ROWS,
   FIXTURE_TODAY,
+  makeCpaTaggingRow,
   makeCwsScopedFixture,
   makeLargeFixture,
 } from './bilateral-overview.fixtures';
@@ -357,21 +363,148 @@ describe('bilateral-overview.aggregate', () => {
     });
   });
 
-  describe('Science Program contribution card (COV-R-10)', () => {
-    it('a project mapping the same SP twice counts once (dedupe per project)', () => {
-      const bySp = buildBySpModel(FIXTURE_D1_ROWS, FIXTURE_PROJECTS);
-      const sp01 = bySp.rows.find(r => r.programCode === 'SP01');
-      expect(sp01?.projectsMappedCount).toBe(1); // Alpha maps SP01 twice in the fixture
+  describe('Science Program contribution card (COV-R-10, projects mapped moved to CPA-R-2)', () => {
+    it('rows carry only the results count (CPA-DD-7: "Projects mapped" is no longer part of this model)', () => {
+      const bySp = buildBySpModel(FIXTURE_D1_ROWS);
+      expect(bySp.rows).toEqual([
+        { programCode: 'SP01', resultsCount: 5 },
+        { programCode: 'SP02', resultsCount: 4 },
+      ]);
     });
 
-    it('two mapped projects, zero results: row shows 2 · 0', () => {
-      const bySp = buildBySpModel(FIXTURE_SP_TWO_PROJECTS_ROWS, FIXTURE_SP_TWO_PROJECTS);
-      expect(bySp.rows).toEqual([{ programCode: 'SP03', projectsMappedCount: 2, resultsCount: 0 }]);
+    it('a mapped project with zero results no longer creates a row here (it lives in the projects-by-P/A model)', () => {
+      expect(buildBySpModel(FIXTURE_SP_TWO_PROJECTS_ROWS).rows).toEqual([]);
     });
 
-    it('sorted by results desc, ties by projects desc', () => {
-      const bySp = buildBySpModel(FIXTURE_D1_ROWS, FIXTURE_PROJECTS);
+    it('sorted by results desc, ties by program code', () => {
+      const bySp = buildBySpModel(FIXTURE_D1_ROWS);
       expect(bySp.rows.map(r => r.programCode)).toEqual(['SP01', 'SP02']); // 5 results vs 4
+    });
+  });
+
+  // @akili-spec bilateral/center-overview-pa-contribution (CPA-T-4, CPA-R-1 A/B, CPA-AC-1)
+  describe('Results by P/A (CPA-R-1)', () => {
+    const byPa = buildByPaModel(FIXTURE_CPA_ROWS);
+    const drillParams = (query: Record<string, string>) => parseBilateralQueryParams(convertToParamMap(query)).params;
+    const group = (code: string) => byPa.rows.find(r => r.programCode === code);
+
+    it('Scenario A: SP05 shows W3 = 3 and tagging = 1 (hand count in the fixture comment)', () => {
+      expect(group('SP05')).toEqual({ programCode: 'SP05', w3Count: 3, taggingCount: 1 });
+    });
+
+    it('BUT a tagging row is never counted in the W3 series, nor a W3 row in the tagging series', () => {
+      expect(group('SP07')).toEqual({ programCode: 'SP07', w3Count: 1, taggingCount: 2 });
+    });
+
+    it('Scenario B: rows with submitter null land in ONE "no P/A" group, shown only when it has rows', () => {
+      expect(group(NO_PA_CODE)).toEqual({ programCode: NO_PA_CODE, w3Count: 1, taggingCount: 1 });
+      expect(buildByPaModel(FIXTURE_CPA_ROWS.filter(r => r.submitter)).rows.some(r => r.programCode === NO_PA_CODE)).toBe(false);
+    });
+
+    it('AND groups sort by (W3 + tagging) desc, then code asc; no P/A last on a tie', () => {
+      expect(byPa.rows.map(r => r.programCode)).toEqual(['SP05', 'SP07', NO_PA_CODE]); // 4, 3, 2
+      const tied = [
+        ...FIXTURE_CPA_ROWS.filter(r => r.submitter === 'SP07'),
+        ...FIXTURE_CPA_ROWS.filter(r => r.submitter === 'SP05').slice(0, 3),
+        ...FIXTURE_CPA_ROWS.filter(r => r.submitter === null), // 1008 (w3) + 1009 (tagging)
+        makeCpaTaggingRow(2001, null, 1, [1]),
+      ];
+      // SP07 = 3, SP05 = 3, NO_PA = 3 → code asc: SP05, SP07, then NO_PA
+      expect(buildByPaModel(tied).rows.map(r => r.programCode)).toEqual(['SP05', 'SP07', NO_PA_CODE]);
+    });
+
+    it('CPA-AC-1 disqualifier: the Total card equals the sum of both series (unfiltered fixture)', () => {
+      const total = buildTotalResultsKpi(FIXTURE_CPA_ROWS).count;
+      const sum = byPa.rows.reduce((acc, r) => acc + r.w3Count + r.taggingCount, 0);
+      expect(total).toBe(9);
+      expect(sum).toBe(9);
+    });
+
+    it('classifies by the raw overview_category exactly like the drill-down: a row without it is in neither series', () => {
+      const noField = { ...FIXTURE_CPA_ROWS[0] };
+      delete noField.overview_category;
+      expect(buildByPaModel([noField]).rows).toEqual([]);
+      // chart = drill: the same row also fails the category=w3 filter
+      const params = drillParams({ category: 'w3' });
+      expect(filterCenterResults([noField], params)).toEqual([]);
+      expect(filterCenterResults([FIXTURE_CPA_ROWS[0]], params)).toHaveLength(1);
+    });
+
+    it('chart = drill: each bar equals the rows filterCenterResults returns for program + category', () => {
+      for (const code of ['SP05', 'SP07']) {
+        const w3 = filterCenterResults(FIXTURE_CPA_ROWS, drillParams({ program: code, category: 'w3' }));
+        const tag = filterCenterResults(FIXTURE_CPA_ROWS, drillParams({ program: code, category: 'w1w2-tagging' }));
+        expect(w3).toHaveLength(group(code)!.w3Count);
+        expect(tag).toHaveLength(group(code)!.taggingCount);
+      }
+    });
+
+    it('empty rows produce no groups', () => {
+      expect(buildByPaModel([]).rows).toEqual([]);
+    });
+  });
+
+  // @akili-spec bilateral/center-overview-pa-contribution (CPA-T-4, CPA-R-2 A/B, CPA-AC-2, A-1, A-5)
+  describe('Projects by P/A (CPA-R-2)', () => {
+    const model = buildProjectsByPaModel(FIXTURE_CPA_ROWS, FIXTURE_CPA_PROJECTS);
+    const group = (code: string, m = model) => m.rows.find(r => r.programCode === code);
+
+    it('mapped: distinct projects per approved mapping (project 2 maps SP07 twice, counts once)', () => {
+      expect(group('SP07')?.mappedCount).toBe(2);
+      expect(group('SP02')?.mappedCount).toBe(2);
+      expect(group('SP05')?.mappedCount).toBe(2);
+    });
+
+    it('with W3 results: mapped AND has a W3 row; a project counts under every P/A it is mapped to (A-5)', () => {
+      expect(group('SP05')?.withW3Count).toBe(1); // {4}
+      expect(group('SP02')?.withW3Count).toBe(2); // {3, 4}
+      expect(group('SP07')?.withW3Count).toBe(0); // project 3 has a W3 row filed under SP07 but is not mapped to it
+    });
+
+    it('Scenario A: tagging rows {1,2} and {2} of SP07 give tagged = 2 (deduped across results, not 3)', () => {
+      expect(group('SP07')?.taggedCount).toBe(2);
+      expect(group('SP05')?.taggedCount).toBe(1);
+    });
+
+    it('Scenario B: P3 tagged by SP07 but mapped only to SP02 counts in SP07 tagged and SP02 mapped, not SP07 mapped', () => {
+      const m = buildProjectsByPaModel(FIXTURE_CPA_ROWS_TAGGING_OUTSIDE_MAPPING, FIXTURE_CPA_PROJECTS);
+      expect(group('SP07', m)?.taggedCount).toBe(3); // {1,2} ∪ {2} ∪ {3}
+      expect(group('SP07', m)?.mappedCount).toBe(2); // {1,2} — P3 excluded
+      expect(group('SP02', m)?.mappedCount).toBe(2); // {3,4} — P3 included
+    });
+
+    it('a W1/W2 result with no P/A never creates a "no P/A" row here (CPA-R-7: it lives in the R-1 "No P/A" group only)', () => {
+      expect(model.rows.some(r => r.programCode === NO_PA_CODE)).toBe(false);
+      // the same tagging row (1009, null P/A) is still counted in the Results by P/A model
+      const byPaNoPa = buildByPaModel(FIXTURE_CPA_ROWS).rows.find(r => r.programCode === NO_PA_CODE);
+      expect(byPaNoPa?.taggingCount).toBe(1);
+    });
+
+    it('does NOT fall back to project_id when tagged_center_project_ids is present (even empty)', () => {
+      const rows = [makeCpaTaggingRow(3001, 'SP07', 1, [])];
+      expect(buildProjectsByPaModel(rows, FIXTURE_CPA_PROJECTS).rows.find(r => r.programCode === 'SP07')?.taggedCount ?? 0).toBe(0);
+    });
+
+    it('deploy skew: falls back to [project_id] only when the field is absent AND that project is a center project', () => {
+      const absent = makeCpaTaggingRow(3002, 'SP07', 1, undefined);
+      const nullField = makeCpaTaggingRow(3003, 'SP07', 2, null);
+      const foreign = makeCpaTaggingRow(3004, 'SP07', 9999, undefined);
+      const m = buildProjectsByPaModel([absent, nullField, foreign], FIXTURE_CPA_PROJECTS);
+      expect(group('SP07', m)?.taggedCount).toBe(2); // {1, 2}; 9999 is not in the center's list
+    });
+
+    it('a project with no mappings never appears; W3 and tagging rows of other categories are ignored', () => {
+      const outOfScope = { ...FIXTURE_CPA_ROWS[0], overview_category: 'replicated_w1w2' as const };
+      const m = buildProjectsByPaModel([outOfScope], FIXTURE_CPA_PROJECTS);
+      expect(m.rows.every(r => r.withW3Count === 0 && r.taggedCount === 0)).toBe(true);
+    });
+
+    it('sorted by mapped desc, then code asc', () => {
+      expect(model.rows.map(r => r.programCode)).toEqual(['SP02', 'SP05', 'SP07']);
+    });
+
+    it('empty rows and empty projects produce no groups', () => {
+      expect(buildProjectsByPaModel([], []).rows).toEqual([]);
     });
   });
 
@@ -453,6 +586,8 @@ describe('bilateral-overview.aggregate', () => {
       expect(model.attention.rows).toHaveLength(4);
       expect(model.byProject.bars).toHaveLength(2);
       expect(model.bySp.rows.length).toBeGreaterThan(0);
+      expect(model.byPa.rows).toEqual([]); // FIXTURE_D1_ROWS carries no overview_category: neither series counts them
+      expect(model.projectsByPa.rows.length).toBeGreaterThan(0);
       expect(model.byType.rows.length).toBeGreaterThan(0);
       expect(model.pace.points.at(-1)?.cumulative).toBe(10);
     });

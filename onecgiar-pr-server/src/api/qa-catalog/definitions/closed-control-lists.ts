@@ -1,4 +1,9 @@
 // @akili-spec quality-assurance/qa-field-catalog
+import {
+  COUNT_UNIT_CODES,
+  USE_NATURE_CODES,
+} from '../../results/result-actors/farmer-follow-up.constant';
+
 /**
  * Amendment v1.9 (D): control lists whose ids are a FIXED, code- or seed-defined set. When a condition
  * compares a select over one of these lists, the shape validator checks every compared id against it.
@@ -83,11 +88,22 @@ export const CLOSED_CONTROL_LISTS: Readonly<Record<string, readonly number[]>> =
      * by the owner in test and prod"); no migration in this repository seeds them (cloned from P22 rows by 1762398554711). Structure
      * from innovationTeamDiversityV2 (result-questions.service.ts:761-808: level-2 children of 112, level-3 children of each) and
      * validation_innovation_dev_P25 (parent 112 at :531, parent 113 at :585, ids 113/114/115/121 at :540-602).
-     * The GESI / risk stage and consolidated IPR options are NOT here: their ids come from AUTO_INCREMENT (migrations 1787842155469 and
-     * 1788441000000) and the client, server and live function resolve them by text.
+     * The GESI / risk stage and consolidated IPR options come from AUTO_INCREMENT (migrations 1787842155469 and 1788441000000) and the
+     * client, server and live function resolve them BY TEXT; their ids are closed lists below since P-20 verified them.
      */
     question_options_team_diversity: [113, 114, 115],
     question_options_team_diversity_actions: [116, 117, 118, 119, 120, 121],
+    /**
+     * GESI stage, negative-impact / risk stage and consolidated IPR question (QRF-T-9, QRF-DD-13). P-20: the owner verified on
+     * 2026-10-28 that these ids are IDENTICAL in test and prod (`result_questions.parent_question_id`): the GESI question is 150
+     * with options 152..156, the risk question 151 with options 157..161, the IPR question 162 with options 163..165 (the parents of
+     * 150 / 151 are 77 and of 162 is 100, also as in test). A relation / path binding over these lists reads only the answers to its
+     * own question (`values/read-plan.ts` `closedListPredicates`), so a stage field no longer returns any answered row of the result
+     * (T-8 golden G-2). Conditions never compare these ids: the "Not applicable" rule stays on the option LABEL.
+     */
+    question_options_gesi_stage: [152, 153, 154, 155, 156],
+    question_options_risk_stage: [157, 158, 159, 160, 161],
+    question_options_ipr: [163, 164, 165],
     /**
      * Length of training (QAC-T-25): the options the form offers, 3 Short-term and 4 Long-term (cap-dev-info.component.ts:98-102 splices the
      * `capdevs_term` rows into [1,2] = degrees and [3,4] = lengths; html:36-45). Source of the rows: 3 = migration
@@ -102,3 +118,21 @@ export const CLOSED_CONTROL_LISTS: Readonly<Record<string, readonly number[]>> =
      */
     capdev_degrees: [1, 2],
   };
+
+/**
+ * Closed lists whose members are CODES (strings stored in a varchar column), not option ids. Same meaning as `CLOSED_CONTROL_LISTS`
+ * (a fixed set the catalog names by `control_list`), kept apart so the numeric lists keep their `number[]` type.
+ * Declarative only: neither the shape validator nor the read plan uses it, on purpose (a row filter on `result_actors` would drop rows).
+ */
+export const CLOSED_CODE_LISTS: Readonly<Record<string, readonly string[]>> = {
+  /**
+   * `result_actors.count_unit` (IFC-R-9): the unit of the numbers of a Farmers actor row, stored as a CODE (varchar), not an id.
+   * Source: `COUNT_UNIT_CODES` (results/result-actors/farmer-follow-up.constant.ts): households, individuals.
+   */
+  actor_count_unit: [...COUNT_UNIT_CODES],
+  /**
+   * `result_actors.use_nature` (IFC-R-9): the nature of a Farmers actor row's number, stored as a CODE (varchar), not an id.
+   * Source: `USE_NATURE_CODES` (same file): information_received, innovation_applied.
+   */
+  actor_use_nature: [...USE_NATURE_CODES],
+};

@@ -185,6 +185,23 @@ describe('ReplicatedInnovationRemindersComponent', () => {
     expect(q('rir-row-3')!.querySelector('[data-testid="rir-send-again-btn"]')).toBeNull();
   });
 
+  it('Send again is disabled while a campaign of the same kind is open', async () => {
+    await setup(
+      of(
+        list([
+          campaign({ id: 1, kind: 'Q4_NOTICE', status: 'SENT' }),
+          campaign({ id: 2, kind: 'Q4_NOTICE', status: 'PENDING' }),
+          campaign({ id: 3, kind: 'FINAL_REMINDER', status: 'SENT' })
+        ])
+      )
+    );
+    const byId = (id: number) => component.campaigns().find(c => c.id === id)!;
+    expect(component.canSendAgain(byId(1))).toBe(false);
+    expect(component.canSendAgain(byId(3))).toBe(true);
+    component.sendAgain(byId(1));
+    expect(component.sendAgainKind()).toBeNull();
+  });
+
   it('Send again opens the create flow preset to that kind, with the helper text, and POSTs like a normal create', async () => {
     await setup(of(list([campaign({ id: 1, kind: 'Q4_NOTICE', status: 'SENT' })])));
     expect(q('rir-send-again-hint-Q4_NOTICE')).toBeNull();

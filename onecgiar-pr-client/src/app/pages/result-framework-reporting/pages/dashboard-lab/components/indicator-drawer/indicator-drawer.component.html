@@ -36,7 +36,7 @@
   </div>
 
   <!-- Context header: Indicator details (planned KPI only — hidden in emerging mode) -->
-  @if (!emerging()) {
+  @if (!emerging() && !impactArea()) {
   <header class="shrink-0 border-b border-[rgba(30,32,47,0.08)] bg-white px-4 py-3 min-[640px]:px-6">
     <div class="flex items-center gap-2 mb-2 flex-wrap">
       <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[13px] font-bold bg-[#6461bc]/10 text-[var(--pr-color-primary-300)] tracking-wide">
@@ -127,7 +127,7 @@
       </div>
     }
   </header>
-  } @else {
+  } @else if (!impactArea()) {
   <header class="shrink-0 border-b border-[rgba(30,32,47,0.08)] bg-white px-4 py-3 min-[640px]:px-6">
     <p class="m-0 text-[13px] text-[var(--pr-text-secondary)]">
       For achievements that were not planned in this program’s Theory of Change.
@@ -158,7 +158,7 @@
     <div class="flex flex-1 min-h-full min-h-0 flex-col" [style.display]="tab() === 'report' ? null : 'none'" data-testid="irr-report-pane">
         <!-- What is already reported here, visible WHILE the form is being filled: recognising a
              duplicate after creating it is too late. Compact on purpose — the form is the job. -->
-        @if (!emerging() && !loadingExisting()) {
+        @if (!emerging() && !impactArea() && !loadingExisting()) {
         @if (existing()?.length) {
           <div class="mb-4 rounded-xl border border-[rgba(30,32,47,0.08)] bg-[var(--pr-color-accents-1)] p-3">
             <p class="m-0 flex items-center gap-1.5 text-[12px] font-semibold text-[var(--pr-color-secondary-400)]">
@@ -216,6 +216,7 @@
             [indicator]="indicator()"
             [emergingMode]="emerging()"
             [emergingCategory]="null"
+            [impactArea]="impactArea()"
             [initiativeId]="initiativeId()"
             [programCode]="programCode()"
             [columns]="columns()"
@@ -246,7 +247,7 @@
            table, then "nothing here". Error before empty is the whole point (IRR-R-7): a 500 that
            renders the empty state tells the user this indicator has no results, which is a lie.
            A search that matches nothing is NOT this branch — it is the table's own empty template. -->
-      @if (!emerging() && tab() === 'results') {
+      @if (!emerging() && !impactArea() && tab() === 'results') {
         @if (returnTab()) {
           <button
             type="button"
@@ -522,7 +523,7 @@
         }
       }
 
-      @if (!emerging() && tab() === 'info') {
+      @if (!emerging() && !impactArea() && tab() === 'info') {
         <!-- ---- Target ---- -->
         <p class="m-0 mb-3 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">
           <span class="material-icons-round text-[16px]">flag</span> Target

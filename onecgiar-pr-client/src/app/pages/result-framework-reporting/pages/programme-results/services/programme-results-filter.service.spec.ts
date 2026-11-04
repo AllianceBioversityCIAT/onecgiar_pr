@@ -666,6 +666,36 @@ describe('ProgrammeResultsFilterService', () => {
     });
   });
 
+  // IRD-T-7 — P25 impact results get their own category, between the RF five and Other.
+  describe('Impact result category (IRD-T-7)', () => {
+    it('lists Impact result after the RF five and before Other, and keeps P22 Impact contribution in Other', () => {
+      const options = buildCategoryFilterOptions(['Knowledge product', 'Impact result', 'Impact contribution'], null);
+
+      expect(options).toEqual([
+        { value: 'Knowledge product', label: 'Knowledge product' },
+        { value: 'Impact result', label: 'Impact result' },
+        { value: PROGRAMME_RESULTS_OTHER_CATEGORY, label: 'Other' }
+      ]);
+    });
+
+    it('offers no Other bucket when Impact result is the only non-RF category', () => {
+      expect(buildCategoryFilterOptions(['Impact result'], null)).toEqual([{ value: 'Impact result', label: 'Impact result' }]);
+    });
+
+    it('Other excludes Impact result rows', () => {
+      expect(matchesProgrammeResultCategory(row({ category: 'Impact result' }), PROGRAMME_RESULTS_OTHER_CATEGORY)).toBe(false);
+      expect(matchesProgrammeResultCategory(row({ category: 'Impact contribution' }), PROGRAMME_RESULTS_OTHER_CATEGORY)).toBe(true);
+    });
+
+    it('the category=Impact contribution deep link still resolves to Impact result rows (alias)', () => {
+      expect(matchesProgrammeResultCategory(row({ category: 'Impact result' }), 'Impact contribution')).toBe(true);
+      expect(matchesProgrammeResultCategory(row({ category: 'Impact contribution' }), 'Impact contribution')).toBe(true);
+      expect(matchesProgrammeResultCategory(row({ category: 'Knowledge product' }), 'Impact contribution')).toBe(false);
+      expect(matchesProgrammeResultCategory(row({ category: 'Impact contribution' }), 'Impact result')).toBe(false);
+      expect(buildCategoryFilterOptions(['Impact result'], 'Impact contribution').map(o => o.value)).toContain('Impact contribution');
+    });
+  });
+
   // CBF-T-1 — Created by dimension. Two-author + blank fixture is the CBF-R-1 evidence
   // (a presence-only assert on selectedCreatedBy is not behavioral proof).
   describe('Created by dimension (CBF-T-1)', () => {

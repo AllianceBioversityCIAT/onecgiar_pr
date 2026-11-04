@@ -4,6 +4,15 @@
  * the rest of the page's template copy has not been migrated.
  */
 export const PORTFOLIO_OVERVIEW_COPY = {
+  // W3/Bilateral card status split (spec changes/portfolio-overview-feedback-round/cleanup-and-approved, PCA-R-3)
+  w3Split: {
+    submitted: 'Submitted',
+    approved: 'Approved',
+    editing: 'Editing',
+    'in-qa': 'Quality Assessed',
+    rejected: 'Rejected',
+    discontinued: 'Discontinued'
+  },
   statusTitle: 'Portfolio Results Reporting Status',
   statusSubtitle: 'All W1/W2 and W3/Bilateral results reported in this phase, by status',
   statusTableCaption: 'Portfolio Results Reporting Status breakdown',
@@ -32,7 +41,8 @@ export const PORTFOLIO_OVERVIEW_COPY = {
   centerEmpty: 'No W3/Bilateral results in this phase',
   // Global filters group (design 6.7); GLF-T-4 adds its keys here (spec changes/portfolio-overview-revamp/global-filters, GLF-R-7, GLF-R-9)
   filters: {
-    dimensions: { program: 'Program', project: 'Project', center: 'Center', typology: 'Typology', status: 'Status' },
+    dimensions: { program: 'Program', project: 'Project', center: 'Center', typology: 'Typology', status: 'Status', funding: 'Funding source' },
+    fundingOptions: { w1w2: 'W1/W2', bilateral: 'W3/Bilateral' },
     notAffected: (labels: string) => `Not affected by: ${labels}`,
     totalsWholePortfolio: 'Totals cover the whole portfolio',
     // Filter bar (GLF-T-4, design 6.4 / 6.7)
@@ -56,7 +66,8 @@ export const PORTFOLIO_OVERVIEW_COPY = {
     droppedNotice: 'Your Project and Center selection was removed because their data could not be loaded.',
     sheetTrigger: (n: number) => (n > 0 ? `Filters (${n})` : 'Filters'),
     sheetTitle: 'Filters',
-    activeChips: 'Active filters'
+    activeChips: 'Active filters',
+    showResults: (n: number) => (n === 1 ? 'Show 1 result ↓' : `Show ${n} results ↓`)
   },
   // Progress against ToC KPIs (spec changes/portfolio-overview-revamp/toc-kpi-progress, TKP-R-4..7)
   tocKpi: {
@@ -107,6 +118,44 @@ export const PORTFOLIO_OVERVIEW_COPY = {
     totalLabel: 'Total',
     tableCaptionProgram: 'W3/Bilateral projects by Program / Accelerator',
     tableCaptionCenter: 'W3/Bilateral projects by Center'
+  },
+  // Contribution requests by P/A (spec changes/portfolio-overview-feedback-round/contribution-requests-by-pa, CRP-R-2..R-6)
+  contributions: {
+    title: 'Contribution requests by Program/Accelerator',
+    subtitle: 'Requests between Programs/Accelerators to contribute to a result. Pending = not answered yet.',
+    kpiPending: 'Pending',
+    kpiAccepted: 'Accepted',
+    kpiDeclined: 'Declined',
+    colProgram: 'Program / Accelerator',
+    colReceived: 'Received',
+    colSent: 'Sent',
+    colExpand: 'Pending requests',
+    pending: 'Pending',
+    accepted: 'Accepted',
+    declined: 'Declined',
+    tableCaption: 'Contribution requests received and sent by each Program / Accelerator, by status',
+    expandLabel: (code: string) => `Show the pending requests of ${code}`,
+    collapseLabel: (code: string) => `Hide the pending requests of ${code}`,
+    rowEmpty: 'No pending requests',
+    allPending: (n: number) => `All pending (${n})`,
+    hideAllPending: (n: number) => `Hide all pending (${n})`,
+    allPendingEmpty: 'No pending requests',
+    listCaption: 'Pending contribution requests, oldest first',
+    colResult: 'Result',
+    colTitle: 'Title',
+    colFromTo: 'From to',
+    colRequested: 'Requested',
+    colWaiting: 'Waiting',
+    noDate: 'No date',
+    noCode: 'None',
+    days: (n: number) => (n === 1 ? '1 day' : `${n} days`),
+    openResult: (code: number | string) => `Open result ${code} in a new tab`,
+    empty: 'No contribution requests in this phase',
+    noMatch: 'No Program/Accelerator matches the filter',
+    phaseLabel: 'Phase',
+    error: 'Contribution requests could not be loaded right now.',
+    retry: 'Retry',
+    loading: 'Loading contribution requests'
   },
   // Results detail (spec changes/portfolio-overview-revamp/filtered-detail-export, FDE-R-1..R-10)
   detail: {

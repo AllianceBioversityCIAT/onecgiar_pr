@@ -1,0 +1,214 @@
+<!--
+  Contribution requests by P/A (spec contribution-requests-by-pa, design 8). Same card as the projects block. Neutral
+  surfaces; Pending / Accepted / Declined reuse the submitted / approved / rejected status tokens (never recombined).
+  Read-only: the only controls are the row expand buttons, the All pending toggle and Retry. No percentages.
+-->
+<section
+  class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]"
+  data-testid="contributions-block"
+  aria-labelledby="contributions-title">
+  <div class="mb-[16px]">
+    <div class="flex flex-wrap items-center gap-[8px]">
+      <h2 id="contributions-title" class="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--pr-text)]">{{ copy.title }}</h2>
+      @if (status() === 'ready') {
+        <span
+          class="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-3 py-1 text-[12px] text-[var(--pr-text-muted)]"
+          data-testid="contributions-phase">
+          <span class="font-medium">{{ copy.phaseLabel }}</span>
+          <span class="font-semibold text-[var(--pr-text)]">{{ year() }}</span>
+        </span>
+      }
+    </div>
+    @if (status() === 'ready') {
+      <p class="m-0 mt-[2px] text-[13px] font-normal text-[var(--pr-text-secondary)]" data-testid="contributions-subtitle">{{ copy.subtitle }}</p>
+    }
+    @if (notAffectedText()) {
+      <p class="m-0 mt-[4px] text-[12px] font-normal text-[var(--pr-text-secondary)]" data-testid="contributions-not-affected">{{ notAffectedText() }}</p>
+    }
+  </div>
+
+  @if (status() === 'loading') {
+    <div aria-busy="true" data-testid="contributions-skeleton">
+      <span class="sr-only" role="status">{{ copy.loading }}</span>
+      <div class="mb-[16px] grid grid-cols-1 gap-[12px] sm:grid-cols-3">
+        @for (n of [0, 1, 2]; track n) {
+          <span class="pr-skeleton h-[72px] w-full rounded-[10px]"></span>
+        }
+      </div>
+      @for (n of skeletonRows; track n) {
+        <div class="border-b border-[var(--pr-border-divider)] py-[12px] last:border-b-0">
+          <span class="pr-skeleton block h-[14px] w-full rounded"></span>
+        </div>
+      }
+    </div>
+  } @else if (status() === 'error') {
+    <div class="flex flex-wrap items-center justify-between gap-[12px]" data-testid="contributions-error">
+      <p role="status" class="m-0 text-[14px] font-normal text-[var(--pr-text-secondary)]" data-testid="contributions-error-text">{{ copy.error }}</p>
+      <button
+        hlmBtn
+        variant="ghost"
+        type="button"
+        class="!text-[13px] focus-visible:[box-shadow:var(--pr-focus-ring)]"
+        data-testid="contributions-retry"
+        (click)="retry()">
+        {{ copy.retry }}
+      </button>
+    </div>
+  } @else if (isEmpty()) {
+    <p role="status" class="m-0 max-h-[160px] text-[14px] font-normal text-[var(--pr-text-secondary)]" data-testid="contributions-empty">{{ copy.empty }}</p>
+  } @else {
+    <!-- KPI row: portfolio totals, never narrowed by the Program filter -->
+    <div class="grid grid-cols-1 gap-[12px] sm:grid-cols-3" data-testid="contributions-kpis">
+      <div
+        class="flex flex-col gap-[4px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-status-submitted-bg)] px-[14px] py-[12px]"
+        data-testid="contributions-kpi-pending">
+        <span class="text-[12px] font-semibold text-[var(--pr-status-submitted-fg)]">{{ copy.kpiPending }}</span>
+        <span class="font-mono text-[22px] font-bold leading-none tabular-nums text-[var(--pr-status-submitted-fg)]" data-testid="contributions-kpi-value">{{ totals().pending }}</span>
+      </div>
+      <div
+        class="flex flex-col gap-[4px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-status-approved-bg)] px-[14px] py-[12px]"
+        data-testid="contributions-kpi-accepted">
+        <span class="text-[12px] font-semibold text-[var(--pr-status-approved-fg)]">{{ copy.kpiAccepted }}</span>
+        <span class="font-mono text-[22px] font-bold leading-none tabular-nums text-[var(--pr-status-approved-fg)]" data-testid="contributions-kpi-value">{{ totals().accepted }}</span>
+      </div>
+      <div
+        class="flex flex-col gap-[4px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-status-rejected-bg)] px-[14px] py-[12px]"
+        data-testid="contributions-kpi-declined">
+        <span class="text-[12px] font-semibold text-[var(--pr-status-rejected-fg)]">{{ copy.kpiDeclined }}</span>
+        <span class="font-mono text-[22px] font-bold leading-none tabular-nums text-[var(--pr-status-rejected-fg)]" data-testid="contributions-kpi-value">{{ totals().declined }}</span>
+      </div>
+    </div>
+    @if (totalsWholePortfolio()) {
+      <p class="m-0 mt-[8px] text-[12px] text-[var(--pr-text-secondary)]" data-testid="contributions-totals-caption">{{ filterCopy.totalsWholePortfolio }}</p>
+    }
+
+    <!-- P/A table: Received first (it is who must act), then Sent -->
+    <div hlmTableContainer class="mt-[20px]">
+      <table hlmTable class="w-full border-collapse text-[13px]" data-testid="contributions-table">
+        <caption hlmCaption class="sr-only">{{ copy.tableCaption }}</caption>
+        <thead hlmTHead>
+          <tr hlmTr class="border-b border-[var(--pr-border-divider)] text-left text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+            <th hlmTh scope="col" rowspan="2" class="px-[8px] py-[8px] font-bold">{{ copy.colProgram }}</th>
+            <th hlmTh scope="colgroup" colspan="3" class="px-[8px] py-[8px] text-center font-bold">{{ copy.colReceived }}</th>
+            <th hlmTh scope="colgroup" colspan="3" class="px-[8px] py-[8px] text-center font-bold">{{ copy.colSent }}</th>
+            <th hlmTh scope="col" rowspan="2" class="px-[8px] py-[8px] font-bold"><span class="sr-only">{{ copy.colExpand }}</span></th>
+          </tr>
+          <tr hlmTr class="border-b border-[var(--pr-border-divider)] text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+            <th hlmTh scope="col" class="px-[8px] py-[6px] text-right font-bold">{{ copy.pending }}</th>
+            <th hlmTh scope="col" class="px-[8px] py-[6px] text-right font-bold">{{ copy.accepted }}</th>
+            <th hlmTh scope="col" class="px-[8px] py-[6px] text-right font-bold">{{ copy.declined }}</th>
+            <th hlmTh scope="col" class="px-[8px] py-[6px] text-right font-bold">{{ copy.pending }}</th>
+            <th hlmTh scope="col" class="px-[8px] py-[6px] text-right font-bold">{{ copy.accepted }}</th>
+            <th hlmTh scope="col" class="px-[8px] py-[6px] text-right font-bold">{{ copy.declined }}</th>
+          </tr>
+        </thead>
+        <tbody hlmTBody>
+          @for (row of rows(); track row.code) {
+            <tr hlmTr class="border-b border-[var(--pr-border-divider)]" data-testid="contributions-row">
+              <th hlmTh scope="row" class="px-[8px] py-[8px] text-left font-semibold text-[var(--pr-text-heading)]">
+                <span data-testid="contributions-row-label">{{ row.code }}</span>
+                @if (row.shortName && row.shortName !== row.code) {
+                  <span class="ml-[6px] text-[12px] font-normal text-[var(--pr-text-muted)]">{{ row.shortName }}</span>
+                }
+              </th>
+              <td hlmTd class="px-[8px] py-[8px] text-right font-mono tabular-nums" [class]="pendingClass(row.received.pending)" data-testid="contributions-received-pending">{{ row.received.pending }}</td>
+              <td hlmTd class="px-[8px] py-[8px] text-right font-mono tabular-nums text-[var(--pr-text-secondary)]">{{ row.received.accepted }}</td>
+              <td hlmTd class="px-[8px] py-[8px] text-right font-mono tabular-nums text-[var(--pr-text-secondary)]">{{ row.received.declined }}</td>
+              <td hlmTd class="px-[8px] py-[8px] text-right font-mono tabular-nums" [class]="pendingClass(row.sent.pending)">{{ row.sent.pending }}</td>
+              <td hlmTd class="px-[8px] py-[8px] text-right font-mono tabular-nums text-[var(--pr-text-secondary)]">{{ row.sent.accepted }}</td>
+              <td hlmTd class="px-[8px] py-[8px] text-right font-mono tabular-nums text-[var(--pr-text-secondary)]">{{ row.sent.declined }}</td>
+              <td hlmTd class="px-[8px] py-[8px] text-right">
+                <button
+                  hlmBtn
+                  variant="ghost"
+                  type="button"
+                  class="!h-[28px] !px-[8px] !text-[13px] focus-visible:[box-shadow:var(--pr-focus-ring)]"
+                  data-testid="contributions-expand"
+                  [attr.aria-expanded]="isExpanded(row.code)"
+                  [attr.aria-controls]="isExpanded(row.code) ? 'contributions-detail-' + row.code : null"
+                  [attr.aria-label]="isExpanded(row.code) ? copy.collapseLabel(row.code) : copy.expandLabel(row.code)"
+                  (click)="toggle(row.code)">
+                  <span aria-hidden="true">{{ isExpanded(row.code) ? '−' : '+' }}</span>
+                </button>
+              </td>
+            </tr>
+            @if (isExpanded(row.code)) {
+              <tr hlmTr class="border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-ground)]" data-testid="contributions-detail" [id]="'contributions-detail-' + row.code">
+                <td hlmTd colspan="8" class="px-[8px] py-[8px]">
+                  <ng-container *ngTemplateOutlet="pendingList; context: { $implicit: pendingOf(row.code), caption: copy.listCaption + ' · ' + row.code }" />
+                </td>
+              </tr>
+            }
+          } @empty {
+            <tr hlmTr>
+              <td hlmTd colspan="8" class="px-[8px] py-[12px] text-[var(--pr-text-secondary)]" data-testid="contributions-no-rows">{{ copy.noMatch }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- All pending (N): the full list under the table, oldest first -->
+    <div class="mt-[12px]">
+      <button
+        hlmBtn
+        variant="ghost"
+        type="button"
+        class="!text-[13px] focus-visible:[box-shadow:var(--pr-focus-ring)]"
+        data-testid="contributions-all-toggle"
+        [attr.aria-expanded]="allOpen()"
+        [attr.aria-controls]="allOpen() ? 'contributions-all-list' : null"
+        (click)="toggleAll()">
+        {{ allOpen() ? copy.hideAllPending(allPending().length) : copy.allPending(allPending().length) }}
+      </button>
+      @if (allOpen()) {
+        <div id="contributions-all-list" class="mt-[8px]" data-testid="contributions-all-list">
+          <ng-container *ngTemplateOutlet="pendingList; context: { $implicit: allPending(), caption: copy.listCaption }" />
+        </div>
+      }
+    </div>
+  }
+</section>
+
+<!-- One pending list: result code (new tab), title, from to, requested date, days waiting -->
+<ng-template #pendingList let-items let-caption="caption">
+  @if (items.length === 0) {
+    <p class="m-0 text-[13px] text-[var(--pr-text-secondary)]" data-testid="contributions-list-empty">{{ copy.rowEmpty }}</p>
+  } @else {
+    <div hlmTableContainer>
+      <table hlmTable class="w-full border-collapse text-[13px]" data-testid="contributions-pending-table">
+        <caption hlmCaption class="sr-only">{{ caption }}</caption>
+        <thead hlmTHead>
+          <tr hlmTr class="border-b border-[var(--pr-border-divider)] text-left text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+            <th hlmTh scope="col" class="px-[8px] py-[6px] font-bold">{{ copy.colResult }}</th>
+            <th hlmTh scope="col" class="px-[8px] py-[6px] font-bold">{{ copy.colTitle }}</th>
+            <th hlmTh scope="col" class="px-[8px] py-[6px] font-bold">{{ copy.colFromTo }}</th>
+            <th hlmTh scope="col" class="px-[8px] py-[6px] font-bold">{{ copy.colRequested }}</th>
+            <th hlmTh scope="col" class="px-[8px] py-[6px] text-right font-bold">{{ copy.colWaiting }}</th>
+          </tr>
+        </thead>
+        <tbody hlmTBody>
+          @for (item of items; track item.requestId) {
+            <tr hlmTr class="border-b border-[var(--pr-border-divider)] last:border-b-0" data-testid="contributions-pending-row">
+              <td hlmTd class="whitespace-nowrap px-[8px] py-[6px] font-mono tabular-nums">
+                <a
+                  [href]="item.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-[var(--pr-color-primary-300)] underline focus-visible:[box-shadow:var(--pr-focus-ring)]"
+                  data-testid="contributions-result-link"
+                  [attr.aria-label]="copy.openResult(item.resultCode)">
+                  {{ item.resultCode }}
+                </a>
+              </td>
+              <td hlmTd class="px-[8px] py-[6px] text-[var(--pr-text-heading)]">{{ item.title }}</td>
+              <td hlmTd class="whitespace-nowrap px-[8px] py-[6px] font-mono tabular-nums text-[var(--pr-text-secondary)]">{{ item.requesterCode ?? copy.noCode }} → {{ item.approvingCode ?? copy.noCode }}</td>
+              <td hlmTd class="whitespace-nowrap px-[8px] py-[6px] font-mono tabular-nums text-[var(--pr-text-secondary)]">{{ item.date }}</td>
+              <td hlmTd class="whitespace-nowrap px-[8px] py-[6px] text-right font-mono tabular-nums text-[var(--pr-text-heading)]">{{ item.days }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</ng-template>

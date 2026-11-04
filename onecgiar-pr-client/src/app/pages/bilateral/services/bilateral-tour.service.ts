@@ -2,6 +2,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { driver, DriveStep, Driver } from 'driver.js';
+import { DraftSpotlightService } from './draft-spotlight.service';
 
 export const BILATERAL_TOUR_STORAGE_KEY = 'pr.tour.bilateral.completed';
 
@@ -37,6 +38,8 @@ export interface BilateralTourOptions {
 @Injectable({ providedIn: 'root' })
 export class BilateralTourService {
   private readonly router = inject(Router, { optional: true });
+  // @akili-spec bilateral/ai-draft-spotlight (ADS-T-2, JD-14)
+  private readonly draftSpotlight = inject(DraftSpotlightService);
   private instance: Driver | null = null;
 
   isBilateralTourCompleted(): boolean {
@@ -60,6 +63,8 @@ export class BilateralTourService {
   }
 
   startBilateralTour(options: BilateralTourOptions = {}): void {
+    // @akili-spec bilateral/ai-draft-spotlight (ADS-T-2, JD-14): two driver.js overlays must never stack.
+    if (this.draftSpotlight.isActive()) return;
     this.instance?.destroy();
 
     const center = options.centerAcronym

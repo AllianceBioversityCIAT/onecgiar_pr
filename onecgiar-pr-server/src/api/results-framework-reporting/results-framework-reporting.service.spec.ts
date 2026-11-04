@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 import { ClarisaProjectsRepository } from '../../clarisa/clarisa-projects/clarisa-projects.repository';
+import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
 import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
@@ -184,6 +185,12 @@ const mockClarisaCenterRepository = {
 
 const mockClarisaProjectsRepository = {
   getPortfolioProjectFacts: jest.fn(),
+  findApprovedProjectsByProgramCode: jest.fn(),
+};
+
+// @akili-spec changes/portfolio-overview-feedback-round/contribution-requests-by-pa (CRP-T-2)
+const mockShareResultRequestRepository = {
+  getPortfolioContributionRequestFacts: jest.fn(),
 };
 
 // W12-R-2: default versionId resolution goes through VersioningService.$_findActivePhase
@@ -231,6 +238,10 @@ describe('ResultsFrameworkReportingService', () => {
         {
           provide: ClarisaProjectsRepository,
           useValue: mockClarisaProjectsRepository,
+        },
+        {
+          provide: ShareResultRequestRepository,
+          useValue: mockShareResultRequestRepository,
         },
         {
           provide: ClarisaGlobalUnitRepository,
@@ -2000,6 +2011,205 @@ describe('ResultsFrameworkReportingService', () => {
 
       expect(result.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
       expect(JSON.stringify(result)).not.toContain('clarisa_projects');
+    });
+  });
+
+  describe('getPortfolioContributionRequests (CRP-T-2)', () => {
+    const openVersion = {
+      id: '42',
+      phase_name: 'Reporting 2026',
+      phase_year: 2026,
+      status: true,
+    };
+    // Seed P/As carry ids; SP99 / id 99 is outside the open portfolio.
+    const seed = () => [
+      { id: 1, official_code: 'SP01', short_name: 'One' },
+      { id: 5, official_code: 'SP05', short_name: 'Five' },
+      { id: 9, official_code: 'SP09', short_name: 'Nine' },
+    ];
+    const fact = (o: any) => ({
+      requestId: 0,
+      resultId: 0,
+      resultCode: 0,
+      resultTitle: 't',
+      requesterInitiativeId: null,
+      requesterCode: null,
+      approvingInitiativeId: null,
+      approvingCode: null,
+      statusId: 1,
+      requestedDate: null,
+      ...o,
+    });
+    const facts = () => [
+      fact({
+        requestId: 1,
+        resultCode: 101,
+        resultTitle: 'Result A',
+        requesterInitiativeId: 1,
+        requesterCode: 'SP01',
+        approvingInitiativeId: 5,
+        approvingCode: 'SP05',
+        statusId: 1,
+        requestedDate: new Date('2026-03-01T10:00:00.000Z'),
+      }),
+      fact({
+        requestId: 2,
+        resultCode: 102,
+        requesterInitiativeId: 5,
+        requesterCode: 'SP05',
+        approvingInitiativeId: 1,
+        approvingCode: 'SP01',
+        statusId: 2,
+      }),
+      fact({
+        requestId: 3,
+        resultCode: 103,
+        requesterInitiativeId: 1,
+        requesterCode: 'SP01',
+        approvingInitiativeId: 5,
+        approvingCode: 'SP05',
+        statusId: 3,
+      }),
+      fact({
+        requestId: 4,
+        resultCode: 104,
+        resultTitle: 'Result D',
+        requesterInitiativeId: 1,
+        requesterCode: 'SP01',
+        approvingInitiativeId: 99,
+        approvingCode: 'X99',
+        statusId: 1,
+        requestedDate: '2026-04-02 08:30:00',
+      }),
+    ];
+    const byCode = (list: any[], code: string) =>
+      list.find((i) => i.code === code);
+
+    beforeEach(() => {
+      mockVersionRepository.findOne.mockReset();
+      mockVersionRepository.findOne.mockResolvedValue(openVersion);
+      mockClarisaInitiativesRepository.find.mockReset();
+      mockClarisaInitiativesRepository.find.mockResolvedValue(seed());
+      mockShareResultRequestRepository.getPortfolioContributionRequestFacts.mockReset();
+      mockShareResultRequestRepository.getPortfolioContributionRequestFacts.mockResolvedValue(
+        facts(),
+      );
+    });
+
+    it('aggregates sent / received per seed P/A and zero-fills SP09 (R-1)', async () => {
+      const result = (await service.getPortfolioContributionRequests()) as any;
+
+      expect(result.status).toBe(HttpStatus.OK);
+      expect(result.response.versionId).toBe(42);
+      expect(result.response.phaseYear).toBe(2026);
+      const { byProgram } = result.response;
+      expect(byProgram).toHaveLength(3);
+      const sp01 = byCode(byProgram, 'SP01');
+      expect(sp01).toMatchObject({ initiativeId: 1, shortName: 'One' });
+      expect(sp01.sent).toEqual({ pending: 2, accepted: 0, declined: 1 });
+      expect(sp01.received).toEqual({ pending: 0, accepted: 1, declined: 0 });
+      const sp05 = byCode(byProgram, 'SP05');
+      expect(sp05.received).toEqual({ pending: 1, accepted: 0, declined: 1 });
+      expect(sp05.sent).toEqual({ pending: 0, accepted: 1, declined: 0 });
+      const zero = { pending: 0, accepted: 0, declined: 0 };
+      expect(byCode(byProgram, 'SP09')).toMatchObject({
+        sent: zero,
+        received: zero,
+      });
+    });
+
+    it('counts each request once in totals, incl. the non-seed one (not sent + received)', async () => {
+      const result = (await service.getPortfolioContributionRequests()) as any;
+      expect(result.response.totals).toEqual({
+        pending: 2,
+        accepted: 1,
+        declined: 1,
+      });
+    });
+
+    it('lists only the status-1 requests in pending, with ISO dates, no e-mails', async () => {
+      const result = (await service.getPortfolioContributionRequests()) as any;
+      const { pending } = result.response;
+
+      expect(pending).toHaveLength(2);
+      const a = pending.find((p: any) => p.requestId === 1);
+      expect(a).toEqual({
+        requestId: 1,
+        resultCode: 101,
+        title: 'Result A',
+        requesterCode: 'SP01',
+        approvingCode: 'SP05',
+        requestedDate: '2026-03-01T10:00:00.000Z',
+      });
+      const d = pending.find((p: any) => p.requestId === 4);
+      expect(d).toMatchObject({
+        title: 'Result D',
+        requesterCode: 'SP01',
+        approvingCode: 'X99',
+      });
+      expect(d.requestedDate).toBe(
+        new Date('2026-04-02 08:30:00').toISOString(),
+      );
+      expect(pending.map((p: any) => p.requestId).sort()).toEqual([1, 4]);
+    });
+
+    it('returns requestedDate null when the fact has none or an invalid one', async () => {
+      mockShareResultRequestRepository.getPortfolioContributionRequestFacts.mockResolvedValue(
+        [
+          fact({ requestId: 7, statusId: 1, requestedDate: null }),
+          fact({ requestId: 8, statusId: 1, requestedDate: 'not-a-date' }),
+        ],
+      );
+      const result = (await service.getPortfolioContributionRequests()) as any;
+      expect(result.status).toBe(HttpStatus.OK);
+      expect(result.response.pending.map((p: any) => p.requestedDate)).toEqual([
+        null,
+        null,
+      ]);
+    });
+
+    it('passes the numeric version id to the repository', async () => {
+      await service.getPortfolioContributionRequests();
+      expect(
+        mockShareResultRequestRepository.getPortfolioContributionRequestFacts,
+      ).toHaveBeenCalledWith(42);
+    });
+
+    it('seeds P/As from portfolio 3, active, entity types 22/23/24', async () => {
+      await service.getPortfolioContributionRequests();
+      const where =
+        mockClarisaInitiativesRepository.find.mock.calls[0][0].where;
+      expect(where).toMatchObject({ portfolio_id: 3, active: true });
+      expect(where.cgiar_entity_type_id.value).toEqual([22, 23, 24]);
+    });
+
+    it('no Reporting version at all is a 404 and the repository is not called', async () => {
+      mockVersionRepository.findOne.mockResolvedValue(null);
+      const result = (await service.getPortfolioContributionRequests()) as any;
+      expect(result.status).toBe(HttpStatus.NOT_FOUND);
+      expect(
+        mockShareResultRequestRepository.getPortfolioContributionRequestFacts,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('a non-positive resolved id is a 404', async () => {
+      mockVersionRepository.findOne.mockResolvedValue({
+        ...openVersion,
+        id: null,
+      });
+      const result = (await service.getPortfolioContributionRequests()) as any;
+      expect(result.status).toBe(HttpStatus.NOT_FOUND);
+    });
+
+    it('turns a repository failure into a generic 500 without SQL', async () => {
+      mockShareResultRequestRepository.getPortfolioContributionRequestFacts.mockRejectedValue(
+        Object.assign(new Error('select * from share_result_request boom'), {
+          code: 'ER_X',
+        }),
+      );
+      const result = (await service.getPortfolioContributionRequests()) as any;
+      expect(result.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(JSON.stringify(result)).not.toContain('share_result_request');
     });
   });
 
@@ -4261,6 +4471,13 @@ describe('ResultsFrameworkReportingService', () => {
   });
 
   describe('getBilateralProjectsByScienceProgram (P2-3001)', () => {
+    // Version/CLARISA mocks keep implementations across describes (clearAllMocks only
+    // clears calls); reset so every case here is order-independent.
+    beforeEach(() => {
+      mockVersionRepository.findOne.mockReset();
+      mockClarisaProjectsRepository.findApprovedProjectsByProgramCode.mockReset();
+    });
+
     it('should return deduplicated bilateral projects for a science program', async () => {
       mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
         id: 10,
@@ -4307,9 +4524,19 @@ describe('ResultsFrameworkReportingService', () => {
       mockTocResultsRepository.findBilateralProjectsByProgramOfficialCode.mockResolvedValueOnce(
         [],
       );
+      mockVersionRepository.findOne.mockResolvedValueOnce({
+        id: 7,
+        phase_year: 2026,
+      });
+      mockClarisaProjectsRepository.findApprovedProjectsByProgramCode.mockResolvedValueOnce(
+        [],
+      );
 
       const result = await service.getBilateralProjectsByScienceProgram('SP02');
 
+      expect(
+        mockClarisaProjectsRepository.findApprovedProjectsByProgramCode,
+      ).toHaveBeenCalledWith('SP02', 2026);
       expect(result.response).toEqual([]);
       expect(result.status).toBe(200);
     });
@@ -4318,6 +4545,100 @@ describe('ResultsFrameworkReportingService', () => {
       const result = await service.getBilateralProjectsByScienceProgram('  ');
 
       expect(result.status).toBe(400);
+    });
+
+    // @akili-spec bugfix/w3-projects-by-program (WPP-T-1)
+    describe('CLARISA-approved projects merge (WPP-R-1)', () => {
+      const givenProgram = () =>
+        mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+          id: 10,
+          official_code: 'SP09',
+        });
+      const givenToc = (ids: number[]) =>
+        mockTocResultsRepository.findBilateralProjectsByProgramOfficialCode.mockResolvedValueOnce(
+          ids.map((project_id) => ({ project_id })),
+        );
+      const givenClarisa = (ids: number[]) =>
+        mockClarisaProjectsRepository.findApprovedProjectsByProgramCode.mockResolvedValueOnce(
+          ids.map((project_id) => ({ project_id })),
+        );
+      const givenYear = () =>
+        mockVersionRepository.findOne.mockResolvedValueOnce({
+          id: 7,
+          phase_year: 2026,
+        });
+
+      beforeEach(() => {
+        mockClarisaProjectsRepository.findApprovedProjectsByProgramCode.mockReset();
+        mockVersionRepository.findOne.mockReset();
+      });
+
+      it('S-1.1: ToC empty + CLARISA rows -> CLARISA rows returned', async () => {
+        givenProgram();
+        givenToc([]);
+        givenYear();
+        givenClarisa([10, 11]);
+
+        const result =
+          await service.getBilateralProjectsByScienceProgram('SP09');
+
+        expect(
+          mockClarisaProjectsRepository.findApprovedProjectsByProgramCode,
+        ).toHaveBeenCalledWith('SP09', 2026);
+        expect(result.response.map((row) => row.project_id)).toEqual([10, 11]);
+      });
+
+      it('S-1.2: union, ToC first, deduplicated', async () => {
+        givenProgram();
+        givenToc([11, 12]);
+        givenYear();
+        givenClarisa([10, 11]);
+
+        const result =
+          await service.getBilateralProjectsByScienceProgram('SP09');
+
+        expect(result.response.map((row) => row.project_id)).toEqual([
+          11, 12, 10,
+        ]);
+      });
+
+      it('S-1.3: ToC rows kept when CLARISA has none', async () => {
+        givenProgram();
+        givenToc([12]);
+        givenYear();
+        givenClarisa([]);
+
+        const result =
+          await service.getBilateralProjectsByScienceProgram('SP09');
+
+        expect(result.response.map((row) => row.project_id)).toEqual([12]);
+      });
+
+      it('WPP-DD-3: unresolved year skips CLARISA and keeps ToC rows', async () => {
+        givenProgram();
+        givenToc([12]);
+        mockVersionRepository.findOne
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce(null);
+
+        const result =
+          await service.getBilateralProjectsByScienceProgram('SP09');
+
+        expect(
+          mockClarisaProjectsRepository.findApprovedProjectsByProgramCode,
+        ).not.toHaveBeenCalled();
+        expect(result.status).toBe(200);
+        expect(result.response.map((row) => row.project_id)).toEqual([12]);
+      });
+
+      it('S-1.5: unknown program still returns 404', async () => {
+        mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce(null);
+
+        const result =
+          await service.getBilateralProjectsByScienceProgram('SP99');
+
+        expect(result.status).toBe(404);
+      });
     });
   });
 
@@ -4377,6 +4698,98 @@ describe('ResultsFrameworkReportingService', () => {
       (service as any).assignIndicatorCenterContext(indicator, 2026);
 
       expect(indicator.center_id).toBe(3);
+    });
+  });
+
+  describe('getIndicatorResultStatusLinks (KRC-T-1)', () => {
+    const linksRepo = mockTocResultsRepository as any;
+
+    beforeEach(() => {
+      linksRepo.findIndicatorResultStatusLinks = jest.fn();
+      mockReportingTocContextService.resolve.mockReset();
+      mockReportingTocContextService.resolveByVersionId.mockReset();
+    });
+
+    it('passes the versionId-resolved context and the upper-cased program to the repository', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 3,
+        official_code: 'SP03',
+        name: 'Program 3',
+      });
+      const tocContext = { reportingYear: 2026, phaseUuid: 'PHASE-X' };
+      mockReportingTocContextService.resolveByVersionId.mockResolvedValueOnce(
+        tocContext,
+      );
+      const links = [
+        {
+          toc_result_id: 1,
+          related_node_id: 'N1',
+          result_id: 9,
+          status_id: 1,
+          anchors: [],
+          has_unanchored: true,
+        },
+      ];
+      linksRepo.findIndicatorResultStatusLinks.mockResolvedValueOnce(links);
+
+      const result: any = await service.getIndicatorResultStatusLinks(
+        ' sp03 ',
+        77,
+      );
+
+      expect(
+        mockReportingTocContextService.resolveByVersionId,
+      ).toHaveBeenCalledWith(77);
+      expect(linksRepo.findIndicatorResultStatusLinks).toHaveBeenCalledWith(
+        'SP03',
+        tocContext,
+      );
+      expect(result.status).toBe(200);
+      expect(result.response).toBe(links);
+    });
+
+    it('falls back to the active phase and returns an empty list with 200', async () => {
+      const tocContext = { reportingYear: 2026, phaseUuid: 'PHASE-ACTIVE' };
+      mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
+      linksRepo.findIndicatorResultStatusLinks.mockResolvedValueOnce([]);
+
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 1,
+        official_code: 'SP01',
+        name: 'Program 1',
+      });
+
+      const result: any = await service.getIndicatorResultStatusLinks('SP01');
+
+      expect(mockReportingTocContextService.resolve).toHaveBeenCalled();
+      expect(result.status).toBe(200);
+      expect(result.response).toEqual([]);
+    });
+
+    it('returns a 404 handler error when the initiative is unknown', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce(null);
+
+      const result: any = await service.getIndicatorResultStatusLinks('ZZ99');
+
+      expect(result.status).toBe(404);
+      expect(linksRepo.findIndicatorResultStatusLinks).not.toHaveBeenCalled();
+    });
+
+    it('returns a 400 handler error when the program is missing', async () => {
+      const result: any = await service.getIndicatorResultStatusLinks('  ');
+
+      expect(result.status).toBe(400);
+      expect(linksRepo.findIndicatorResultStatusLinks).not.toHaveBeenCalled();
+    });
+
+    it('returns a 400 handler error when versionId is not a number', async () => {
+      const result: any = await service.getIndicatorResultStatusLinks(
+        'SP01',
+        Number.NaN,
+      );
+
+      expect(result.status).toBe(400);
+      expect(linksRepo.findIndicatorResultStatusLinks).not.toHaveBeenCalled();
     });
   });
 });

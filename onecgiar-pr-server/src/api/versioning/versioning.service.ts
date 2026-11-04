@@ -74,6 +74,8 @@ import {
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { BilateralVersioningRulesService } from '../bilateral/versioning-rules/bilateral-versioning-rules.service';
+import { ResultImpactLevelRepository } from '../results-framework-reporting/impact-level/repositories/result-impact-level.repository';
+import { ResultImpactPreviousResultRepository } from '../results-framework-reporting/impact-level/repositories/result-impact-previous-result.repository';
 
 /** Clarisa `clarisa_initiatives.portfolio_id` for CGIAR Programs (P25). */
 const PORTFOLIO_CGIAR_PROGRAMS_P25_ID = 3;
@@ -134,6 +136,8 @@ export class VersioningService {
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
     private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _bilateralRules: BilateralVersioningRulesService,
+    private readonly _resultImpactLevelRepository: ResultImpactLevelRepository,
+    private readonly _resultImpactPreviousResultRepository: ResultImpactPreviousResultRepository,
   ) {}
 
   /**
@@ -420,6 +424,15 @@ export class VersioningService {
           );
           await this._resultActorRepository.replicate(manager, config);
           await this._resultIpMeasureRepository.replicate(manager, config);
+          break;
+        case 9:
+          // IRS-R-14 — impact results: the 1:1 impact-level row and its previous-result links.
+          // Links keep the same `previous_result_id`; only `result_id` moves to the copy.
+          await this._resultImpactLevelRepository.replicate(manager, config);
+          await this._resultImpactPreviousResultRepository.replicate(
+            manager,
+            config,
+          );
           break;
       }
       await this._nonPooledProjectRepository.replicate(manager, config);

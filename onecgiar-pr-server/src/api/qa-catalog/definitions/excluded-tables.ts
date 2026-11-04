@@ -79,6 +79,11 @@ export const EXCLUDED_TABLES: ExcludedTable[] = [
     reason: 'control list of result levels (not result data)',
   },
   {
+    table: 'result_qa_intake_log',
+    reason:
+      'append-only audit of QA intake/release calls by external platforms (qa-intake QIN-R-5); not data entered in the result form',
+  },
+  {
     table: 'result_qaed_log',
     reason: 'QA audit log written by the QA flow (not catalogued result data)',
   },
@@ -115,6 +120,16 @@ export const EXCLUDED_TABLES: ExcludedTable[] = [
   },
   { table: 'results_impact_area_indicators', reason: LEGACY_MAPPING },
   { table: 'results_impact_area_target', reason: LEGACY_MAPPING },
+  {
+    table: 'results_impact_level',
+    reason:
+      'Impact level info of an impact result (type 9, P2-3901 server-foundation); its form section ships with child spec result-detail-impact, catalogue it then',
+  },
+  {
+    table: 'results_impact_previous_result',
+    reason:
+      'previous results linked from the Impact level info section (type 9, P2-3901 server-foundation); catalogue it with results_impact_level when the result-detail-impact form ships',
+  },
   {
     table: 'results_innovations_use_measures',
     reason:

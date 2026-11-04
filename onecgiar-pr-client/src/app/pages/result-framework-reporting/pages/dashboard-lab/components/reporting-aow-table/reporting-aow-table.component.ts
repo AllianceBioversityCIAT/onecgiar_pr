@@ -17,6 +17,8 @@ import {
 } from '../../../../../../shared/components/pr-table';
 import { buildRatio, hasTarget, pendingOf } from '../../reporting-burndown';
 import { PT_ACTIVITY_TOOLTIP, PtActivityIndex, centerAcronymsOfRow, ptActivityCountOf, ptActivityLabel, ptActivityShortLabel } from '../../pt-activity';
+import { KpiStatusChipComponent } from '../kpi-status-chip/kpi-status-chip.component';
+import type { KpiStatusCounts } from '../../kpi-status-counts.util';
 import { HighlightSearchPipe } from '../../pipes/highlight-search.pipe';
 
 /**
@@ -230,7 +232,8 @@ interface IndicatorBand {
     PrTableHeaderDirective,
     PrTableBodyDirective,
     PrTableEmptyDirective,
-    HighlightSearchPipe
+    HighlightSearchPipe,
+    KpiStatusChipComponent
   ],
   templateUrl: './reporting-aow-table.component.html',
   styleUrls: ['./reporting-aow-table.component.scss'],
@@ -323,6 +326,12 @@ export class ReportingAowTableComponent {
    * the table looks exactly as it did before the feature.
    */
   readonly ptActivity = input<PtActivityIndex | null>(null);
+  /**
+   * Per-row status counts for the KPI chip, supplied by the host (this component stays presentation-only).
+   * `null` (default) renders no chip, so the table looks exactly as before.
+   * @akili-spec result-framework-reporting/kpi-row-status-counts (KRC-T-3, P-7)
+   */
+  readonly statusCountsFor = input<((row: ReportingIndicator) => KpiStatusCounts) | null>(null);
 
   readonly openAow = output<string>();
   readonly openRow = output<ReportingIndicator>();

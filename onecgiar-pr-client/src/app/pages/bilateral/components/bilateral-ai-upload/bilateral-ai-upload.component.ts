@@ -593,7 +593,7 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
         this.justSubmittedProjectName.set(projectLabel);
         this.messageService.add({
           key: 'globalUserNotification',
-          severity: 'success',
+          severity: 'info',
           summary: this.copy.toast.summary(projectLabel),
           detail: this.copy.toast.detail,
           // P2-3853 fix: route the toast's View action through the same handler as the

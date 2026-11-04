@@ -101,8 +101,8 @@ describe('IpsrUnsubmitModalComponent', () => {
       expect(component.requesting).toBeFalsy();
     });
   });
-  it('should set requesting to false and show error alert on PATCHSubmissionsUnsubmitIpsr error', () => {
-    const errorResponse = { message: 'Error in unsubmitted' };
+  it('should set requesting to false and show the server message on PATCHSubmissionsUnsubmitIpsr error', () => {
+    const errorResponse = { error: { message: 'This result is under QA review and cannot be unsubmitted until QA releases it.' } };
     const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
     const spy = jest.spyOn(mockApiService.resultsSE, 'PATCHSubmissionsUnsubmitIpsr').mockReturnValue(throwError(errorResponse));
 
@@ -110,6 +110,21 @@ describe('IpsrUnsubmitModalComponent', () => {
 
     expect(component.requesting).toBeFalsy();
     expect(spy).toHaveBeenCalled();
+    expect(spyShow).toHaveBeenCalledWith({
+      id: 'unsubmodalerror',
+      title: 'Error in unsubmitted',
+      description: 'This result is under QA review and cannot be unsubmitted until QA releases it.',
+      status: 'error'
+    });
+  });
+
+  it('should fall back to an empty description when the error carries no message', () => {
+    const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
+    jest.spyOn(mockApiService.resultsSE, 'PATCHSubmissionsUnsubmitIpsr').mockReturnValue(throwError({ message: 'Error in unsubmitted' }));
+
+    component.onSubmit();
+
+    expect(component.requesting).toBeFalsy();
     expect(spyShow).toHaveBeenCalledWith({
       id: 'unsubmodalerror',
       title: 'Error in unsubmitted',

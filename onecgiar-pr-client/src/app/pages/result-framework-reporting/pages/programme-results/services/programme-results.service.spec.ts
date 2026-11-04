@@ -118,6 +118,15 @@ describe('ProgrammeResultsService', () => {
       expect(GET_AllResultsWithUseRole).toHaveBeenCalledWith(2, expect.objectContaining({ submitter_id: '55' }));
     });
 
+    it('maps a P25 type 9 row to the Impact result category, and nothing else (IRD-T-7)', () => {
+      const cat = (partial: Record<string, any>) => toProgrammeResultRow(rawResult(partial)).category;
+
+      expect(cat({ result_type_id: 9, acronym: 'P25', result_type: 'Impact contribution' })).toBe('Impact result');
+      expect(cat({ result_type_id: '9', portfolio: 'P25', result_type: 'Impact contribution' })).toBe('Impact result');
+      expect(cat({ result_type_id: 9, acronym: 'P22', result_type: 'Impact contribution' })).toBe('Impact contribution');
+      expect(cat({ result_type_id: 6, acronym: 'P25', result_type: 'Knowledge product' })).toBe('Knowledge product');
+    });
+
     it('maps every row to the table contract', () => {
       service.load('SP01');
 

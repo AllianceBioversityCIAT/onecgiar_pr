@@ -10,6 +10,14 @@ import { PtResultProvenanceDto } from '../../../../progress-tracker/dto/pt-resul
 import { ProgressTrackerPrefillService } from '../../../../progress-tracker/progress-tracker-prefill.service';
 import { PtPrefillSummary } from '../../../../progress-tracker/dto/pt-result-prefill.dto';
 import { ResultTypeEnum } from '../../../../../shared/constants/result-type.enum';
+import { ResultLevelEnum } from '../../../../../shared/constants/result-level.enum';
+import { CreateResultsFrameworkResultDto } from '../../../dto/create-results-framework.dto';
+import {
+  IMPACT_AREA_TAG_COLUMN,
+  IMPACT_TAG_LEVEL_NOT_TARGETED,
+  IMPACT_TAG_LEVEL_PRINCIPAL,
+  ImpactAreaId,
+} from '../../../impact-level/constants/impact-area-tag-column';
 
 @Injectable()
 export class CreateResultFromFrameworkHandler {
@@ -32,6 +40,11 @@ export class CreateResultFromFrameworkHandler {
 
   async execute(command: CreateResultFromFrameworkCommand) {
     const { payload, user } = command;
+
+    // IRS-R-1 (E1): impact results are guarded manually, before any write.
+    const impactAreaId = this._isImpactCreate(payload)
+      ? this._assertImpactCreatePayload(payload)
+      : null;
 
     // PTM-T-7 (`PTM-R-14`, `PTM-AC-13`): no block, no provenance step at all.
     const hasProvenance = payload.progress_tracker_provenance != null;
@@ -61,13 +74,23 @@ export class CreateResultFromFrameworkHandler {
       );
     }
 
-    const primaryTocRecordId =
-      await this._linkFrameworkResultTocService.execute(
+    // IRS-R-1 / IRS-R-2: impact results carry no ToC link; the Impact Area prefill runs
+    // once here (never in createResultGeneralInformation, so later saves are untouched).
+    let primaryTocRecordId: number | null = null;
+    if (impactAreaId === null) {
+      primaryTocRecordId = await this._linkFrameworkResultTocService.execute(
         payload,
         user,
         createdResultId,
         initiativeId,
       );
+    } else {
+      await this._applyImpactAreaPrefill(
+        impactAreaId,
+        createdResultId,
+        user.id,
+      );
+    }
 
     await this._applyFrameworkResultAssociationsService.execute(
       payload,
@@ -116,5 +139,75 @@ export class CreateResultFromFrameworkHandler {
       message: 'Result created successfully through the reporting workflow.',
       status: HttpStatus.CREATED,
     };
+  }
+
+  private _isImpactCreate(payload: CreateResultsFrameworkResultDto): boolean {
+    return (
+      Number(payload?.result?.result_level_id) === ResultLevelEnum.IMPACT &&
+      Number(payload?.result?.result_type_id) ===
+        ResultTypeEnum.IMPACT_CONTRIBUTION
+    );
+  }
+
+  /** Returns the validated Impact Area id, or throws 400 (IRS-R-1, Scenarios 1.2 / 1.3). */
+  private _assertImpactCreatePayload(
+    payload: CreateResultsFrameworkResultDto,
+  ): ImpactAreaId {
+    const raw: unknown = payload.result.impact_area_id;
+    const isNumeric =
+      typeof raw === 'number' || (typeof raw === 'string' && raw.trim() !== '');
+    const area = isNumeric ? Number(raw) : Number.NaN;
+    if (!Number.isInteger(area) || !(area in IMPACT_AREA_TAG_COLUMN)) {
+      throwServiceError('Impact results require an Impact Area');
+    }
+
+    const forbidden = (
+      [
+        ['toc_result_id', payload.toc_result_id],
+        ['indicators', payload.indicators],
+        ['number_target', payload.number_target],
+        ['target_date', payload.target_date],
+        ['contributing_indicator', payload.contributing_indicator],
+        // Post-decision 2026-10-30 (R-9): a non-empty ToC contributors list is forbidden;
+        // the client may still send an empty list.
+        [
+          'contributors_result_toc_result',
+          Array.isArray(payload.contributors_result_toc_result) &&
+          payload.contributors_result_toc_result.length > 0
+            ? payload.contributors_result_toc_result
+            : null,
+        ],
+      ] as const
+    )
+      .filter(([, value]) => value != null)
+      .map(([field]) => field);
+    if (forbidden.length) {
+      throwServiceError(
+        'Impact results cannot have targets, indicators or Theory of Change',
+        HttpStatus.BAD_REQUEST,
+        { forbidden_fields: forbidden },
+      );
+    }
+
+    return area as ImpactAreaId;
+  }
+
+  private async _applyImpactAreaPrefill(
+    impactAreaId: ImpactAreaId,
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    const chosen = IMPACT_AREA_TAG_COLUMN[impactAreaId];
+    const patch: Record<string, number> = {};
+    for (const column of Object.values(IMPACT_AREA_TAG_COLUMN)) {
+      patch[column] =
+        column === chosen
+          ? IMPACT_TAG_LEVEL_PRINCIPAL
+          : IMPACT_TAG_LEVEL_NOT_TARGETED;
+    }
+    await this._resultRepository.update(resultId, {
+      ...patch,
+      last_updated_by: userId,
+    });
   }
 }

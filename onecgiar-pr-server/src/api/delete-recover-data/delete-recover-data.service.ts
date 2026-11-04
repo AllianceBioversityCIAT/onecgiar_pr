@@ -82,6 +82,8 @@ import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser
 import { RoleEnum } from '../../shared/constants/role-type.enum';
 import { ResultDeletionAuditService } from '../results/result-deletion-audit/result-deletion-audit.service';
 import { ResultDeletionAuditSource } from '../results/result-deletion-audit/result-deletion-audit-source.enum';
+import { ResultImpactLevelRepository } from '../results-framework-reporting/impact-level/repositories/result-impact-level.repository';
+import { ResultImpactPreviousResultRepository } from '../results-framework-reporting/impact-level/repositories/result-impact-previous-result.repository';
 
 const P25_PORTFOLIO_ACRONYM = 'P25';
 
@@ -156,6 +158,8 @@ export class DeleteRecoverDataService {
     private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _versionRepository: VersionRepository,
     private readonly _resultDeletionAuditService: ResultDeletionAuditService,
+    private readonly _resultImpactLevelRepository: ResultImpactLevelRepository,
+    private readonly _resultImpactPreviousResultRepository: ResultImpactPreviousResultRepository,
   ) {}
 
   async deleteResult(
@@ -333,6 +337,11 @@ export class DeleteRecoverDataService {
       );
       await this._nonPooledProjectBudgetRepository.logicalDelete(resultData.id);
       await this._resultInitiativeBudgetRepository.logicalDelete(resultData.id);
+      // IRS-R-13 — impact results (type 9): both impact tables follow the result.
+      await this._resultImpactLevelRepository.logicalDelete(resultData.id);
+      await this._resultImpactPreviousResultRepository.logicalDelete(
+        resultData.id,
+      );
       const toUpdateFromElastic = await this._resultsService.findAllSimplified(
         resultData.id.toString(),
         true,
@@ -709,6 +718,17 @@ export class DeleteRecoverDataService {
         await this._resultsActionAreaOutcomeRepository.fisicalDelete(result_id);
         await this._resultsImpactAreaTargetRepository.fisicalDelete(result_id);
         await this._resultsTocResultRepository.fisicalDelete(result_id);
+      }
+
+      // IRS-R-13 — leaving Impact contribution: its impact-level row and links are not carried over.
+      if (
+        old_result_type == ResultTypeEnum.IMPACT_CONTRIBUTION &&
+        new_result_type != ResultTypeEnum.IMPACT_CONTRIBUTION
+      ) {
+        await this._resultImpactLevelRepository.fisicalDelete(result_id);
+        await this._resultImpactPreviousResultRepository.fisicalDelete(
+          result_id,
+        );
       }
 
       // delete every data not related to the new result type

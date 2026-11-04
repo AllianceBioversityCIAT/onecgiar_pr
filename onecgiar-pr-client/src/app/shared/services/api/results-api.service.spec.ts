@@ -5254,6 +5254,19 @@ describe('ResultsApiService', () => {
     });
   });
 
+  describe('GET_impactLevelCounts', () => {
+    it('should GET the impact counts with initiativeId and versionId query params', done => {
+      service.GET_impactLevelCounts('SP01', 7).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/impact-level/counts?initiativeId=SP01&versionId=7`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
   describe('POST_createResult', () => {
     it('should call POST_createResult and return expected data', done => {
       const mockBody = { name: 'test' };
@@ -5265,6 +5278,23 @@ describe('ResultsApiService', () => {
       const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/create`);
       expect(req.request.method).toBe('POST');
       req.flush(mockResponse);
+    });
+  });
+
+  // @akili-spec result-framework-reporting/kpi-row-status-counts (KRC-T-2)
+  describe('GET_IndicatorResultStatusLinks', () => {
+    const base = `${environment.apiBaseUrl}api/results-framework-reporting/indicator-result-status-links`;
+
+    it('sends program and versionId', () => {
+      service.GET_IndicatorResultStatusLinks('SP03', 8).subscribe();
+      const req = httpMock.expectOne(`${base}?program=SP03&versionId=8`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('omits versionId when absent', () => {
+      service.GET_IndicatorResultStatusLinks('SP03').subscribe();
+      httpMock.expectOne(`${base}?program=SP03`).flush(mockResponse);
     });
   });
 
@@ -5848,6 +5878,59 @@ describe('ResultsApiService', () => {
     it('omits the query string for a non-finite versionId', () => {
       service.GET_PortfolioResultDimensions(NaN).subscribe();
       httpMock.expectOne(base).flush({});
+    });
+  });
+
+  describe('impact level (IRD-T-1)', () => {
+    const base = `${environment.apiBaseUrl}api/results-framework-reporting/impact-level`;
+
+    it('GET_impactStudyTypes hits study-types', () => {
+      service.GET_impactStudyTypes().subscribe();
+      const req = httpMock.expectOne(`${base}/study-types`);
+      expect(req.request.method).toBe('GET');
+      req.flush({});
+    });
+
+    it('GET_impactLevelInfo hits get/result/:id', () => {
+      service.GET_impactLevelInfo(77).subscribe();
+      const req = httpMock.expectOne(`${base}/get/result/77`);
+      expect(req.request.method).toBe('GET');
+      req.flush({});
+    });
+
+    it('PATCH_impactLevelInfo hits save/result/:id with the body', () => {
+      const body = { impact_study_type_id: 2, cgiar_contribution: 'x', previously_reported: true, previous_result_ids: [1, 2] };
+      service.PATCH_impactLevelInfo(77, body).subscribe();
+      const req = httpMock.expectOne(`${base}/save/result/77`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual(body);
+      req.flush({});
+    });
+
+    it('GET_impactPreviousResultsSearch omits null/empty params and sends typeIds as csv', () => {
+      service
+        .GET_impactPreviousResultsSearch({ q: 'rice', versionId: null, portfolioId: '', typeIds: [1, 7], excludeResultId: 5, page: 1, limit: 20 })
+        .subscribe();
+      const req = httpMock.expectOne(r => r.url === `${base}/previous-results/search`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.keys().sort()).toEqual(['excludeResultId', 'limit', 'page', 'q', 'typeIds']);
+      expect(req.request.params.get('typeIds')).toBe('1,7');
+      expect(req.request.params.get('q')).toBe('rice');
+      req.flush({});
+    });
+
+    it('GET_impactPreviousResultsSearch sends no params for empty input and skips empty typeIds', () => {
+      service.GET_impactPreviousResultsSearch({ typeIds: [] }).subscribe();
+      const req = httpMock.expectOne(r => r.url === `${base}/previous-results/search`);
+      expect(req.request.params.keys()).toEqual([]);
+      req.flush({});
+    });
+
+    it('GET_resultTypes hits results types/all', () => {
+      service.GET_resultTypes().subscribe();
+      const req = httpMock.expectOne(`${service.apiBaseUrl}types/all`);
+      expect(req.request.method).toBe('GET');
+      req.flush({});
     });
   });
 });

@@ -797,7 +797,8 @@ export class BilateralCenterService {
           action: ReviewActionEnum.UPDATE,
           comment:
             `Result type changed from level ${result.result_level_id}, type ${result.result_type_id} ` +
-            `to level ${dto.result_level_id}, type ${dto.result_type_id}. ${dto.justification}`,
+            `to level ${dto.result_level_id}, type ${dto.result_type_id}.` +
+            (dto.justification?.trim() ? ` ${dto.justification.trim()}` : ''),
           created_by: user.id,
         }),
       );

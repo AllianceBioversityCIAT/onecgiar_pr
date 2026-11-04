@@ -12,6 +12,7 @@ import { filterOutAvisaInitiatives } from '../../../../../../shared/utils/avisa-
 import {
   KNOWLEDGE_PRODUCT_TYPE_ID,
   buildCreateResultPayload,
+  buildImpactCreateResultPayload,
   isKnowledgeProductResultType,
   OTHER_CENTERS_CODE,
   OTHER_SP_ID,
@@ -20,6 +21,8 @@ import {
   resolveReportResultTypeId,
   resolveReportResultTypeName
 } from '../../../../shared/report-result/create-result-payload.util';
+// @akili-spec results/impact-results-reporting/sp-reporting-entry (IRE-T-3)
+import { ImpactArea } from '../../../../shared/report-result/impact-areas.constant';
 import { KP_HANDLE_NO_ERROR, KpHandleError, pickKpBrowseLink, validateKpHandle } from '../../../../shared/report-result/kp-handle.validator';
 import {
   INNOVATION_LINK_QUESTION,
@@ -331,6 +334,10 @@ export class LabReportFormComponent {
    */
   readonly emergingCategory = input<{ id: number; name: string; levelId: number } | null>(null);
   readonly isEmerging = computed(() => this.emergingMode() || !!this.emergingCategory());
+  // @akili-spec results/impact-results-reporting/sp-reporting-entry (IRE-T-3, IRE-DD-4)
+  /** Impact result entry: its own input, never `emergingCategory` (own permission, copy and body). Null = not impact. */
+  readonly impactArea = input<ImpactArea | null>(null);
+  readonly isImpact = computed(() => this.impactArea() != null);
   /**
    * Whether the user may create a result here (phase open + member of the program). Sourced from
    * `EntityAowService.canReportResults()`. Defaults to false so a host that forgets to pass it
@@ -782,6 +789,13 @@ export class LabReportFormComponent {
       const ind = this.indicator();
       const emerging = this.emergingCategory();
       const emergingMode = this.emergingMode();
+      // @akili-spec results/impact-results-reporting/sp-reporting-entry (IRE-T-3): impact mode only
+      // clears the form (no indicator, catalogues or contributors are loaded for it).
+      const impact = this.impactArea();
+      if (impact && !ind && !emerging && !emergingMode) {
+        untracked(() => this.resetForm());
+        return;
+      }
       if (!ind && !emerging && !emergingMode) return;
       // Field bug 2026-09-04 (quick/category-picker-kp-reset): everything below runs UNTRACKED.
       // This effect used to read `currentResultIsKnowledgeProduct()`, which depends on the form body
@@ -1144,6 +1158,12 @@ export class LabReportFormComponent {
   readonly missingFields = computed<string[]>(() => {
     const body = this.createResultBody();
     const missing: string[] = [];
+    // @akili-spec results/impact-results-reporting/sp-reporting-entry (IRE-T-3): impact mode = title rule only.
+    if (this.isImpact()) {
+      if (!body.result_name?.trim()) missing.push('Result title');
+      else if (this.titleWordCount() > 30) missing.push('Result title exceeds 30 words');
+      return missing;
+    }
     if (this.needsCategoryChoice() && !body.result_type_id) missing.push('Indicator category');
     if (!body.result_name?.trim()) missing.push('Result title');
     else if (this.titleWordCount() > 30) missing.push('Result title exceeds 30 words');
@@ -1226,7 +1246,16 @@ export class LabReportFormComponent {
         }
       : null;
 
-    const body = buildCreateResultPayload({
+    // @akili-spec results/impact-results-reporting/sp-reporting-entry (IRE-T-3, IRE-DD-5/6): impact
+    // swaps only the body; the POST and the success/error handlers below are shared.
+    const impact = this.impactArea();
+    const body = impact
+      ? buildImpactCreateResultPayload({
+          initiativeId: this.initiativeId(),
+          resultName: (this.createResultBody().result_name ?? '').trim(),
+          impactAreaId: impact.id
+        })
+      : buildCreateResultPayload({
       indicator: this.indicator(),
       tocNode: this.tocNode(),
       initiativeId: this.initiativeId(),

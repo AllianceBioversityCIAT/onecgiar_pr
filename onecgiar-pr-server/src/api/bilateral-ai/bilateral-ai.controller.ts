@@ -11,14 +11,16 @@ import {
   Query,
   UploadedFiles,
   UseInterceptors,
+  ValidationPipe,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { BilateralAiService } from './services/bilateral-ai.service';
 import { CreateBilateralAiJobDto } from './dto/create-bilateral-ai-job.dto';
+import { DiscardBilateralAiDraftsDto } from './dto/discard-bilateral-ai-drafts.dto';
 import { BilateralAiExpectationsMix } from './dto/bilateral-ai-expectations.dto';
 
 @Controller('center/ai')
@@ -129,6 +131,32 @@ export class BilateralAiController {
       body.is_formal_evidence === true,
       user.id,
     );
+  }
+
+  // `ABD-T-1` (`ABD-R-5`). Two path segments, so it never collides with
+  // `POST drafts/:draftId/promote` (three) or `DELETE drafts/:draftId` (other verb); declared before
+  // the parameterised `drafts/:draftId/*` routes to keep literal-before-parameter explicit.
+  // No global `ValidationPipe` exists, so the pipe is bound here — without it the 400 of
+  // `ABD-S-5.4` would never happen.
+  @Post('drafts/discard')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Discard several AI drafts at once. Each id follows the single-discard rules and commits independently; partial failure still answers 200 with a `failed` list.',
+  })
+  @ApiBody({ type: DiscardBilateralAiDraftsDto })
+  discardDrafts(
+    @Body(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: false,
+        transform: true,
+      }),
+    )
+    dto: DiscardBilateralAiDraftsDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.bilateralAiService.discardDrafts(dto.draftIds, user.id);
   }
 
   @Post('drafts/:draftId/promote')

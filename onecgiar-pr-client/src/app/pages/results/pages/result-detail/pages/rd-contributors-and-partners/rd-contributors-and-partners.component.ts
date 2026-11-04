@@ -361,13 +361,25 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
     this.api.dataControlSE.currentResultSectionName.set('Partners & Contributors');
   }
 
+  /** WPP-R-2: true only once `getData()` has REJECTED or RESOLVED EMPTY; false while pending or loaded. */
+  centersLoadFailed = signal(false);
+  centersLoadErrorNote = 'The CGIAR Centers list could not be loaded.';
+
+  /** WPP-R-2: (re)asks for the CLARISA centres catalogue; also the Retry action's handler. */
+  loadCentersCatalogue(): void {
+    this.centersSE
+      .getData()
+      .then(list => this.centersLoadFailed.set(!list?.length))
+      .catch(() => this.centersLoadFailed.set(true));
+  }
+
   ngOnInit() {
     // P2-3554: the CLARISA centres catalogue is fetched once at app bootstrap. If that single attempt
     // failed, EVERY centres dropdown on this section — "Contributing CGIAR Centers" and the mandatory
     // "Lead center" — shows "No information found" for the rest of the session, so the section cannot be
     // completed at all. `getData()` is a no-op once the catalogue is in memory, so this is the (cheap)
     // recovery point: re-ask on entering the section that needs it.
-    this.centersSE.getData().catch(() => undefined);
+    this.loadCentersCatalogue();
     this.rdPartnersSE.resetState();
     // `UCA-T-9` attempt 3, Issue 1: tell the service to call us back whenever a catalogue-driven lead
     // re-assignment happens after our own load, so we can reconcile the baseline. Cleared in
@@ -415,6 +427,18 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
       initiative_id: result?.initiative_id
     });
   });
+
+  /**
+   * @akili-spec results/impact-results-reporting/result-detail-impact (IRD-T-5, IRD-R-8, IRD-DD-5).
+   * Impact result = P25 AND type 9. The template takes the ToC block and the generic linked-results block
+   * out with `@if` (never CSS: the mandatory-field DOM scan would still count hidden fields) and
+   * `performSave` omits `has_innovation_link` / `linked_results`. Optional call: hosts/specs stub
+   * `dataControlSE` without the signal.
+   */
+  isImpactResult = computed(() => !!this.api.dataControlSE.isP25ImpactResultSignal?.());
+
+  // PLACEHOLDER copy (design §6.4) — to be confirmed at IRD-T-8.
+  readonly impactContributorsCopy = 'Include contributors to the whole intervention and scaling endeavour';
 
   hideWhyReportedField = computed(() => {
     const initiativeId = this.api.dataControlSE.currentResultSignal?.()?.initiative_id ?? this.api.dataControlSE.currentResult?.initiative_id;
@@ -1221,7 +1245,9 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
     // `results_innovations_use.has_innovation_link` (`getInnovationLinkStatus`), and the Innovation Use
     // section writes only the latter. A "Yes" set there, followed by any save here, would arrive as
     // "No" and take the stored `linked_result` rows with it.
-    if (this.showsQaInnovationLink()) {
+    // IRD-T-5: impact results (P25 type 9) show neither the ToC nor the linked-results question, so
+    // the link fields are omitted too (same reasoning as above: not asked => not answered).
+    if (this.showsQaInnovationLink() || this.isImpactResult()) {
       delete sendedData.has_innovation_link;
       delete sendedData.linked_results;
     }

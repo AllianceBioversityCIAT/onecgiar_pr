@@ -268,7 +268,7 @@ export class FieldsManagerService {
       '[geoscope-management]-has_extra_geo_scope': {
         label: 'Are there any other geographic areas where  the innovation could be impactful (beyond current development and use)?',
         description:
-          'This should reflect other geographies where the innovation development, testing and/or use could also contribute to outcomes and impact"',
+          'This should reflect other geographies where the innovation development, testing and/or use could also contribute to outcomes and impact',
         required: true,
         hide: this.isP22() || !this.isAnInnovation()
       },

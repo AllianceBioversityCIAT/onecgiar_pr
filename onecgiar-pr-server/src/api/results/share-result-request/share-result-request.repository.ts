@@ -18,6 +18,24 @@ import {
 } from './dto/approval-chain.dto';
 
 /**
+ * @akili-spec changes/portfolio-overview-feedback-round/contribution-requests-by-pa CRP-T-1
+ * One contribution-request fact (design.md §5). Requester = `requester_initiative_id`; the side that
+ * must answer = `approving_inititiative_id` (CRP-DD-1, load-bearing typo). Consumed by CRP-T-2.
+ */
+export interface PortfolioContributionRequestFact {
+  requestId: number;
+  resultId: number;
+  resultCode: number;
+  resultTitle: string;
+  requesterInitiativeId: number | null;
+  requesterCode: string | null;
+  approvingInitiativeId: number | null;
+  approvingCode: string | null;
+  statusId: number;
+  requestedDate: Date | string | null;
+}
+
+/**
  * @akili-spec notifications/detail-side-panel
  * DSP-R-12, design.md §5/§8 — raw rows read by `getApprovalChainData` (≤ 4 queries), handed to the
  * pure `composeApprovalChain` below. Kept separate from `ApprovalChainDto` on purpose: these mirror
@@ -939,6 +957,52 @@ export class ShareResultRequestRepository
         initiativeRoleRows: initiativeRoleRows ?? [],
         requestRows: requestRows ?? [],
       };
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ShareResultRequestRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * @akili-spec changes/portfolio-overview-feedback-round/contribution-requests-by-pa CRP-T-1
+   * CRP-R-1 facts: live contribution requests (status 1 pending, 2 accepted, 3 declined; never
+   * drafts = 4 nor `primary` rows) on active results of the given phase. Aggregation is done in TS
+   * (CRP-DD-2); `versionId` is bound, never interpolated.
+   */
+  async getPortfolioContributionRequestFacts(
+    versionId: number,
+  ): Promise<PortfolioContributionRequestFact[]> {
+    const queryData = `
+    SELECT
+      srr.share_result_request_id AS requestId,
+      r.id AS resultId,
+      r.result_code AS resultCode,
+      r.title AS resultTitle,
+      srr.requester_initiative_id AS requesterInitiativeId,
+      ci_req.official_code AS requesterCode,
+      srr.approving_inititiative_id AS approvingInitiativeId,
+      ci_app.official_code AS approvingCode,
+      srr.request_status_id AS statusId,
+      srr.requested_date AS requestedDate
+    FROM share_result_request srr
+      INNER JOIN \`result\` r ON r.id = srr.result_id
+      LEFT JOIN clarisa_initiatives ci_req ON ci_req.id = srr.requester_initiative_id
+      LEFT JOIN clarisa_initiatives ci_app ON ci_app.id = srr.approving_inititiative_id
+    WHERE srr.is_active > 0
+      AND srr.request_type = 'contribution'
+      AND srr.request_status_id IN (1, 2, 3)
+      AND r.is_active > 0
+      AND r.version_id = ?;
+    `;
+    try {
+      const rows: PortfolioContributionRequestFact[] = await this.query(
+        queryData,
+        [versionId],
+      );
+      return rows;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ShareResultRequestRepository.name,

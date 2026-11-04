@@ -24,7 +24,7 @@ export function resolveStatusSlot(row: RawResult): PortfolioStatusSegment['key']
 /** The six status slots in the status section's order, with their labels (Status filter options, GLF-R-3). */
 export const PORTFOLIO_STATUS_SLOTS: readonly { key: PortfolioStatusSegment['key']; label: string }[] = [
   { key: 'editing', label: 'Editing' },
-  { key: 'in-qa', label: 'In QA' },
+  { key: 'in-qa', label: 'Quality Assessed' },
   { key: 'submitted', label: 'Submitted' },
   { key: 'approved', label: 'Approved' },
   { key: 'rejected', label: 'Rejected' },

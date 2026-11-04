@@ -9,6 +9,7 @@ export enum ValidationMapsEnum {
   KNOWLEDGE_PRODUCT = 'knowledge-product-info',
   CAP_DEV = 'cap-dev-info',
   POLICY_CHANGE = 'policy-change1-info',
+  IMPACT_LEVEL_INFO = 'impact-level-info',
   LINK_RESULT = 'links-to-results',
   CONTRIBUTOR_PARTNERS = 'contributor-partners',
   IPSR_STEP_ONE = 'Step 1',

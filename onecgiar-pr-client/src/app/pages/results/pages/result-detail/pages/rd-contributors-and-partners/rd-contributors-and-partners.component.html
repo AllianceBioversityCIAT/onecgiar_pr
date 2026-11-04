@@ -35,6 +35,13 @@
     }
   }
 
+  <!-- IRD-T-5 (IRD-R-8): impact results (P25 type 9) have no ToC alignment — block removed with @if, never CSS. -->
+  @if (isImpactResult()) {
+    <!-- PLACEHOLDER copy (design §6.4) — to be confirmed at IRD-T-8. -->
+    <app-alert-status data-testid="cp-impact-copy" [description]="impactContributorsCopy" [collapsible]="false"></app-alert-status>
+  }
+
+  @if (!isImpactResult()) {
   <app-pr-yes-or-not
     data-testid="cp-field-result_toc_result.planned_result"
     [label]="tocQuestionLabel()"
@@ -93,10 +100,18 @@
       </app-pr-textarea>
     }
   }
+  }
 
   <!-- P2-3201 / P2-4010 (2026): CLARISA-based definition of a contributor, shown once before Contributing CGIAR Centers. -->
   @if (isCP2026()) {
     <app-alert-status data-testid="cp-contributor-definition" [description]="contributorDefinitionNote" [collapsible]="false"></app-alert-status>
+  }
+
+  @if (centersLoadFailed()) {
+    <div data-testid="cp-centers-load-error">
+      <app-alert-status status="error" [description]="centersLoadErrorNote" [collapsible]="false"></app-alert-status>
+      <app-pr-button data-testid="cp-centers-retry" text="Retry" icon="refresh" colorType="secondary" (clickEvent)="loadCentersCatalogue()"></app-pr-button>
+    </div>
   }
 
   <!-- P2-2998 / P2-3036 (2026): Contributing CGIAR Centers split into "from ToC" + "Other(s)". SAVE NOT ADDRESSED YET. -->
@@ -119,10 +134,11 @@
         (selectOptionEvent)="onContributingCenterSelect($event)">
         <ng-container ngProjectAs="[selectedItems]" *ngTemplateOutlet="contributingCenterChips"></ng-container>
       </app-pr-multi-select>
-    } @else {
+    } @else if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result === true) {
       <!-- P2-2998 AC4: ToC returned no centers → show note; the Other(s) dropdown below auto-activates with ALL centers.
            OTV-R-1: the field-header that used to duplicate the dropdown's own label was removed — the dropdown below
-           now carries "Contributing CGIAR Centers" itself via its conditional [label]. -->
+           now carries "Contributing CGIAR Centers" itself via its conditional [label].
+           WPP-R-3: the note waits for an explicit "Yes" on the ToC KPI question (unanswered → no note; dropdown stays). -->
       <div class="pr-message">
         <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
         <p>{{ noCentersNote }}</p>
@@ -565,8 +581,8 @@
 
   <!-- Contributing Centers end -->
 
-  <!-- P2-3171 (AC5): External Partners are inherited from the HLO/Outcome level in the ToC. P25 (2026) only. -->
-  @if (isCP2026()) {
+  <!-- P2-3171 (AC5): External Partners are inherited from the HLO/Outcome level in the ToC. P25 (2026) only. IRD-T-8 F-6: hidden for impact results (no ToC). -->
+  @if (isCP2026() && !isImpactResult()) {
     <app-alert-status [description]="externalPartnersInfoNote" [collapsible]="false"></app-alert-status>
   }
   <app-knowledge-product-selector *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-knowledge-product-selector>
@@ -611,7 +627,8 @@
     (this.api.dataControlSE.currentResultSignal().result_type_id == 2 ||
       this.api.dataControlSE.currentResultSignal().result_type_id == 7 ||
       isCP2026()) &&
-    !showsQaInnovationLink()
+    !showsQaInnovationLink() &&
+    !isImpactResult()
   ) {
     @if (
       this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7

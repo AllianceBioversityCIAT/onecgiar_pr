@@ -124,9 +124,6 @@
               <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)] group-hover:text-[var(--pr-color-primary-600)] transition-colors">
                 W1/W2 results
               </span>
-              <span class="inline-flex h-[24px] shrink-0 items-center rounded-full bg-[var(--pr-color-primary-50)] px-[8px] text-[11px] font-semibold text-[var(--pr-color-primary-600)]">
-                {{ kpis().w1w2SubmittedPercent }}% submitted / QA
-              </span>
             </div>
             <div class="flex items-baseline gap-[8px]">
               <span class="pr-figure text-[28px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums group-hover:text-[var(--pr-color-primary-700)] transition-colors">
@@ -162,9 +159,6 @@
               <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)] group-hover:text-[var(--pr-color-primary-600)] transition-colors">
                 W3/Bilateral results
               </span>
-              <span class="inline-flex h-[24px] shrink-0 items-center rounded-full bg-purple-50 px-[8px] text-[11px] font-semibold text-purple-700">
-                {{ kpis().bilateralApprovedPercent }}% approved
-              </span>
             </div>
             <div class="flex items-baseline gap-[8px]">
               <span class="pr-figure text-[28px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums group-hover:text-[var(--pr-color-primary-700)] transition-colors">
@@ -177,12 +171,27 @@
                 <span>New</span>
                 <span class="font-semibold text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-bilateral-new">{{ kpis().bilateralNew }}</span>
               </div>
-              <span class="text-[11px] text-[var(--pr-text-muted)]" data-testid="kpi-bilateral-split">Submitted {{ kpis().bilateralNewSubmitted }} · Editing {{ kpis().bilateralNewEditing }}</span>
+              <span class="text-[11px] text-[var(--pr-text-muted)]" data-testid="kpi-bilateral-split">
+                @for (part of kpis().bilateralNewSplit; track part.key; let last = $last) {
+                  <span>{{ part.label }} {{ part.count }}</span>
+                  @if (!last) {
+                    <span aria-hidden="true"> · </span>
+                  }
+                }
+              </span>
               <hlm-separator />
               <div class="flex items-center justify-between gap-[8px]">
                 <span>Innovations replicated from 2025</span>
                 <span class="font-semibold text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-bilateral-replicated">{{ kpis().bilateralReplicated }}</span>
               </div>
+              <span class="text-[11px] text-[var(--pr-text-muted)]" data-testid="kpi-bilateral-replicated-split">
+                @for (part of kpis().bilateralReplicatedSplit; track part.key; let last = $last) {
+                  <span>{{ part.label }} {{ part.count }}</span>
+                  @if (!last) {
+                    <span aria-hidden="true"> · </span>
+                  }
+                }
+              </span>
             </div>
             <div class="flex justify-end w-full">
               <span class="text-[11px] font-semibold text-purple-700 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
@@ -259,16 +268,13 @@
                         <span
                           class="h-[9px] w-[9px] shrink-0 rounded-full transition-transform group-hover:scale-125"
                           [style.background]="segment.fg"></span>
-                        <span class="truncate text-[12.5px] font-semibold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors">
+                        <span [attr.title]="segment.label" class="truncate text-[12.5px] font-semibold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors">
                           {{ segment.label }}
                         </span>
                       </div>
                       <div class="flex shrink-0 items-baseline gap-[3px]">
                         <span class="pr-figure-sm text-[14px] font-bold text-[var(--pr-text-heading)] tabular-nums">
                           {{ segment.count }}
-                        </span>
-                        <span class="text-[11px] font-medium text-[var(--pr-text-muted)] tabular-nums">
-                          ({{ segment.percent }}%)
                         </span>
                       </div>
                     </div>
@@ -296,6 +302,15 @@
                     }
                   </span>
                   <div class="flex flex-wrap items-center gap-[12px] self-end sm:self-auto">
+                    @if (data.filteredTotal() > 0) {
+                      <button
+                        type="button"
+                        data-testid="portfolio-active-filter-jump"
+                        (click)="scrollToResultsDetail()"
+                        class="rounded-[6px] bg-[var(--pr-color-primary-600)] px-[10px] py-[4px] text-[12px] font-bold text-white hover:bg-[var(--pr-color-primary-700)] cursor-pointer border-0">
+                        {{ copy.filters.showResults(data.filteredTotal()) }}
+                      </button>
+                    }
                     @if (resultsCenterLinkable()) {
                       <button
                         type="button"
@@ -335,7 +350,9 @@
     <app-portfolio-centers-block
       [selection]="data.selection()"
       [dimensionIndex]="data.dimensionIndex()"
-      [dimensionsVersionId]="centersDimensionsVersionId()" />
+      [dimensionsVersionId]="centersDimensionsVersionId()"
+      [deckW3Total]="centersDeckW3Total()"
+      [deckVersionId]="data.versionId()" />
 
     <!-- ── W3/Bilateral projects (WPS-T-5): last section, own data path. Under !loading() but OUTSIDE hasFigures() (WPS-DD-7); no page skeleton (JD-10). ── -->
     @if (!data.loading()) {
@@ -344,6 +361,14 @@
         [programs]="data.selection().program"
         [centers]="data.selection().center"
         [notAffected]="projectsNotAffected()" />
+    }
+
+    <!-- ── Contribution requests by P/A (CRP-T-4): after Projects, before Results detail. Own data path. Under !loading() (versionId resolved: a null at mount = 2 calls) but OUTSIDE hasFigures() (CRP-R-3). ── -->
+    @if (!data.loading()) {
+      <app-portfolio-contribution-requests-block
+        [versionId]="data.versionId()"
+        [programs]="data.selection().program"
+        [notAffected]="contributionsNotAffected()" />
     }
 
     <!-- ── Results detail + export (FDE-T-3, #9): last section. Figures gate (R-1); not rendered with 0 filtered rows and nothing pending (R-9, the no-match panel covers). ── -->

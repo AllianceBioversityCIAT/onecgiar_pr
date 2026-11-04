@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin:0; padding:0; height:100%; }
+  /* Mirrors the real chain: sidebar-container is position:fixed; inset-y:0; h-svh (hlm-sidebar.ts) */
+  .sidebar-container {
+    position: fixed;
+    top: 0; bottom: 0;
+    height: 100svh;
+    width: 260px;
+  }
+  /* sidebar-inner: flex size-full flex-col (hlm-sidebar.ts) */
+  .sidebar-inner { display:flex; flex-direction:column; height:100%; width:100%; background:#1b1430; }
+  .header { height:64px; flex-shrink:0; background:#2a2246; color:#fff; font:12px sans-serif; display:flex; align-items:center; padding:0 8px; }
+  /* hlm-sidebar-content.ts: flex min-h-0 flex-1 flex-col overflow-y-auto */
+  .content { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:4px; padding:8px; }
+  .item { height:36px; flex-shrink:0; background:#332a55; color:#fff; font:12px sans-serif; display:flex; align-items:center; padding:0 8px; }
+  #last { background:#8a2be2; }
+</style>
+</head>
+<body>
+  <div class="sidebar-container">
+    <div class="sidebar-inner">
+      <div class="header">Header 64px</div>
+      <div class="content" id="content">
+        <script>
+          for (let i=1;i<=20;i++){
+            document.write(`<div class="item" ${i===20?'id="last"':''}>Item ${i}${i===20?' (LICENSE - last item)':''}</div>`);
+          }
+        </script>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -391,6 +391,62 @@ describe('ResultActorRepository (unit)', () => {
     });
   });
 
+  // IFC-T-2 (IFC-R-8) — the two Farmers answers travel with the actor row on EVERY path.
+  describe('count_unit / use_nature replication (IFC-R-8)', () => {
+    const NEW_COLUMNS = ['count_unit', 'use_nature'];
+
+    it('carries both columns in the findQuery and both halves of the insertQuery', () => {
+      const { findQuery, insertQuery } = repo.createQueries(config);
+      const { columns, selectNames } = insertHalves(insertQuery);
+
+      for (const c of NEW_COLUMNS) {
+        expect(findQueryTargets(findQuery)).toContain(c);
+        expect(columns).toContain(c);
+        expect(selectNames).toContain(c);
+      }
+    });
+
+    describe('replicable()', () => {
+      const runReplicable = async (f?: any) => {
+        const query = jest.fn().mockResolvedValue([]);
+        (repo as any).query = query;
+        (repo as any).save = jest.fn().mockResolvedValue([]);
+        await repo.replicable({
+          ...config,
+          f,
+        });
+        return query.mock.calls.map((c) => normalize(c[0] as string));
+      };
+
+      const SELECT_BODY = (sql: string) =>
+        sql.slice(sql.toLowerCase().indexOf('select'));
+
+      it('default path: INSERT list, INSERT-SELECT and the read-back SELECT all carry both columns', async () => {
+        const [insertSql, findSql] = await runReplicable();
+
+        const head = insertSql.slice(
+          0,
+          insertSql.toLowerCase().indexOf('select'),
+        );
+        for (const c of NEW_COLUMNS) {
+          expect(head).toContain(c);
+          expect(SELECT_BODY(insertSql)).toContain(`ra.${c}`);
+          expect(findSql).toContain(`ra.${c}`);
+        }
+      });
+
+      it('custonFunction path: the source SELECT carries both columns', async () => {
+        const [sql] = await runReplicable({
+          custonFunction: (row: any) => [row],
+        });
+
+        for (const c of NEW_COLUMNS) {
+          expect(sql).toContain(`ra.${c}`);
+        }
+      });
+    });
+  });
+
   // LAST in the file and fully synchronous: it mutates a globalThis singleton.
   describe('red-ability', () => {
     it('can go red: a column added to the entity and not to the query is reported missing', () => {

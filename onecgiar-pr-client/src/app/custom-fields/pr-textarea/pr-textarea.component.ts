@@ -24,6 +24,8 @@ export class PrTextareaComponent implements ControlValueAccessor {
   readonly description = input<string>();
   readonly tooltip = input<string>('');
   readonly maxWords = input<number>();
+  /** Optional counter; defaults to `WordCounterService.counter` (21 consumers rely on it). IRD-DD-3. */
+  readonly wordCounterFn = input<((text: string) => number) | undefined>(undefined);
   readonly readOnly = input<boolean>();
   readonly isStatic = input<boolean>(false);
   readonly required = input<boolean>(true);
@@ -65,7 +67,11 @@ export class PrTextareaComponent implements ControlValueAccessor {
   });
 
   /** Word count derived reactively from the current value. */
-  readonly wordCount = computed<number>(() => (this.maxWords() ? this.wordCounterSE.counter(this._value()) : 0));
+  readonly wordCount = computed<number>(() => {
+    if (!this.maxWords()) return 0;
+    const customCounter = this.wordCounterFn();
+    return customCounter ? customCounter(this._value()) : this.wordCounterSE.counter(this._value());
+  });
 
   get value() {
     return this._value();
