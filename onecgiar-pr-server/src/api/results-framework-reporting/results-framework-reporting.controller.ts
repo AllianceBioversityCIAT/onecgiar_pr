@@ -30,6 +30,7 @@ import { ValidRoleGuard } from '../../shared/guards/valid-role.guard';
 import { RoleEnum, RoleTypeEnum } from '../../shared/constants/role-type.enum';
 import { PortfolioTocCoverageResponseDto } from './dto/portfolio-toc-coverage.dto';
 import { PortfolioBilateralProjectsResponseDto } from './dto/portfolio-bilateral-projects.dto';
+import { PortfolioContributionRequestsResponseDto } from './dto/portfolio-contribution-requests.dto';
 import { PortfolioResultDimensionsResponseDto } from './dto/portfolio-result-dimensions.dto';
 
 @Controller()
@@ -383,6 +384,45 @@ export class ResultsFrameworkReportingController {
         : undefined;
 
     return this.resultsFrameworkReportingService.getPortfolioBilateralProjects(
+      normalizedVersion,
+    );
+  }
+
+  // @akili-spec changes/portfolio-overview-feedback-round/contribution-requests-by-pa (CRP-T-2)
+  @Get('portfolio/contribution-requests')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
+  @ApiOperation({
+    summary: 'Portfolio contribution requests by Program / Accelerator',
+    description:
+      'Counts the live contribution requests (pending, accepted, declined; never drafts) on active results of a reporting phase. Each request is counted once in totals; under every Program / Accelerator of the open portfolio it is counted as sent (requester) and as received (approving side), zeros included. A request whose Program / Accelerator is outside the open portfolio still counts in totals and in the pending list. The pending list carries only requests still waiting for an answer (request id, result code and title, requesting and approving codes, ISO request date); no user data. Restricted to the Admin application role. Items are unordered; the client sorts.',
+  })
+  @ApiQuery({
+    name: 'versionId',
+    type: Number,
+    required: false,
+    description:
+      'Optional reporting version (phase) identifier; a closed phase is accepted. A missing, non-numeric or non-positive value falls back to the open reporting phase, else the newest one.',
+  })
+  @ApiOkResponse({
+    description: 'Portfolio contribution requests retrieved successfully.',
+    type: PortfolioContributionRequestsResponseDto,
+  })
+  getPortfolioContributionRequests(@Query('versionId') versionId?: string) {
+    // Same coercion as portfolio-coverage: empty, non-numeric or non-positive means absent.
+    const parsedVersion =
+      typeof versionId === 'string' && versionId.trim() !== ''
+        ? Number(versionId)
+        : undefined;
+
+    const normalizedVersion =
+      typeof parsedVersion === 'number' &&
+      Number.isFinite(parsedVersion) &&
+      parsedVersion > 0
+        ? parsedVersion
+        : undefined;
+
+    return this.resultsFrameworkReportingService.getPortfolioContributionRequests(
       normalizedVersion,
     );
   }

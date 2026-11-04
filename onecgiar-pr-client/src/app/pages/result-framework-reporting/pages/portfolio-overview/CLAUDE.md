@@ -1,6 +1,6 @@
 # portfolio-overview
 
-**Verified:** 2026-11-04 · specs changes/portfolio-overview-feedback-round/funding-filter (Funding bar dimension) + cleanup-and-approved · prior: 2026-10-27
+**Verified:** 2026-11-04 · specs changes/portfolio-overview-feedback-round/contribution-requests-by-pa (2026-11-04) + funding-filter (Funding bar dimension) + cleanup-and-approved · prior: 2026-10-27
 
 **What this owns:** the **admin-only** `/portfolio-overview` screen — figures for the WHOLE portfolio in the open
 phase: KPI deck, status, results by typology, progress against ToC KPIs, CGIAR Centers, W3/Bilateral projects, filtered results detail + Excel export. Ticket **P2-3304**;
@@ -67,6 +67,13 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 - Center labels come from `CentersService.getData()` (`acronym || name || code`, same mapping as Centers); it fires HTTP on construction, so page specs must mock it.
 - 🛑 **Mount rule:** under `@if (!data.loading())` (`versionId` is resolved) but **outside** `hasFigures()` (WPS-DD-7): a phase with no result rows must still answer "0 reporting projects". **No page skeleton** (JD-10); the block has its own states.
 - ⚠️ Gotchas: P/A bars can sum to more than the total (a project may map to several P/As; totals count it once). Projects with no Center count under **Unassigned** (last). On a closed phase the year is that phase's, so figures can differ from Center Overview, which reads the active year (WPS-P-7).
+
+## Contribution requests by P/A (2026-11-04, spec `changes/portfolio-overview-feedback-round/contribution-requests-by-pa`)
+
+- `components/contribution-requests-block/` (`app-portfolio-contribution-requests-block`, inputs `versionId`, `programs`, `notAffected`), after Projects, before Results detail. Own data path: `GET_PortfolioContributionRequests(versionId)` -> `GET api/results-framework-reporting/portfolio/contribution-requests?versionId=` (admin only, server-side), **one** call per version and per Retry.
+- 🛑 **Mount rule:** under `@if (!data.loading())`, **outside** `hasFigures()`, because a `null` `versionId` at mount gives 2 calls and a phase with no rows must still answer. No page skeleton.
+- **Filters:** honours **Program only**, client-side (never refetches); totals stay unfiltered. Funding is listed as not affected through `extra`: `notAffectedBy('contributions', selection, ['funding'])` (`contributionsNotAffected`).
+- **Received** = the P/A that must answer (`approving_inititiative_id`). Monitoring only: no reminder, no export.
 
 ## Gotchas
 

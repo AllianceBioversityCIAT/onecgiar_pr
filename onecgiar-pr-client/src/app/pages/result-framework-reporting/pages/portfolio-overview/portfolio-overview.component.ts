@@ -13,6 +13,7 @@ import { STATUS_GUIDE_URL } from '../../../../shared/constants/portfolio-links.c
 import { PortfolioCentersBlockComponent } from './components/centers-block/centers-block.component';
 import { FilterBarComponent } from './components/filter-bar/filter-bar.component';
 import { PortfolioResultsDetailComponent } from './components/results-detail/results-detail.component';
+import { PortfolioContributionRequestsBlockComponent } from './components/contribution-requests-block/contribution-requests-block.component';
 import { PortfolioProjectsBlockComponent } from './components/projects-block/projects-block.component';
 import { PortfolioTocKpiBlockComponent } from './components/toc-kpi-block/toc-kpi-block.component';
 import { PortfolioTypologyBlockComponent } from './components/typology-block/typology-block.component';
@@ -94,6 +95,7 @@ export function getCategoryShortName(category: string): string {
     PrVizChartComponent,
     PortfolioCentersBlockComponent,
     PortfolioProjectsBlockComponent,
+    PortfolioContributionRequestsBlockComponent,
     PortfolioResultsDetailComponent,
     PortfolioTocKpiBlockComponent,
     PortfolioTypologyBlockComponent,
@@ -226,6 +228,8 @@ export class PortfolioOverviewComponent {
   readonly resultsCenterLinkable = computed(() => resultsCenterLinkable(this.data.selection()));
   readonly tocNotAffected = computed(() => notAffectedBy('toc', this.data.selection()));
   readonly projectsNotAffected = computed(() => notAffectedBy('projects', this.data.selection()));
+  /** CRP-DD-5: honours Program only; Funding has no SECTION_SOURCE entry, so it is listed through `extra`. */
+  readonly contributionsNotAffected = computed(() => notAffectedBy('contributions', this.data.selection(), ['funding']));
   /** The Centers block honours Project only once the map is ready (DD-5): until then it says "Not affected by: Project". */
   readonly centersDimensionsVersionId = computed(() => (this.data.dimensionIndex() ? this.data.versionId() : null));
   /** V-1 gate: the deck's W3 total for the Centers block's no-Center note; null while the deck cannot say (loading, error, partial, filters pending). */

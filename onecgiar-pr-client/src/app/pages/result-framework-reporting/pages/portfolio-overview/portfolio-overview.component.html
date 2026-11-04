@@ -363,6 +363,14 @@
         [notAffected]="projectsNotAffected()" />
     }
 
+    <!-- ── Contribution requests by P/A (CRP-T-4): after Projects, before Results detail. Own data path. Under !loading() (versionId resolved: a null at mount = 2 calls) but OUTSIDE hasFigures() (CRP-R-3). ── -->
+    @if (!data.loading()) {
+      <app-portfolio-contribution-requests-block
+        [versionId]="data.versionId()"
+        [programs]="data.selection().program"
+        [notAffected]="contributionsNotAffected()" />
+    }
+
     <!-- ── Results detail + export (FDE-T-3, #9): last section. Figures gate (R-1); not rendered with 0 filtered rows and nothing pending (R-9, the no-match panel covers). ── -->
     @if (hasFigures() && (data.filteredTotal() > 0 || data.filtersPending())) {
       <app-portfolio-results-detail

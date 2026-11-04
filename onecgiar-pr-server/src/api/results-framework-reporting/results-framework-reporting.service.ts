@@ -51,6 +51,14 @@ import type {
   PortfolioBilateralProjectsResponseDto,
 } from './dto/portfolio-bilateral-projects.dto';
 import type { PortfolioResultDimensionsResponseDto } from './dto/portfolio-result-dimensions.dto';
+// @akili-spec changes/portfolio-overview-feedback-round/contribution-requests-by-pa (CRP-T-2)
+import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
+import type {
+  ContributionRequestCountsDto,
+  ContributionRequestsByProgramDto,
+  PendingContributionRequestDto,
+  PortfolioContributionRequestsResponseDto,
+} from './dto/portfolio-contribution-requests.dto';
 
 /** One entry of the additive `scopeBuckets[]` partition (design.md §5). */
 export interface ScopeBucketDto {
@@ -59,6 +67,27 @@ export interface ScopeBucketDto {
   byStatus: Record<number, number>;
   total: number;
 }
+
+// Contribution-request helpers (pure, module level).
+const contributionStatusKey = (
+  statusId: number,
+): keyof ContributionRequestCountsDto | null => {
+  if (statusId === 1) return 'pending';
+  if (statusId === 2) return 'accepted';
+  if (statusId === 3) return 'declined';
+  return null;
+};
+const emptyContributionCounts = (): ContributionRequestCountsDto => ({
+  pending: 0,
+  accepted: 0,
+  declined: 0,
+});
+// Single place where the driver's Date | string | null becomes ISO.
+const contributionToIso = (value: Date | string | null | undefined) => {
+  if (value === null || value === undefined) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+};
 
 @Injectable()
 export class ResultsFrameworkReportingService {
@@ -81,6 +110,7 @@ export class ResultsFrameworkReportingService {
     @InjectRepository(ClarisaCenter)
     private readonly _clarisaCenterRepository: Repository<ClarisaCenter>,
     private readonly _clarisaProjectsRepository: ClarisaProjectsRepository,
+    private readonly _shareResultRequestRepository: ShareResultRequestRepository,
   ) {}
 
   async getGlobalUnitsByProgram(user: TokenDto, programId?: string) {
@@ -1201,6 +1231,131 @@ export class ResultsFrameworkReportingService {
       return this._handlersError.returnErrorRes({
         error: {
           message: 'The portfolio bilateral projects could not be retrieved.',
+          response: { error: true },
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        },
+        debug: false,
+      });
+    }
+  }
+
+  /**
+   * Portfolio Overview contribution requests by Program / Accelerator
+   * (changes/portfolio-overview-feedback-round/contribution-requests-by-pa,
+   * CRP-T-2, design §6 / §7, CRP-DD-2). The repository returns one fact per live
+   * request; this method aggregates in one pass: a fact feeds `sent[status]` of
+   * its requester and `received[status]` of its approving P/A only when that P/A
+   * is in the seed, and `totals[status]` exactly once.
+   */
+  async getPortfolioContributionRequests(versionId?: number) {
+    try {
+      const version = await this.resolveReportingVersion(versionId);
+
+      // `version.id` is BIGINT and the MySQL driver returns it as a string.
+      const resolvedVersionId = Number(version?.id);
+      if (!Number.isFinite(resolvedVersionId) || resolvedVersionId <= 0) {
+        throwServiceError(
+          'No reporting version could be resolved for the portfolio contribution requests.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      const phaseYear = Number(version.phase_year);
+
+      const seed = await this._clarisaInitiativesRepository.find({
+        where: {
+          portfolio_id: 3,
+          active: true,
+          cgiar_entity_type_id: In([22, 23, 24]),
+        },
+      });
+
+      const facts =
+        await this._shareResultRequestRepository.getPortfolioContributionRequestFacts(
+          resolvedVersionId,
+        );
+
+      const totals = emptyContributionCounts();
+      const byInitiativeId = new Map<
+        number,
+        {
+          sent: ContributionRequestCountsDto;
+          received: ContributionRequestCountsDto;
+        }
+      >();
+      for (const initiative of seed) {
+        byInitiativeId.set(Number(initiative.id), {
+          sent: emptyContributionCounts(),
+          received: emptyContributionCounts(),
+        });
+      }
+      const pending: PendingContributionRequestDto[] = [];
+
+      for (const fact of facts) {
+        const key = contributionStatusKey(Number(fact.statusId));
+        if (!key) continue;
+
+        totals[key] += 1;
+        if (fact.requesterInitiativeId != null) {
+          const bucket = byInitiativeId.get(Number(fact.requesterInitiativeId));
+          if (bucket) bucket.sent[key] += 1;
+        }
+        if (fact.approvingInitiativeId != null) {
+          const bucket = byInitiativeId.get(Number(fact.approvingInitiativeId));
+          if (bucket) bucket.received[key] += 1;
+        }
+        if (key === 'pending') {
+          pending.push({
+            requestId: Number(fact.requestId),
+            resultCode: Number(fact.resultCode),
+            title: fact.resultTitle,
+            requesterCode: fact.requesterCode,
+            approvingCode: fact.approvingCode,
+            requestedDate: contributionToIso(fact.requestedDate),
+          });
+        }
+      }
+
+      const byProgram: ContributionRequestsByProgramDto[] = seed.map(
+        (initiative) => {
+          const counts = byInitiativeId.get(Number(initiative.id));
+          return {
+            initiativeId: Number(initiative.id),
+            code: (initiative.official_code ?? '').trim(),
+            shortName: initiative.short_name ?? '',
+            sent: counts.sent,
+            received: counts.received,
+          };
+        },
+      );
+
+      const response: PortfolioContributionRequestsResponseDto = {
+        versionId: resolvedVersionId,
+        phaseYear,
+        totals,
+        byProgram,
+        pending,
+      };
+
+      return {
+        response,
+        message: 'Portfolio contribution requests retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      // Same catch as getPortfolioBilateralProjects: a 4xx is safe to pass
+      // through; anything else becomes a generic 500 so no SQL reaches the body.
+      const status = Number(error?.status);
+      if (Number.isInteger(status) && status >= 400 && status < 500) {
+        return this._handlersError.returnErrorRes({ error, debug: true });
+      }
+
+      const errorCode =
+        typeof error?.code === 'string' ? ` (${error.code})` : '';
+      this._logger.error(`getPortfolioContributionRequests failed${errorCode}`);
+      return this._handlersError.returnErrorRes({
+        error: {
+          message:
+            'The portfolio contribution requests could not be retrieved.',
           response: { error: true },
           status: HttpStatus.INTERNAL_SERVER_ERROR,
         },

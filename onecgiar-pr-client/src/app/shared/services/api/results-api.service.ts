@@ -25,6 +25,7 @@ import { toDisplayBasis } from '../../constants/achieved-display-basis';
 import { PortfolioTocCoverage } from '../../interfaces/portfolio-toc-coverage.interface';
 import { PortfolioBilateralProjects } from '../../interfaces/portfolio-bilateral-projects.interface';
 import { PortfolioResultDimensions } from '../../interfaces/portfolio-result-dimensions.interface';
+import { PortfolioContributionRequests } from '../../interfaces/portfolio-contribution-requests.interface';
 import { ReportingApiResponse } from '../../interfaces/reporting-api.response';
 import { ImpactLevelInfo, ImpactPreviousResultsSearchParams, ImpactPreviousResultsSearchResponse, ImpactStudyType, SaveImpactLevelBody } from '../../interfaces/impact-level.interface';
 
@@ -1724,6 +1725,16 @@ export class ResultsApiService {
       url += `?versionId=${encodeURIComponent(String(versionId))}`;
     }
     return this.http.get<ReportingApiResponse<PortfolioBilateralProjects>>(url);
+  }
+
+  // @akili-spec changes/portfolio-overview-feedback-round/contribution-requests-by-pa (CRP-T-3) — contribution
+  // requests of the phase by P/A (sent / received, Pending / Accepted / Declined) + the pending list. Admin only.
+  GET_PortfolioContributionRequests(versionId?: number) {
+    let url = `${environment.apiBaseUrl}api/results-framework-reporting/portfolio/contribution-requests`;
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      url += `?versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    return this.http.get<ReportingApiResponse<PortfolioContributionRequests>>(url);
   }
 
   // @akili-spec changes/portfolio-overview-revamp/global-filters (GLF-T-2) — result <-> project and

@@ -383,6 +383,7 @@ describe('portfolio-filters (pure logic)', () => {
       expect(SECTION_HONOURS.centers).toEqual(FILTER_DIMENSIONS);
       expect(SECTION_HONOURS.toc).toEqual(['program', 'funding']);
       expect(SECTION_HONOURS.projects).toEqual(['program', 'center', 'funding']);
+      expect(SECTION_HONOURS.contributions).toEqual(['program']);
     });
 
     it('S-9.1: toc is not affected by Center, Status (bar order); projects by Status; the rest by nothing', () => {
@@ -392,6 +393,12 @@ describe('portfolio-filters (pure logic)', () => {
       for (const section of ['kpi', 'status', 'typology', 'centers'] as const) {
         expect(notAffectedBy(section, selection)).toEqual([]);
       }
+    });
+
+    it('CRP-R-4: contributions honours Program only; Funding is listed through `extra`, the rest by default', () => {
+      const selection = sel({ program: ['SP01'], center: ['CENTER-1'], funding: ['bilateral'] });
+      expect(notAffectedBy('contributions', selection, ['funding'])).toEqual(['center', 'funding']);
+      expect(notAffectedBy('contributions', sel({ program: ['SP01'] }), ['funding'])).toEqual([]);
     });
 
     it('lists nothing when nothing is active, and ignores a dimension the section honours', () => {

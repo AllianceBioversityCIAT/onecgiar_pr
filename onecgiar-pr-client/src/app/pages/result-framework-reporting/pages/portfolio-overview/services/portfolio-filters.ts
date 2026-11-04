@@ -316,7 +316,7 @@ export function parseQueryParams(input: string | Readonly<Record<string, ParamVa
 // Which section honours which dimension (GLF-R-9, R-5)
 // ---------------------------------------------------------------------------------------------
 
-export type FilterSection = 'kpi' | 'status' | 'typology' | 'centers' | 'toc' | 'projects';
+export type FilterSection = 'kpi' | 'status' | 'typology' | 'centers' | 'toc' | 'projects' | 'contributions';
 
 export const SECTION_HONOURS: Readonly<Record<FilterSection, readonly FilterDimension[]>> = {
   kpi: FILTER_DIMENSIONS,
@@ -324,7 +324,9 @@ export const SECTION_HONOURS: Readonly<Record<FilterSection, readonly FilterDime
   typology: FILTER_DIMENSIONS,
   centers: FILTER_DIMENSIONS,
   toc: ['program', 'funding'],
-  projects: ['program', 'center', 'funding']
+  projects: ['program', 'center', 'funding'],
+  // Own data path; Program only. No SECTION_SOURCE entry: callers pass `['funding']` as `extra` (CRP-DD-4).
+  contributions: ['program']
 };
 
 /** Sections whose data is ONE funding source by rule (PFF-R-4). Others have none and honour funding as a row filter. */
