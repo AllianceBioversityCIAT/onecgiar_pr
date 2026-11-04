@@ -6,7 +6,10 @@ import {
   SECTION_HONOURS,
   activeDimensions,
   buildDimensionIndex,
+  FUNDING_OPTIONS,
+  SECTION_SOURCE,
   buildOptions,
+  fundingOf,
   isActive,
   matchesRow,
   notAffectedBy,
@@ -25,7 +28,8 @@ const sel = (partial: Partial<Record<keyof PortfolioFilterSelection, string[]>>)
   project: new Set(partial.project ?? []),
   center: new Set(partial.center ?? []),
   typology: new Set(partial.typology ?? []),
-  status: new Set(partial.status ?? [])
+  status: new Set(partial.status ?? []),
+  funding: new Set(partial.funding ?? [])
 });
 
 const W1W2 = 'W1/W2';
@@ -88,7 +92,7 @@ describe('portfolio-filters (pure logic)', () => {
     });
 
     it('lists active dimensions in bar order, not insertion order', () => {
-      expect(FILTER_DIMENSIONS).toEqual(['program', 'project', 'center', 'typology', 'status']);
+      expect(FILTER_DIMENSIONS).toEqual(['program', 'project', 'center', 'typology', 'status', 'funding']);
       expect(activeDimensions(sel({ status: ['editing'], program: ['SP02'], center: ['CENTER-1'] }))).toEqual(['program', 'center', 'status']);
       expect(isActive(sel({ status: ['editing'] }))).toBe(true);
       expect(isActive(sel({ status: ['editing'] }), 'program')).toBe(false);
@@ -172,6 +176,69 @@ describe('portfolio-filters (pure logic)', () => {
     it('a row with no id or an id absent from the map misses a Center filter (index present)', () => {
       const noId: FilterRow = { submitter: 'SP02' };
       expect(matchesRow(noId, sel({ center: ['CENTER-1'] }), INDEX)).toBe('miss');
+    });
+  });
+
+  describe('funding source (PFF-R-2, R-3, R-4, R-5)', () => {
+    const w3Sp01: FilterRow = { id: 10, submitter: 'SP01', result_type: 'Policy change', status_id: 1, source_name: W3 };
+    const w12Sp01: FilterRow = { id: 11, submitter: 'SP01', result_type: 'Policy change', status_id: 1, source_name: W1W2 };
+
+    it('fundingOf: exact W3 name (trimmed) is bilateral; everything else is w1w2', () => {
+      expect(fundingOf({ source_name: 'W3/Bilaterals' })).toBe('bilateral');
+      expect(fundingOf({ source_name: ' W3/Bilaterals ' })).toBe('bilateral');
+      for (const value of ['W1/W2', '', null, 'W3', undefined]) expect(fundingOf({ source_name: value })).toBe('w1w2');
+    });
+
+    it('matcher: bilateral keeps only W3 rows; both values keep all', () => {
+      expect(matching(sel({ funding: ['bilateral'] }))).toEqual([4]);
+      expect(matching(sel({ funding: ['w1w2'] }))).toEqual([1, 2, 3, 5]);
+      expect(matching(sel({ funding: ['w1w2', 'bilateral'] }))).toEqual([1, 2, 3, 4, 5]);
+    });
+
+    it('matcher: Program SP01 + W1/W2 drops a W3 SP01 row', () => {
+      expect(matching(sel({ program: ['SP01'], funding: ['w1w2'] }), [w3Sp01, w12Sp01])).toEqual([11]);
+    });
+
+    it('matcher: funding never yields unknown without an index', () => {
+      expect(matchesRow(R4, sel({ funding: ['bilateral'] }), null)).toBe('match');
+      expect(matchesRow(R1, sel({ funding: ['bilateral'] }), null)).toBe('miss');
+    });
+
+    it('options are the two static values, not data-derived', () => {
+      const odd: FilterRow = { id: 99, submitter: 'SP01', source_name: 'Something else' };
+      const options = buildOptions([odd], null);
+      expect(options.funding.map(o => o.value)).toEqual([...FUNDING_OPTIONS]);
+      expect(options.funding.map(o => o.label)).toEqual(['W1/W2', 'W3/Bilateral']);
+    });
+
+    it('codec: ?funding=bilateral,w1w2 round-trips; ?funding=w4 is dropped by sanitize', () => {
+      const options = buildOptions(ROWS, MAP);
+      const clean = sanitize(parseQueryParams('?funding=bilateral,w1w2'), options);
+      expect([...clean.funding]).toEqual(['bilateral', 'w1w2']);
+      expect(toQueryParams(clean)).toEqual({ funding: 'bilateral,w1w2' });
+      expect(sanitize(parseQueryParams('?funding=w4'), options).funding.size).toBe(0);
+    });
+
+    it('notAffectedBy: single-source blocks are flagged only when the selection excludes their source', () => {
+      expect(SECTION_SOURCE).toEqual({ centers: 'bilateral', projects: 'bilateral', toc: 'w1w2' });
+      for (const section of ['centers', 'projects'] as const) {
+        expect(notAffectedBy(section, sel({ funding: ['w1w2'] }))).toEqual(['funding']);
+        expect(notAffectedBy(section, sel({ funding: ['bilateral'] }))).toEqual([]);
+        expect(notAffectedBy(section, sel({ funding: ['w1w2', 'bilateral'] }))).toEqual([]);
+      }
+      expect(notAffectedBy('toc', sel({ funding: ['bilateral'] }))).toEqual(['funding']);
+      expect(notAffectedBy('toc', sel({ funding: ['w1w2'] }))).toEqual([]);
+      expect(notAffectedBy('toc', sel({ funding: ['w1w2', 'bilateral'] }))).toEqual([]);
+      for (const section of ['kpi', 'status', 'typology'] as const) {
+        expect(notAffectedBy(section, sel({ funding: ['w1w2'] }))).toEqual([]);
+        expect(notAffectedBy(section, sel({ funding: ['bilateral'] }))).toEqual([]);
+      }
+    });
+
+    it('resultsCenterLinkable: funding 1 value (+ status) yes; 2 values no; funding + typology no', () => {
+      expect(resultsCenterLinkable(sel({ funding: ['bilateral'], status: ['editing'] }))).toBe(true);
+      expect(resultsCenterLinkable(sel({ funding: ['bilateral', 'w1w2'] }))).toBe(false);
+      expect(resultsCenterLinkable(sel({ funding: ['bilateral'], typology: ['output'] }))).toBe(false);
     });
   });
 
@@ -314,8 +381,8 @@ describe('portfolio-filters (pure logic)', () => {
       expect(SECTION_HONOURS.status).toEqual(FILTER_DIMENSIONS);
       expect(SECTION_HONOURS.typology).toEqual(FILTER_DIMENSIONS);
       expect(SECTION_HONOURS.centers).toEqual(FILTER_DIMENSIONS);
-      expect(SECTION_HONOURS.toc).toEqual(['program']);
-      expect(SECTION_HONOURS.projects).toEqual(['program', 'center']);
+      expect(SECTION_HONOURS.toc).toEqual(['program', 'funding']);
+      expect(SECTION_HONOURS.projects).toEqual(['program', 'center', 'funding']);
     });
 
     it('S-9.1: toc is not affected by Center, Status (bar order); projects by Status; the rest by nothing', () => {

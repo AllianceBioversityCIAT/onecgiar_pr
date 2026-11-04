@@ -1,6 +1,6 @@
 # portfolio-overview
 
-**Verified:** 2026-11-04 · spec changes/portfolio-overview-feedback-round/cleanup-and-approved (no submitted/approved percentage, W3 status split, Centers block counts distinct results) · prior: 2026-10-27 · fix/portfolio-overview-in-qa-list
+**Verified:** 2026-11-04 · specs changes/portfolio-overview-feedback-round/funding-filter (Funding bar dimension) + cleanup-and-approved · prior: 2026-10-27
 
 **What this owns:** the **admin-only** `/portfolio-overview` screen — figures for the WHOLE portfolio in the open
 phase: KPI deck, status, results by typology, progress against ToC KPIs, CGIAR Centers, W3/Bilateral projects, filtered results detail + Excel export. Ticket **P2-3304**;
@@ -15,7 +15,7 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 - The component owns only **view state**: `bilateralExpanded`, the `phaseYear()` shared by the eyebrow and the ToC KPI
   subtitle, the four mutually exclusive states `isLoading` / `hasError` / `isEmpty` / `hasFigures`, and the URL mirror.
 - Page data: **one** `GET_AllResultsWithUseRole(userId, { limit: 20000 })`, no `submitter_id` (all the roles allow).
-- Route: `extraRoutingApp` (`shared/routing/routing-data.ts`), `canActivate: [CheckAdminGuard]`. **Guarded, not
+- Used by `shared/components/reporting-nav-sidebar/reporting-nav-sidebar.component.ts:218` (first in PLATFORM for admins); Bilateral and ToC KPI rows open `entity-details/:code/results`. Route: `extraRoutingApp` (`shared/routing/routing-data.ts`), `canActivate: [CheckAdminGuard]`. **Guarded, not
   merely hidden** (client CLAUDE.md §7).
 - `kpis()` carries the New / Replicated counts per source (`w1w2New`, `w1w2Replicated`, `bilateralNew`, `bilateralReplicated`). **W1/W2** also keeps `w1w2NewSubmitted` / `w1w2NewEditing` (Editing = `Number(status_id) === 1`, every other status Submitted; Submitted + Editing = New). **W3** instead carries the status splits `bilateralNewSplit` / `bilateralReplicatedSplit` (`{ key, label, count }[]`). **Replicated** = `is_replicated` ∈ `1 | '1' | true`, else **New**.
 - 🛑 **W3 split goes through `resolveStatusSlot`** (`services/portfolio-status-slot.ts`), never an ad-hoc `status_id === 1` test (W3 only; the W1/W2 split stays Submitted / Editing). Submitted / Approved / Editing always show; Quality Assessed / Rejected / Discontinued only when > 0. Status 2 is NOT Approved. Labels: `PORTFOLIO_OVERVIEW_COPY.w3Split`.
@@ -23,14 +23,16 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 
 ## Global filters (2026-10-16, spec `changes/portfolio-overview-revamp/global-filters`)
 
-- **Bar** `components/filter-bar/` (`app-portfolio-filter-bar`, no inputs, reads the service): Program, Project, Center, Typology, Status. Mounted inside `hasFigures()` above the deck, so never while loading, on error or phase-empty.
+- **Bar** `components/filter-bar/` (`app-portfolio-filter-bar`, no inputs, reads the service): six dimensions Program · Project · Center · Typology · Status · **Funding** (`w1w2` | `bilateral`; `FILTER_DIMENSIONS` in `services/portfolio-filters.ts`). Mounted inside `hasFigures()` above the deck, so never while loading, on error or phase-empty.
 - **State** lives in the service: `selection` (changed only via `setSelection` / `toggleValue` / `clearDimension` / `clearAll`), `filteredRows()` / `filteredTotal()`, `filtersPending()`, `dimensions` (the Project / Center map, **one** request per load + Retry), `dimensionIndex`. Pure logic in `services/portfolio-filters.ts`.
-- **URL mirror** (DD-11): the page reads `?program=&project=&center=&typology=&status=` **once**, applies it when rows exist (the service sanitizes; Project / Center after the map), then an effect writes `router.navigate([], { queryParams, queryParamsHandling: 'merge', replaceUrl: true })`. A signal is the only state; never read the URL back.
+- **URL mirror** (DD-11): the page reads `?program=&project=&center=&typology=&status=&funding=` **once**, applies it when rows exist (the service sanitizes; Project / Center after the map), then an effect writes `router.navigate([], { queryParams, queryParamsHandling: 'merge', replaceUrl: true })`. A signal is the only state; never read the URL back.
 - 🛑 **Sub-switch order** inside `hasFigures()`: `filtersPending()` -> section skeletons (testid `portfolio-overview-skeleton-filters`); else `filteredTotal() === 0` -> no-match panel (`portfolio-no-match`, Clear all); else deck, status, typology. The ToC KPI block sits **outside** the sub-switch (renders in every case).
 - **Block inputs:** typology `[rows]=filteredRows()`; ToC KPI `programs` + `notAffected`; Projects `programs`, `centers`, `notAffected` (from `notAffectedBy('toc' | 'projects', selection)`); Centers `selection`, `dimensionIndex`, `[dimensionsVersionId]="data.dimensionIndex() ? data.versionId() : null"` (only once the map is ready, else Project shows as "Not affected by: Project").
-- 🛑 **DD-7, do not re-add a local status highlight:** the status tiles and donut call `toggleValue('status', key)` (`aria-pressed` from `selection().status`); the old local status-filter signal and its toggle are gone. The strip shows when ANY dimension is active; **View in Results Center** only when `resultsCenterLinkable` (<= 1 Program, <= 1 Status).
+- 🛑 **DD-7, do not re-add a local status highlight:** the status tiles and donut call `toggleValue('status', key)` (`aria-pressed` from `selection().status`); the old local status-filter signal and its toggle are gone. The strip shows when ANY dimension is active; **View in Results Center** only when `resultsCenterLinkable` (only Program / Status / Funding active, each <= 1 value); the link carries `funding` (`extra.funding` in `navigateToResultsCenter`).
 - **Strip jump link** `portfolio-active-filter-jump` ("Show N results ↓", `copy.filters.showResults`): shown when `filteredTotal() > 0`, scrolls to `app-portfolio-results-detail` (`scrollToResultsDetail`). Why: the filtered list is the LAST block of a ~4,600 px page; a tile click alone left users scrolling to the ToC KPI bars and giving up (admin report, 26-oct-2026).
 - 🛑 **Every `navigateToResultsCenter` link carries `phase=<versionId()>`.** This page counts the open phase only; Results Center defaults to every phase of the portfolio (P25 = 2025 + 2026), so without it the same click showed 5 here and 11 there. Results Center reads it into `ResultsListFilterService.requestedPhaseId` and applies it once its phase options load (`results-list-filters.component.ts`, `handleVersioningResponse`).
+- 🛑 **Funding = ONE rule, `fundingOf(row)`** (`portfolio-filters.ts`; exact trimmed `source_name === 'W3/Bilaterals'` = `bilateral`, else `w1w2`). New code calls it; `typology-block/typology.aggregate.ts` and `results-detail/results-detail.rows.ts` still carry their own W3 string test (T-1 advisory, do not copy).
+- 🛑 **Single-source blocks (`SECTION_SOURCE`): Centers + Projects = `bilateral`, ToC KPI = `w1w2`.** They do not row-filter by Funding: `notAffectedBy` lists Funding as not affected only when the selection excludes the block's source. Centers `applyGlobal` blanks Center and Funding; Projects honours Program + Center; ToC honours Program. KPI, status, typology and results detail honour all six.
 - **Typology Center view is lead-only by design** (it counts the lead Center); the global Center filter matches lead + contributing Centers, so their numbers can differ. Not a bug.
 
 ## Results detail + export (2026-10-16, spec `changes/portfolio-overview-revamp/filtered-detail-export`, #9)
@@ -66,30 +68,15 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 - 🛑 **Mount rule:** under `@if (!data.loading())` (`versionId` is resolved) but **outside** `hasFigures()` (WPS-DD-7): a phase with no result rows must still answer "0 reporting projects". **No page skeleton** (JD-10); the block has its own states.
 - ⚠️ Gotchas: P/A bars can sum to more than the total (a project may map to several P/As; totals count it once). Projects with no Center count under **Unassigned** (last). On a closed phase the year is that phase's, so figures can differ from Center Overview, which reads the active year (WPS-P-7).
 
-## Where it is used
-
-- `shared/components/reporting-nav-sidebar/reporting-nav-sidebar.component.ts:218` — first in PLATFORM for admins (`extraRoutingApp`). Bilateral and ToC KPI rows open `entity-details/:code/results`.
-
 ## Gotchas
 
-- 🛑 **The payload carries EVERY phase** (6094 rows on prtest, 259 open). `apply()` narrows to
-  `phase_status === 1` **before** counting; with none open it falls back to the newest `version_id` and flips
-  `closedPhase()` (amber "Viewing a closed phase" banner).
+- 🛑 **The payload carries EVERY phase** (6094 rows on prtest, 259 open). `apply()` narrows to `phase_status === 1` **before** counting; with none open it falls back to the newest `version_id` and flips `closedPhase()` (amber banner).
 - 🛑 **Status 2 is labelled "Quality Assessed", not "In QA"** (key stays `in-qa` for URLs and tests). Elsewhere in PRMS "In QA" is the separate in-review tag (`result.inQA`, `api.service.ts` `full_status_name_html`); the old "In QA" label made the tile and the Results Center chip disagree (27-oct-2026). Both label definitions: `services/portfolio-status-slot.ts` + `STATUS_SEGMENT_DEFINITIONS` in the service.
-- ⚠️ **Status dots resolve by `status_id`, never by `status_name`.** Same map as
-  `programme-results.component.ts:101`; unknown ids fall back to the `not-started` foreground. The
-  names in the payload (`Editing`, `Pending Review`, …) are labels only — colouring by name would
-  invent a sixth status colour (UI rule 9).
+- ⚠️ **Status dots resolve by `status_id`, never by `status_name`** (same map as `programme-results.component.ts:101`; unknown ids fall back to `not-started`). Payload names are labels only: colouring by name invents a sixth status colour (UI rule 9).
 - **The counters and the category bars are NOT clickable** (no surface lists the portfolio by status or category, P2-3304).
-- **The bilateral fill uses `--pr-chart-2-muted` (`#8b7cc4`)** — the design's colour, valid here
-  because it is a NON-TEXT graphic (3.52:1 on the divider track, WCAG 1.4.11). 🛑 Never use it for
-  text: see `docs/DESIGN-DEVIATIONS.md` §1 vs §8, the same hex answering two different questions.
-- **`isPartial()`** (`meta.total` > what we asked for) now only feeds the Results detail note (`detail-partial`).
-  The orange header notice ("Showing the first N results…") was **removed on request** 2026-10-22
-  (`quick/portfolio-overview-partial-label`); do not re-add it without asking.
-- 🛑 **Two counts, two questions.** `total()` (`services/portfolio-overview.service.ts:195`) is the open-phase
-  count (feeds the KPI tile); `fetchedCount()` (`:182`) is the raw server count captured in `load()` before
-  `apply()`'s phase filter. Any partial note MUST bind to `fetchedCount()`.
+- **The bilateral fill uses `--pr-chart-2-muted` (`#8b7cc4`)**: valid only as a NON-TEXT graphic (3.52:1, WCAG 1.4.11). 🛑 Never for text (`docs/DESIGN-DEVIATIONS.md` §1 vs §8).
+- **`isPartial()`** (`meta.total` > what we asked for) only feeds the Results detail note (`detail-partial`). The orange header notice was **removed on request** 2026-10-22; do not re-add it without asking.
+- 🛑 **Two counts, two questions.** `total()` is the open-phase count (KPI tile); `fetchedCount()` is the raw server count captured in `load()` before `apply()`'s phase filter. Any partial note MUST bind to `fetchedCount()`.
 - ⚠️ **"Replicated" means `is_replicated`, not "innovation".** Card-3's "Innovations replicated from 2025" assumes replicated W3 rows are innovations only (P-3, prod 2026-10-14); if that stops holding, change the label.
 - 🛑 **`tests/mocks/spartanBrainMock.ts` must declare every input a Helm host directive re-exposes**, or NG0311:
   `BrnSeparator` (`orientation`/`decorative`, deck), `BrnTooltip` (`brnTooltip`/`position`/`hideDelay`/
@@ -98,8 +85,7 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 ## Status section & removed rankings (2026-10-14, spec `…/remove-rankings-status-copy`)
 
 - Copy: `internationalization/portfolio-overview.copy.ts`. Rejected-tile hint: `statusHints` + `hlmTooltip`.
-- Guide link: `STATUS_GUIDE_URL` (`shared/constants/portfolio-links.constants.ts`), typed `string` (not `''`,
-  or templates narrow it to `never`). Empty = not rendered. Pending OQ-1: set it when the guide exists.
+- Guide link: `STATUS_GUIDE_URL` (`shared/constants/portfolio-links.constants.ts`), typed `string` (not `''`, or templates narrow to `never`). Empty = not rendered. Pending OQ-1.
 - 🛑 **Removed on purpose, do not re-add:** the Program and Center ranking cards ("competition" feedback),
   "Progress by Center" (stakeholder item 9: no planning data for W3, so no "progress") and the Program x category
   matrix with search, filters, paging, column picker and Excel export (TKP-R-9). Level counts per Program live in
@@ -113,9 +99,7 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 
 ## Progress against ToC KPIs (2026-10-15, spec `changes/portfolio-overview-revamp/toc-kpi-progress`)
 
-- `components/toc-kpi-block/`, order typology -> ToC KPI -> Centers, **inside** `hasFigures()` (skeleton testid
-  `portfolio-overview-skeleton-toc-kpi`): it never mounts or requests while loading, so `[versionId]` is already
-  resolved and `[year]` is `phaseYear()`, never `''`. Do not move it out of the gate: null then a number = 2 calls.
+- `components/toc-kpi-block/`, order typology -> ToC KPI -> Centers, **inside** `hasFigures()` (skeleton testid `portfolio-overview-skeleton-toc-kpi`): never mounts while loading, so `[versionId]` is resolved and `[year]` is `phaseYear()`. Do not move it out of the gate (null then a number = 2 calls).
 - **Own data path**: `GET_PortfolioTocCoverage(versionId)` (`toc-results/portfolio-coverage`, admin-only on the
   server), one request per version and per Retry; a failure shows the block's error and leaves the page intact.
 - Rule: a KPI = distinct indicator, covered by >= 1 pooled W1/W2 result in QA or Submitted (W3 never covers).

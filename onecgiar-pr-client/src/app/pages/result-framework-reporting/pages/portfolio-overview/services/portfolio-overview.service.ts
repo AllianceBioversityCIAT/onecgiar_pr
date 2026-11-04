@@ -8,6 +8,7 @@ import {
   FILTER_DIMENSIONS,
   buildDimensionIndex,
   buildOptions,
+  fundingOf,
   isActive,
   matchesRow,
   sanitize,
@@ -268,13 +269,13 @@ export class PortfolioOverviewService {
     const totalResults = allRows.length;
     const phaseLabel = this.phaseName() || 'Active Cycle';
 
-    const w1w2Rows = allRows.filter(r => text(r.source_name) !== 'W3/Bilaterals');
+    const w1w2Rows = allRows.filter(r => fundingOf(r) === 'w1w2');
     const w1w2Count = w1w2Rows.length;
 
     const w1w2Categories = new Set(w1w2Rows.map(r => text(r.result_type)).filter(Boolean));
     const w1w2CategoriesCount = w1w2Categories.size;
 
-    const bilateralRows = allRows.filter(r => text(r.source_name) === 'W3/Bilaterals');
+    const bilateralRows = allRows.filter(r => fundingOf(r) === 'bilateral');
     const bilateralCount = bilateralRows.length;
 
     const isReplicated = (r: RawResult): boolean =>
@@ -385,8 +386,8 @@ export class PortfolioOverviewService {
 
     return cats.map(category => {
       const matching = allRows.filter(r => text(r.result_type) === category);
-      const w1w2Count = matching.filter(r => text(r.source_name) !== 'W3/Bilaterals').length;
-      const bilateralCount = matching.filter(r => text(r.source_name) === 'W3/Bilaterals').length;
+      const w1w2Count = matching.filter(r => fundingOf(r) === 'w1w2').length;
+      const bilateralCount = matching.filter(r => fundingOf(r) === 'bilateral').length;
       return {
         category,
         w1w2Count,
@@ -461,8 +462,8 @@ export class PortfolioOverviewService {
     return this.categories().map(name => ({ code: '', name, n: counts.get(name) ?? 0, width: percent(counts.get(name) ?? 0, max) }));
   });
 
-  /** Bilateral (`W3/Bilaterals`) results of the open phase, narrowed by the global selection. */
-  private readonly bilaterals = computed(() => this.filteredRows().filter(row => text(row.source_name) === 'W3/Bilaterals'));
+  /** Bilateral results of the open phase, narrowed by the global selection. */
+  private readonly bilaterals = computed(() => this.filteredRows().filter(row => fundingOf(row) === 'bilateral'));
 
   readonly bilateralTotal = computed(() => this.bilaterals().length);
 

@@ -863,7 +863,7 @@ describe('PortfolioOverviewComponent', () => {
       expect(commands).toEqual([]);
       expect(extras.replaceUrl).toBe(true);
       expect(extras.queryParamsHandling).toBe('merge');
-      expect(extras.queryParams).toEqual({ program: 'SP06', status: 'editing', project: null, center: null, typology: null });
+      expect(extras.queryParams).toEqual({ program: 'SP06', status: 'editing', project: null, center: null, typology: null, funding: null });
       expect(extras.queryParams).not.toHaveProperty('foo');
     });
 
@@ -946,6 +946,63 @@ describe('PortfolioOverviewComponent', () => {
       q<HTMLButtonElement>(LINK)!.click();
 
       expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: { phase: 36, status: 1 } });
+    });
+
+    it('PFF-R-5: View in Results Center with status=approved + funding=bilateral navigates with phase, status 6 and funding', () => {
+      build([...OPEN_PHASE, raw({ source_name: 'W3/Bilaterals', status_id: '6', status_name: 'Approved' })]);
+      component.data.setSelection({ ...component.data.selection(), status: new Set(['approved']), funding: new Set(['bilateral']) });
+      refresh();
+      const navigateSpy = jest.spyOn(router, 'navigate');
+
+      q<HTMLButtonElement>(LINK)!.click();
+
+      expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: { phase: 36, status: 6, funding: 'bilateral' } });
+    });
+
+    it('PFF-R-5: funding = w1w2 passes funding=w1w2; bilateral pre-sets the W3/Bilaterals source (id 2)', () => {
+      build(OPEN_PHASE);
+      const filterSE = (component as any).resultsListFilterSE;
+      component.data.setSelection({ ...component.data.selection(), funding: new Set(['w1w2']) });
+      refresh();
+      const navigateSpy = jest.spyOn(router, 'navigate');
+      q<HTMLButtonElement>(LINK)!.click();
+      expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: { phase: 36, funding: 'w1w2' } });
+      if (filterSE) expect(filterSE.selectedFundingSource()).toEqual([{ id: 1, name: 'W1/W2' }]);
+
+      component.data.setSelection({ ...component.data.selection(), funding: new Set(['bilateral']) });
+      refresh();
+      q<HTMLButtonElement>(LINK)!.click();
+      expect(navigateSpy).toHaveBeenLastCalledWith(['/result/results-outlet/results-list'], { queryParams: { phase: 36, funding: 'bilateral' } });
+      if (filterSE) expect(filterSE.selectedFundingSource()).toEqual([{ id: 2, name: 'W3/Bilaterals' }]);
+    });
+
+    it('PFF-R-5: the link is hidden with both funding values selected', () => {
+      build(OPEN_PHASE);
+      component.data.setSelection({ ...component.data.selection(), funding: new Set(['w1w2', 'bilateral']) });
+      refresh();
+      expect(q(STRIP)).toBeTruthy();
+      expect(q(LINK)).toBeNull();
+    });
+
+    it('PFF-R-3: the URL mirror writes funding=bilateral, then funding=null after Clear all', () => {
+      build(OPEN_PHASE);
+      component.data.toggleValue('funding', 'bilateral');
+      refresh();
+      const navigate = router.navigate as jest.Mock;
+      expect(navigate.mock.calls[navigate.mock.calls.length - 1][1].queryParams['funding']).toBe('bilateral');
+      component.clearFilters();
+      refresh();
+      expect(navigate.mock.calls[navigate.mock.calls.length - 1][1].queryParams['funding']).toBeNull();
+    });
+
+    it('PFF-R-4: funding = bilateral flags the ToC KPI block as not affected by funding (W1/W2 only), Projects not', () => {
+      build(OPEN_PHASE);
+      component.data.toggleValue('funding', 'bilateral');
+      refresh();
+      const toc = fixture.debugElement.query(By.directive(PortfolioTocKpiBlockComponent)).componentInstance;
+      const projects = fixture.debugElement.query(By.directive(PortfolioProjectsBlockComponent)).componentInstance;
+      expect(toc.notAffected()).toContain('funding');
+      expect(projects.notAffected()).not.toContain('funding');
     });
 
     it('the strip offers a jump to the filtered list, with its count, and scrolls to it', () => {

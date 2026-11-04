@@ -151,6 +151,17 @@ describe('centers-block.aggregate (P2-3858, moved by P2-3928)', () => {
       expect(ids(applyGlobal(rows, sel({ project: ['10'] }), index, false))).toEqual([1, 2, 3, 4]);
     });
 
+    it('PFF-R-4: funding is not a row rule here (rows carry no source_name): bilateral and w1w2 both return every row', () => {
+      expect(ids(applyGlobal(rows, sel({ funding: ['bilateral'] }), null, true))).toEqual([1, 2, 3, 4]);
+      expect(ids(applyGlobal(rows, sel({ funding: ['w1w2'] }), null, true))).toEqual([1, 2, 3, 4]);
+      expect(ids(applyGlobal(rows, sel({ funding: ['w1w2', 'bilateral'] }), null, true))).toEqual([1, 2, 3, 4]);
+    });
+
+    it('PFF-R-4: funding + program still narrows by program', () => {
+      expect(ids(applyGlobal(rows, sel({ funding: ['bilateral'], program: ['SP02'] }), null, true))).toEqual([3, 4]);
+      expect(ids(applyGlobal(rows, sel({ funding: ['w1w2'], program: ['SP01'] }), null, true))).toEqual([1, 2]);
+    });
+
     it('honoured project without an index is pending: no row is claimed as a match', () => {
       expect(applyGlobal(rows, sel({ project: ['10'] }), null, true)).toEqual([]);
     });

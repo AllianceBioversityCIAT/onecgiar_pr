@@ -89,7 +89,7 @@ const NO_VALUES: ReadonlySet<string> = new Set<string>();
  * tile. Program, Typology and Status are decided by the row (`matchesRow`, so the level map and the status slots
  * are the page's own); Project goes through the dimensions index by `row.id`, and only when `honoursProject`
  * (the block's phase is the page version). The Center dimension is not a row rule: it limits which Centers feed
- * the block, so it is dropped here. Project honoured with no index yet is pending: no row is claimed as a match.
+ * the block, so it is dropped here. Funding is dropped too (PFF-R-4): the block is W3 by construction and its rows carry no `source_name`. Project honoured with no index yet is pending: no row is claimed as a match.
  */
 export function applyGlobal(
   rows: readonly BilateralCenterResult[],
@@ -97,7 +97,7 @@ export function applyGlobal(
   index: DimensionIndex | null | undefined,
   honoursProject: boolean
 ): BilateralCenterResult[] {
-  const effective: PortfolioFilterSelection = { ...selection, center: NO_VALUES, project: honoursProject ? selection.project : NO_VALUES };
+  const effective: PortfolioFilterSelection = { ...selection, center: NO_VALUES, funding: NO_VALUES, project: honoursProject ? selection.project : NO_VALUES };
   if (!isActive(effective)) return [...rows];
   return rows.filter(row => matchesRow(row as unknown as FilterRow, effective, index) === 'match');
 }

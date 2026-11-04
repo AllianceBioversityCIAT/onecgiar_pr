@@ -629,7 +629,8 @@ describe('PortfolioOverviewService — global filters (GLF-T-3)', () => {
     project: new Set(over.project ?? []),
     center: new Set(over.center ?? []),
     typology: new Set(over.typology ?? []),
-    status: new Set(over.status ?? [])
+    status: new Set(over.status ?? []),
+    funding: new Set(over.funding ?? [])
   });
 
   const ids = () => service.filteredRows().map(r => r.id);
@@ -647,6 +648,21 @@ describe('PortfolioOverviewService — global filters (GLF-T-3)', () => {
     service = TestBed.inject(PortfolioOverviewService);
     return service;
   };
+
+  describe('PFF-R-2 funding filter on the service totals', () => {
+    it('120 W1/W2 + 288 W3, funding=bilateral: total 288, bilateral 288, w1w2 0', () => {
+      const w1w2Rows = Array.from({ length: 120 }, () => raw({ source_name: 'W1/W2' }));
+      const w3Rows = Array.from({ length: 288 }, (_, i) => raw({ source_name: i % 2 ? ' W3/Bilaterals ' : 'W3/Bilaterals' }));
+      setup([...w1w2Rows, ...w3Rows]);
+      service.load();
+      expect(service.kpiTotals().totalResults).toBe(408);
+      service.setSelection(sel({ funding: ['bilateral'] }));
+      const k = service.kpiTotals();
+      expect(k.totalResults).toBe(288);
+      expect(k.bilateralCount).toBe(288);
+      expect(k.w1w2Count).toBe(0);
+    });
+  });
 
   describe('S-4.1 reconciliation under a selection', () => {
     beforeEach(() => {

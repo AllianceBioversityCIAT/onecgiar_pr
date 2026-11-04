@@ -610,6 +610,24 @@ describe('PortfolioCentersBlockComponent (P2-3858, moved by P2-3928)', () => {
       expect(fixture.nativeElement.querySelector('[data-testid="centers-not-affected"]')).not.toBeNull();
     });
 
+    it('PFF-R-4: funding = w1w2 shows "Not affected by: Funding source" and the KPI total equals the unfiltered one', async () => {
+      const unfiltered = (await create({})).componentInstance.kpis();
+      TestBed.resetTestingModule();
+      const fixture = await create({ selection: sel({ funding: ['w1w2'] }) });
+      expect(fixture.nativeElement.querySelector('[data-testid="centers-not-affected"]').textContent).toContain('Funding source');
+      expect(fixture.componentInstance.kpis()).toEqual(unfiltered);
+      expect(fixture.componentInstance.kpis().bilateral).toBe(5);
+    });
+
+    it('PFF-R-4: funding = bilateral shows no note and keeps the same KPI total', async () => {
+      const unfiltered = (await create({})).componentInstance.kpis();
+      TestBed.resetTestingModule();
+      const fixture = await create({ selection: sel({ funding: ['bilateral'] }) });
+      expect(fixture.nativeElement.querySelector('[data-testid="centers-not-affected"]')).toBeNull();
+      expect(fixture.componentInstance.kpis()).toEqual(unfiltered);
+      expect(fixture.componentInstance.kpis().bilateral).toBe(5);
+    });
+
     it('S-9.1: no line when no dimension is active, nor for the other four', async () => {
       const fixture = await create({ selection: sel({ program: ['SP01'], center: ['CENTER-03'], typology: ['output'], status: ['editing'] }) });
       expect(fixture.nativeElement.querySelector('[data-testid="centers-not-affected"]')).toBeNull();
