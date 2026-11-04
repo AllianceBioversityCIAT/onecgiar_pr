@@ -130,25 +130,35 @@ describe('ImpactResultsCardComponent', () => {
       fixture.detectChanges();
     };
 
+    it('header has no click handler; the toggle button is stretched over it (Sonar S1082, keyboard path = the button)', async () => {
+      await setup();
+      expect(header().classList.contains('relative')).toBe(true);
+      expect(toggleBtn().classList.contains('after:absolute')).toBe(true);
+      expect(toggleBtn().classList.contains('after:inset-0')).toBe(true);
+      header().click();
+      fixture.detectChanges();
+      expect(toggleBtn().getAttribute('aria-expanded')).toBe('true');
+    });
+
     it('1.2 is expanded on first render', async () => {
       await setup();
       expect(q('[data-testid=impact-row]').length).toBe(5);
       expect(toggleBtn().getAttribute('aria-expanded')).toBe('true');
     });
 
-    it('1.1 header click hides rows and flips aria-expanded; second click shows rows 1-5 with counts', async () => {
+    it('1.1 toggle click hides rows and flips aria-expanded; second click shows rows 1-5 with counts', async () => {
       await setup();
-      click(header());
+      click(toggleBtn());
       expect(q('[data-testid=impact-row]').length).toBe(0);
       expect(toggleBtn().getAttribute('aria-expanded')).toBe('false');
-      click(header());
+      click(toggleBtn());
       expect(toggleBtn().getAttribute('aria-expanded')).toBe('true');
       expect(q('[data-testid=impact-row]').length).toBe(5);
       expect(Array.from(q('[data-testid=impact-row-name]')).map(text)).toEqual(IMPACT_AREAS.map(a => a.name));
       expect(Array.from(q('[data-testid=impact-row-count]')).map(text)).toEqual(['3', '0', '5', '1', '2']);
     });
 
-    it('1.1 a click on the chevron button toggles exactly once (bubbles to header)', async () => {
+    it('1.1 a click on the chevron button toggles exactly once (stretched over the header, no header handler)', async () => {
       await setup();
       click(toggleBtn());
       expect(toggleBtn().getAttribute('aria-expanded')).toBe('false');
@@ -158,7 +168,7 @@ describe('ImpactResultsCardComponent', () => {
     it('1.1 collapsed keeps the header content and an identical Total', async () => {
       await setup();
       const before = text(q('[data-testid=impact-total]')[0]);
-      click(header());
+      click(toggleBtn());
       expect(toggleBtn().getAttribute('aria-expanded')).toBe('false');
       expect(q('[data-testid=impact-tag]').length).toBe(1);
       expect(text(q('h3')[0])).toBe('Impact results');
@@ -171,15 +181,15 @@ describe('ImpactResultsCardComponent', () => {
     it('header border-b only while expanded', async () => {
       await setup();
       expect(header().classList.contains('border-b')).toBe(true);
-      click(header());
+      click(toggleBtn());
       expect(header().classList.contains('border-b')).toBe(false);
     });
 
     it('1.2 does not persist the state', async () => {
       await setup();
       const spy = jest.spyOn(Storage.prototype, 'setItem');
-      click(header());
-      click(header());
+      click(toggleBtn());
+      click(toggleBtn());
       expect(spy).not.toHaveBeenCalled();
       spy.mockRestore();
     });
@@ -196,8 +206,8 @@ describe('ImpactResultsCardComponent', () => {
     it('3.1 toggling does not issue a new counts request', async () => {
       await setup();
       expect(get).toHaveBeenCalledTimes(1);
-      click(header());
-      click(header());
+      click(toggleBtn());
+      click(toggleBtn());
       await fixture.whenStable();
       expect(get).toHaveBeenCalledTimes(1);
     });
