@@ -10,7 +10,7 @@
 //
 // Usage: `node zoom-check.js` from this directory. Requires a local Playwright-compatible
 // Chromium; update CHROMIUM_PATH below to match your `~/Library/Caches/ms-playwright/` install.
-const path = require('path');
+const path = require('node:path');
 
 const PLAYWRIGHT_PKG_PATH =
   process.env.PLAYWRIGHT_PKG_PATH ||
@@ -49,17 +49,22 @@ async function checkAgainstRealViewport(page) {
 
 (async () => {
   const browser = await chromium.launch({ executablePath: CHROMIUM_PATH });
+  // Sequential by design: one shared browser, one zoom level at a time, so console output stays
+  // ordered and contexts never interfere with each other. NOSONAR on each await below.
   for (const zoom of [1, 1.15, 1.3, 1.5]) {
-    const context = await browser.newContext({ viewport: { width: 1280, height: 574 } });
-    const page = await context.newPage();
-    await page.goto(fileUrl);
-    await page.evaluate(z => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 574 } }); // NOSONAR
+    const page = await context.newPage(); // NOSONAR
+    await page.goto(fileUrl); // NOSONAR
+    await page.evaluate(z => { // NOSONAR
       document.documentElement.style.zoom = String(z);
     }, zoom);
-    await page.waitForTimeout(100);
-    const result = await checkAgainstRealViewport(page);
+    await page.waitForTimeout(100); // NOSONAR
+    const result = await checkAgainstRealViewport(page); // NOSONAR
     console.log(`zoom=${zoom}:`, result);
-    await context.close();
+    await context.close(); // NOSONAR
   }
   await browser.close();
-})();
+})().catch(err => {
+  console.error(err);
+  process.exitCode = 1;
+});

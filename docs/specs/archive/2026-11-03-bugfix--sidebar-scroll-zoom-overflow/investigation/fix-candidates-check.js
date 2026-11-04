@@ -3,7 +3,7 @@
 //
 // Usage: `node fix-candidates-check.js` from this directory. Override PLAYWRIGHT_PKG_PATH /
 // CHROMIUM_PATH env vars if your local Playwright/Chromium install differs.
-const path = require('path');
+const path = require('node:path');
 const PLAYWRIGHT_PKG_PATH =
   process.env.PLAYWRIGHT_PKG_PATH ||
   '/Users/mariacamilagiraldo/.nvm/versions/node/v20.20.2/lib/node_modules/@playwright/cli/node_modules/playwright';
@@ -43,18 +43,23 @@ async function measure(page) {
       .sidebar-container { height: calc(100svh / 1.15) !important; }
     `
   };
+  // Sequential by design: one shared browser, one variant at a time, so console output stays
+  // ordered and contexts never interfere with each other. NOSONAR on each await below.
   for (const [name, css] of Object.entries(variants)) {
-    const context = await browser.newContext({ viewport: { width: 1280, height: 574 } });
-    const page = await context.newPage();
-    await page.goto(fileUrl);
+    const context = await browser.newContext({ viewport: { width: 1280, height: 574 } }); // NOSONAR
+    const page = await context.newPage(); // NOSONAR
+    await page.goto(fileUrl); // NOSONAR
     if (css) {
-      await page.addStyleTag({ content: css });
+      await page.addStyleTag({ content: css }); // NOSONAR
     }
-    await page.evaluate(() => { document.documentElement.style.zoom = '1.15'; });
-    await page.waitForTimeout(100);
-    const r = await measure(page);
+    await page.evaluate(() => { document.documentElement.style.zoom = '1.15'; }); // NOSONAR
+    await page.waitForTimeout(100); // NOSONAR
+    const r = await measure(page); // NOSONAR
     console.log(`--- ${name} ---`, r);
-    await context.close();
+    await context.close(); // NOSONAR
   }
   await browser.close();
-})();
+})().catch(err => {
+  console.error(err);
+  process.exitCode = 1;
+});
