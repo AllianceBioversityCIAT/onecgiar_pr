@@ -76,9 +76,13 @@ export class HlmSidebar {
   );
 
   public readonly sidebarContainerClass = input<ClassValue>('');
+  // `h-svh` ignores root zoom (`--pr-font-scale`), so it overshoots the real viewport whenever
+  // the scale isn't 1; dividing by it keeps the rendered height pinned. Height-only on purpose —
+  // counter-zooming the container was tried and rejected for also shrinking its width.
+  // bugfix/sidebar-scroll-zoom-overflow, design.md §8/§11 SBZ-DD-2.
   protected readonly _sidebarContainerComputedClass = computed(() =>
     hlm(
-      'fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex',
+      'fixed inset-y-0 z-10 hidden h-[calc(100svh/var(--pr-font-scale,1))] w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex',
       this.variant() === 'floating' || this.variant() === 'inset'
         ? 'p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]'
         : 'group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l',
