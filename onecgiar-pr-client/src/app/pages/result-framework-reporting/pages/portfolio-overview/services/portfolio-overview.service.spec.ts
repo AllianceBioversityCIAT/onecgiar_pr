@@ -99,11 +99,8 @@ describe('PortfolioOverviewService', () => {
         totalResults: 0,
         phaseLabel: 'Active Cycle',
         w1w2Count: 0,
-        w1w2SubmittedPercent: 0,
         w1w2CategoriesCount: 0,
         bilateralCount: 0,
-        bilateralApprovedPercent: 0,
-        bilateralCentersCount: 0,
         activeProgramsCount: 0,
         totalProgramsCount: 13,
         portfolioProgressPercent: 0,
@@ -112,9 +109,17 @@ describe('PortfolioOverviewService', () => {
         w1w2NewEditing: 0,
         w1w2Replicated: 0,
         bilateralNew: 0,
-        bilateralNewSubmitted: 0,
-        bilateralNewEditing: 0,
-        bilateralReplicated: 0
+        bilateralNewSplit: [
+          { key: 'submitted', label: 'Submitted', count: 0 },
+          { key: 'approved', label: 'Approved', count: 0 },
+          { key: 'editing', label: 'Editing', count: 0 }
+        ],
+        bilateralReplicated: 0,
+        bilateralReplicatedSplit: [
+          { key: 'submitted', label: 'Submitted', count: 0 },
+          { key: 'approved', label: 'Approved', count: 0 },
+          { key: 'editing', label: 'Editing', count: 0 }
+        ]
       });
     });
 
@@ -161,17 +166,11 @@ describe('PortfolioOverviewService', () => {
 
       // W1/W2 count = 6 (SP01: 3, SP06: 3)
       expect(kpis.w1w2Count).toBe(6);
-      // W1/W2 submitted or higher = SP01 Submitted(3), SP01 QA(2), SP06 Approved(6) = 3 of 6 = 50%
-      expect(kpis.w1w2SubmittedPercent).toBe(50);
       // W1/W2 distinct categories: Innovation development, Policy change, Knowledge product = 3
       expect(kpis.w1w2CategoriesCount).toBe(3);
 
       // Bilateral count = 3 (CIAT: 2, CIMMYT: 1)
       expect(kpis.bilateralCount).toBe(3);
-      // Bilateral approved = CIAT Approved(6), CIMMYT Approved(2) = 2 of 3 = 67%
-      expect(kpis.bilateralApprovedPercent).toBe(67);
-      // Bilateral centers = CIAT, CIMMYT = 2
-      expect(kpis.bilateralCentersCount).toBe(2);
 
       // Active programs in rows = SP01, CIAT, SP06, CIMMYT = 4
       expect(kpis.activeProgramsCount).toBe(4);
@@ -446,6 +445,9 @@ describe('PortfolioOverviewService', () => {
   describe('KPI breakdown — new/replicated × submitted/editing (POVKB-R-1..R-3, R-6)', () => {
     const w12 = (over: Partial<RawResult> = {}) => raw({ source_name: 'W1/W2', ...over });
     const w3 = (over: Partial<RawResult> = {}) => raw({ source_name: 'W3/Bilaterals', ...over });
+    const sum = (split: { count: number }[]) => split.reduce((n, p) => n + p.count, 0);
+    const counts = (split: { key: string; count: number }[]) =>
+      Object.fromEntries(split.map(p => [p.key, p.count]));
 
     it('classifies is_replicated encodings: 1, "1", true are replicated; 0, "0", null, absent are new', () => {
       const flags: unknown[] = [1, '1', true, 0, '0', null, undefined];
@@ -486,9 +488,49 @@ describe('PortfolioOverviewService', () => {
       const k = service.kpiTotals();
       expect(k.bilateralCount).toBe(4);
       expect(k.bilateralNew).toBe(2);
-      expect(k.bilateralNewSubmitted).toBe(1);
-      expect(k.bilateralNewEditing).toBe(1);
+      expect(counts(k.bilateralNewSplit)).toEqual({ submitted: 0, approved: 1, editing: 1 });
       expect(k.bilateralReplicated).toBe(2);
+    });
+
+    it('PCA-R-3: W3 splits by status slot on both lines; status 2 is not Approved', () => {
+      setupService([
+        w3({ status_id: 5, status_name: 'Pending Review', is_replicated: 0 }),
+        w3({ status_id: 6, status_name: 'Approved', is_replicated: 0 }),
+        w3({ status_id: 6, status_name: 'Approved', is_replicated: 0 }),
+        w3({ status_id: 2, status_name: 'Quality Assessed', is_replicated: 0 }),
+        w3({ status_id: 1, status_name: 'Editing', is_replicated: 0 }),
+        w3({ status_id: 1, status_name: 'Editing', is_replicated: 0 }),
+        w3({ status_id: 1, status_name: 'Editing', is_replicated: 0 }),
+        ...[1, 2, 3, 4].map(() => w3({ status_id: 6, status_name: 'Approved', is_replicated: 1 })),
+        w3({ status_id: 7, status_name: 'Rejected', is_replicated: 1 }),
+        w3({ status_id: 1, status_name: 'Editing', is_replicated: 1 }),
+        w3({ status_id: 1, status_name: 'Editing', is_replicated: 1 })
+      ]);
+      service.load();
+      const k = service.kpiTotals();
+      expect(k.bilateralNewSplit.map(p => [p.label, p.count])).toEqual([
+        ['Submitted', 1],
+        ['Approved', 2],
+        ['Editing', 3],
+        ['Quality Assessed', 1]
+      ]);
+      expect(k.bilateralReplicatedSplit.map(p => [p.label, p.count])).toEqual([
+        ['Submitted', 0],
+        ['Approved', 4],
+        ['Editing', 2],
+        ['Rejected', 1]
+      ]);
+      expect(sum(k.bilateralNewSplit)).toBe(k.bilateralNew);
+      expect(sum(k.bilateralReplicatedSplit)).toBe(k.bilateralReplicated);
+    });
+
+    it('PCA-R-1: kpiTotals carries no percentage or Centers-count fields', () => {
+      setupService([w3({ status_id: 6, is_replicated: 0 }), w12({ status_id: 3 })]);
+      service.load();
+      const k = service.kpiTotals() as unknown as Record<string, unknown>;
+      expect('w1w2SubmittedPercent' in k).toBe(false);
+      expect('bilateralApprovedPercent' in k).toBe(false);
+      expect('bilateralCentersCount' in k).toBe(false);
     });
 
     it('keeps every row in exactly one bucket on mixed data (invariants + 4-part total)', () => {
@@ -504,7 +546,8 @@ describe('PortfolioOverviewService', () => {
       expect(k.w1w2New + k.w1w2Replicated).toBe(k.w1w2Count);
       expect(k.w1w2NewSubmitted + k.w1w2NewEditing).toBe(k.w1w2New);
       expect(k.bilateralNew + k.bilateralReplicated).toBe(k.bilateralCount);
-      expect(k.bilateralNewSubmitted + k.bilateralNewEditing).toBe(k.bilateralNew);
+      expect(sum(k.bilateralNewSplit)).toBe(k.bilateralNew);
+      expect(sum(k.bilateralReplicatedSplit)).toBe(k.bilateralReplicated);
       expect(k.w1w2New + k.w1w2Replicated + k.bilateralNew + k.bilateralReplicated).toBe(k.totalResults);
       expect(k.w1w2Count + k.bilateralCount).toBe(k.totalResults);
     });
@@ -514,8 +557,8 @@ describe('PortfolioOverviewService', () => {
       service.load();
       const k = service.kpiTotals();
       expect(k.bilateralNew).toBe(0);
-      expect(k.bilateralNewSubmitted).toBe(0);
-      expect(k.bilateralNewEditing).toBe(0);
+      expect(sum(k.bilateralNewSplit)).toBe(0);
+      expect(sum(k.bilateralReplicatedSplit)).toBe(0);
       expect(k.bilateralReplicated).toBe(0);
     });
 

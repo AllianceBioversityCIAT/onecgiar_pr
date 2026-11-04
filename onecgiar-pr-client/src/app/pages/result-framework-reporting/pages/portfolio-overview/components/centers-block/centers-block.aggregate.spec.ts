@@ -1,5 +1,5 @@
 import { EMPTY_SELECTION, buildDimensionIndex, type PortfolioFilterSelection } from '../../services/portfolio-filters';
-import { CENTER_STATUS_IDS, applyGlobal, buildCenterRow, byOrigin, isReplicatedRow, isW3Row, originCounts, sumRows } from './centers-block.aggregate';
+import { CENTER_STATUS_IDS, applyGlobal, buildCenterRow, byOrigin, hasLeadProgram, isReplicatedRow, isW3Row, originCounts, dedupeById } from './centers-block.aggregate';
 
 describe('centers-block.aggregate (P2-3858, moved by P2-3928)', () => {
   describe('buildCenterRow', () => {
@@ -24,12 +24,17 @@ describe('centers-block.aggregate (P2-3858, moved by P2-3928)', () => {
     });
   });
 
-  describe('sumRows', () => {
-    it('adds every column of the rows passed in', () => {
-      const a = buildCenterRow('A', 'A', [{ status_id: '1' }, { status_id: '6' }] as any[]);
-      const b = buildCenterRow('B', 'B', [{ status_id: '1' }] as any[]);
-      expect(sumRows([a, b], 4)).toEqual({ total: 3, counts: [2, 0, 1, 0] });
-      expect(sumRows([], 4)).toEqual({ total: 0, counts: [0, 0, 0, 0] });
+  describe('dedupeById (PCA-R-4)', () => {
+    const r = (id: any, status_id = '1') => ({ id, status_id, source: 'API' }) as any;
+    it('keeps one row per result id, first wins', () => {
+      const out = dedupeById([r(10, '5'), r(11), r(10, '6')]);
+      expect(out.map(x => x.id)).toEqual([10, 11]);
+      expect(out[0].status_id).toBe('5');
+    });
+    it('keeps every row that has no id and does not mutate its input', () => {
+      const input = [r(undefined), r(null), r(7), r(7)];
+      expect(dedupeById(input).length).toBe(3);
+      expect(input.length).toBe(4);
     });
   });
 
@@ -44,6 +49,18 @@ describe('centers-block.aggregate (P2-3858, moved by P2-3928)', () => {
 
     it('treats a missing key as new', () => {
       expect(isReplicatedRow({} as any)).toBe(false);
+    });
+  });
+
+  describe('hasLeadProgram (PCA-DD-6)', () => {
+    it('is true for a non-blank lead Program/Accelerator code', () => {
+      expect(hasLeadProgram({ submitter: 'SP01' } as any)).toBe(true);
+    });
+    it.each([null, undefined, '', '   '])('is false for %p (no active lead P/A)', value => {
+      expect(hasLeadProgram({ submitter: value } as any)).toBe(false);
+    });
+    it('is false when the key is missing', () => {
+      expect(hasLeadProgram({} as any)).toBe(false);
     });
   });
 

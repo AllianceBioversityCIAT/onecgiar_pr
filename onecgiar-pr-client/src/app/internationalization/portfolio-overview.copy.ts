@@ -4,6 +4,15 @@
  * the rest of the page's template copy has not been migrated.
  */
 export const PORTFOLIO_OVERVIEW_COPY = {
+  // W3/Bilateral card status split (spec changes/portfolio-overview-feedback-round/cleanup-and-approved, PCA-R-3)
+  w3Split: {
+    submitted: 'Submitted',
+    approved: 'Approved',
+    editing: 'Editing',
+    'in-qa': 'Quality Assessed',
+    rejected: 'Rejected',
+    discontinued: 'Discontinued'
+  },
   statusTitle: 'Portfolio Results Reporting Status',
   statusSubtitle: 'All W1/W2 and W3/Bilateral results reported in this phase, by status',
   statusTableCaption: 'Portfolio Results Reporting Status breakdown',

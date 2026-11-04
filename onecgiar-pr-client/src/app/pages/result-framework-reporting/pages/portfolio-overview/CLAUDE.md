@@ -1,6 +1,6 @@
 # portfolio-overview
 
-**Verified:** 2026-10-27 · branch fix/portfolio-overview-in-qa-list (strip jump link + Results Center keeps the open phase) · prior: 2026-10-22 · quick/portfolio-overview-partial-label
+**Verified:** 2026-11-04 · spec changes/portfolio-overview-feedback-round/cleanup-and-approved (no submitted/approved percentage, W3 status split, Centers block counts distinct results) · prior: 2026-10-27 · fix/portfolio-overview-in-qa-list
 
 **What this owns:** the **admin-only** `/portfolio-overview` screen — figures for the WHOLE portfolio in the open
 phase: KPI deck, status, results by typology, progress against ToC KPIs, CGIAR Centers, W3/Bilateral projects, filtered results detail + Excel export. Ticket **P2-3304**;
@@ -17,8 +17,9 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 - Page data: **one** `GET_AllResultsWithUseRole(userId, { limit: 20000 })`, no `submitter_id` (all the roles allow).
 - Route: `extraRoutingApp` (`shared/routing/routing-data.ts`), `canActivate: [CheckAdminGuard]`. **Guarded, not
   merely hidden** (client CLAUDE.md §7).
-- `kpis()` has 8 breakdown fields (`w1w2New/NewSubmitted/NewEditing/Replicated`, same four `bilateral…`). **Replicated** = `is_replicated` ∈ `1 | '1' | true`, else **New**. **Editing** = `Number(status_id) === 1`; every
-  other status (missing too) is **Submitted**. Submitted + Editing = New, so New + Replicated reconciles.
+- `kpis()` carries the New / Replicated counts per source (`w1w2New`, `w1w2Replicated`, `bilateralNew`, `bilateralReplicated`). **W1/W2** also keeps `w1w2NewSubmitted` / `w1w2NewEditing` (Editing = `Number(status_id) === 1`, every other status Submitted; Submitted + Editing = New). **W3** instead carries the status splits `bilateralNewSplit` / `bilateralReplicatedSplit` (`{ key, label, count }[]`). **Replicated** = `is_replicated` ∈ `1 | '1' | true`, else **New**.
+- 🛑 **W3 split goes through `resolveStatusSlot`** (`services/portfolio-status-slot.ts`), never an ad-hoc `status_id === 1` test (W3 only; the W1/W2 split stays Submitted / Editing). Submitted / Approved / Editing always show; Quality Assessed / Rejected / Discontinued only when > 0. Status 2 is NOT Approved. Labels: `PORTFOLIO_OVERVIEW_COPY.w3Split`.
+- 🛑 **No submitted/approved percentage in the KPI deck, the Status section or the Centers block chip and tiles** (stakeholder, 2026-11-04, PCA-R-5): no deck chips, no tile `(N%)`. `segment.percent` survives only as the tile/bar WIDTH (PCA-DD-3). Known Centers exceptions, out of R-5 scope: the sr-only donut table keeps a "Share %" column (`centers-block.charts.ts`) and the donut tooltip formatter keeps `({d}%)`. The Typology, ToC KPI and Projects percentages (`typology-card-percent`, `toc-kpi-percent`, `toc-kpi-summary-percent`, `projects-kpi-percent`) are a different question and stay.
 
 ## Global filters (2026-10-16, spec `changes/portfolio-overview-revamp/global-filters`)
 
@@ -42,19 +43,21 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 
 ## KPI deck (2026-10-14, spec `changes/portfolio-overview-kpi-breakdown`)
 
-- Three cards: **Total** (W1/W2 new + W3 new + the two replicated, reconciling to the total), **W1/W2** and
-  **W3/Bilateral** (New -> Submitted / Editing, separator, replicated line). Click targets: card 1
-  `navigateToResultsCenter('all')`, card 2 `'w1w2'`, card 3 `'bilateral'`; test ids `kpi-total-*`, `kpi-w1w2-*`, `kpi-bilateral-*`.
+- Three cards: **Total** (W1/W2 new + W3 new + the two replicated, reconciling to the total), **W1/W2** (keeps its Submitted / Editing split, `kpi-w1w2-split`) and
+  **W3/Bilateral** (New with its status split, separator, replicated line with its split). Click targets: card 1
+  `navigateToResultsCenter('all')`, card 2 `'w1w2'`, card 3 `'bilateral'`; test ids `kpi-total-*`, `kpi-w1w2-*`, `kpi-bilateral-*`, splits `kpi-bilateral-split` / `kpi-bilateral-replicated-split`.
 
 ## CGIAR Centers block (P2-3928; W3-only + origin filter by spec `centers-new-vs-replicated`)
 
-- `components/centers-block/` — `PortfolioCentersBlockComponent`, rendered before the Projects block, **outside** the `hasFigures()` branch (own data and own loading / error / empty states). Old route `admin-module/entities-overview` redirects here (`adminModuleRouting`). Parts: header + phase chip, 2 KPI cards (`centers-kpis`), Reporting status card (donut + tiles + active-filter strip). Progress by Center is gone on purpose; do not re-add.
+- `components/centers-block/` — `PortfolioCentersBlockComponent`, rendered before the Projects block, **outside** the `hasFigures()` branch (own data and own loading / error / empty states). Old route `admin-module/entities-overview` redirects here (`adminModuleRouting`). Parts: header + phase chip, one W3/Bilateral KPI card (`centers-kpis`, single-column grid), Reporting status card (donut + tiles + active-filter strip). Progress by Center is gone on purpose; do not re-add.
 - Data path is **its own**: `CentersService.getData()`, then **one** `GET_bilateralCenterResults(code, versionId)` per Center for the open **P25** phase (`resolvePhase()`). Copy: `internationalization/portfolio-centers-block.copy.ts`.
-- ⚠️ **W3 only.** The endpoint returns the Center Overview rows (W1/W2 too); `loadCenter` keeps `isW3Row` (`source === 'API'`) at load, so every figure is W3. A result shared by several Centers counts once per Center. Its total therefore differs from the page's own "W3/Bilateral results" tile (counted per result, not per Center).
-- Classifiers live in `centers-block.aggregate.ts`: `isW3Row`, `isReplicatedRow` (`is_replicated` ∈ 1 | '1' | true), `byOrigin`, `originCounts`. `CenterRowState` stores `w3Rows`; `viewRows` applies the origin per Center.
-- **Origin filter** (`origin`: all | new | replicated): two `<button aria-pressed>` in the W3/Bilateral card (`origin-new`, `origin-replicated`), styled like the status tiles. It composes with the status filter (`toggleOrigin` / `toggleStatus` never touch each other; `clearFilters` resets both) and drives the donut, tiles and `centerTotals`. 🛑 DD-4: `kpis()` (total, % approved, Centers reporting, the New / Replicated counts) read **unfiltered** W3 rows and ignore the origin; the card is the control, so it must not shrink.
+- ⚠️ **W3 only.** The endpoint returns the Center Overview rows (W1/W2 too); `loadCenter` keeps `isW3Row` (`source === 'API'`) at load, so every figure is W3. 🛑 **The block counts DISTINCT results**: `distinctRows = dedupeById(globalCenters().flatMap(w3Rows))`, applied after the Center filter, so a result shared by several Centers counts once (subtitle: "Each result counts once, even when several Centers share it."). Its total therefore matches the page's own "W3/Bilateral results" tile.
+- 🛑 **Lead-P/A rule (PCA-DD-6):** `loadCenter` also keeps only rows with `hasLeadProgram` (`submitter` non-blank), before dedupe, like the deck's W3 query (INNER JOIN lead role 1 + active initiative). So Centers = deck minus results with no Center. `submitter` has no `ci.active` check in its SQL: equal to the deck only while no lead is inactive/blank (0 on v36).
+- Classifiers live in `centers-block.aggregate.ts`: `isW3Row`, `isReplicatedRow` (`is_replicated` ∈ 1 | '1' | true), `byOrigin`, `originCounts`. `CenterRowState` stores `w3Rows`; `kpis()` = `{ bilateral, bilateralNew, bilateralReplicated }` and `statusTotals()` feeds the donut and tiles, both over `distinctRows`. The Centers reporting card / chip, `viewRows`, `centerTotals` and `sumRows` are removed on purpose; do not re-add.
+- **Origin filter** (`origin`: all | new | replicated): two `<button aria-pressed>` in the W3/Bilateral card (`origin-new`, `origin-replicated`), styled like the status tiles. It composes with the status filter (`toggleOrigin` / `toggleStatus` never touch each other; `clearFilters` resets both) and drives the donut and tiles. 🛑 DD-4: `kpis()` (total, New / Replicated counts) read the **unfiltered** distinct W3 rows and ignore the origin; the card is the control, so it must not shrink.
 - Strip: `activeFilterLabel()` ("New · Pending review"). "View in Results Center" shows only when a status is set **and** origin is `all` (`showResultsCenterLink`), with `funding=bilateral`: Results Center cannot filter by origin.
 - 🛑 **"Retry failed Centers":** a `role="status"` region shows the partial note (`centers-partial`) and **one** button (`centers-retry-failed`) re-requesting only failed Centers. No failures = no button. A failed Centers list shows `centers-error`; an empty catalogue shows `centers-empty`.
+- **No-Center note (V-1 gate):** `centers-no-center-note` under the W3 total reads "N W3 result(s) have no Center", N = deck W3 total (`kpiTotals().bilateralCount`, inputs `deckW3Total` + `deckVersionId`) minus `kpis().bilateral`. Shown only when N > 0, same phase, every Center loaded, none failed, and **no global filter dimension active** (`isActive(selection())`; the deck filters Center per result, the block per Center feed, so they only agree unfiltered); otherwise absent.
 
 ## W3/Bilateral projects (2026-10-16, spec `changes/portfolio-overview-revamp/w3-projects-section`)
 

@@ -228,6 +228,10 @@ export class PortfolioOverviewComponent {
   readonly projectsNotAffected = computed(() => notAffectedBy('projects', this.data.selection()));
   /** The Centers block honours Project only once the map is ready (DD-5): until then it says "Not affected by: Project". */
   readonly centersDimensionsVersionId = computed(() => (this.data.dimensionIndex() ? this.data.versionId() : null));
+  /** V-1 gate: the deck's W3 total for the Centers block's no-Center note; null while the deck cannot say (loading, error, partial, filters pending). */
+  readonly centersDeckW3Total = computed(() =>
+    this.hasFigures() && !this.data.isPartial() && !this.data.filtersPending() ? this.data.kpiTotals().bilateralCount : null
+  );
 
   /** One entry per active dimension: its label and the labels of the chosen values (the strip's text). */
   readonly activeSummary = computed(() => {

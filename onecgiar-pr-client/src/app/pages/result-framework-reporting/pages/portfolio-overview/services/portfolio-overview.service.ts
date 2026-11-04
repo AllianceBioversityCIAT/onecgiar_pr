@@ -16,6 +16,7 @@ import {
   type PortfolioFilterOptions,
   type PortfolioFilterSelection
 } from './portfolio-filters';
+import { PORTFOLIO_OVERVIEW_COPY } from '../../../../../internationalization/portfolio-overview.copy';
 import { resolveStatusSlot } from './portfolio-status-slot';
 
 /**
@@ -61,15 +62,19 @@ export interface AllResultsEnvelope {
   response?: { items?: RawResult[]; meta?: { total?: number | string } };
 }
 
+/** One part of the W3 card's status sub-line (PCA-R-3). */
+export interface PortfolioW3SplitPart {
+  key: PortfolioStatusSegment['key'];
+  label: string;
+  count: number;
+}
+
 export interface PortfolioKpis {
   totalResults: number;
   phaseLabel: string;
   w1w2Count: number;
-  w1w2SubmittedPercent: number;
   w1w2CategoriesCount: number;
   bilateralCount: number;
-  bilateralApprovedPercent: number;
-  bilateralCentersCount: number;
   activeProgramsCount: number;
   totalProgramsCount: number;
   portfolioProgressPercent: number;
@@ -78,9 +83,9 @@ export interface PortfolioKpis {
   w1w2NewEditing: number;
   w1w2Replicated: number;
   bilateralNew: number;
-  bilateralNewSubmitted: number;
-  bilateralNewEditing: number;
+  bilateralNewSplit: PortfolioW3SplitPart[];
   bilateralReplicated: number;
+  bilateralReplicatedSplit: PortfolioW3SplitPart[];
 }
 
 export interface PortfolioStatusSegment {
@@ -266,36 +271,11 @@ export class PortfolioOverviewService {
     const w1w2Rows = allRows.filter(r => text(r.source_name) !== 'W3/Bilaterals');
     const w1w2Count = w1w2Rows.length;
 
-    const w1w2Submitted = w1w2Rows.filter(r => {
-      const sid = Number(r.status_id);
-      const sname = (r.status_name || '').toLowerCase();
-      return (
-        sid === 3 ||
-        sid === 2 ||
-        sname.includes('submitted') ||
-        sname.includes('quality assessed') ||
-        sname.includes('approved')
-      );
-    }).length;
-    const w1w2SubmittedPercent = w1w2Count > 0 ? Math.round((w1w2Submitted / w1w2Count) * 100) : 0;
-
     const w1w2Categories = new Set(w1w2Rows.map(r => text(r.result_type)).filter(Boolean));
     const w1w2CategoriesCount = w1w2Categories.size;
 
     const bilateralRows = allRows.filter(r => text(r.source_name) === 'W3/Bilaterals');
     const bilateralCount = bilateralRows.length;
-
-    const bilateralApproved = bilateralRows.filter(r => {
-      const sid = Number(r.status_id);
-      const sname = (r.status_name || '').toLowerCase();
-      return sid === 2 || sid === 6 || sname.includes('approved');
-    }).length;
-    const bilateralApprovedPercent = bilateralCount > 0 ? Math.round((bilateralApproved / bilateralCount) * 100) : 0;
-
-    const bilateralCenters = new Set(
-      bilateralRows.map(r => text(r.submitter) || text(r.submitter_short_name)).filter(Boolean)
-    );
-    const bilateralCentersCount = bilateralCenters.size;
 
     const isReplicated = (r: RawResult): boolean =>
       r.is_replicated === 1 || r.is_replicated === '1' || r.is_replicated === true;
@@ -314,6 +294,21 @@ export class PortfolioOverviewService {
     };
     const w1w2Tally = tally(w1w2Rows);
     const bilateralTally = tally(bilateralRows);
+
+    // PCA-R-3: one slot per row via the page's single status map; Submitted/Approved/Editing always shown.
+    const ALWAYS_SHOWN: PortfolioStatusSegment['key'][] = ['submitted', 'approved', 'editing'];
+    const splitBy = (rows: RawResult[]): PortfolioW3SplitPart[] => {
+      const counts = new Map<PortfolioStatusSegment['key'], number>();
+      for (const r of rows) {
+        const slot = resolveStatusSlot(r);
+        counts.set(slot, (counts.get(slot) ?? 0) + 1);
+      }
+      return (['submitted', 'approved', 'editing', 'in-qa', 'rejected', 'discontinued'] as const)
+        .filter(key => ALWAYS_SHOWN.includes(key) || (counts.get(key) ?? 0) > 0)
+        .map(key => ({ key, label: PORTFOLIO_OVERVIEW_COPY.w3Split[key], count: counts.get(key) ?? 0 }));
+    };
+    const bilateralNewSplit = splitBy(bilateralRows.filter(r => !isReplicated(r)));
+    const bilateralReplicatedSplit = splitBy(bilateralRows.filter(isReplicated));
 
     const activePrograms = new Set(allRows.map(r => text(r.submitter)).filter(Boolean));
     const activeProgramsCount = activePrograms.size;
@@ -338,11 +333,8 @@ export class PortfolioOverviewService {
       totalResults,
       phaseLabel,
       w1w2Count,
-      w1w2SubmittedPercent,
       w1w2CategoriesCount,
       bilateralCount,
-      bilateralApprovedPercent,
-      bilateralCentersCount,
       activeProgramsCount,
       totalProgramsCount,
       portfolioProgressPercent,
@@ -351,9 +343,9 @@ export class PortfolioOverviewService {
       w1w2NewEditing: w1w2Tally.newEditing,
       w1w2Replicated: w1w2Tally.replicated,
       bilateralNew: bilateralTally.newRows,
-      bilateralNewSubmitted: bilateralTally.newSubmitted,
-      bilateralNewEditing: bilateralTally.newEditing,
-      bilateralReplicated: bilateralTally.replicated
+      bilateralNewSplit,
+      bilateralReplicated: bilateralTally.replicated,
+      bilateralReplicatedSplit
     };
   });
 

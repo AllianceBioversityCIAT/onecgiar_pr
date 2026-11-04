@@ -19,12 +19,11 @@ import {
   buildSegments,
   buildSegmentsTable,
   buildStatusDonutOption,
-  percentOf,
   statusIdFromChartEvent
 } from './centers-block.charts';
 import { BilateralCenterResult } from '../../../../../bilateral/services/bilateral-center-result.interface';
-import { DimensionIndex, EMPTY_SELECTION, PortfolioFilterSelection, notAffectedBy } from '../../services/portfolio-filters';
-import { CENTER_STATUS_IDS, CenterOrigin, EntityOverviewRow, applyGlobal, buildCenterRow, byOrigin, isW3Row, originCounts, sumRows } from './centers-block.aggregate';
+import { DimensionIndex, EMPTY_SELECTION, PortfolioFilterSelection, isActive, notAffectedBy } from '../../services/portfolio-filters';
+import { CENTER_STATUS_IDS, CenterOrigin, applyGlobal, buildCenterRow, byOrigin, dedupeById, hasLeadProgram, isW3Row, originCounts } from './centers-block.aggregate';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -47,7 +46,7 @@ function resolveCssColor(value: string): string {
 /**
  * P2-3928 — the CGIAR Centers (W3/Bilateral) block of the Portfolio overview. Built for P2-3858 as Admin ›
  * All P/As and Centers; moved here as one more section (Ángel, 7-Oct-2026: "La respuesta son las 3") with
- * the same figures and presentation: KPI cards and status donut + tiles, for the open P25 reporting phase.
+ * the same figures and presentation: the KPI card and status donut + tiles, for the open P25 reporting phase.
  * Read-only: it only issues GETs. Admin-only because its host route (`portfolio-overview`) carries `CheckAdminGuard`.
  */
 @Component({
@@ -68,6 +67,9 @@ export class PortfolioCentersBlockComponent {
   readonly selection = input<PortfolioFilterSelection>(EMPTY_SELECTION);
   readonly dimensionIndex = input<DimensionIndex | null>(null);
   readonly dimensionsVersionId = input<number | null>(null);
+  /** V-1 gate: the deck's W3/Bilateral total (same selection) and the version it was read for; null while the deck cannot say. */
+  readonly deckW3Total = input<number | null>(null);
+  readonly deckVersionId = input<number | null>(null);
 
   readonly phase = signal<Phases | null>(null);
   readonly phaseResolved = signal(false);
@@ -75,15 +77,29 @@ export class PortfolioCentersBlockComponent {
 
   readonly centersListState = signal<LoadState>('loading');
   readonly centerRows = signal<CenterRowState[]>([]);
-  /** Per-Center row over the W3 rows of the selected origin (CNR-3); Centers still loading or failed are absent. */
-  readonly viewRows = computed<EntityOverviewRow[]>(() => {
-    const origin = this.origin();
-    return this.globalCenters().map(center => buildCenterRow(center.code, center.acronym, byOrigin(center.w3Rows, origin)));
+  /** PCA-R-4: every loaded Center's W3 rows under the global selection, one row per result (a shared result counts once). */
+  private readonly distinctRows = computed(() => dedupeById(this.globalCenters().flatMap(center => center.w3Rows)));
+  /** Status counts of the distinct rows of the selected origin (CNR-3), for the donut and the tiles. */
+  readonly statusTotals = computed(() => {
+    const row = buildCenterRow('all', '', byOrigin(this.distinctRows(), this.origin()));
+    return { total: row.total, counts: row.counts };
   });
-  readonly loadedCenterRows = computed(() => this.viewRows());
-  readonly centerTotals = computed(() => sumRows(this.loadedCenterRows(), CENTER_STATUS_IDS.length));
   readonly centersPartial = computed(() => this.centerRows().some(center => center.state === 'error'));
   readonly centersLoading = computed(() => this.centerRows().some(center => center.state === 'loading'));
+
+  /**
+   * V-1 gate: W3 results the deck counts that no Center returns (deck total minus the distinct Centers total).
+   * Comparable only when both read the same phase and the same selection (no global filter active), every Center loaded
+   * and none failed (the partial note already explains that gap). Otherwise 0, so no note.
+   */
+  readonly noCenterCount = computed(() => {
+    const deck = this.deckW3Total();
+    if (deck === null || this.centersListState() !== 'ready' || this.centersLoading() || this.centersPartial()) return 0;
+    if (this.versionId() === null || this.versionId() !== this.deckVersionId() || this.notAffected().length > 0) return 0;
+    // PCA-R-4 "deck and Centers agree": only with no global filter. The deck applies Center per result, the block per Center feed.
+    if (isActive(this.selection())) return 0;
+    return Math.max(0, deck - this.kpis().bilateral);
+  });
 
   /** Project is honoured only when this block's phase is the version the dimensions index was built for (GLF-R-8, A-3). */
   readonly honoursProject = computed(() => this.versionId() !== null && this.versionId() === this.dimensionsVersionId());
@@ -120,27 +136,17 @@ export class PortfolioCentersBlockComponent {
   private readonly donutPalette = computed(() => DONUT_PALETTE_TOKENS.map(token => resolveCssColor(`var(${token})`)));
 
   readonly activeState = computed<LoadState>(() =>
-    this.centersListState() === 'ready' && this.centersLoading() && !this.loadedCenterRows().length ? 'loading' : this.centersListState()
+    this.centersListState() === 'ready' && this.centersLoading() && !this.globalCenters().length ? 'loading' : this.centersListState()
   );
-  readonly segments = computed(() => buildSegments(this.tileColumns(), this.centerTotals()));
+  readonly segments = computed(() => buildSegments(this.tileColumns(), this.statusTotals()));
 
-  /** CNR-DD-4: the KPI card reads ALL W3 rows under the global selection, whatever the origin filter says. */
+  /** CNR-DD-4: the KPI card reads ALL distinct W3 rows under the global selection, whatever the origin filter says. */
   readonly kpis = computed(() => {
-    const loaded = this.globalCenters();
-    const all = loaded.flatMap(center => center.w3Rows);
-    const counts = originCounts(all);
-    const approved = all.filter(row => Number(row.status_id) === 6).length;
-    return {
-      bilateral: counts.total,
-      bilateralNew: counts.new,
-      bilateralReplicated: counts.replicated,
-      bilateralApproved: percentOf(approved, counts.total),
-      centersReporting: loaded.filter(center => center.w3Rows.length > 0).length,
-      centersCount: this.visibleCenterRows().length
-    };
+    const counts = originCounts(this.distinctRows());
+    return { bilateral: counts.total, bilateralNew: counts.new, bilateralReplicated: counts.replicated };
   });
 
-  readonly donutOption = computed(() => buildStatusDonutOption(this.segments(), this.centerTotals().total, this.selectedStatus(), this.donutPalette()));
+  readonly donutOption = computed(() => buildStatusDonutOption(this.segments(), this.statusTotals().total, this.selectedStatus(), this.donutPalette()));
   readonly donutTable = computed(() => buildSegmentsTable(this.copy.statusTitle, this.segments()));
   readonly selectedLabel = computed(() => {
     const id = this.selectedStatus();
@@ -263,7 +269,7 @@ export class PortfolioCentersBlockComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (envelope: any) =>
-          this.patchCenter(center.code, { state: 'ready', w3Rows: ((envelope?.response ?? []) as BilateralCenterResult[]).filter(isW3Row) }),
+          this.patchCenter(center.code, { state: 'ready', w3Rows: ((envelope?.response ?? []) as BilateralCenterResult[]).filter(isW3Row).filter(hasLeadProgram) }),
         error: () => this.patchCenter(center.code, { state: 'error', w3Rows: null })
       });
   }
