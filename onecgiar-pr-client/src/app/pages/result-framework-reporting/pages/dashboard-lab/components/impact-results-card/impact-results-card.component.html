@@ -1,17 +1,18 @@
 <!-- IRE-R-1..4 — Impact results card. Sibling of the reporting table cards (same container/tag/button tokens). -->
 <section class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)]" data-testid="impact-results-card">
+  <!-- Stretched button: its ::after covers the whole header, so a click anywhere toggles once and the keyboard path is the button itself. -->
   <header
-    class="flex min-h-[52px] cursor-pointer flex-wrap items-center gap-x-[10px] gap-y-[4px] px-[12px] py-[8px] sm:px-[20px]"
+    class="relative flex min-h-[52px] cursor-pointer flex-wrap items-center gap-x-[10px] gap-y-[4px] px-[12px] py-[8px] sm:px-[20px]"
     [class.border-b]="expanded()"
-    [class.border-[var(--pr-border-divider)]]="expanded()"
-    (click)="toggle()">
+    [class.border-[var(--pr-border-divider)]]="expanded()">
     <button
       type="button"
-      class="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-[6px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-400)]"
+      class="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-[6px] after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-400)]"
       aria-label="Impact results"
       [attr.aria-expanded]="expanded()"
       [attr.aria-controls]="listId"
-      data-testid="impact-toggle">
+      data-testid="impact-toggle"
+      (click)="toggle()">
       <ng-icon
         name="lucideChevronDown"
         aria-hidden="true"
