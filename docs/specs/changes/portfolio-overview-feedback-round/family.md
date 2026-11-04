@@ -16,7 +16,7 @@
 |---|---|---|---|---|---|
 | 1 | `changes/portfolio-overview-feedback-round/cleanup-and-approved` | 2, 3, 4, 5 | none | yes | executed (fb4526f9b, 2026-11-04) |
 | 2 | `changes/portfolio-overview-feedback-round/funding-filter` | 1 | `changes/portfolio-overview-feedback-round/cleanup-and-approved` | no (same page template + service) | done (archived 2026-11-04, uncommitted) |
-| 3 | `changes/portfolio-overview-feedback-round/contribution-requests-by-pa` | 6 | none | yes (new server endpoint + new block; only touches the page template at one mount point) | pending |
+| 3 | `changes/portfolio-overview-feedback-round/contribution-requests-by-pa` | 6 | none | yes (new server endpoint + new block; only touches the page template at one mount point) | specified (2026-11-04) |
 
 **Closed-set rule:** no child folder exists without a row here; adding one is a HITL-approved edit.
 

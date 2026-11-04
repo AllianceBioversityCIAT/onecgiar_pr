@@ -37,6 +37,7 @@ describe('ResultsFrameworkReportingController', () => {
             getDashboardStats: jest.fn(),
             getPortfolioTocCoverage: jest.fn(),
             getPortfolioBilateralProjects: jest.fn(),
+            getPortfolioContributionRequests: jest.fn(),
             getPortfolioResultDimensions: jest.fn(),
           },
         },
@@ -145,6 +146,60 @@ describe('ResultsFrameworkReportingController', () => {
       const payload = { response: {}, status: 200 } as any;
       reportingService.getPortfolioBilateralProjects.mockResolvedValue(payload);
       expect(await controller.getPortfolioBilateralProjects('1')).toBe(payload);
+    });
+  });
+
+  describe('getPortfolioContributionRequests (CRP-T-2)', () => {
+    const handler = () =>
+      ResultsFrameworkReportingController.prototype
+        .getPortfolioContributionRequests;
+
+    it('is mounted at GET portfolio/contribution-requests', () => {
+      expect(Reflect.getMetadata(PATH_METADATA, handler())).toBe(
+        'portfolio/contribution-requests',
+      );
+      expect(Reflect.getMetadata(METHOD_METADATA, handler())).toBe(
+        RequestMethod.GET,
+      );
+    });
+
+    it('carries the same guard and role metadata as the sibling portfolio route (CRP-R-5)', () => {
+      const sibling =
+        ResultsFrameworkReportingController.prototype
+          .getPortfolioBilateralProjects;
+      expect(Reflect.getMetadata(GUARDS_METADATA, handler())).toEqual([
+        ValidRoleGuard,
+      ]);
+      expect(Reflect.getMetadata('role', handler())).toEqual(
+        Reflect.getMetadata('role', sibling),
+      );
+      expect(Reflect.getMetadata('role', handler())).toEqual({
+        roles: RoleEnum.ADMIN,
+        type: RoleTypeEnum.APPLICATION,
+      });
+    });
+
+    it.each([
+      ['7', 7],
+      [undefined, undefined],
+      ['', undefined],
+      ['abc', undefined],
+      ['-1', undefined],
+    ])('passes versionId %p to the service as %p', (raw, expected) => {
+      controller.getPortfolioContributionRequests(raw as any);
+      expect(
+        reportingService.getPortfolioContributionRequests,
+      ).toHaveBeenCalledWith(expected);
+    });
+
+    it('returns what the service returns', async () => {
+      const payload = { response: {}, status: 200 } as any;
+      reportingService.getPortfolioContributionRequests.mockResolvedValue(
+        payload,
+      );
+      expect(await controller.getPortfolioContributionRequests('1')).toBe(
+        payload,
+      );
     });
   });
 

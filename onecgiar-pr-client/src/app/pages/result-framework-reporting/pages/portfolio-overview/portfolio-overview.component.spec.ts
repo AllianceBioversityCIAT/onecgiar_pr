@@ -1173,6 +1173,49 @@ describe('PortfolioOverviewComponent', () => {
     });
   });
 
+  describe('Contribution requests slot (CRP-T-4, CRP-R-3)', () => {
+    const CRB = 'app-portfolio-contribution-requests-block';
+
+    it('hasFigures: the block sits after Projects and before Results detail', () => {
+      build(OPEN_PHASE);
+      const root: HTMLElement = fixture.nativeElement;
+      const projects = root.querySelector('app-portfolio-projects-block') as Element;
+      const block = root.querySelector(CRB) as Element;
+      const detail = root.querySelector('app-portfolio-results-detail') as Element;
+      expect(projects && block && detail).toBeTruthy();
+      expect(projects.compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(block.compareDocumentPosition(detail) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('0 result rows: the block is still present, and asks the server once (no real HTTP)', () => {
+      build([]);
+      expect(fixture.componentInstance.hasFigures()).toBe(false);
+      expect(fixture.nativeElement.querySelector(CRB)).toBeTruthy();
+      const calls = TestBed.inject(HttpTestingController).match(r => r.url.includes('contribution-requests'));
+      expect(calls.length).toBe(1);
+      calls.forEach(c => c.flush({ response: null }));
+    });
+
+    it('loading: the block is absent and makes no request', () => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [PortfolioOverviewComponent],
+        providers: [
+          { provide: ApiService, useValue: { authSE: { localStorageUser: { id: 2 } }, resultsSE: { GET_AllResultsWithUseRole: () => new Subject() } } },
+          { provide: Router, useValue: { navigate: jest.fn() } },
+          { provide: DataControlService, useValue: { reportingCurrentPhase: {} } },
+          ...projectsProviders(),
+          provideHttpClient(),
+          provideHttpClientTesting()
+        ]
+      });
+      fixture = TestBed.createComponent(PortfolioOverviewComponent);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector(CRB)).toBeNull();
+      expect(TestBed.inject(HttpTestingController).match(r => r.url.includes('contribution-requests')).length).toBe(0);
+    });
+  });
+
   it('refuses to load without a session instead of asking the server for user "undefined"', () => {
     TestBed.resetTestingModule();
     const spy = jest.fn();
