@@ -4,6 +4,15 @@
  * the rest of the page's template copy has not been migrated.
  */
 export const PORTFOLIO_OVERVIEW_COPY = {
+  // W3/Bilateral card status split (spec changes/portfolio-overview-feedback-round/cleanup-and-approved, PCA-R-3)
+  w3Split: {
+    submitted: 'Submitted',
+    approved: 'Approved',
+    editing: 'Editing',
+    'in-qa': 'Quality Assessed',
+    rejected: 'Rejected',
+    discontinued: 'Discontinued'
+  },
   statusTitle: 'Portfolio Results Reporting Status',
   statusSubtitle: 'All W1/W2 and W3/Bilateral results reported in this phase, by status',
   statusTableCaption: 'Portfolio Results Reporting Status breakdown',
@@ -32,7 +41,8 @@ export const PORTFOLIO_OVERVIEW_COPY = {
   centerEmpty: 'No W3/Bilateral results in this phase',
   // Global filters group (design 6.7); GLF-T-4 adds its keys here (spec changes/portfolio-overview-revamp/global-filters, GLF-R-7, GLF-R-9)
   filters: {
-    dimensions: { program: 'Program', project: 'Project', center: 'Center', typology: 'Typology', status: 'Status' },
+    dimensions: { program: 'Program', project: 'Project', center: 'Center', typology: 'Typology', status: 'Status', funding: 'Funding source' },
+    fundingOptions: { w1w2: 'W1/W2', bilateral: 'W3/Bilateral' },
     notAffected: (labels: string) => `Not affected by: ${labels}`,
     totalsWholePortfolio: 'Totals cover the whole portfolio',
     // Filter bar (GLF-T-4, design 6.4 / 6.7)

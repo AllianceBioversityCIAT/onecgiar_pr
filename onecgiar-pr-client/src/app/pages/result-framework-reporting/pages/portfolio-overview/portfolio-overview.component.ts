@@ -228,6 +228,10 @@ export class PortfolioOverviewComponent {
   readonly projectsNotAffected = computed(() => notAffectedBy('projects', this.data.selection()));
   /** The Centers block honours Project only once the map is ready (DD-5): until then it says "Not affected by: Project". */
   readonly centersDimensionsVersionId = computed(() => (this.data.dimensionIndex() ? this.data.versionId() : null));
+  /** V-1 gate: the deck's W3 total for the Centers block's no-Center note; null while the deck cannot say (loading, error, partial, filters pending). */
+  readonly centersDeckW3Total = computed(() =>
+    this.hasFigures() && !this.data.isPartial() && !this.data.filtersPending() ? this.data.kpiTotals().bilateralCount : null
+  );
 
   /** One entry per active dimension: its label and the labels of the chosen values (the strip's text). */
   readonly activeSummary = computed(() => {
@@ -264,7 +268,8 @@ export class PortfolioOverviewComponent {
     const selection = this.data.selection();
     const status = [...selection.status][0];
     const program = [...selection.program][0];
-    this.navigateToResultsCenter('all', { ...(status ? { status } : {}), ...(program ? { program } : {}) });
+    const funding = [...selection.funding][0] as 'w1w2' | 'bilateral' | undefined;
+    this.navigateToResultsCenter('all', { ...(status ? { status } : {}), ...(program ? { program } : {}), ...(funding ? { funding } : {}) });
   }
 
   /** The strip's jump link: the filtered list is the last block of a long page, so a status click alone never shows it. */
@@ -320,7 +325,7 @@ export class PortfolioOverviewComponent {
 
   navigateToResultsCenter(
     filter?: 'all' | 'w1w2' | 'bilateral',
-    extra?: { status?: number | string; search?: string; category?: string; program?: string }
+    extra?: { status?: number | string; search?: string; category?: string; program?: string; funding?: 'w1w2' | 'bilateral' }
   ): void {
     if (filter === 'bilateral') {
       this.router.navigate(['/result-framework-reporting/bilateral-results']);
@@ -328,8 +333,10 @@ export class PortfolioOverviewComponent {
     }
 
     if (this.resultsListFilterSE) {
-      if (filter === 'w1w2') {
+      if (filter === 'w1w2' || extra?.funding === 'w1w2') {
         this.resultsListFilterSE.selectedFundingSource.set([{ id: 1, name: 'W1/W2' }]);
+      } else if (extra?.funding === 'bilateral') {
+        this.resultsListFilterSE.selectedFundingSource.set([{ id: 2, name: 'W3/Bilaterals' }]);
       } else {
         this.resultsListFilterSE.selectedFundingSource.set([]);
       }
@@ -363,6 +370,7 @@ export class PortfolioOverviewComponent {
     const phase = this.data.versionId();
     if (phase) queryParams['phase'] = phase;
     if (filter === 'w1w2') queryParams['funding'] = 'w1w2';
+    else if (extra?.funding) queryParams['funding'] = extra.funding;
     if (extra?.status) {
       const sId =
         typeof extra.status === 'number'

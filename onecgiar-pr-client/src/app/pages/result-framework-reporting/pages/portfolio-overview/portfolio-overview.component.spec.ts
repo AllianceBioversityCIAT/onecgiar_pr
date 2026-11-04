@@ -179,7 +179,6 @@ describe('PortfolioOverviewComponent', () => {
       expect(kpis.w1w2CategoriesCount).toBe(2);
       // W1/W2 submitted or QA: 1 of 3 (SP06 Approved sid=2) = 33% or 67% based on matching criteria
       expect(kpis.bilateralCount).toBe(2);
-      expect(kpis.bilateralCentersCount).toBe(2);
       expect(kpis.activeProgramsCount).toBe(2);
       expect(kpis.totalProgramsCount).toBe(13);
       expect(kpis.portfolioProgressPercent).toBe(40);
@@ -215,8 +214,60 @@ describe('PortfolioOverviewComponent', () => {
       expect(fig('kpi-w1w2-split')).toBe('Submitted 4 · Editing 2');
       expect(fig('kpi-w1w2-replicated')).toBe('5');
       expect(fig('kpi-bilateral-new')).toBe('9');
-      expect(fig('kpi-bilateral-split')).toBe('Submitted 8 · Editing 1');
+      expect(fig('kpi-bilateral-split')).toBe('Submitted 4 · Approved 0 · Editing 5');
       expect(fig('kpi-bilateral-replicated')).toBe('7');
+      expect(fig('kpi-bilateral-replicated-split')).toBe('Submitted 0 · Approved 0 · Editing 7');
+    });
+
+    it('renders no percentage and no placeholder chip in the deck cards (PCA-R-1)', () => {
+      build(BREAKDOWN_PHASE);
+
+      const cards = fixture.nativeElement.querySelectorAll('button.po-card') as NodeListOf<HTMLElement>;
+      expect(cards.length).toBe(3);
+      cards.forEach(card => expect(card.textContent).not.toContain('%'));
+      // W1/W2 and W3 headers hold only their title span: no chip, no empty placeholder (card 1 keeps its phase badge).
+      [cards[1], cards[2]].forEach(card => {
+        const header = card.querySelector('div.justify-between') as HTMLElement;
+        expect(header).toBeTruthy();
+        expect(header.children.length).toBe(1);
+        expect(header.children[0].textContent!.trim().length).toBeGreaterThan(0);
+      });
+      expect(fixture.nativeElement.querySelector('[data-testid="kpi-bilateral-split"]')).toBeTruthy();
+    });
+
+    it('renders the W3 New and Replicated split by status slot and keeps counts and the card click (PCA-R-3, PCA-R-1)', () => {
+      const w3 = (status_id: string, status_name: string, is_replicated: number) =>
+        raw({ source_name: 'W3/Bilaterals', status_id, status_name, is_replicated });
+      build([
+        w3('5', 'Pending Review', 0),
+        w3('6', 'Approved', 0),
+        w3('6', 'Approved', 0),
+        w3('2', 'Quality Assessed', 0),
+        w3('1', 'Editing', 0),
+        w3('1', 'Editing', 0),
+        w3('1', 'Editing', 0),
+        ...[1, 2, 3, 4].map(() => w3('6', 'Approved', 1)),
+        w3('7', 'Rejected', 1),
+        w3('1', 'Editing', 1),
+        w3('1', 'Editing', 1)
+      ]);
+
+      const norm = (id: string) => {
+        const el = fixture.nativeElement.querySelector(`[data-testid="${id}"]`) as HTMLElement | null;
+        expect(el).toBeTruthy();
+        return (el!.textContent ?? '').replace(/\s+/g, ' ').trim();
+      };
+      expect(norm('kpi-bilateral-split')).toBe('Submitted 1 · Approved 2 · Editing 3 · Quality Assessed 1');
+      expect(norm('kpi-bilateral-replicated-split')).toBe('Submitted 0 · Approved 4 · Editing 2 · Rejected 1');
+      expect(norm('kpi-bilateral-new')).toBe('7');
+      expect(norm('kpi-bilateral-replicated')).toBe('7');
+
+      // The card itself still navigates (the split lines are inside the button).
+      const navigateSpy = jest.spyOn(router, 'navigate');
+      const w3Card = (fixture.nativeElement.querySelector('[data-testid="kpi-bilateral-split"]') as HTMLElement).closest('button') as HTMLButtonElement;
+      expect(w3Card).toBeTruthy();
+      w3Card.click();
+      expect(navigateSpy).toHaveBeenCalledWith(['/result-framework-reporting/bilateral-results']);
     });
 
     it('renders 0 (not blank) in every card-3 bucket when there are no W3/Bilateral rows', () => {
@@ -224,7 +275,8 @@ describe('PortfolioOverviewComponent', () => {
 
       const fig = (id: string) => (fixture.nativeElement.querySelector(`[data-testid="${id}"]`)?.textContent ?? '').replace(/\s+/g, ' ').trim();
       expect(fig('kpi-bilateral-new')).toBe('0');
-      expect(fig('kpi-bilateral-split')).toBe('Submitted 0 · Editing 0');
+      expect(fig('kpi-bilateral-split')).toBe('Submitted 0 · Approved 0 · Editing 0');
+      expect(fig('kpi-bilateral-replicated-split')).toBe('Submitted 0 · Approved 0 · Editing 0');
       expect(fig('kpi-bilateral-replicated')).toBe('0');
       expect(fig('kpi-total-bilateral-new')).toBe('0');
       expect(fig('kpi-total-bilateral-replicated')).toBe('0');
@@ -281,6 +333,25 @@ describe('PortfolioOverviewComponent', () => {
 
       component.toggleStatus('editing');
       expect(component.data.selection().status.size).toBe(0);
+    });
+
+    it('status tiles show no percentage text but keep the bar width and the filter click (PCA-R-2)', () => {
+      build(OPEN_PHASE);
+
+      const tile = fixture.nativeElement.querySelector('[data-testid="status-tile-editing"]') as HTMLElement;
+      expect(tile).toBeTruthy();
+      const segments = component.statusSegments();
+      expect(segments.length).toBe(6);
+      segments.forEach(seg => {
+        const t = fixture.nativeElement.querySelector(`[data-testid="status-tile-${seg.key}"]`) as HTMLElement;
+        expect(t).toBeTruthy();
+        expect(t.textContent).not.toContain('%');
+      });
+      const bar = tile.querySelector('div.h-full') as HTMLElement;
+      expect(bar.style.width).toBe('60%');
+      const spy = jest.spyOn(component, 'toggleStatus');
+      tile.click();
+      expect(spy).toHaveBeenCalledWith('editing');
     });
 
     it('renders symmetrical status metric grid with counts and percentages', () => {
@@ -792,7 +863,7 @@ describe('PortfolioOverviewComponent', () => {
       expect(commands).toEqual([]);
       expect(extras.replaceUrl).toBe(true);
       expect(extras.queryParamsHandling).toBe('merge');
-      expect(extras.queryParams).toEqual({ program: 'SP06', status: 'editing', project: null, center: null, typology: null });
+      expect(extras.queryParams).toEqual({ program: 'SP06', status: 'editing', project: null, center: null, typology: null, funding: null });
       expect(extras.queryParams).not.toHaveProperty('foo');
     });
 
@@ -875,6 +946,63 @@ describe('PortfolioOverviewComponent', () => {
       q<HTMLButtonElement>(LINK)!.click();
 
       expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: { phase: 36, status: 1 } });
+    });
+
+    it('PFF-R-5: View in Results Center with status=approved + funding=bilateral navigates with phase, status 6 and funding', () => {
+      build([...OPEN_PHASE, raw({ source_name: 'W3/Bilaterals', status_id: '6', status_name: 'Approved' })]);
+      component.data.setSelection({ ...component.data.selection(), status: new Set(['approved']), funding: new Set(['bilateral']) });
+      refresh();
+      const navigateSpy = jest.spyOn(router, 'navigate');
+
+      q<HTMLButtonElement>(LINK)!.click();
+
+      expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: { phase: 36, status: 6, funding: 'bilateral' } });
+    });
+
+    it('PFF-R-5: funding = w1w2 passes funding=w1w2; bilateral pre-sets the W3/Bilaterals source (id 2)', () => {
+      build(OPEN_PHASE);
+      const filterSE = (component as any).resultsListFilterSE;
+      component.data.setSelection({ ...component.data.selection(), funding: new Set(['w1w2']) });
+      refresh();
+      const navigateSpy = jest.spyOn(router, 'navigate');
+      q<HTMLButtonElement>(LINK)!.click();
+      expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: { phase: 36, funding: 'w1w2' } });
+      if (filterSE) expect(filterSE.selectedFundingSource()).toEqual([{ id: 1, name: 'W1/W2' }]);
+
+      component.data.setSelection({ ...component.data.selection(), funding: new Set(['bilateral']) });
+      refresh();
+      q<HTMLButtonElement>(LINK)!.click();
+      expect(navigateSpy).toHaveBeenLastCalledWith(['/result/results-outlet/results-list'], { queryParams: { phase: 36, funding: 'bilateral' } });
+      if (filterSE) expect(filterSE.selectedFundingSource()).toEqual([{ id: 2, name: 'W3/Bilaterals' }]);
+    });
+
+    it('PFF-R-5: the link is hidden with both funding values selected', () => {
+      build(OPEN_PHASE);
+      component.data.setSelection({ ...component.data.selection(), funding: new Set(['w1w2', 'bilateral']) });
+      refresh();
+      expect(q(STRIP)).toBeTruthy();
+      expect(q(LINK)).toBeNull();
+    });
+
+    it('PFF-R-3: the URL mirror writes funding=bilateral, then funding=null after Clear all', () => {
+      build(OPEN_PHASE);
+      component.data.toggleValue('funding', 'bilateral');
+      refresh();
+      const navigate = router.navigate as jest.Mock;
+      expect(navigate.mock.calls[navigate.mock.calls.length - 1][1].queryParams['funding']).toBe('bilateral');
+      component.clearFilters();
+      refresh();
+      expect(navigate.mock.calls[navigate.mock.calls.length - 1][1].queryParams['funding']).toBeNull();
+    });
+
+    it('PFF-R-4: funding = bilateral flags the ToC KPI block as not affected by funding (W1/W2 only), Projects not', () => {
+      build(OPEN_PHASE);
+      component.data.toggleValue('funding', 'bilateral');
+      refresh();
+      const toc = fixture.debugElement.query(By.directive(PortfolioTocKpiBlockComponent)).componentInstance;
+      const projects = fixture.debugElement.query(By.directive(PortfolioProjectsBlockComponent)).componentInstance;
+      expect(toc.notAffected()).toContain('funding');
+      expect(projects.notAffected()).not.toContain('funding');
     });
 
     it('the strip offers a jump to the filtered list, with its count, and scrolls to it', () => {

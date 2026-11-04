@@ -4,8 +4,7 @@ import { DimensionIndex, FilterRow, PortfolioFilterSelection, isActive, matchesR
 
 /**
  * P2-3858 — pure aggregation of the CGIAR Centers block (moved from Admin › All P/As and Centers into
- * the Portfolio overview by P2-3928). Each row counts the W3 (bilateral) rows of one Center only (CNR-1:
- * the caller drops W1/W2 before building it), so it no longer repeats the Center's own Overview. It still
+ * the Portfolio overview by P2-3928). Rows are W3 (bilateral) only (CNR-1: the caller drops W1/W2), deduped by result id across Centers (PCA-R-4). It still
  * uses that page's `buildStatusModel` for the four status tiles (Editing · Pending review · Approved ·
  * Rejected) over the rows it is given.
  */
@@ -32,20 +31,33 @@ export function buildCenterRow(code: string, acronym: string, rows: readonly Bil
   };
 }
 
-/** Column-wise sum of the loaded rows (rows still loading or failed are passed in as absent). */
-export function sumRows(rows: readonly EntityOverviewRow[], columns: number): { total: number; counts: number[] } {
-  const counts = new Array(columns).fill(0);
-  let total = 0;
-  for (const row of rows) {
-    total += row.total;
-    row.counts.forEach((count, index) => (counts[index] += count));
-  }
-  return { total, counts };
+/**
+ * PCA-R-4 — one row per result. A result linked to several Centers arrives once per Center with the same id,
+ * status and origin, so the first one wins. Rows without an id cannot be matched and are all kept.
+ */
+export function dedupeById(rows: readonly BilateralCenterResult[]): BilateralCenterResult[] {
+  const seen = new Set<number | string>();
+  return rows.filter(row => {
+    const id = row.id;
+    if (id === null || id === undefined) return true;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
 }
 
 /** CNR-1 — W3 (bilateral) rows are exactly those that came from the API (CNR-P-1). */
 export function isW3Row(row: BilateralCenterResult): boolean {
   return row.source === 'API';
+}
+
+/**
+ * @akili-spec changes/portfolio-overview-feedback-round/cleanup-and-approved PCA-DD-6
+ * The deck counts only W3 results with an active lead Program/Accelerator; the Centers feed does not. `submitter` is the lead's
+ * official code (role 1); it matches the deck rule (no `ci.active` in its SQL) only while no lead is inactive or blank (checked on v36).
+ */
+export function hasLeadProgram(row: BilateralCenterResult): boolean {
+  return typeof row.submitter === 'string' && row.submitter.trim() !== '';
 }
 
 /**
@@ -77,7 +89,7 @@ const NO_VALUES: ReadonlySet<string> = new Set<string>();
  * tile. Program, Typology and Status are decided by the row (`matchesRow`, so the level map and the status slots
  * are the page's own); Project goes through the dimensions index by `row.id`, and only when `honoursProject`
  * (the block's phase is the page version). The Center dimension is not a row rule: it limits which Centers feed
- * the block, so it is dropped here. Project honoured with no index yet is pending: no row is claimed as a match.
+ * the block, so it is dropped here. Funding is dropped too (PFF-R-4): the block is W3 by construction and its rows carry no `source_name`. Project honoured with no index yet is pending: no row is claimed as a match.
  */
 export function applyGlobal(
   rows: readonly BilateralCenterResult[],
@@ -85,7 +97,7 @@ export function applyGlobal(
   index: DimensionIndex | null | undefined,
   honoursProject: boolean
 ): BilateralCenterResult[] {
-  const effective: PortfolioFilterSelection = { ...selection, center: NO_VALUES, project: honoursProject ? selection.project : NO_VALUES };
+  const effective: PortfolioFilterSelection = { ...selection, center: NO_VALUES, funding: NO_VALUES, project: honoursProject ? selection.project : NO_VALUES };
   if (!isActive(effective)) return [...rows];
   return rows.filter(row => matchesRow(row as unknown as FilterRow, effective, index) === 'match');
 }

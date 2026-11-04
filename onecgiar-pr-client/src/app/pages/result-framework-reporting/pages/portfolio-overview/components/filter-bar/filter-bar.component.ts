@@ -49,6 +49,7 @@ export class FilterBarComponent {
     put('project', options.project);
     put('center', options.center);
     put('status', options.status);
+    put('funding', options.funding);
     for (const group of options.typology) {
       map.set(`typology:${group.value}`, group.label);
       put('typology', group.types);
