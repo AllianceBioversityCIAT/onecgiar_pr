@@ -253,7 +253,7 @@
   - [x] The grep check passes
   - [x] Change-log row added
 
-### [ ] QIN-T-7 — Live verification (HITL)
+### [x] QIN-T-7 — Live verification (HITL)
 
 - **Type:** rollout
 - **Description:** On the local server against the dev/test DB, then on prtest after merge:
@@ -278,9 +278,9 @@
   - **Disqualifier:** timings from a cold first call only, or from fewer than 5 runs. A race check run in a single session.
   - **Consumers:** none.
 - **Definition of done:**
-  - [ ] Evidence quoted in `execution.md`, with no key or token
-  - [ ] Test data reverted
-  - [ ] P-15 recorded
+  - [x] Evidence quoted in `execution.md`, with no key or token
+  - [x] Test data reverted
+  - [x] P-15 recorded
 
 ## 4. Dependency graph
 

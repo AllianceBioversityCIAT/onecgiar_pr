@@ -409,3 +409,122 @@
   - assert the 401 body end to end on one QA route.
 - **Rollout dependency:** every `/api/qa/*` call is a 401 until CLARISA **prod** returns `endpoint_allowed`.
 - **Totals:** 7 tasks closed of 8 · 10 review rounds.
+
+---
+
+## QIN-T-7 — Live verification (HITL)
+
+- **Date:** 2026-11-04. **Environment:** prtest (`performance-refactor` deploy, catalog 2026.32) and the test DB it uses. The local `.env` DB was confirmed to be the same database: the feed's ids and result_codes match it row for row. **Mode:** gated, HITL. The Leader ran the API and SQL steps; the owner ran the UI steps (3, 4 and the QAed badge).
+- **Caller:** the QA Platform key (CLARISA MIS 30, "QA"), read from a private scratch file. It was never printed.
+- **Pre-check (read-only):**
+  - migration `AddResultQaIntakeLog1793283760300` applied;
+  - `result_qa_intake_log` holds 0 rows;
+  - `result.in_qa` is `tinyint NOT NULL DEFAULT 0`;
+  - no 2026 result had `in_qa = 1`, so there were no manual flags to protect;
+  - 2026 counts: `status_id` 2 = 5 and 3 = 34.
+
+### 1. Intake, mixed batch of 8 — PASS
+
+Batch: `[11037, 11038, 11040, 12524 (Editing), 10556 (2025), 11813 (bilateral), 12447 (Approved), 999999999]`. All 7 existing rows had `in_qa = 0` before the call.
+
+```
+200 889ms
+{"phase_year":2026,"taken":[{"result_id":11037,"result_code":8569,"changed":true},{"result_id":11038,"result_code":8570,"changed":true},{"result_id":11040,"result_code":8572,"changed":true}],"not_taken":[{"result_id":12524,"result_code":10056,"reason":"not_submitted"},{"result_id":10556,"result_code":8088,"reason":"other_phase"},{"result_id":11813,"result_code":9345,"reason":"not_w1w2"},{"result_id":12447,"result_code":9979,"reason":"not_submitted"},{"result_id":999999999,"result_code":null,"reason":"not_found"}]}
+```
+
+- **DB after:** `in_qa = 1` only on 11037, 11038 and 11040. The other 4 rows are unchanged (status and `in_qa`).
+- **Audit:** exactly 3 rows: `{result_id 11037|11038|11040, action "intake", phase_year 2026, platform_id 30, platform_acronym "QA"}`.
+
+### 2. Repeat — PASS
+
+Same call: `200 694ms`, all 3 taken with `"changed":false`, the same 5 `not_taken` reasons, and still 3 audit rows.
+
+### 3. Unsubmit while In QA (UI, owner) — PASS
+
+Result 8569 (id 11037), Reporting 2026, Un-submit with a justification. The UI showed:
+
+> This result is under QA review and cannot be unsubmitted until QA releases it.
+
+DB after: 11037 is `status_id 3`, `in_qa 1`, and has no new `submission` row.
+
+Note: the UI still opens the justification modal, because UI changes are out of scope. The refusal comes from the server.
+
+### 4. Release `not_qaed`, then unsubmit — PASS
+
+```
+200 926ms
+{"phase_year":2026,"released":[{"result_id":11037,"result_code":8569,"outcome":"not_qaed"}],"not_released":[]}
+```
+
+DB: 11037 has `in_qa 0`, `status_id 3`. The owner then unsubmitted 8569 from the UI, and it succeeded. DB: `status 0`, `status_id 1`, plus `submission` row 8747 (`status_id 1`, the owner's comment).
+
+### 5. Release `qaed` on a disposable result — PASS
+
+8570 (id 11038). The same call also sends `qaed` for 12524 (Editing, never taken):
+
+```
+200 846ms
+{"phase_year":2026,"released":[{"result_id":11038,"result_code":8570,"outcome":"qaed"}],"not_released":[{"result_id":12524,"result_code":10056,"reason":"not_in_qa"}]}
+```
+
+- **DB:** 11038 went from `status 1, status_id 3, in_qa 1` to `status 1, status_id 2, in_qa 0`.
+- **Audit:** 11038 has `intake` and then `release_qaed`.
+- **UI (owner):** 8570 shows the QAed badge.
+- `get_qa_info()` could not be called from SQL: the test DB user is denied `SELECT` on `qa_evaluations`. The badge was checked in the UI instead.
+
+### 6. Two-session race — PASS
+
+Script with two DB sessions on 11474 (code 9006), originally `status 1, status_id 3, in_qa 0`.
+
+- **Direction A:** session 1 runs the intake path (`SELECT … FOR UPDATE`, then `in_qa = 1`) and holds it for 3 s before committing. Session 2 runs the production unsubmit statement verbatim (`unsubmitUnlessUnderQaReview`), inside a transaction that is rolled back.
+  ```
+  A: unsubmit CAS after intake commit -> {"affected":0,"waited_ms":3144}
+  A: state {"status":1,"status_id":3,"in_qa":1}
+  ```
+- **Direction B:** session 1 holds an unsubmit (`status 0, status_id 1`) for 3 s, then commits. Meanwhile the **real prtest intake** is called for 11474.
+  ```
+  B: intake while unsubmit held -> 3112ms total; 200 3025ms | {"phase_year":2026,"taken":[],"not_taken":[{"result_id":11474,"result_code":9006,"reason":"not_submitted"}]}
+  B: state {"status":0,"status_id":1,"in_qa":0}
+  ```
+- 11474 was restored to `status 1, status_id 3, in_qa 0`, with 0 audit rows.
+- **Result:** in both orders the second writer waits on the row lock and then sees the committed state. The final state is never Editing with `in_qa = 1`.
+
+### 7. p95, batch of 50 — PASS (≤ 2 s)
+
+The batch is the 33 eligible 2026 results plus 17 2026 results in Editing. There were 6 runs; times are client-side end to end, including the CLARISA validation.
+
+```
+200 945ms taken 33 changed 30 not_taken 17
+200 626ms taken 33 changed 0 not_taken 17
+200 686ms taken 33 changed 0 not_taken 17
+200 631ms taken 33 changed 0 not_taken 17
+200 642ms taken 33 changed 0 not_taken 17
+200 725ms taken 33 changed 0 not_taken 17
+```
+
+p95 (n=6) = **945 ms**. Then the 31 remaining results were released with `not_qaed`: `200 961ms released 31 not_released []`. The release timing for 31 ids is in the same range.
+
+### 8. 401 without a key — PASS
+
+Run on prtest on 2026-11-03 and 2026-11-04:
+- intake without `x-api-key` → 401;
+- intake and release with the QA key and `{}` → 400 (the key passes and the DTO answers).
+
+### 9. Revert — DONE
+
+- 11037 restored to `status 1, status_id 3`. `submission` 8747 (created by the step-4 unsubmit) was deleted, so the result's submission history is as before.
+- 11038 restored to `status_id 3`.
+- All 66 test rows were deleted from `result_qa_intake_log` (none existed before the test).
+- **Final check:**
+  - `result_qa_intake_log` holds 0 rows;
+  - no 2026 result has `in_qa = 1`;
+  - 2026 counts: `status_id` 2 = 5 and 3 = 34, the same as the pre-check.
+- **Not revertible:** `result.last_updated_date` changed on the results the test touched: the 33 eligible 2026 results, plus 11474 (race) and 11037 (UI).
+
+### P-15 — recorded
+
+- **Statement (owner):** `in_qa` was set only by the Reporting team's manual SQL step. No other process writes `in_qa` or `status_id = 2` in `prdb`, and the QA Platform reads from `qadb`.
+- **Consequence for rollout:** once the QA Platform uses intake and release, the manual `UPDATE … in_qa` step must stop. Otherwise a manual flag has no audit row and is not tied to a release.
+- **Status:** owner-stated, not observed in prod. The pre-check confirms that no 2026 flag existed on test before the run.
+
+- **Totals:** 8 tasks closed of 8 · 10 review rounds (T-7 is a HITL checklist; the review is the evidence quoted above).
