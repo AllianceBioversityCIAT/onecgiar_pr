@@ -26,33 +26,36 @@
     <!-- IRD-T-8 F-4: the bottom bar reads `.pr-field.mandatory` markers. `app-pr-yes-or-not` renders none and
          `app-pr-textarea` only checks non-empty, so these hidden reporters add the Yes/No answer, the word limit and
          the Yes => at least one link rule. -->
-    <div appFeedbackValidation labelText="Already reported in PRMS?" [isComplete]="previouslyReported !== null && previouslyReported !== undefined"></div>
+    <div appFeedbackValidation labelText="Has this intervention, or a component of it, already been reported in PRMS?" [isComplete]="previouslyReported !== null && previouslyReported !== undefined"></div>
     <div appFeedbackValidation [labelText]="'CGIAR contribution (up to ' + maxWords + ' words)'" [isComplete]="!contributionOverLimit"></div>
 
-    <app-pr-yes-or-not label="Already reported in PRMS?" [(ngModel)]="previouslyReported" (selectOptionEvent)="onPreviouslyReportedChange($event)"> </app-pr-yes-or-not>
+    <app-pr-yes-or-not label="Has this intervention, or a component of it, already been reported in PRMS?" [(ngModel)]="previouslyReported" (selectOptionEvent)="onPreviouslyReportedChange($event)"> </app-pr-yes-or-not>
 
     @if (previouslyReported === true) {
-      <div appFeedbackValidation labelText="Previously reported results" [isComplete]="previousResults.length > 0"></div>
-      <div class="flex flex-col gap-3" data-cy="impact-previous-results">
-        @if (previousResults.length) {
-          <ul class="flex list-none flex-col gap-2 p-0" aria-label="Previously reported results">
-            @for (result of previousResults; track result.result_id) {
-              <li class="flex items-start justify-between gap-3 rounded-lg border border-[var(--pr-color-neutral-300)] bg-white p-3">
-                <div class="flex min-w-0 flex-col gap-1 text-[12px] text-[var(--pr-color-secondary-400)]">
-                  <span class="pr-code font-mono">{{ result.result_code }}</span>
-                  <span class="text-[14px] font-medium">{{ result.title }}</span>
-                  <span>{{ result.result_type_name }} · {{ result.phase_name }} · {{ result.portfolio_acronym }} · {{ result.status_name }}</span>
-                </div>
-                @if (!readOnly) {
-                  <button hlmBtn type="button" variant="ghost" size="sm" data-cy="impact-remove-result" [attr.aria-label]="'Remove result ' + result.result_code" (click)="removePreviousResult(result.result_id)">Remove</button>
-                }
-              </li>
-            }
-          </ul>
-        }
+      <div appFeedbackValidation labelText="Please select a result" [isComplete]="previousResults.length > 0"></div>
+      <div class="previous-results" data-cy="impact-previous-results">
         @if (!readOnly) {
-          <div>
-            <button hlmBtn type="button" variant="outline" data-cy="impact-add-results" (click)="openPreviousResultsPicker()">Add results</button>
+          <app-pr-field-header label="Please select a result" [required]="true"></app-pr-field-header>
+          <app-previous-results-picker [resultId]="api.resultsSE.currentResultId" [selection]="previousResults" (selectionChange)="onSelectionChange($event)"></app-previous-results-picker>
+        }
+        @if (previousResults.length) {
+          <div class="selected-results" data-cy="impact-selected-results">
+            <div class="selected-title" data-cy="impact-selected-title">Results selected ({{ previousResults.length }})</div>
+            <ul class="selected-list" aria-label="Previously reported results">
+              @for (result of previousResults; track result.result_id) {
+                <li class="selected-item" data-cy="impact-selected-item">
+                  <div class="selected-info">
+                    <span class="selected-head"><span class="pr-code">{{ result.result_code }}</span> · {{ result.result_type_name }} · {{ result.phase_name }} · {{ result.portfolio_acronym }} · {{ result.status_name }}</span>
+                    <span class="selected-result-title">{{ result.title }}</span>
+                  </div>
+                  @if (!readOnly) {
+                    <button type="button" class="remove-btn" data-cy="impact-remove-result" [attr.aria-label]="'Remove result ' + result.result_code" (click)="removePreviousResult(result.result_id)">
+                      <i class="pi pi-times" aria-hidden="true"></i>
+                    </button>
+                  }
+                </li>
+              }
+            </ul>
           </div>
         }
       </div>

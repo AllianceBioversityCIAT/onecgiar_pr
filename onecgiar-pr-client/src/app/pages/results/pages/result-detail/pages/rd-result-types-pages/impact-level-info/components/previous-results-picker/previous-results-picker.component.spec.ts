@@ -1,17 +1,9 @@
-// @akili-spec results/impact-results-reporting/result-detail-impact (IRD-T-4)
-// Real CDK dialog behaviour (focus trap/restore, Escape, layout) cannot run under Jest (`@spartan-ng/brain` is a
-// stub here); it is covered by `previous-results-picker.cy.ts`.
+// @akili-spec results/impact-results-reporting/impact-previous-results-dropdown (IPD-T-1)
+// Every param assertion reads the mocked GET_impactPreviousResultsSearch call args (not template text).
 import { ComponentFixture, TestBed, fakeAsync, flush, tick } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
-import { BrnDialogRef } from '@spartan-ng/brain/dialog';
 import { PreviousResultsPickerComponent } from './previous-results-picker.component';
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
-
-let mockContext: any = null;
-jest.mock('@spartan-ng/brain/dialog', () => ({
-  ...jest.requireActual('@spartan-ng/brain/dialog'),
-  injectBrnDialogContext: () => mockContext
-}));
 
 const item = (id: number) => ({
   result_id: id,
@@ -23,13 +15,13 @@ const item = (id: number) => ({
   status_name: 'Submitted'
 });
 
-const page = (ids: number[], over: any = {}) => ({ response: { items: ids.map(item), meta: { total: ids.length, page: 1, limit: 20, totalPages: 1, ...over } } });
+const page = (ids: number[], meta: any = {}) => ({ response: { items: ids.map(item), meta: { total: ids.length, page: 1, limit: 20, totalPages: 1, ...meta } } });
 
-describe('PreviousResultsPickerComponent', () => {
+describe('PreviousResultsPickerComponent (inline dropdown)', () => {
   let fixture: ComponentFixture<PreviousResultsPickerComponent>;
   let component: PreviousResultsPickerComponent;
   let search: jest.Mock;
-  let close: jest.Mock;
+  let emitted: any[][];
   const el = () => fixture.nativeElement as HTMLElement;
   const q = (sel: string) => el().querySelector(sel) as HTMLElement | null;
   const qa = (sel: string) => Array.from(el().querySelectorAll(sel)) as HTMLElement[];
@@ -38,198 +30,304 @@ describe('PreviousResultsPickerComponent', () => {
     flush();
     fixture.detectChanges();
   };
+  const lastParams = () => search.mock.calls[search.mock.calls.length - 1][0];
+  const openPanel = () => {
+    q('[data-cy="impact-picker-field"]')!.click();
+    settle();
+  };
+  const typeText = (value: string) => {
+    const input = q('[data-cy="impact-picker-search"]') as HTMLInputElement;
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+  };
+  const chip = (label: string) => qa('[data-cy="impact-picker-type"]').find(button => button.textContent?.includes(label))!;
+  const segment = (label: string) => qa('[data-cy="impact-picker-portfolio"]').find(button => button.textContent?.trim() === label)!;
 
-  function setup(opts: { search?: jest.Mock; context?: any } = {}) {
-    mockContext = opts.context === undefined ? { resultId: 77, initialSelection: [item(1)] } : opts.context;
+  function setup(opts: { search?: jest.Mock; selection?: any[] } = {}) {
     search = opts.search ?? jest.fn().mockReturnValue(of(page([1, 2, 3])));
-    close = jest.fn();
+    emitted = [];
     const resultsSE = {
       GET_impactPreviousResultsSearch: search,
       GET_versioning: jest.fn().mockReturnValue(
         of({
           response: [
-            { id: 5, phase_name: 'Reporting 2025', phase_name_status: 'Reporting 2025 - (Open)', obj_portfolio: { id: 3, acronym: 'P25' } },
-            { id: 4, phase_name: 'Reporting 2024', phase_name_status: 'Reporting 2024 - (Closed)' }
+            { id: 5, phase_name: 'Reporting 2025', obj_portfolio: { id: 3, acronym: 'P25' } },
+            { id: 6, phase_name: 'Reporting 2026', obj_portfolio: { id: 3, acronym: 'P25' } },
+            { id: 4, phase_name: 'Reporting 2022', obj_portfolio: { id: 2, acronym: 'P22' } },
+            { id: 1, phase_name: 'No portfolio' }
           ]
         })
       ),
-      GET_resultTypes: jest.fn().mockReturnValue(of({ response: [{ id: 9, name: 'Impact contribution' }] }))
+      GET_resultTypes: jest.fn().mockReturnValue(
+        of({
+          response: [
+            { id: 1, name: 'Policy change' },
+            { id: 9, name: 'Impact contribution' }
+          ]
+        })
+      )
     };
-    TestBed.configureTestingModule({
-      imports: [PreviousResultsPickerComponent],
-      providers: [
-        { provide: ApiService, useValue: { resultsSE } },
-        { provide: BrnDialogRef, useValue: { close } }
-      ]
-    });
+    TestBed.configureTestingModule({ imports: [PreviousResultsPickerComponent], providers: [{ provide: ApiService, useValue: { resultsSE } }] });
     fixture = TestBed.createComponent(PreviousResultsPickerComponent);
     component = fixture.componentInstance;
-    settle();
+    fixture.componentRef.setInput('resultId', 77);
+    fixture.componentRef.setInput('selection', opts.selection ?? [item(1)]);
+    component.selectionChange.subscribe(list => emitted.push(list));
+    fixture.detectChanges();
   }
 
-  const type = (value: string) => {
-    const input = q('[data-cy="impact-picker-search"]') as HTMLInputElement;
-    input.value = value;
-    input.dispatchEvent(new Event('input'));
-  };
-
-  it('opens with ONE request: excludeResultId, limit 20, page 1, no query', fakeAsync(() => {
+  it('makes no E5 call before the first open, then exactly one with excludeResultId and no versionId', fakeAsync(() => {
     setup();
+    settle();
+    expect(search).not.toHaveBeenCalled();
+    openPanel();
     expect(search).toHaveBeenCalledTimes(1);
-    expect(search.mock.calls[0][0]).toEqual({ q: '', versionId: null, typeIds: [], excludeResultId: 77, page: 1, limit: 20 });
+    expect(lastParams()).toEqual({ q: '', portfolioId: null, typeIds: [], excludeResultId: 77, page: 1, limit: 20 });
+    expect(lastParams()).not.toHaveProperty('versionId');
     expect(qa('[data-cy="impact-picker-item"]')).toHaveLength(3);
+    // closing and reopening does not reload
+    q('[data-cy="impact-picker-close"]')!.click();
+    settle();
+    openPanel();
+    expect(search).toHaveBeenCalledTimes(1);
   }));
 
-  it('a typing burst sends exactly one request, after 300 ms', fakeAsync(() => {
+  it('typology chip toggles typeIds and sends portfolioId (never versionId) for P25; All sends none', fakeAsync(() => {
     setup();
+    openPanel();
+    expect(qa('[data-cy="impact-picker-portfolio"]').map(b => b.textContent?.trim())).toEqual(['All', 'P25', 'P22']);
+
+    chip('Policy change').click();
+    settle();
+    expect(lastParams().typeIds).toEqual([1]);
+    expect(chip('Policy change').getAttribute('aria-pressed')).toBe('true');
+
+    segment('P25').click();
+    settle();
+    expect(lastParams()).toEqual({ q: '', portfolioId: 3, typeIds: [1], excludeResultId: 77, page: 1, limit: 20 });
+    expect(lastParams()).not.toHaveProperty('versionId');
+    expect(segment('P25').getAttribute('aria-pressed')).toBe('true');
+
+    chip('Policy change').click();
+    settle();
+    expect(lastParams().typeIds).toEqual([]);
+
+    segment('All').click();
+    settle();
+    expect(lastParams().portfolioId).toBeNull();
+    expect(search.mock.calls.every(call => call[0].excludeResultId === 77)).toBe(true);
+  }));
+
+  it('a typing burst sends one request after 300 ms with q trimmed', fakeAsync(() => {
+    setup();
+    openPanel();
     search.mockClear();
-    type('r');
+    typeText('w');
     tick(100);
-    type('ri');
+    typeText('wa');
     tick(100);
-    type('ric');
-    tick(100);
-    type('rice');
+    typeText(' water ');
     tick(299);
     expect(search).not.toHaveBeenCalled();
     tick(1);
     expect(search).toHaveBeenCalledTimes(1);
-    expect(search.mock.calls[0][0].q).toBe('rice');
+    expect(lastParams().q).toBe('water');
+    expect(lastParams().page).toBe(1);
     flush();
   }));
 
-  it('a new query goes back to page 1', fakeAsync(() => {
-    setup({ search: jest.fn().mockReturnValue(of(page([1, 2], { totalPages: 3 }))) });
-    component.goToPage(3);
-    expect(search.mock.calls.at(-1)[0].page).toBe(3);
-    type('rice');
-    tick(300);
-    expect(search.mock.calls.at(-1)[0]).toEqual(expect.objectContaining({ q: 'rice', page: 1 }));
-    flush();
-  }));
-
-  it('a stale response never overwrites a newer one (switchMap)', fakeAsync(() => {
+  it('drops a stale response: the first request answering last does not overwrite the list', fakeAsync(() => {
     const first = new Subject<any>();
     const second = new Subject<any>();
-    setup({ search: jest.fn().mockReturnValueOnce(of(page([1]))).mockReturnValueOnce(first).mockReturnValueOnce(second) });
-    type('a');
-    tick(300);
-    type('ab');
-    tick(300);
+    setup({ search: jest.fn().mockReturnValueOnce(first).mockReturnValueOnce(second) });
+    openPanel();
+    chip('Policy change').click();
+    fixture.detectChanges();
+    expect(search).toHaveBeenCalledTimes(2);
     second.next(page([20]));
-    first.next(page([10]));
+    second.complete();
+    first.next(page([10, 11]));
+    first.complete();
     settle();
     expect(component.items().map(i => i.result_id)).toEqual([20]);
   }));
 
-  it('filters send versionId / typeIds and reset to page 1', fakeAsync(() => {
-    setup({ search: jest.fn().mockReturnValue(of(page([1], { totalPages: 2 }))) });
-    component.goToPage(2);
-    component.onVersionChange(5);
-    expect(search.mock.calls.at(-1)[0]).toEqual(expect.objectContaining({ versionId: 5, page: 1 }));
-    component.onTypesChange([9, 2]);
-    expect(search.mock.calls.at(-1)[0]).toEqual(expect.objectContaining({ versionId: 5, typeIds: [9, 2], page: 1 }));
-    component.onVersionChange('all');
-    expect(search.mock.calls.at(-1)[0].versionId).toBeNull();
-    // The portfolio acronym is in the label; a phase without `obj_portfolio` keeps the plain label. Only versionId is sent.
-    expect(component.phaseOptions().map(o => o.label)).toEqual(['All phases', 'P25 · Reporting 2025 - (Open)', 'Reporting 2024 - (Closed)']);
-    expect(Object.keys(search.mock.calls.at(-1)[0])).not.toContain('portfolioId');
-    expect(q('[data-cy="impact-picker-phase-filter"]')?.getAttribute('role')).toBe('group');
-    expect(q('[data-cy="impact-picker-phase-filter"]')?.getAttribute('aria-labelledby')).toBe('impact-picker-phase-label');
-    expect(q('[data-cy="impact-picker-type-filter"]')?.getAttribute('aria-labelledby')).toBe('impact-picker-type-label');
-    expect(q('#impact-picker-type-label')?.textContent).toContain('Result type');
-    expect(component.typeOptions()).toEqual([{ value: 9, label: 'Impact result / Impact contribution' }]);
-  }));
-
-  it('an already selected item shows "Selected", is disabled and cannot be added twice', fakeAsync(() => {
-    setup();
-    const items = qa('[data-cy="impact-picker-item"]');
-    const first = items[0].querySelector('button') as HTMLButtonElement;
-    expect(first.textContent?.trim()).toBe('Selected');
-    expect(first.disabled).toBe(true);
-    component.add(item(1));
-    expect(component.selection().map(s => s.result_id)).toEqual([1]);
-    (items[1].querySelector('button') as HTMLButtonElement).click();
+  it('a stale Load more is dropped: a filter change in between never gets the old page appended', fakeAsync(() => {
+    const more = new Subject<any>();
+    const fresh = new Subject<any>();
+    setup({ search: jest.fn().mockReturnValueOnce(of(page([1, 2], { totalPages: 2, total: 4 }))).mockReturnValueOnce(more).mockReturnValueOnce(fresh) });
+    openPanel();
+    q('[data-cy="impact-picker-load-more"]')!.click();
+    expect(lastParams().page).toBe(2);
+    segment('P22').click(); // filter change while page 2 is in flight
+    fixture.detectChanges();
+    expect(lastParams().page).toBe(1);
+    more.next(page([3, 4], { totalPages: 2, total: 4 }));
+    fresh.next(page([9], { total: 1 }));
     settle();
-    expect(component.selection().map(s => s.result_id)).toEqual([1, 2]);
-    expect((qa('[data-cy="impact-picker-item"]')[1].querySelector('button') as HTMLButtonElement).textContent?.trim()).toBe('Selected');
+    expect(component.items().map(i => i.result_id)).toEqual([9]);
   }));
 
-  it('Done emits the working selection; Cancel emits undefined', fakeAsync(() => {
+  it('Load more appends page 2 (not replaces) and the button disappears on the last page', fakeAsync(() => {
+    const searchMock = jest
+      .fn()
+      .mockReturnValueOnce(of(page([1, 2], { totalPages: 2, total: 4 })))
+      .mockReturnValueOnce(of(page([3, 4], { page: 2, totalPages: 2, total: 4 })));
+    setup({ search: searchMock });
+    openPanel();
+    expect(qa('[data-cy="impact-picker-item"]')).toHaveLength(2);
+    expect(q('[data-cy="impact-picker-load-more"]')).not.toBeNull();
+    q('[data-cy="impact-picker-load-more"]')!.click();
+    settle();
+    expect(lastParams().page).toBe(2);
+    expect(qa('[data-cy="impact-picker-item"]')).toHaveLength(4);
+    expect(component.items().map(i => i.result_id)).toEqual([1, 2, 3, 4]);
+    expect(component.page()).toBe(component.totalPages());
+    expect(q('[data-cy="impact-picker-load-more"]')).toBeNull();
+  }));
+
+  it('Reset filters clears q, chips and portfolio and reloads page 1', fakeAsync(() => {
     setup();
-    component.add(item(2));
-    component.remove(1);
-    (q('[data-cy="impact-picker-done"]') as HTMLButtonElement).click();
-    expect(close).toHaveBeenLastCalledWith([item(2)]);
-    (q('[data-cy="impact-picker-cancel"]') as HTMLButtonElement).click();
-    expect(close).toHaveBeenLastCalledWith(undefined);
+    openPanel();
+    chip('Policy change').click();
+    segment('P25').click();
+    typeText('water');
+    tick(300);
+    settle();
+    expect(lastParams()).toEqual({ q: 'water', portfolioId: 3, typeIds: [1], excludeResultId: 77, page: 1, limit: 20 });
+    const calls = search.mock.calls.length;
+    q('[data-cy="impact-picker-reset"]')!.click();
+    settle();
+    expect(search.mock.calls.length).toBe(calls + 1);
+    expect(lastParams()).toEqual({ q: '', portfolioId: null, typeIds: [], excludeResultId: 77, page: 1, limit: 20 });
+    expect((q('[data-cy="impact-picker-search"]') as HTMLInputElement).value).toBe('');
+    expect(chip('Policy change').getAttribute('aria-pressed')).toBe('false');
+    expect(segment('All').getAttribute('aria-pressed')).toBe('true');
   }));
 
-  it('Escape inside an open filter dropdown only closes the dropdown; elsewhere it still reaches the dialog (F-5)', fakeAsync(() => {
+  it('typing the same query again after Reset or the clear (x) still sends a request', fakeAsync(() => {
     setup();
-    const root = q('[data-cy="impact-picker"]') as HTMLElement;
-    const dropdown = document.createElement('div');
-    dropdown.className = 'custom_select';
-    const trigger = document.createElement('a');
-    trigger.tabIndex = 0;
-    dropdown.appendChild(trigger);
-    root.appendChild(dropdown);
-    trigger.focus();
-    expect(document.activeElement).toBe(trigger);
+    openPanel();
+    typeText('water');
+    tick(300);
+    settle();
+    q('[data-cy="impact-picker-reset"]')!.click();
+    settle();
+    search.mockClear();
+    typeText('water');
+    tick(300);
+    settle();
+    expect(search).toHaveBeenCalledTimes(1);
+    expect(lastParams().q).toBe('water');
 
-    const bodySeen = jest.fn();
-    document.body.addEventListener('keydown', bodySeen);
-    trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    expect(bodySeen).not.toHaveBeenCalled();
-    expect(document.activeElement).not.toBe(trigger);
-
-    const search = q('[data-cy="impact-picker-search"]') as HTMLElement;
-    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    expect(bodySeen).toHaveBeenCalledTimes(1);
-
-    document.body.removeEventListener('keydown', bodySeen);
-    dropdown.remove();
+    q('[data-cy="impact-picker-clear-search"]')!.click();
+    settle();
+    search.mockClear();
+    typeText('water');
+    tick(300);
+    settle();
+    expect(search).toHaveBeenCalledTimes(1);
+    expect(lastParams().q).toBe('water');
   }));
 
-  it('the context list is copied, never mutated', fakeAsync(() => {
-    const initial = [item(1)];
-    setup({ context: { resultId: 77, initialSelection: initial } });
-    component.add(item(2));
-    expect(initial).toHaveLength(1);
+  it('outside click returns focus to the field only when it would be lost', fakeAsync(() => {
+    setup();
+    openPanel();
+    (q('[data-cy="impact-picker-search"]') as HTMLInputElement).focus();
+    document.body.click();
+    settle();
+    expect(q('[data-cy="impact-picker-panel"]')).toBeNull();
+    expect(document.activeElement).toBe(q('[data-cy="impact-picker-field"]'));
+
+    openPanel();
+    const other = document.createElement('button');
+    document.body.appendChild(other);
+    other.focus();
+    other.click();
+    settle();
+    expect(q('[data-cy="impact-picker-panel"]')).toBeNull();
+    expect(document.activeElement).toBe(other);
+    other.remove();
   }));
 
-  it('empty state when nothing matches', fakeAsync(() => {
-    setup({ search: jest.fn().mockReturnValue(of(page([], { total: 0, totalPages: 0 }))) });
-    expect(q('[data-cy="impact-picker-empty"]')).not.toBeNull();
-    expect(q('[data-cy="impact-picker-item"]')).toBeNull();
+  it('row toggle emits the added / removed array; filter changes and Clear selection behave', fakeAsync(() => {
+    setup({ selection: [item(1)] });
+    openPanel();
+    expect(emitted).toEqual([]); // opening / loading / filtering never emits
+    chip('Policy change').click();
+    settle();
+    expect(emitted).toEqual([]);
+
+    const checks = qa('[data-cy="impact-picker-check"]') as HTMLInputElement[];
+    expect(checks.map(c => c.checked)).toEqual([true, false, false]);
+    checks[1].click();
+    expect(emitted[0].map(i => i.result_id)).toEqual([1, 2]);
+    checks[0].click();
+    expect(emitted[1]).toEqual([]);
+
+    expect(q('[data-cy="impact-picker-count"]')!.textContent).toContain('1 results selected');
+    q('[data-cy="impact-picker-clear"]')!.click();
+    expect(emitted[2]).toEqual([]);
   }));
 
-  it('error state with retry that loads again', fakeAsync(() => {
-    setup({ search: jest.fn().mockReturnValueOnce(throwError(() => new Error('x'))).mockReturnValue(of(page([2]))) });
-    expect(q('[data-cy="impact-picker-error"]')).not.toBeNull();
-    (q('[data-cy="impact-picker-retry"]') as HTMLButtonElement).click();
+  it('hides Clear selection with nothing selected', fakeAsync(() => {
+    setup({ selection: [] });
+    openPanel();
+    expect(q('[data-cy="impact-picker-clear"]')).toBeNull();
+    expect(q('[data-cy="impact-picker-count"]')!.textContent).toContain('0 results selected');
+  }));
+
+  it('error shows Retry, emits nothing and Retry reloads; 0 items shows the empty text', fakeAsync(() => {
+    const searchMock = jest
+      .fn()
+      .mockReturnValueOnce(throwError(() => new Error('boom')))
+      .mockReturnValueOnce(of(page([])));
+    setup({ search: searchMock });
+    openPanel();
+    expect(q('[data-cy="impact-picker-error"]')!.textContent).toContain('Results could not be loaded');
+    expect(emitted).toEqual([]);
+    expect(q('[data-cy="impact-picker-empty"]')).toBeNull();
+    q('[data-cy="impact-picker-retry"]')!.click();
     settle();
     expect(q('[data-cy="impact-picker-error"]')).toBeNull();
-    expect(qa('[data-cy="impact-picker-item"]')).toHaveLength(1);
+    expect(q('[data-cy="impact-picker-empty"]')!.textContent).toContain('No results match your search');
   }));
 
-  it('paging buttons follow meta.totalPages', fakeAsync(() => {
-    setup({ search: jest.fn().mockReturnValue(of(page([1, 2], { totalPages: 2 }))) });
-    // `[disabled]` goes through `BrnButton`, a stub under Jest, so assert the state it is bound to.
-    expect(component.hasPrev()).toBe(false);
-    expect(component.hasNext()).toBe(true);
-    (q('[data-cy="impact-picker-next"]') as HTMLButtonElement).click();
-    expect(search.mock.calls.at(-1)[0].page).toBe(2);
-    component.goToPage(1);
-    expect(search.mock.calls.at(-1)[0].page).toBe(1);
-    component.goToPage(0);
-    component.goToPage(9);
-    expect(search.mock.calls.at(-1)[0].page).toBe(1);
+  it('Escape and Close return focus to the field and keep the selection; outside click closes', fakeAsync(() => {
+    setup();
+    openPanel();
+    q('[data-cy="impact-picker-search"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    settle();
+    expect(q('[data-cy="impact-picker-panel"]')).toBeNull();
+    expect(document.activeElement).toBe(q('[data-cy="impact-picker-field"]'));
+    expect(emitted).toEqual([]);
+
+    openPanel();
+    q('[data-cy="impact-picker-close"]')!.click();
+    settle();
+    expect(q('[data-cy="impact-picker-panel"]')).toBeNull();
+
+    openPanel();
+    q('[data-cy="impact-picker-panel"]')!.click(); // inside: stays open
+    settle();
+    expect(q('[data-cy="impact-picker-panel"]')).not.toBeNull();
+    document.body.click(); // outside
+    settle();
+    expect(q('[data-cy="impact-picker-panel"]')).toBeNull();
+
+    openPanel();
+    q('[data-cy="impact-picker-field"]')!.click(); // field toggles closed
+    settle();
+    expect(q('[data-cy="impact-picker-panel"]')).toBeNull();
   }));
 
-  it('without a dialog context it still renders (no exclusion, empty selection)', fakeAsync(() => {
-    setup({ context: null });
-    expect(search.mock.calls[0][0].excludeResultId).toBeNull();
-    expect(component.selection()).toEqual([]);
+  it('renders the row label [portfolio · phase] code · type with status and title', fakeAsync(() => {
+    setup();
+    openPanel();
+    const row = qa('[data-cy="impact-picker-item"]')[0];
+    expect(row.textContent).toContain('[P25 · Reporting 2025] 1001');
+    expect(row.textContent).toContain('Policy change');
+    expect(row.textContent).toContain('Submitted');
+    expect(row.textContent).toContain('Result 1');
   }));
 });

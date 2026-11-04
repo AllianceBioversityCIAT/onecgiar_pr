@@ -175,7 +175,7 @@ Implements [`requirements.md`](./requirements.md) (KRC-R-1..8, NFR-1..3) per [`d
 
 | Field | Value |
 |---|---|
-| Status | `[ ]` |
+| Status | `[x]` |
 | Size | S (no code) |
 | Depends on | KRC-T-1..3, KRC-T-5, deployed to PRTest (performance-refactor) |
 | Covers | KRC-R-2 (real-data parity), KRC-R-4 (S-4.1 end-to-end), KRC-R-6.3, KRC-NFR-1 |

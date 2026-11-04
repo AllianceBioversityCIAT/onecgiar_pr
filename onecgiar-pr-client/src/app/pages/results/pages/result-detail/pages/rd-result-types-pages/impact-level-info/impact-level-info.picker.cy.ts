@@ -1,4 +1,4 @@
-// @akili-spec results/impact-results-reporting/result-detail-impact (IRD-T-4, IRD-NFR-1/NFR-2)
+// @akili-spec results/impact-results-reporting/impact-previous-results-dropdown (IPD-T-3, IPD-NFR-1/NFR-2/NFR-3, Sc 1.3)
 /// <reference types="cypress-real-events" />
 import { CUSTOM_ELEMENTS_SCHEMA, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -9,17 +9,18 @@ import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { HlmButton } from '@spartan/button';
 import { ImpactLevelInfoComponent } from './impact-level-info.component';
+import { PreviousResultsPickerComponent } from './components/previous-results-picker/previous-results-picker.component';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../../shared/services/global/roles.service';
 import { CustomFieldsModule } from '../../../../../../../custom-fields/custom-fields.module';
 import { BeforeUnloadWarningDirective } from '../../../../../../../shared/directives/before-unload-warning.directive';
 
 /**
- * IRD-T-4 — page + previous-results picker (real `hlm-dialog` / CDK overlay) at 1280 and 900 px.
- * The API is stubbed; the picker, the page and the CDK dialog are the real components.
+ * IPD-T-3 — page + inline previous-results dropdown at 1280 and 900 px, driven with REAL key presses (cypress-real-events).
+ * The API is stubbed; the picker and the page are the real components.
  */
 const LONG_TITLE =
-  'A deliberately very long previously reported result title that keeps going and going so that wrapping, not horizontal scrolling, is what the dialog has to do at narrow widths';
+  'A deliberately very long previously reported result title that keeps going and going so that wrapping, not horizontal scrolling, is what the panel has to do at narrow widths';
 
 const prev = (id: number, title = `Result ${id}`) => ({
   result_id: id,
@@ -70,24 +71,15 @@ function mountPage() {
     dataControlSE: { currentResultSectionName: signal(''), currentResultSignal: signal<any>({}) }
   };
   cy.mount(ImpactLevelInfoComponent, {
-    imports: [CommonModule, FormsModule, CustomFieldsModule, BeforeUnloadWarningDirective, HlmButton, HttpClientTestingModule, NoopAnimationsModule],
+    imports: [CommonModule, FormsModule, CustomFieldsModule, BeforeUnloadWarningDirective, HlmButton, PreviousResultsPickerComponent, HttpClientTestingModule, NoopAnimationsModule],
     providers: [provideRouter([]), { provide: ApiService, useValue: api }],
     schemas: [CUSTOM_ELEMENTS_SCHEMA]
   }).then(wrapper => {
     wrapper.fixture.debugElement.injector.get(RolesService).readOnly = false;
     wrapper.fixture.detectChanges();
   });
-  cy.get('[data-cy="impact-add-results"]').should('exist');
+  cy.get('[data-cy="impact-picker-field"]').should('exist');
 }
-
-const addButton = () => cy.get('[data-cy="impact-add-results"]');
-const picker = () => cy.get('.cdk-dialog-container [data-cy="impact-picker"]');
-const openPicker = () => {
-  addButton().click();
-  picker().should('be.visible');
-  cy.get('[data-cy="impact-picker-item"]').should('have.length', 3);
-  cy.wait(250); // past HlmDialogContent's own entry transition before any geometry read
-};
 
 /** Real Tab presses (CDP, not synthetic) until the focused element matches `selector`; fails after `max` presses. */
 function tabUntil(selector: string, max = 8): void {
@@ -104,142 +96,132 @@ function tabUntil(selector: string, max = 8): void {
   step(max);
 }
 
+const field = () => cy.get('[data-cy="impact-picker-field"]');
+const panel = () => cy.get('[data-cy="impact-picker-panel"]');
+
+/** Opens the panel with a real Enter on the focused field. */
+const openWithEnter = () => {
+  tabUntil('[data-cy="impact-picker-field"]', 24); // real Tab, not .focus()
+  cy.realPress('Enter');
+  panel().should('be.visible');
+  cy.get('[data-cy="impact-picker-item"]').should('have.length', 3);
+  field().should('have.attr', 'aria-expanded', 'true');
+};
+
+/** Describes every element whose right edge passes the viewport's clientWidth (the culprit list in a failure message). */
+function overflowingElements(doc: Document): string[] {
+  const limit = doc.documentElement.clientWidth;
+  return Array.from(doc.body.querySelectorAll('*'))
+    .map(el => ({ el, right: el.getBoundingClientRect().right }))
+    .filter(({ right }) => right > limit + 0.5)
+    .slice(0, 6)
+    .map(({ el, right }) => `${el.tagName.toLowerCase()}${el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).join('.') : ''} right=${Math.round(right)} (limit ${limit})`);
+}
+
+/**
+ * IPD-NFR-3: no horizontal page scroll. Waits for the panel to settle (transitions, late fonts/icons), then checks every box that could
+ * scroll sideways (html, scrollingElement, body, the CT root); a failure names the descendants that pass the viewport.
+ */
+const noHorizontalOverflow = (label: string) => {
+  cy.wait(400);
+  cy.document().then(doc => {
+    const culprits = overflowingElements(doc).join(' | ');
+    const boxes: Array<[string, Element | null]> = [
+      ['documentElement', doc.documentElement],
+      ['scrollingElement', doc.scrollingElement],
+      ['body', doc.body],
+      ['[data-cy-root]', doc.querySelector('[data-cy-root]')]
+    ];
+    boxes.forEach(([name, el]) => {
+      expect(el, name).not.to.equal(null);
+      expect(el!.scrollWidth, `${label}: ${name} scrollWidth <= clientWidth; overflowing: ${culprits || 'none'}`).to.be.at.most(el!.clientWidth);
+    });
+    expect(culprits, `${label}: no element past the viewport`).to.equal('');
+  });
+};
+
 [1280, 900].forEach(width => {
-  describe(`Impact level info + previous-results picker at ${width}px (IRD-T-4)`, () => {
+  describe(`Impact previous-results dropdown at ${width}px (IPD-T-3)`, () => {
     beforeEach(() => cy.viewport(width, 800));
 
-    it('shows no horizontal scroll on the page or in the dialog, even with a very long title', () => {
+    it('KEYBOARD ONLY: Enter opens, Space toggles a chip, Space selects a row, Escape closes and focus returns to the field', () => {
       mountPage();
-      cy.document().then(doc => expect(doc.documentElement.scrollWidth, 'page scrollWidth').to.be.at.most(width));
-      openPicker();
-      cy.get('.cdk-dialog-container').then($container => {
-        const el = $container[0];
-        expect(el.scrollWidth, 'dialog scrollWidth <= clientWidth').to.be.at.most(el.clientWidth);
-        expect(el.getBoundingClientRect().right, 'dialog right edge inside the viewport').to.be.at.most(width);
-      });
-      picker().then($root => expect($root[0].scrollWidth, 'picker scrollWidth <= clientWidth').to.be.at.most($root[0].clientWidth));
-      cy.get('[data-cy="impact-picker-results"]').then($list => expect($list[0].scrollWidth, 'results scrollWidth').to.be.at.most($list[0].clientWidth));
-      cy.document().then(doc => expect(doc.documentElement.scrollWidth, 'document scrollWidth with the dialog open').to.be.at.most(width));
-    });
+      noHorizontalOverflow('closed');
+      openWithEnter();
 
-    it('is a named, modal dialog and marks the already selected result as Selected', () => {
-      mountPage();
-      openPicker();
-      cy.get('.cdk-dialog-container[aria-labelledby]').then($c => {
-        const target = document.getElementById($c.attr('aria-labelledby') as string);
-        expect(target?.textContent).to.contain('Add previously reported results');
-      });
-      cy.get('[data-cy="impact-picker-item"]').first().find('button').should('contain.text', 'Selected').and('be.disabled');
-      cy.get('[data-cy="impact-picker-item"]').eq(1).find('button').should('contain.text', 'Add').and('not.be.disabled');
-    });
-
-    it('Add + Done replaces the page list; Cancel discards; focus returns to "Add results"', () => {
-      mountPage();
-      cy.get('[data-cy="impact-previous-results"] li').should('have.length', 1);
-
-      // Cancel keeps the list
-      openPicker();
-      cy.get('[data-cy="impact-picker-item"]').eq(2).find('[data-cy="impact-picker-add"]').click();
-      cy.get('[data-cy="impact-picker-chip"]').should('have.length', 2);
-      cy.get('[data-cy="impact-picker-cancel"]').click();
-      cy.get('.cdk-dialog-container').should('not.exist');
-      cy.get('[data-cy="impact-previous-results"] li').should('have.length', 1);
-      cy.focused().should('have.attr', 'data-cy', 'impact-add-results');
-
-      // Done commits
-      openPicker();
-      cy.get('[data-cy="impact-picker-item"]').eq(2).find('[data-cy="impact-picker-add"]').click();
-      cy.get('[data-cy="impact-picker-done"]').click();
-      cy.get('.cdk-dialog-container').should('not.exist');
-      cy.get('[data-cy="impact-previous-results"] li').should('have.length', 2);
-      cy.focused().should('have.attr', 'data-cy', 'impact-add-results');
-    });
-
-    it('both filters are labelled groups and the phase options carry the portfolio acronym', () => {
-      mountPage();
-      openPicker();
-      cy.get('[data-cy="impact-picker-phase-filter"]').should('have.attr', 'role', 'group').and('have.attr', 'aria-labelledby', 'impact-picker-phase-label');
-      cy.get('[data-cy="impact-picker-type-filter"]').should('have.attr', 'role', 'group').and('have.attr', 'aria-labelledby', 'impact-picker-type-label');
-      cy.get('#impact-picker-phase-label').should('contain.text', 'Phase / portfolio');
-      cy.get('#impact-picker-type-label').should('contain.text', 'Result type');
-      cy.get('[data-cy="impact-picker-phase-filter"] .option').then($o => {
-        const labels = Array.from($o).map(o => o.textContent?.trim());
-        expect(labels).to.deep.equal(['All phases', 'P25 · Reporting 2025 - (Open)', 'P22 · Reporting 2024 - (Closed)']);
-      });
-    });
-
-    it('KEYBOARD ONLY: search, phase, result type, Add and Done with real Tab/Enter/Space presses', () => {
-      mountPage();
-      openPicker();
-
-      // 1. CDK autofocus lands on the search box; type a query (one debounced request).
-      cy.focused().should('have.attr', 'data-cy', 'impact-picker-search');
-      cy.realType('rice');
-      cy.wrap(null).should(() => expect(searchCalls[searchCalls.length - 1].q).to.equal('rice'));
-
-      // 2. Tab to the Phase trigger, Tab into its search box, narrow to ONE option, Enter picks it.
-      cy.realPress('Tab');
-      cy.focused().closest('[data-cy="impact-picker-phase-filter"]').should('exist');
-      cy.realPress('Tab');
-      cy.focused().should('match', 'input').closest('[data-cy="impact-picker-phase-filter"]').should('exist');
-      cy.realType('2025');
-      cy.realPress('Enter');
-      cy.wrap(null).should(() => expect(searchCalls[searchCalls.length - 1].versionId).to.equal(5));
-      cy.get('[data-cy="impact-picker-phase-filter"] .text').should('contain.text', 'P25 · Reporting 2025 - (Open)');
-
-      // 3. Tab to the first Result-type checkbox (the picked phase option is not focusable, so Tab moves on) and press Space.
-      tabUntil('[data-cy="impact-picker-type-filter"] input[type="checkbox"]');
+      // Tab to a typology chip and press Space: aria-pressed flips and E5 is re-queried with that type.
+      tabUntil('[data-cy="impact-picker-type"]');
+      cy.focused().should('have.attr', 'aria-pressed', 'false');
       cy.realPress('Space');
-      cy.wrap(null).should(() => {
-        const last = searchCalls[searchCalls.length - 1];
-        expect(last.typeIds).to.deep.equal([9]);
-        expect(last.versionId).to.equal(5);
-        expect(last.q).to.equal('rice');
-        expect(last.page).to.equal(1);
-        expect(last.excludeResultId).to.equal(77);
-        expect(last.limit).to.equal(20);
+      cy.focused().should('have.attr', 'aria-pressed', 'true');
+      cy.wrap(null).should(() => expect(searchCalls[searchCalls.length - 1].typeIds).to.deep.equal([9]));
+      cy.realPress('Space');
+      cy.focused().should('have.attr', 'aria-pressed', 'false');
+
+      // Tab to an unselected row checkbox and press Space: the row is selected (count 1 -> 2).
+      cy.get('[data-cy="impact-picker-count"]').should('contain.text', '1 results selected');
+      tabUntil('[data-cy="impact-picker-check"]:not(:checked)', 12);
+      cy.realPress('Space');
+      cy.get('[data-cy="impact-picker-count"]').should('contain.text', '2 results selected');
+
+      // Panel stays open and nothing overflows while it is open.
+      panel().should('be.visible');
+      noHorizontalOverflow('open');
+      panel().then($p => expect($p[0].scrollWidth, 'panel scrollWidth <= clientWidth').to.be.at.most($p[0].clientWidth));
+      cy.get('[data-cy="impact-picker-results"]').then($l => expect($l[0].scrollWidth, 'results scrollWidth').to.be.at.most($l[0].clientWidth));
+
+      // Escape closes the panel; focus is on the field, not <body>.
+      cy.realPress('Escape');
+      cy.get('[data-cy="impact-picker-panel"]').should('not.exist');
+      cy.focused().should('have.attr', 'data-cy', 'impact-picker-field');
+      cy.get('[data-cy="impact-selected-title"]').should('contain.text', 'Results selected (2)'); // Escape keeps the selection
+      cy.document().then(doc => {
+        expect(doc.activeElement, 'activeElement is not <body>').not.to.equal(doc.body);
+        expect(doc.activeElement?.getAttribute('data-cy')).to.equal('impact-picker-field');
       });
-      cy.get('[data-cy="impact-picker-item"]').should('have.length', 3);
-
-      // 4. Tab to an enabled Add button and press Enter.
-      tabUntil('[data-cy="impact-picker-add"]');
-      cy.realPress('Enter');
-      cy.get('[data-cy="impact-picker-chip"]').should('have.length', 2);
-
-      // 5. Tab to Done and press Enter: the dialog closes and the page list is replaced.
-      tabUntil('[data-cy="impact-picker-done"]', 12);
-      cy.realPress('Enter');
-      cy.get('.cdk-dialog-container').should('not.exist');
-      cy.get('[data-cy="impact-previous-results"] li').should('have.length', 2);
-      cy.focused().should('have.attr', 'data-cy', 'impact-add-results');
+      field().should('have.attr', 'aria-expanded', 'false');
+      noHorizontalOverflow('after close');
     });
 
-    it('Escape inside an open filter dropdown closes only the dropdown and keeps the picker, search and selection (F-5)', () => {
+    it('Escape from the search box also closes the panel and returns focus to the field', () => {
       mountPage();
-      openPicker();
-      cy.get('[data-cy="impact-picker-item"]').eq(1).find('[data-cy="impact-picker-add"]').click();
-      cy.get('[data-cy="impact-picker-search"]').type('rice');
-      tabUntil('[data-cy="impact-picker-type-filter"] .field');
-      cy.focused().closest('.custom_select').should('exist');
+      openWithEnter();
+      tabUntil('[data-cy="impact-picker-search"]');
       cy.realPress('Escape');
-      cy.get('.cdk-dialog-container').should('exist');
-      cy.get('[data-cy="impact-picker-search"]').should('have.value', 'rice');
-      cy.get('[data-cy="impact-picker-chip"]').should('have.length', 2);
-      cy.document().then(doc => expect(Cypress.$(doc.activeElement).closest('.custom_select').length, 'dropdown closed').to.equal(0));
-      // no dropdown open: Escape still closes the whole picker
-      cy.get('[data-cy="impact-picker-search"]').focus();
-      cy.realPress('Escape');
-      cy.get('.cdk-dialog-container').should('not.exist');
+      cy.get('[data-cy="impact-picker-panel"]').should('not.exist');
+      cy.focused().should('have.attr', 'data-cy', 'impact-picker-field');
     });
 
-    it('Escape closes the dialog without keeping changes and focus returns to "Add results"', () => {
+    it('has no horizontal overflow with the panel open and a very long title', () => {
       mountPage();
-      openPicker();
-      cy.get('[data-cy="impact-picker-item"]').eq(1).find('[data-cy="impact-picker-add"]').click();
-      cy.get('body').type('{esc}');
-      cy.get('.cdk-dialog-container').should('not.exist');
-      cy.get('[data-cy="impact-previous-results"] li').should('have.length', 1);
-      cy.focused().should('have.attr', 'data-cy', 'impact-add-results');
+      openWithEnter();
+      cy.contains('[data-cy="impact-picker-item"]', 'deliberately very long').should('be.visible');
+      noHorizontalOverflow('open, long title');
+      panel().then($p => expect($p[0].getBoundingClientRect().right, 'panel right edge inside the viewport').to.be.at.most(width));
     });
+
+    if (width === 1280) {
+      it('captures the open dropdown for the visual parity review', () => {
+        // 1280x720 = the Electron window of `cypress run`: a taller viewport is scaled by Cypress, and the scaled capture shows a
+        // phantom horizontal scrollbar even on a plain 100%-width page (proved with a throwaway spec). The real overflow is asserted below.
+        cy.viewport(1280, 720);
+        mountPage();
+        openWithEnter();
+        noHorizontalOverflow('screenshot state');
+        cy.screenshot('ipd-impact-dropdown-1280', {
+          capture: 'viewport',
+          overwrite: true,
+          // the state Cypress captures: re-assert right before the shot, with the numbers in the message
+          onBeforeScreenshot: () => {
+            const doc = Cypress.$('html')[0].ownerDocument;
+            const root = doc.documentElement;
+            expect(root.scrollWidth, `capture state: html scrollWidth <= clientWidth; overflowing: ${overflowingElements(doc).join(' | ') || 'none'}`).to.be.at.most(root.clientWidth);
+          }
+        });
+        // whole panel (rows, Load more, footer) regardless of the fold
+        panel().scrollIntoView();
+        panel().screenshot('ipd-impact-dropdown-panel-1280', { overwrite: true });
+      });
+    }
   });
 });

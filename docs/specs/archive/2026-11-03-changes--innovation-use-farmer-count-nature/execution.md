@@ -370,3 +370,33 @@
   - **Clear the unit:** re-click Individual actors (unit cleared) → save → stored `null/innovation_applied`, `innovation-use-info: false`, submit false ✅ (IFC-R-6 server, section 1).
   - **Answer again:** re-select + save → individuals, green, submit true ✅.
   - **Final state of #8558:** the current-use block is no longer TBD and holds that Farmers row.
+
+### IFC-T-7 — PRTest re-check of the session-41 fixes (2026-11-03, onecgiar-pr-02, perf d4f1fdbbd deployed, nothing saved)
+- Deploy confirmed in the served page: the Q-b radiogroup carries `-mt-[27px]`. #8558 shows 3 Farmers follow-up blocks (current use row 1962 = 10/2, 20/3, total 30, persisted).
+- Current use → Add actor → Farmers. A second Farmers row is allowed. The bottom bar shows "2 fields missing" (Q-a, Q-b).
+- Households: the single "How many" shows **REQUIRED** on the unsaved row and the bar stays at **2 fields missing** (Q-b + How many) → F-1 fix ✅
+- Re-click Households (deselect): the **grid comes back** with "does not apply" unticked → deselect fix ✅
+- The unsaved row was left unsaved (not persisted).
+
+### IFC-T-7 — close (2026-11-03, session onecgiar-pr-41)
+- **Read-only PRTest checks:** bilateral 2026 result #9506 (SP09, source API) has a Farmers row in the 2030 block. It shows **no** follow-up block, and the section stays green, as before ✅ (IFC-R-1 out-of-scope (b)). Screenshot: `C:\Users\santiagosanchez\AppData\Local\Temp\claude-chrome-screenshots-GoES6n\screenshot-1793736674395-11.jpg`.
+- **Not run in a browser:**
+  - a 2025 W1/W2 result and IPSR step 1, because the Results Center filters misbehaved and no id was at hand. Covered by the T-4 falsifier specs (phase 2025 and null year, `isIpsr = true`, both blocks).
+  - Phase duplication, covered by the T-2 replicate-SQL specs (both columns in every replicate path).
+- **Santiago's decisions (2026-11-03):**
+  - Visual of the follow-up block vs `mockup/` **approved**.
+  - The spec is accepted for archive without a `test-report.md` or `validation-report.md`.
+- **Doc sync:** `onecgiar-pr-server/src/api/results-framework-reporting/innovation-use/CLAUDE.md` gains the section "Seguimiento Farmers: count_unit / use_nature (P2-4048)". It covers:
+  - the columns and the whitelist;
+  - the Farmers de-dup rule;
+  - the 4 callers of `saveAnticipatedInnoUser`, with the bilateral guard and the review-update consequence;
+  - the full-payload update rule;
+  - the live green-check rule.
+
+  `Verified:` re-stamped.
+- **Final status: all tasks IFC-T-1..T-7 done.** Production steps (Santiago, at deploy):
+  1. The pipeline runs migration 1793300000000.
+  2. Run `sql/checks.sql` Steps 0/1/2/4.
+  3. Apply `sql/validation_innovation_use_P25.after.sql` as is (DEFINER `prmsadmin`, DBeaver SQL Editor with Alt+X; in test the Function Editor did not persist).
+  4. Run Step 2b with the BEFORE ids.
+  5. Tell users. Result 34582 (ENABEL) and the other 2026 W1/W2 Farmers rows turn red until answered.

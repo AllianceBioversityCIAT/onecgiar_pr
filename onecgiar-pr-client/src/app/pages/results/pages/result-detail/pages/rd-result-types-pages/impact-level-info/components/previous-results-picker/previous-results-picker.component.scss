@@ -1,0 +1,377 @@
+@use '../../../../../../../../../../styles/fonts.scss' as fonts;
+
+// IPD-T-1 / IPD-DD-3: dropdown rules copied from rd-contributors-and-partners.component.scss (not shared).
+// Chips, segments, links and the field are <button>s here, so each gets a reset to look identical.
+:host {
+  display: block;
+}
+
+.picker {
+  position: relative;
+  width: 100%;
+}
+
+.picker-field {
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+button.filter-chip,
+button.grouped-chip,
+button.reset-link,
+button.clear-btn,
+button.clear-search,
+button.close-btn {
+  font: inherit;
+  appearance: none;
+  background: none;
+  border: 0;
+  margin: 0;
+  text-align: inherit;
+}
+
+.custom-dropdown-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background-color: var(--pr-color-white);
+  border-radius: 8px;
+  box-shadow: var(--pr-shadow-2);
+  z-index: 1000;
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+
+  .search-bar {
+    padding: 15px 20px 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+
+    input {
+      flex: 1;
+      border: 1px solid var(--pr-color-neutral-1000);
+      border-radius: 6px;
+      padding: 8px 12px;
+      padding-left: 35px;
+      @include fonts.pr-typography('body-1');
+      color: var(--pr-text);
+      outline: none;
+
+      &::placeholder {
+        color: var(--pr-text-muted);
+      }
+    }
+
+    i.search-icon {
+      position: absolute;
+      left: 32px;
+      font-size: 14px;
+      color: var(--pr-text-muted);
+    }
+
+    .clear-search {
+      position: absolute;
+      right: 32px;
+      cursor: pointer;
+      color: var(--pr-text-muted);
+    }
+  }
+
+  .filter-group-title {
+    @include fonts.pr-typography('body-3');
+    font-weight: 700;
+    color: var(--pr-text-muted);
+    margin: 10px 20px 8px 20px;
+    text-transform: uppercase;
+  }
+
+  .filters-row.typology-row {
+    padding: 0 20px 15px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .filter-chip {
+      padding: 5px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--pr-color-neutral-1000);
+      @include fonts.pr-typography('body-2');
+      color: var(--pr-text-secondary);
+      background-color: var(--pr-color-white);
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &.active {
+        background-color: var(--pr-color-primary-300);
+        color: var(--pr-color-white);
+        border-color: var(--pr-color-primary-300);
+        font-weight: 500;
+      }
+    }
+  }
+
+  .flex-row-align {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 20px 15px 20px;
+    border-bottom: 1px solid var(--pr-border-divider);
+
+    .left-filters {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+
+      .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .filter-label {
+          color: var(--pr-text-muted);
+          font-weight: 700;
+          @include fonts.pr-typography('body-3');
+          text-transform: uppercase;
+        }
+
+        .filter-chip-group.segmented {
+          display: flex;
+          border: 1px solid var(--pr-color-neutral-1000);
+          border-radius: 4px;
+          overflow: hidden;
+
+          .grouped-chip {
+            padding: 4px 12px;
+            @include fonts.pr-typography('body-2');
+            color: var(--pr-text-secondary);
+            background-color: var(--pr-color-white);
+            cursor: pointer;
+            border-right: 1px solid var(--pr-color-neutral-1000);
+            transition: all 0.2s;
+
+            &:last-child {
+              border-right: none;
+            }
+
+            &.active {
+              background-color: var(--pr-color-primary-300);
+              color: var(--pr-color-white);
+              font-weight: 500;
+            }
+          }
+        }
+      }
+    }
+
+    .summary-and-reset {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      @include fonts.pr-typography('body-2');
+
+      .summary-text {
+        color: var(--pr-text-muted);
+      }
+
+      .reset-link {
+        color: var(--pr-color-primary-300);
+        font-weight: 600;
+        cursor: pointer;
+
+        &:hover {
+          color: var(--pr-color-primary-400);
+          text-decoration: underline;
+        }
+      }
+    }
+  }
+
+  .results-list.compact-list {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 0;
+
+    .state-message {
+      @include fonts.pr-typography('body-1');
+      color: var(--pr-text-secondary);
+      margin: 0;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .result-list-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--pr-border-divider);
+      cursor: pointer;
+      background-color: var(--pr-color-white);
+
+      &:hover {
+        background-color: var(--pr-surface-raised-soft);
+      }
+
+      .item-left {
+        padding-top: 2px;
+
+        .pr-native-check {
+          appearance: none;
+          width: 18px;
+          height: 18px;
+          border: 2px solid var(--pr-color-primary-300);
+          border-radius: 4px;
+          background-color: transparent;
+          position: relative;
+          margin: 0;
+          cursor: pointer;
+
+          &:checked {
+            background-color: var(--pr-color-primary-300);
+            border-color: var(--pr-color-primary-300);
+
+            &::after {
+              content: '';
+              position: absolute;
+              left: 4px;
+              top: 1px;
+              width: 5px;
+              height: 10px;
+              border: solid var(--pr-color-white);
+              border-width: 0 2px 2px 0;
+              transform: rotate(45deg);
+            }
+          }
+        }
+      }
+
+      .item-right {
+        flex: 1;
+        min-width: 0;
+
+        .item-header {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 6px;
+          margin-bottom: 6px;
+          @include fonts.pr-typography('body-2');
+
+          .item-code {
+            font-weight: 700;
+            color: var(--pr-text-heading);
+          }
+
+          .item-dot {
+            color: var(--pr-text-subtle);
+          }
+
+          .item-typology {
+            color: var(--pr-color-primary-300);
+            font-weight: 600;
+          }
+
+          .item-funding-badge {
+            background-color: var(--pr-surface-subtle);
+            color: var(--pr-text-secondary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            @include fonts.pr-typography('body-3');
+            font-weight: 600;
+            margin-left: 4px;
+          }
+        }
+
+        .item-title {
+          display: block;
+          @include fonts.pr-typography('body-1');
+          color: var(--pr-text-secondary);
+          line-height: 1.4;
+        }
+      }
+    }
+
+    .load-more-row {
+      display: flex;
+      justify-content: center;
+      padding: 12px 20px;
+      background-color: var(--pr-surface-subtle);
+    }
+  }
+
+  .close-btn {
+    background-color: var(--pr-color-white);
+    border: 1px solid var(--pr-color-neutral-1000);
+    border-radius: 20px;
+    padding: 6px 20px;
+    @include fonts.pr-typography('body-2');
+    font-weight: 600;
+    color: var(--pr-text-secondary);
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: var(--pr-surface-subtle);
+    }
+
+    &:disabled {
+      cursor: default;
+      color: var(--pr-text-muted);
+    }
+  }
+
+  .panel-footer {
+    padding: 15px 20px;
+    background-color: var(--pr-color-white);
+    border-top: 1px solid var(--pr-border-divider);
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+
+      .selection-count {
+        @include fonts.pr-typography('body-2');
+        font-weight: 500;
+        color: var(--pr-color-primary-300);
+      }
+
+      .clear-btn {
+        @include fonts.pr-typography('body-2');
+        color: var(--pr-color-primary-300);
+        text-decoration: underline;
+        cursor: pointer;
+
+        &:hover {
+          color: var(--pr-color-primary-400);
+          font-weight: 600;
+        }
+      }
+    }
+  }
+}

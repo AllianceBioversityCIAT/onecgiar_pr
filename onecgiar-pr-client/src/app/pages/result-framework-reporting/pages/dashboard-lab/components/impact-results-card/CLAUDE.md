@@ -1,6 +1,6 @@
 # impact-results-card
 
-**Verified:** 2026-10-31 · qa-development-2026-ss · results/impact-results-reporting/sp-reporting-entry IRE-T-5 (CT layout spec added, guide re-verified) · prior: 2026-10-30 · qa-development-2026-ss · results/impact-results-reporting/sp-reporting-entry IRE-T-2 (new component)
+**Verified:** 2026-11-03 · qa-development-2026-ss · changes/impact-results-card-collapse ICC-T-1 (collapse toggle) · prior: 2026-10-31 · qa-development-2026-ss · results/impact-results-reporting/sp-reporting-entry IRE-T-5 (CT layout spec added, guide re-verified) · prior: 2026-10-30 · qa-development-2026-ss · results/impact-results-reporting/sp-reporting-entry IRE-T-2 (new component)
 
 ## Qué es
 Tarjeta **Impact results** de la pestaña Reporting del Science Program: cabecera (tag `IMPACT`, título, línea
@@ -20,6 +20,7 @@ Tarjeta **Impact results** de la pestaña Reporting del Science Program: cabecer
 
 ## Trampas
 - ⚠️ El total sale de `total` del E6, **no** de sumar filas.
-- ⚠️ Nada de barra de progreso, ratio, %, "By AOW", chevron ni favoritos (IRE-R-1): el spec lo prohíbe a propósito.
+- ⚠️ Nada de barra de progreso, ratio, %, "By AOW" ni favoritos (IRE-R-1): el spec lo prohíbe a propósito.
+- Colapsable (ICC, `changes/impact-results-card-collapse`): `expanded = signal(true)` local, sin persistir ni reset por inputs; `<button>` nativo con chevron (`aria-expanded`/`aria-controls`) y un único `(click)` en `<header>`; las filas salen del DOM con `@if`. `expanded` no entra en los `params` del `rxResource` (no refetch).
 - El nombre accesible del botón es `Report result for <área>`; el icono lleva `alt=""` (el nombre ya es texto visible).
 - No edites `reporting-aow-table` para reutilizar estilos: aquí se replican las clases de tag/botón.

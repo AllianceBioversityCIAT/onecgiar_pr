@@ -426,12 +426,6 @@ export const resultDetailRouting: PrRoute[] = [
   },
   ...rdResultTypesPages,
   {
-    prName: 'Evidence',
-    path: 'evidences',
-    underConstruction: false,
-    loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-evidences/rd-evidences.module').then(m => m.RdEvidencesModule)
-  },
-  {
     prName: 'Impact level info',
     path: 'impact-level-info',
     prHide: 9,
@@ -441,6 +435,12 @@ export const resultDetailRouting: PrRoute[] = [
       import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/impact-level-info/impact-level-info.module').then(
         m => m.ImpactLevelInfoModule
       )
+  },
+  {
+    prName: 'Evidence',
+    path: 'evidences',
+    underConstruction: false,
+    loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-evidences/rd-evidences.module').then(m => m.RdEvidencesModule)
   },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'general-information' }
 ];

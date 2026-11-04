@@ -152,9 +152,9 @@ describe('ResultSectionsService', () => {
       build();
     };
 
-    it('lists exactly General, Contributors, Geo, Evidence, Impact level info for P25 type 9', () => {
+    it('lists exactly General, Contributors, Geo, Impact level info, Evidence for P25 type 9', () => {
       setup('P25', 9);
-      expect(paths()).toEqual(['general-information', 'contributor-partners', 'geographic-location', 'evidences', 'impact-level-info']);
+      expect(paths()).toEqual(['general-information', 'contributor-partners', 'geographic-location', 'impact-level-info', 'evidences']);
     });
 
     it('exposes the exact path impact-level-info', () => {

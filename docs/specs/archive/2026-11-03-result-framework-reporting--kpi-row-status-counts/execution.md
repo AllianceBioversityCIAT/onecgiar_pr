@@ -382,3 +382,10 @@ KRC-R-1 (S-1.1/1.2/1.3), KRC-R-4 (Achieved untouched in the UI), KRC-R-6.1, KRC-
 - **Step 3, 640 px (2026-11-03): PASS.** Santiago's DevTools screenshot at 652×913, localhost SP09 › HLO 1.1.1: "1 result reported · 1 editing ›" and "2 results reported · 2 editing ›" wrap onto their own line inside the row, with no overflow. The header overlap at that width (Tour / Report emerging result over the title) is pre-existing page chrome, not KRC.
 - **Step 4, fail-soft (2026-11-03): PASS (KRC-S-5.1).** XHR/fetch were patched in the page so `indicator-result-status-links` fails (1 blocked call), then in-app navigation to SP10 › AoW01. KPI rows rendered (200 "Report" buttons), 0 results-reported chips, 0 toasts or alerts, no console errors. The page was reloaded afterwards to drop the patch.
 - **KRC-T-4 summary:** steps 2–5 done. Step 1 (JSON before/after diff) **not run**: the deploy had already happened. Open: the Escape → chip-click race to re-check manually.
+
+### KRC-T-4 — close (2026-11-03, session onecgiar-pr-41)
+- **Status:** PASS on steps 2–5. Step 1 (JSON before/after diff) was **not run**, because the deploy had already happened. KRC-R-4 (figures unchanged) still holds: the endpoint is SELECT-only, the protected functions were not edited, and the existing specs are unchanged and green.
+- **Santiago's decisions (2026-11-03):**
+  - OQ-1 is closed as is. Quality Assessed stays under Submitted, and Pending review is not highlighted.
+  - The spec is accepted for archive without a `test-report.md` or `validation-report.md`.
+- **Final status: KRC-T-1..T-5 done.**

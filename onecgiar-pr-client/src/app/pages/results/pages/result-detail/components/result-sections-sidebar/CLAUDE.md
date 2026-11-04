@@ -1,6 +1,6 @@
 # result-sections-sidebar
 
-**Verified:** 2026-10-31 · qa-development-2026-ss · (uncommitted) · spec `results/impact-results-reporting/result-detail-impact` IRD-T-7: `resultTypeName` runs through `resultTypeDisplayName` ONLY when `isP25ImpactResultSignal()` (P25 type 9 reads `Impact result`; every other type/portfolio keeps its DB name); prior: 2026-09-22 · branch yzuniga/p2-2385-ai-review-kp · P2-2385 (AI review opens to Knowledge Products); prior: 2026-09-03 · branch qa-development-2026 · 6963df5af
+**Verified:** 2026-11-03 · qa-development-2026-ss · quick/impact-section-order: P25 type 9 rail order is now General, Contributors, Geo, Impact level info, Evidence (array order in `resultDetailRouting`); prior: 2026-10-31 · qa-development-2026-ss · spec `results/impact-results-reporting/result-detail-impact` IRD-T-7: `resultTypeName` runs through `resultTypeDisplayName` ONLY when `isP25ImpactResultSignal()` (P25 type 9 reads `Impact result`; every other type/portfolio keeps its DB name); prior: 2026-09-22 · branch yzuniga/p2-2385-ai-review-kp · P2-2385 (AI review opens to Knowledge Products); prior: 2026-09-03 · branch qa-development-2026 · 6963df5af
 
 ## Qué es
 Segundo riel (240px, blanco) del detalle de resultado: identidad (Result code #, type, status

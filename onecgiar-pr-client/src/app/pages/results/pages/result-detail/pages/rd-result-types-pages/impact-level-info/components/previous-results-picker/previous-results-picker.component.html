@@ -1,109 +1,121 @@
-<div class="flex max-h-[85svh] min-w-0 flex-col gap-4" data-cy="impact-picker" (keydown.escape)="onEscape($event)">
-  <div hlmDialogHeader>
-    <h2 hlmDialogTitle class="text-[18px]!">Add previously reported results</h2>
-    <p hlmDialogDescription class="text-[14px]! leading-[1.5]!">Search results from any phase and portfolio. Nothing is saved until you save the section.</p>
-  </div>
+<div class="picker custom_select" data-cy="impact-picker" (keydown.escape)="onEscape($event)">
+  <button
+    #fieldRef
+    type="button"
+    class="field picker-field"
+    data-cy="impact-picker-field"
+    aria-haspopup="true"
+    aria-controls="impact-picker-panel"
+    [attr.aria-expanded]="open()"
+    (click)="toggle()">
+    <span class="text select_placeholder">Please select a result</span>
+    <i class="pi pi-chevron-down icon_dropdown" aria-hidden="true"></i>
+  </button>
 
-  <div class="flex min-w-0 flex-col gap-3">
-    <input
-      hlmInput
-      type="search"
-      class="w-full text-[14px]!"
-      data-cy="impact-picker-search"
-      aria-label="Search by title or result code"
-      placeholder="Search by title or result code"
-      autocomplete="off"
-      (input)="onQueryInput(search.value)"
-      #search />
-
-    <div class="relative z-10 flex min-w-0 flex-wrap gap-3" data-cy="impact-picker-filters">
-      <div class="flex w-[220px] min-w-0 max-w-full flex-col gap-1" role="group" aria-labelledby="impact-picker-phase-label" data-cy="impact-picker-phase-filter">
-        <span class="text-[12px] text-[var(--pr-color-secondary-400)]" id="impact-picker-phase-label">Phase / portfolio</span>
-        <app-pr-filter-select
-          [options]="phaseOptions()"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="All phases"
-          [filter]="true"
-          [ngModel]="versionFilter()"
-          (changed)="onVersionChange($event)"></app-pr-filter-select>
+  @if (open()) {
+    <div class="custom-dropdown-panel" id="impact-picker-panel" data-cy="impact-picker-panel">
+      <div class="search-bar">
+        <i class="pi pi-search search-icon" aria-hidden="true"></i>
+        <input
+          type="text"
+          data-cy="impact-picker-search"
+          aria-label="Search by code or title"
+          placeholder="Search by code or title…"
+          autocomplete="off"
+          [value]="searchText()"
+          (input)="onQueryInput(search.value)"
+          #search />
+        @if (searchText()) {
+          <button type="button" class="clear-search" data-cy="impact-picker-clear-search" aria-label="Clear search" (click)="clearSearch()">
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+        }
       </div>
-      <div class="flex w-[220px] min-w-0 max-w-full flex-col gap-1" role="group" aria-labelledby="impact-picker-type-label" data-cy="impact-picker-type-filter">
-        <span class="text-[12px] text-[var(--pr-color-secondary-400)]" id="impact-picker-type-label">Result type</span>
-        <app-pr-filter-multiselect
-          [options]="typeOptions()"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="All types"
-          countLabel="types"
-          [filter]="true"
-          [ngModel]="typeFilter()"
-          (changed)="onTypesChange($event)"></app-pr-filter-multiselect>
+
+      <div class="filter-group-title" id="impact-picker-typology-label">FILTER BY RESULT TYPOLOGY</div>
+      <div class="filters-row typology-row" role="group" aria-labelledby="impact-picker-typology-label" data-cy="impact-picker-types">
+        @for (type of typeOptions(); track type.id) {
+          <button type="button" class="filter-chip" data-cy="impact-picker-type" [class.active]="isTypeActive(type.id)" [attr.aria-pressed]="isTypeActive(type.id)" (click)="toggleType(type.id)">
+            {{ type.label }}
+          </button>
+        }
+      </div>
+
+      <div class="flex-row-align">
+        <div class="left-filters">
+          <div class="filter-group">
+            <span class="filter-label" id="impact-picker-portfolio-label">PORTFOLIO:</span>
+            <div class="filter-chip-group segmented" role="group" aria-labelledby="impact-picker-portfolio-label" data-cy="impact-picker-portfolios">
+              <button type="button" class="grouped-chip" data-cy="impact-picker-portfolio" [class.active]="portfolioFilter() === null" [attr.aria-pressed]="portfolioFilter() === null" (click)="setPortfolio(null)">All</button>
+              @for (portfolio of portfolios(); track portfolio.id) {
+                <button
+                  type="button"
+                  class="grouped-chip"
+                  data-cy="impact-picker-portfolio"
+                  [class.active]="portfolioFilter() === portfolio.id"
+                  [attr.aria-pressed]="portfolioFilter() === portfolio.id"
+                  (click)="setPortfolio(portfolio.id)">
+                  {{ portfolio.acronym }}
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-and-reset">
+          <span class="summary-text" data-cy="impact-picker-summary">Showing {{ total() }} results</span>
+          <button type="button" class="reset-link" data-cy="impact-picker-reset" (click)="resetFilters()">Reset filters</button>
+        </div>
+      </div>
+
+      <span class="sr-only" role="status" aria-live="polite" data-cy="impact-picker-announcer">{{ announcement() }}</span>
+
+      <div class="results-list compact-list" [attr.aria-busy]="loading()" data-cy="impact-picker-results">
+        @if (error()) {
+          <div class="state-message error" role="alert" data-cy="impact-picker-error">
+            <span>Results could not be loaded</span>
+            <button type="button" class="close-btn" data-cy="impact-picker-retry" (click)="retry()">Retry</button>
+          </div>
+        }
+        @if (loading() && !items().length) {
+          <p class="state-message" data-cy="impact-picker-loading">Loading results...</p>
+        } @else if (!items().length && !error()) {
+          <p class="state-message" data-cy="impact-picker-empty">No results match your search</p>
+        }
+        @for (item of items(); track item.result_id) {
+          <label class="result-list-item" data-cy="impact-picker-item">
+            <span class="item-left">
+              <input type="checkbox" class="pr-native-check" data-cy="impact-picker-check" [checked]="isSelected(item)" [attr.aria-label]="'Select result ' + item.result_code" (change)="toggleItem(item)" />
+            </span>
+            <span class="item-right">
+              <span class="item-header">
+                <span class="item-code">[{{ item.portfolio_acronym }} · {{ item.phase_name }}] {{ item.result_code }}</span>
+                <span class="item-dot">·</span>
+                <span class="item-typology">{{ item.result_type_name }}</span>
+                <span class="item-funding-badge">{{ item.status_name }}</span>
+              </span>
+              <span class="item-title">{{ item.title }}</span>
+            </span>
+          </label>
+        }
+        @if (hasMore()) {
+          <div class="load-more-row">
+            <button type="button" class="close-btn" data-cy="impact-picker-load-more" [disabled]="loading()" (click)="loadMore()">Load more</button>
+          </div>
+        }
+      </div>
+
+      <div class="panel-footer">
+        <div class="footer-left">
+          <span class="selection-count" data-cy="impact-picker-count">{{ selection().length }} results selected</span>
+          @if (selection().length) {
+            <button type="button" class="clear-btn" data-cy="impact-picker-clear" (click)="clearSelection()">Clear selection</button>
+          }
+        </div>
+        <div class="footer-right">
+          <button type="button" class="close-btn" data-cy="impact-picker-close" (click)="close(true)">Close</button>
+        </div>
       </div>
     </div>
-  </div>
-
-  <span class="sr-only" role="status" aria-live="polite" data-cy="impact-picker-announcer">{{ announcement() }}</span>
-
-  <div class="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto" [attr.aria-busy]="loading()" data-cy="impact-picker-results">
-    @if (error()) {
-      <div role="alert" class="flex flex-col items-start gap-2 rounded-lg border border-[var(--pr-color-red-300)] bg-white p-3 text-[14px] text-[var(--pr-color-secondary-400)]" data-cy="impact-picker-error">
-        <span>We could not load the results. Check your connection and try again.</span>
-        <button hlmBtn type="button" variant="outline" size="sm" data-cy="impact-picker-retry" (click)="retry()">Retry</button>
-      </div>
-    } @else if (loading() && !items().length) {
-      <p class="text-[14px] text-[var(--pr-color-secondary-400)]" data-cy="impact-picker-loading">Loading results...</p>
-    } @else if (!items().length) {
-      <div class="flex flex-col gap-1 py-2 text-[14px] text-[var(--pr-color-secondary-400)]" data-cy="impact-picker-empty">
-        <span>No results match your search.</span>
-        <span class="text-[12px]">Try a different title or result code, or clear the filters.</span>
-      </div>
-    } @else {
-      <ul class="m-0 flex list-none flex-col gap-2 p-0" aria-label="Search results" [class.opacity-60]="loading()">
-        @for (item of items(); track item.result_id) {
-          <li class="flex min-w-0 items-start justify-between gap-3 rounded-lg border border-[var(--pr-color-neutral-300)] bg-white p-3" data-cy="impact-picker-item">
-            <div class="flex min-w-0 flex-1 flex-col gap-1 text-[12px] text-[var(--pr-color-secondary-400)]">
-              <span class="pr-code font-mono">{{ item.result_code }}</span>
-              <span class="line-clamp-2 break-words text-[14px] font-medium">{{ item.title }}</span>
-              <span class="break-words">{{ item.result_type_name }} · {{ item.phase_name }} · {{ item.portfolio_acronym }} · {{ item.status_name }}</span>
-            </div>
-            @if (isSelected(item)) {
-              <button hlmBtn type="button" variant="ghost" size="sm" disabled data-cy="impact-picker-selected" [attr.aria-label]="'Result ' + item.result_code + ' is already selected'">Selected</button>
-            } @else {
-              <button hlmBtn type="button" variant="outline" size="sm" data-cy="impact-picker-add" [attr.aria-label]="'Add result ' + item.result_code" (click)="add(item)">Add</button>
-            }
-          </li>
-        }
-      </ul>
-
-      @if (totalPages() > 1) {
-        <div class="flex items-center justify-between gap-2 text-[12px] text-[var(--pr-color-secondary-400)]" data-cy="impact-picker-paging">
-          <button hlmBtn type="button" variant="outline" size="sm" data-cy="impact-picker-prev" [disabled]="!hasPrev() || loading()" (click)="goToPage(page() - 1)">Previous</button>
-          <span>Page {{ page() }} of {{ totalPages() }}</span>
-          <button hlmBtn type="button" variant="outline" size="sm" data-cy="impact-picker-next" [disabled]="!hasNext() || loading()" (click)="goToPage(page() + 1)">Next</button>
-        </div>
-      }
-    }
-  </div>
-
-  <div class="flex min-w-0 flex-col gap-2 border-t border-[var(--pr-color-neutral-300)] pt-3" data-cy="impact-picker-selection">
-    <span class="text-[12px] font-medium text-[var(--pr-color-secondary-400)]">Selected ({{ selection().length }})</span>
-    @if (selection().length) {
-      <ul class="m-0 flex max-h-[96px] list-none flex-wrap gap-2 overflow-y-auto p-0" aria-label="Selected results">
-        @for (item of selection(); track item.result_id) {
-          <li class="flex min-w-0 max-w-full items-center gap-1 rounded-full border border-[var(--pr-color-neutral-300)] bg-white py-1 pl-3 pr-1 text-[12px] text-[var(--pr-color-secondary-400)]" data-cy="impact-picker-chip">
-            <span class="pr-code font-mono">{{ item.result_code }}</span>
-            <button hlmBtn type="button" variant="ghost" size="sm" data-cy="impact-picker-chip-remove" [attr.aria-label]="'Remove result ' + item.result_code" (click)="remove(item.result_id)">Remove</button>
-          </li>
-        }
-      </ul>
-    } @else {
-      <span class="text-[12px] text-[var(--pr-color-secondary-400)]">No results selected yet.</span>
-    }
-  </div>
-
-  <div hlmDialogFooter>
-    <button hlmBtn type="button" variant="brand" class="text-[14px]! h-10! px-4!" data-cy="impact-picker-done" (click)="done()">Done</button>
-    <button hlmBtn type="button" variant="outline" class="text-[14px]! h-10! px-4!" data-cy="impact-picker-cancel" (click)="cancel()">Cancel</button>
-  </div>
+  }
 </div>
