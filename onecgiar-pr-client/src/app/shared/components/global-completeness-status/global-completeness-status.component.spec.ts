@@ -86,15 +86,22 @@ describe('GlobalCompletenessStatusComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  // Was a fire-and-forget setTimeout: the assertion ran later inside another test and failed CI there.
   it('should map initiatives correctly', () => {
-    setTimeout(() => {
-      const mappedInitiatives = component.mapMyInitiativesList();
-      expect(mappedInitiatives).toEqual([1, 2]);
-      expect(component.initiativesSelected).toEqual([
-        { id: 1, full_name: 'Initiative 1' },
-        { id: 2, full_name: 'Initiative 2' }
-      ]);
-    }, 1000);
+    component.api.dataControlSE.myInitiativesList = [
+      { initiative_id: 1, full_name: 'Initiative 1', role: 'Lead' },
+      { initiative_id: 2, full_name: 'Initiative 2', role: 'Coordinator' },
+      { initiative_id: 3, full_name: 'Initiative 3', role: 'Member' }
+    ];
+    component.initiativesSelected = [];
+
+    const mappedInitiatives = component.mapMyInitiativesList();
+
+    expect(mappedInitiatives).toEqual([1, 2]);
+    expect(component.initiativesSelected).toEqual([
+      { id: 1, full_name: 'Initiative 1' },
+      { id: 2, full_name: 'Initiative 2' }
+    ]);
   });
 
   it('should call exportExcel on exportTablesSE when exportToExcel is called', () => {
