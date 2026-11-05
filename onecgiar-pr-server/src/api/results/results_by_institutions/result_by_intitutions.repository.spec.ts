@@ -54,6 +54,93 @@ describe('ResultByIntitutionsRepository', () => {
     });
   });
 
+  describe('updateInstitutions deactivate statement', () => {
+    const incoming: any[] = [{ institutions_id: 5, institution_roles_id: 2 }];
+    // SQL literal captured from the pre-change code; result type lookup answers non-KP (6 would add the KP unlink statement)
+    const deactivateCall = () =>
+      queryMock.mock.calls.find(([sql]) => /set is_active = 0/.test(sql)) as [
+        string,
+        any[],
+      ];
+
+    beforeEach(() => {
+      queryMock.mockResolvedValue([{ result_type_id: 1 }]);
+    });
+
+    it('default call: SQL and params are unchanged (no keep-list)', async () => {
+      await repository.updateInstitutions(10, incoming, 3);
+
+      expect(deactivateCall()).toEqual([
+        '\n    update results_by_institution \n    set is_active = 0, \n    last_updated_date = NOW(), \n    last_updated_by = ? \n    where is_active > 0 \n    \tand result_id = ?\n      and institution_roles_id in (?)\n    \tand institutions_id not in (5);\n    ',
+        [3, 10, [2]],
+      ]);
+    });
+
+    it('empty keep-list behaves exactly like no keep-list', async () => {
+      await repository.updateInstitutions(10, incoming, 3);
+      const baseline = deactivateCall();
+      queryMock.mockClear();
+
+      await repository.updateInstitutions(
+        10,
+        incoming,
+        3,
+        false,
+        [2 as any],
+        [],
+      );
+
+      expect(deactivateCall()).toEqual(baseline);
+    });
+
+    it('keep-list [7001]: the deactivate statement excludes 7001 through a bound param', async () => {
+      await repository.updateInstitutions(
+        10,
+        incoming,
+        3,
+        false,
+        [2 as any],
+        [7001],
+      );
+
+      const [sql, params] = deactivateCall();
+      expect(sql).toMatch(/and id not in \(\?\)/);
+      expect(sql).not.toContain('7001');
+      expect(params).toEqual([3, 10, [2], [7001]]);
+    });
+
+    it('keep-list applies when the incoming list is empty', async () => {
+      await repository.updateInstitutions(10, [], 3, false, [2 as any], [7001]);
+
+      const [sql, params] = deactivateCall();
+      expect(sql).toMatch(/and id not in \(\?\)/);
+      expect(params).toEqual([3, 10, [2], [7001]]);
+    });
+  });
+
+  describe('getMqapLinkedPartnerRowIds', () => {
+    it('returns the ids of active PARTNER rows linked to an active MQAP institution', async () => {
+      queryMock.mockResolvedValueOnce([{ id: 7001 }, { id: 7002 }]);
+
+      const ids = await repository.getMqapLinkedPartnerRowIds(10);
+
+      expect(ids).toEqual([7001, 7002]);
+      const [sql, params] = queryMock.mock.calls[0];
+      expect(sql).toContain('results_kp_mqap_institutions');
+      expect(sql).toContain('rbi.result_id = ?');
+      expect(sql).not.toContain('10');
+      expect(params).toEqual([10, 2]);
+    });
+
+    it('returns an empty list when nothing is linked', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await expect(repository.getMqapLinkedPartnerRowIds(10)).resolves.toEqual(
+        [],
+      );
+    });
+  });
+
   describe('fisicalDelete', () => {
     it('removes partners by result id', async () => {
       queryMock.mockResolvedValueOnce({ affectedRows: 5 });
