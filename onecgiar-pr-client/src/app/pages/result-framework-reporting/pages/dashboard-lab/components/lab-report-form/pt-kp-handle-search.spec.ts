@@ -90,6 +90,37 @@ describe('pickVerifiedCgspaceCandidate', () => {
     ).toEqual({ status: 'none' });
   });
 
+  it('does not present a MELSpace or WorldFish link as CGSpace when repository is empty', () => {
+    const title = 'Conflict sensitivity repository framework';
+    const melUuid = '679513e4-eeba-4a06-a017-015862e7b9b3';
+    expect(
+      pickVerifiedCgspaceCandidate(title, [
+        item({
+          repository: '',
+          itemUrl: `https://repo.mel.cgiar.org/items/${melUuid}`,
+          handleUrl: 'https://hdl.handle.net/20.500.11766/999',
+          handle: '20.500.11766/999'
+        })
+      ])
+    ).toEqual({ status: 'none' });
+    expect(
+      pickVerifiedCgspaceCandidate(title, [
+        item({
+          repository: '',
+          itemUrl: `https://digitalarchive.worldfishcenter.org/items/${melUuid}`,
+          handleUrl: 'https://hdl.handle.net/20.500.12348/999',
+          handle: '20.500.12348/999'
+        })
+      ])
+    ).toEqual({ status: 'none' });
+
+    const cgspace = pickVerifiedCgspaceCandidate(title, [
+      item({ repository: '', itemUrl: '', handleUrl: 'https://hdl.handle.net/10568/182598', handle: '10568/182598' })
+    ]);
+    expect(cgspace.status).toBe('one');
+    if (cgspace.status === 'one') expect(cgspace.candidate.handle).toContain('10568/182598');
+  });
+
   it('returns ambiguous when two different handles share the title, and one when they are the same handle', () => {
     const ambiguous = pickVerifiedCgspaceCandidate('Conflict sensitivity repository framework', [
       item(),

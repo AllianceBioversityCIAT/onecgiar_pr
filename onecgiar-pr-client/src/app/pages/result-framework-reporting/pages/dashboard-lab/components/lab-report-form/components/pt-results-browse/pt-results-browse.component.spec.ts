@@ -270,6 +270,52 @@ describe('PtResultsBrowseComponent', () => {
       expect(handle.textContent).toContain('10568/128401');
     });
 
+    it('toInnovation keeps an integer 0-9 and drops a decimal, 11, a string, empty developers, and an empty payload', () => {
+      const withInnovation = (innovation: unknown) => ({ ...sampleProposal, result_key: '8006329bfd49:inn', innovation });
+      let nextId = 0;
+      const load = (innovation: unknown) => {
+        nextId += 1;
+        mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(okEnvelope([withInnovation(innovation)])));
+        fixture.componentRef.setInput('tocIndicatorId', `inn-${nextId}`);
+        fixture.detectChanges();
+        return component.proposals()[0]?.innovation ?? null;
+      };
+
+      expect(load({ readiness_level: 5, readiness_level_name: 'Model/Early Prototype', typology: 'Policy innovation', developers: ['CIAT', ' ', 3] })).toEqual({
+        readiness_level: 5,
+        readiness_level_name: 'Model/Early Prototype',
+        typology: 'Policy innovation',
+        developers: ['CIAT']
+      });
+      expect(load({ readiness_level: 4.5, developers: [] })).toBeNull();
+      expect(load({ readiness_level: 11, developers: [] })).toBeNull();
+      expect(load({ readiness_level: '5', developers: [] })).toBeNull();
+      expect(load({ developers: ['', '  '] })).toBeNull();
+      expect(load({})).toBeNull();
+      expect(load(null)).toBeNull();
+    });
+
+    it('INC-167646: colors the proposal type blue when it matches the fixed indicator category and yellow when it does not', () => {
+      mockResultsApiService.GET_progressTrackerResults.mockReturnValue(
+        of(
+          okEnvelope([
+            sampleProposal,
+            { ...kpProposal, result_type: 'knowledge_product', result_type_label: 'Knowledge product' }
+          ])
+        )
+      );
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.componentRef.setInput('expectedResultTypeLabel', 'Knowledge product');
+      fixture.detectChanges();
+
+      const innovation = fixture.nativeElement.querySelector('[data-test="pt-proposal-8006329bfd49:1"] [data-test="pt-proposal-type"]');
+      const knowledge = fixture.nativeElement.querySelector('[data-test="pt-proposal-8006329bfd49:2"] [data-test="pt-proposal-type"]');
+      expect(innovation.getAttribute('data-pt-tone')).toBe('divergent');
+      expect(innovation.className).toContain('bg-amber-50');
+      expect(knowledge.getAttribute('data-pt-tone')).toBe('aligned');
+      expect(knowledge.className).toContain('bg-sky-50');
+    });
+
     it('shows the type-locked note when indicatorFixesResultType is true', () => {
       mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(okEnvelope([sampleProposal])));
 

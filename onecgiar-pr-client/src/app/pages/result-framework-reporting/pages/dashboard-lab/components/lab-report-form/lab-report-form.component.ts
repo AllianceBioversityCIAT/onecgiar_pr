@@ -564,11 +564,6 @@ export class LabReportFormComponent {
   }
 
   /**
-   * Copies a Progress Tracker handle only when `validateKpHandle` already accepts it.
-   * A known-invalid value (doi.org, another repository, a bare DOI) stays out of the field.
-   * Nothing is derived from the DOI and no CGSpace lookup is added.
-   */
-  /**
    * INC-167646. For a knowledge product with evidence, a title, and confidence of at least 60%,
    * and no valid repository handle, search CGSpace by that title. A single title-matched handle
    * is offered for review. Accepting it fills the field and does not call Sync or MQAP. A DOI is
@@ -640,6 +635,11 @@ export class LabReportFormComponent {
     this.ptCgspaceSkipReason.set(null);
   }
 
+  /**
+   * Copies a Progress Tracker handle only when `validateKpHandle` already accepts it.
+   * A known-invalid value (doi.org, another repository, a bare DOI) stays out of the field.
+   * Nothing is derived from the DOI and no CGSpace lookup is added.
+   */
   private applyPtKnowledgeProductHandle(proposal: PtProposalDto): void {
     if (!this.currentResultIsKnowledgeProduct()) return;
     const raw = proposal.knowledge_product_handle;

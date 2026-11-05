@@ -1,6 +1,5 @@
 import { normalizeKpHandle, validateKpHandle } from '../../../../shared/report-result/kp-handle.validator';
 import { PtProposalDto } from './components/pt-results-browse/pt-results-browse.component';
-import { canonicalResultType } from '../../pt-typology';
 
 /**
  * INC-167646 — propose a CGSpace handle for a knowledge product that has evidence and no valid
@@ -59,12 +58,7 @@ function citesEvidence(proposal: PtProposalDto): boolean {
  * created (the indicator can fix it). A valid handle already in the field is left alone.
  */
 export function ptKpHandleSearchPlan(proposal: PtProposalDto | null | undefined, formIsKnowledgeProduct: boolean): PtKpSearchPlan {
-  const proposalIsKp =
-    !!proposal &&
-    (canonicalResultType(proposal.result_type) === 'knowledge_product' || canonicalResultType(proposal.result_type_label) === 'knowledge_product');
-  if (!formIsKnowledgeProduct && !proposalIsKp) return { action: 'skip', reason: 'not_knowledge_product', tellUser: false };
-  if (!formIsKnowledgeProduct) return { action: 'skip', reason: 'not_knowledge_product', tellUser: false };
-  if (!proposal) return { action: 'skip', reason: 'not_knowledge_product', tellUser: false };
+  if (!formIsKnowledgeProduct || !proposal) return { action: 'skip', reason: 'not_knowledge_product', tellUser: false };
 
   const rawHandle = typeof proposal.knowledge_product_handle === 'string' ? proposal.knowledge_product_handle.trim() : '';
   if (rawHandle && !validateKpHandle(rawHandle).status) return { action: 'skip', reason: 'valid_handle_present', tellUser: false };
@@ -79,21 +73,24 @@ export function ptKpHandleSearchPlan(proposal: PtProposalDto | null | undefined,
   return { action: 'search', query };
 }
 
+/** A CGSpace item URL or the 10568 handle. MELSpace (`20.500.11766`) and WorldFish (`20.500.12348`) are not this. */
+function isUnambiguousCgspaceLink(link: string): boolean {
+  return /cgspace\.cgiar\.org/i.test(link) || /^10568\/\d+$/.test(link) || /hdl\.handle\.net\/10568\//i.test(link);
+}
+
+/**
+ * A hit counts only when the repository is `cgspace`, or the link itself is a CGSpace URL/handle.
+ * An empty `repository` is not CGSpace: a MELSpace or WorldFish link with no repository must not
+ * be offered as a CGSpace finding.
+ */
 function cgspaceLink(item: Record<string, unknown>): string {
-  const repository = typeof item['repository'] === 'string' ? item['repository'] : '';
+  const repository = typeof item['repository'] === 'string' ? item['repository'].trim().toLowerCase() : '';
   const itemUrl = typeof item['itemUrl'] === 'string' ? item['itemUrl'] : '';
   const handleUrl = typeof item['handleUrl'] === 'string' ? item['handleUrl'] : '';
   const handle = typeof item['handle'] === 'string' ? item['handle'] : '';
   const link = itemUrl || handleUrl || handle;
   if (!link || validateKpHandle(link).status) return '';
-  const looksCgspace =
-    repository === 'cgspace' ||
-    repository === '' ||
-    /cgspace\.cgiar\.org/i.test(link) ||
-    /^10568\/\d+$/.test(link) ||
-    /hdl\.handle\.net\/10568\//i.test(link);
-  if (!looksCgspace) return '';
-  if (repository && repository !== 'cgspace') return '';
+  if (repository !== 'cgspace' && !isUnambiguousCgspaceLink(link)) return '';
   return normalizeKpHandle(link);
 }
 

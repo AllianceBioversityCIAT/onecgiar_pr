@@ -396,4 +396,19 @@ describe('pt-prefill.util — block + outcome (PTB-R-18b)', () => {
     expect(ptPrefillOutcomeItems(sent, undefined).map(i => i.label)).toEqual(['Geographic location', 'Impact area scores']);
     expect(ptPrefillOutcomeItems(null, {})).toEqual([]);
   });
+
+  it('ptPrefillOutcomeItems treats readiness_applied as the 0-9 level, not a CLARISA id', () => {
+    const sent = { evidence_links: [], partners: [], readiness: { level: 5 } };
+    expect(ptPrefillOutcomeItems(sent, { readiness_applied: 5 })).toEqual([]);
+    expect(ptPrefillOutcomeItems(sent, { readiness_applied: null, readiness_skipped_reason: 'not_empty' })[0]).toEqual({
+      label: 'Innovation readiness level',
+      detail: 'Not prefilled — the result already had a readiness level'
+    });
+    expect(ptPrefillOutcomeItems(sent, { readiness_applied: null, readiness_skipped_reason: 'unknown_level' })[0].detail).toContain(
+      'not in the PRMS catalogue'
+    );
+    // A missing summary is not applied. A CLARISA id (15) is not the level 5 the server returns.
+    expect(ptPrefillOutcomeItems(sent, undefined)[0].detail).toContain('Could not be saved');
+    expect(ptPrefillOutcomeItems(sent, { readiness_applied: 15 })[0].label).toBe('Innovation readiness level');
+  });
 });
