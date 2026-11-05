@@ -5888,6 +5888,66 @@ describe('BilateralService (unit)', () => {
       });
     });
 
+    describe('the knowledge product port (KPC-T-3)', () => {
+      it('normalizeHandle is the create path normaliser; readStoredHandle reads the KP row handle only', async () => {
+        const { service } = makeService();
+        const svc: any = service;
+        svc._resultsKnowledgeProductsRepository = {
+          findOne: jest
+            .fn()
+            .mockResolvedValueOnce({ handle: '10568/175322' })
+            .mockResolvedValueOnce(null),
+        };
+        const port = svc.buildResubmissionKnowledgeProductPort();
+
+        expect(
+          port.normalizeHandle('https://hdl.handle.net/10568/175322'),
+        ).toBe('10568/175322');
+        await expect(port.readStoredHandle(501)).resolves.toBe('10568/175322');
+        await expect(port.readStoredHandle(501)).resolves.toBeNull();
+        expect(
+          svc._resultsKnowledgeProductsRepository.findOne,
+        ).toHaveBeenCalledWith({
+          where: { results_id: 501 },
+          select: ['handle'],
+        });
+      });
+
+      it('fetchMetadata reads DSpace for the result as the existing platform user, or id 0 when the email is new, and creates no user', async () => {
+        const { service } = makeService();
+        const svc: any = service;
+        const fetched = { resultKnowledgeProduct: {}, newMetadata: {} };
+        svc._resultsKnowledgeProductsService.fetchDspaceMetadata = jest
+          .fn()
+          .mockResolvedValue(fetched);
+        svc._userRepository = {
+          findOne: jest
+            .fn()
+            .mockResolvedValueOnce({ id: 41 })
+            .mockResolvedValueOnce(null),
+        };
+        const port = svc.buildResubmissionKnowledgeProductPort();
+        const dto = (email: string) => ({ created_by: { email } });
+
+        await expect(port.fetchMetadata(501, dto('a@x.org'))).resolves.toBe(
+          fetched,
+        );
+        await port.fetchMetadata(501, dto('new@x.org'));
+
+        const fetchSpy =
+          svc._resultsKnowledgeProductsService.fetchDspaceMetadata;
+        expect(fetchSpy).toHaveBeenNthCalledWith(1, 501, {
+          id: 41,
+          email: 'a@x.org',
+        });
+        expect(fetchSpy).toHaveBeenNthCalledWith(2, 501, {
+          id: 0,
+          email: 'new@x.org',
+        });
+        expect(svc._userService.createFull).not.toHaveBeenCalled();
+      });
+    });
+
     describe('the port members', () => {
       it('readOwnerInitiativeId reads the active role-1 owner and answers null when there is none', async () => {
         const { service, stubs: typedStubs } = makeService();

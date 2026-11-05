@@ -83,6 +83,46 @@
 - **HITL:** asked 2026-11-05; user asked for clarification twice; question restated as yes/no ("¿un Journal Article reenviado por la API debe actualizarse con lo nuevo de CGSpace aunque quien lo envía no sea admin?"). **Answered 2026-11-05 by Juan David Delgado (owner/driver):** "Si claro, debemos actualizarlo, no sabemos si son admins o no, mayoritariamente son external users al PRMS" → DD-3 confirmed: the correction skips the admin Journal Article gate; the in-app re-sync keeps it.
 - **Final status (updated):** PASS · 2026-11-05 — HITL closed, all DoD items met.
 
+### `KPC-T-3` — KP mode: status rule, lock re-read and preflight
+
+- **Final status:** PASS · 2026-11-05
+- **Attempts:** 1
+- **Skills:** `nestjs-expert`, `error-handling-patterns`, `tdd` (task defaults) · effort **high** (deviation from medium default: refusal order under the lock, BR5)
+- **Premise Ledger hand-off (settled before code):**
+  - **P-11 — holds for the standard forms.** Stored `results_knowledge_product.handle` = mapper `dto.handle` (`results-knowledge-products.mapper.ts:584`, built `:33-39`, last two path segments, e.g. `10568/175322`). `extractHandleIdentifier` (`results-knowledge-products.service.ts:688-707`) maps `https://hdl.handle.net/10568/175322`, `https://cgspace.cgiar.org/handle/10568/175322` and `10568/175322` to the same value. **Edge (UNVERIFIED):** a DSpace 7 `…/items/<uuid>` URL is returned whole (`:699-701`) → possible false 409; whether MQAP emits that form is unknown → check in `KPC-T-7`.
+  - **P-13 — holds for new users.** `findOrCreateUser` → `createFull` defaults `role_platform = 2` (guest) (`user.service.ts:112-114`; `bilateral.service.ts:1457-1495`). An existing user matched by email could be admin; harmless now that the fetch has no admin gate (HITL `KPC-T-1`). Fetch runs before `resolveUsers` with a read-only lookup (id `0` for a new email).
+- **Attempt 1**
+  - Files changed: `onecgiar-pr-server/src/api/bilateral/services/bilateral-resubmission.service.ts`, `…/bilateral-resubmission.service.spec.ts`, `onecgiar-pr-server/src/api/bilateral/bilateral.service.ts`, `…/bilateral.service.spec.ts`
+  - Shape: `allowedResubmissionStatuses` (`{7}` non-KP, `{7,1}` KP) + `resubmissionStatusRefusal` (one rule, DD-2); lock re-read renamed `assertSourceStatusStillAllowed`, returns the status read → `params.sourceStatusId` (for the `KPC-T-4` CAS); `runPreflight` KP mode skips `validateGeoFocus`/`ensureUniqueTitle`, then after contributors runs `checkKnowledgeProductHandleAndFetch` (400 missing payload handle, 409 mismatch, 422 passthrough, any other throw → 502 §4.1), then users; metadata in `kpMetadata`. New optional `ResubmissionKnowledgeProductPort` on `ResubmissionParams`, built by `bilateral.service.ts` `buildResubmissionKnowledgeProductPort()` and passed only for a KP target.
+  - Red run (observed): `jest -t KPC-T-3` → `Tests: 18 failed, 108 skipped, 2 passed` (passes = the non-KP cases). E.g. F6 expected `"Result 31500 cannot be corrected: its status is approved. Only rejected or editing knowledge products can be corrected."`, received `"Result 31500 cannot be resubmitted: its status is approved. Only rejected results can be resubmitted."`; CAS: `Expected: ObjectContaining {"sourceStatusId": 7}` absent. F1–F4 initially masked by `"geo_focus is required", "status": 400` (the geo falsifier's red).
+  - Mutations on post-change code (mutate → red → revert):
+    - M1 remove handle compare → expected `"Result 31500 is linked to handle 10568/175322; …"`, received `"KPC-T-3 spec: the preflight passed"`
+    - M2 fetch moved after the reset → `[Error: closed world: dataSource.transaction() is not a declared read]` instead of 502 (spec helper gained `pipelineContinues` so a late refusal reaches the reset)
+    - M3 drop 422 passthrough → expected `422 "Only journal articles published in 2026 are eligible."`, received `502 "The DSpace record of result 31500 … could not be read…"`
+    - M4 `validateGeoFocus` re-enabled for KP → received `"geo_focus is required"` (+11 failures)
+    - M5 `ensureUniqueTitle` re-enabled for KP → `Expected number of calls: 0, Received number of calls: 1`
+    - M6 KP allows only `{7}` → `ConflictException: Result 31500 cannot be corrected: its status is editing…`
+    - M7 non-KP allows `{7,1}` → expected 409 `…its status is editing. Only rejected results…`, received `400 "geo_focus is required"`
+    - M8 drop `sourceStatusId` → 3 failed
+    - M9 fetch after users → 4 failed (502 and handle-409 cases)
+  - Implementer verification: `bilateral-resubmission.service` 128/128 (existing RSB tests incl. `:140`, `:2397` unchanged); `--testPathPattern="bilateral"` 49 suites / 1711 tests; tsc 0; eslint 0.
+  - Evidence re-run (Leader-inline, non-author): **VERIFIED** — `Test Suites: 49 passed, 49 total` / `Tests: 1711 passed, 1711 total`; tsc exit 0; eslint exit 0.
+  - Reviewer: **PASS** — one status function; non-KP messages byte-identical; every KP refusal precedes `resolveUsers` and any write; 422 passthrough / any other throw → 502; separate optional port accepted (DD-4 fixes behaviour, not port shape; keeps non-KP params unchanged).
+  - runtime events: none
+- **spawns:** implementer not reported by host (worker: 51 tool calls, ~245k tokens), ended partial (assumptions only); reviewer not reported by host (12 tool calls, ~107k tokens), ended complete
+- **Not Done / Assumptions (Implementer, carried verbatim in substance; no owed items, no blocker → no continuation):**
+  - A missing stored handle (KP row absent or empty) is treated as a mismatch → 409 with an empty `{stored}`. Spec silent.
+  - `fetchDspaceMetadata` is called with `{ id, email }` only (it uses just the id).
+  - The 502 path logs the error message at error level, never the payload; the handle appears as the §4.1 text requires.
+- **ADVISORY (4R, recorded only):**
+  - RELIABILITY: the missing-stored-handle 409 renders `"is linked to handle ; the payload sends …"` (malformed), and makes the NotFoundException → 502 path unreachable for a missing KP row; reads more naturally as R-8 (502). Raised to the user at the T-3 gate as a one-line amendment question.
+  - RISK (`.cursorrules`): the 502 log line carries the raw `error.message` of the fetch chain; consider logging status + error class only.
+  - RESILIENCE: P-11 `items/<uuid>` edge → carried to `KPC-T-7`.
+  - READABILITY: tasks.md names `buildResubmissionPreflightPort`; the builder is `buildResubmissionKnowledgeProductPort` (forward pointer below).
+- **Requirements covered:** `KPC-R-1` (re-read half), `KPC-R-6` (both scenarios + 400 missing payload handle), `KPC-R-8` (both scenarios + no row written), `KPC-R-9` (rules + "no geo_focus"), `KPC-R-10` (preflight refusals before any write).
+- **Final verification:** green (re-run VERIFIED).
+- **Running totals (Budget tripwire):** tasks closed 3/7 · LOC ≈ 1 360 diff lines incl. tests (prod ≈ 230+43+~200, test ≈ 87+160+524) vs ~1 060 budget (~350 prod / ~650 test / ~60 doc) — **production ≈ 470 vs ~350; tests ≈ 770 vs ~650** · review rounds 3/9.
+
 ## Forward pointers
 
 | To task | Item | From |
@@ -91,3 +131,5 @@
 | `KPC-T-3` | Fetch signature is `fetchDspaceMetadata(resultId, user, preloaded?)`; result carries `{ resultKnowledgeProduct, newMetadata }` | `KPC-T-1` |
 | `KPC-T-4` | Apply is `applyDspaceMetadata(resultKnowledgeProduct, newMetadata, user)`; MQAP-linked read is `getMqapLinkedPartnerRowIds(resultId)`; keep-list is the 6th arg of `updateInstitutions` | `KPC-T-1`, `KPC-T-2` |
 | `KPC-T-4` | One assertion for a payload partner equal to a kept MQAP institution (reactivation of both rows) `[advisory-grade]` | `KPC-T-2` Reviewer advisory |
+| `KPC-T-4` | KP reads live in the optional `ResubmissionKnowledgeProductPort` (`buildResubmissionKnowledgeProductPort`, `bilateral.service.ts`), not in `ResubmissionPreflightPort`; preflight result carries `kpMetadata`; CAS source is `params.sourceStatusId` | `KPC-T-3` |
+| `KPC-T-7` | P-11 edge: confirm MQAP never stores/returns a DSpace 7 `items/<uuid>` handle for the corrected KPs | `KPC-T-3` |

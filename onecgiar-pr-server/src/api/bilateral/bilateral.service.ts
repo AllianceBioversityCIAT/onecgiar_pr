@@ -125,6 +125,7 @@ import { BilateralVersioningRulesService } from './versioning-rules/bilateral-ve
 import {
   BilateralResubmissionService,
   describeResultStatus,
+  ResubmissionKnowledgeProductPort,
   ResubmissionPreflightPort,
   ResubmissionWritersPort,
   ResubmissionWriteArgs,
@@ -377,6 +378,15 @@ export class BilateralService {
               preflight: this.buildResubmissionPreflightPort(),
               // RSB-T-5: the writers of the pipeline, same reason.
               writers: this.buildResubmissionWritersPort(),
+              // KPC-T-3: the reads of the KP preflight (handle compare, DSpace fetch). Only a KP
+              // target carries them, so the params of every other type are exactly what they were.
+              ...(Number(resultCodeTarget.target.result_type_id) ===
+              ResultTypeEnum.KNOWLEDGE_PRODUCT
+                ? {
+                    knowledgeProduct:
+                      this.buildResubmissionKnowledgeProductPort(),
+                  }
+                : {}),
             },
           );
           createdResults.push({
@@ -4780,6 +4790,40 @@ export class BilateralService {
       resolveContributorInitiativeIds: (contributingPrograms) =>
         this.resolveContributorInitiativeIds(contributingPrograms),
       resolveUsers: (dto) => this.resolveResubmissionUsers(dto),
+    };
+  }
+
+  /**
+   * @akili-spec changes/bilateral-kp-correction — KPC-T-3 (`KPC-DD-4`).
+   *
+   * The reads of the KP preflight. Neither writes: `readStoredHandle` is a SELECT and
+   * `fetchDspaceMetadata` only reads DSpace and the KP row (`KPC-DD-3`, no admin Journal Article gate).
+   * The fetch needs a user because `findOnCGSpace` applies the reporting-cycle year rule to non-admins
+   * (`KPC-R-8`, the 422): it is the platform user of the payload, looked up WITHOUT creating it (the
+   * preflight creates users last, after every refusal). An email nobody has yet cannot be an admin, so
+   * the id `0` makes the non-admin rule apply, as it will for the user `resolveUsers` creates.
+   */
+  private buildResubmissionKnowledgeProductPort(): ResubmissionKnowledgeProductPort {
+    return {
+      normalizeHandle: (raw) =>
+        this._resultsKnowledgeProductsService.extractHandleIdentifier(raw),
+      readStoredHandle: async (resultId) => {
+        const stored = await this._resultsKnowledgeProductsRepository.findOne({
+          where: { results_id: resultId },
+          select: ['handle'],
+        });
+        return stored?.handle ?? null;
+      },
+      fetchMetadata: async (resultId, dto) => {
+        const email = dto.created_by?.email;
+        const platformUser = email
+          ? await this._userRepository.findOne({ where: { email } })
+          : null;
+        return this._resultsKnowledgeProductsService.fetchDspaceMetadata(
+          resultId,
+          { id: platformUser?.id ?? 0, email: email ?? '' } as TokenDto,
+        );
+      },
     };
   }
 

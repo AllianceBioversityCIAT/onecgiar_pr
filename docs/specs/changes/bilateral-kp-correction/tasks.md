@@ -6,7 +6,7 @@
 |---|---|
 | Spec Path | `changes/bilateral-kp-correction` |
 | Depth | Full |
-| Status | **approved**, user 2026-11-05 (Phase 3 gate) · in execution (`KPC-T-1` [x], `KPC-T-2` [x]) |
+| Status | **approved**, user 2026-11-05 (Phase 3 gate) · in execution (`KPC-T-1..3` [x]) |
 | Date | 2026-11-05 |
 | Linked spec | `requirements.md` (`KPC-R-1..15`), `design.md` (`KPC-DD-1..6`, Premise Ledger `P-1..18`) — both approved by the user at their gates on 2026-11-05 |
 | Owner / driver | Juan David Delgado |
@@ -85,7 +85,7 @@ Scoped jest only, never the full suite: `npx jest --testPathPattern="<pattern>" 
   - [x] `npx tsc --noEmit` exit 0.
 - **Skills:** `nestjs-expert`, `tdd`
 
-### `KPC-T-3` — KP mode: status rule, lock re-read and preflight
+### [x] `KPC-T-3` — KP mode: status rule, lock re-read and preflight
 
 - **Type:** server
 - **Description:**
@@ -124,10 +124,10 @@ Scoped jest only, never the full suite: `npx jest --testPathPattern="<pattern>" 
   - **Disqualifier:** if the DSpace fetch cannot run inside the preflight without a write (P-6 false), stop: Pivot, BR5 cannot hold as designed
   - **Consumers:** `bilateral-resubmission.service.spec.ts` tests at `:140`, `:2397` (re-read message and order) stay green unchanged
 - **Definition of done:**
-  - [ ] P-11 and P-13 settled and recorded.
-  - [ ] Every falsifier executed against the post-change code; reds quoted.
-  - [ ] All existing RSB tests in `bilateral-resubmission.service.spec.ts` green unchanged.
-  - [ ] `npx tsc --noEmit` exit 0.
+  - [x] P-11 and P-13 settled and recorded.
+  - [x] Every falsifier executed against the post-change code; reds quoted.
+  - [x] All existing RSB tests in `bilateral-resubmission.service.spec.ts` green unchanged.
+  - [x] `npx tsc --noEmit` exit 0.
 - **Skills:** `nestjs-expert`, `error-handling-patterns`, `tdd`
 
 ### `KPC-T-4` — KP mode: reset, writers, DSpace apply, CAS and history

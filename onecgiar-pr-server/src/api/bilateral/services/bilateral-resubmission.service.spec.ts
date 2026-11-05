@@ -39,6 +39,10 @@ import { Result } from '../../results/entities/result.entity';
 import { ClarisaProjectMapping } from '../../../clarisa/clarisa-projects/entity/clarisa-project-mapping.entity';
 import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { PrimaryProgramRequestService } from '../../results/share-result-request/services/primary-program-request.service';
+import {
+  DspaceReadException,
+  ResultsKnowledgeProductsService,
+} from '../../results/results-knowledge-products/results-knowledge-products.service';
 
 // The skeleton and preflight cases never reach the writers (the pipeline is spied or refused earlier).
 const passingWriters = (): ResubmissionWritersPort => ({
@@ -2877,5 +2881,465 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
           .filter((line) => line.includes('direct primary transfer')),
       ).toEqual([]);
     });
+  });
+});
+
+// @akili-spec changes/bilateral-kp-correction — KPC-T-3 (KPC-R-1 re-read, R-6, R-8, R-9, R-10;
+// KPC-DD-2, DD-4, DD-6). KP mode of the lock re-read and of the preflight. Same closed-world
+// approach as the RSB-T-3 cases above: the data source answers the lock plumbing and the status
+// read, anything else is a recorded violation, so "a refusal wrote nothing" is a claim about every
+// call the service made. The pipeline stops, with a sentinel, as soon as the preflight has passed.
+describe('BilateralResubmissionService knowledge product mode (KPC-T-3)', () => {
+  const REJECTED = ResultStatusData.Rejected.value;
+  const EDITING = ResultStatusData.Editing.value;
+  const KP_CODE = 31500;
+  const kpTarget = {
+    id: 501,
+    result_code: KP_CODE,
+    result_type_id: ResultTypeEnum.KNOWLEDGE_PRODUCT,
+    status_id: REJECTED,
+    version_id: 36,
+  } as any;
+  const AFTER_PREFLIGHT = 'KPC-T-3 spec: the preflight passed';
+  const STORED_HANDLE = '10568/175322';
+  const FETCHED = {
+    resultKnowledgeProduct: { handle: STORED_HANDLE, results_id: 501 },
+    newMetadata: { title: 'Title from DSpace', handle: STORED_HANDLE },
+  };
+
+  const dtoWith = (overrides: Record<string, unknown> = {}): any => ({
+    result_type_id: ResultTypeEnum.KNOWLEDGE_PRODUCT,
+    knowledge_product: { handle: 'https://hdl.handle.net/10568/175322' },
+    contributing_programs: [{ science_program_id: 'SP01' }],
+    contributing_bilateral_projects: [{ grant_title: 'P1' }],
+    toc_mapping: { science_program_id: 'SP06' },
+    // No `geo_focus` and no `title`: a KP correction does not need them.
+    ...overrides,
+  });
+
+  const arrange = (
+    opts: {
+      target?: any;
+      statusRead?: number;
+      storedHandle?: string | null;
+      fetch?: (...a: any[]) => any;
+      port?: Partial<Record<keyof ResubmissionPreflightPort, jest.Mock>>;
+      /**
+       * The writers' owner read normally stops the pipeline right after the preflight (sentinel). With
+       * `true` it answers, so a refusal that came LATE (after the reset) would run the reset's writes
+       * and show up as a closed-world violation instead of hiding behind the sentinel.
+       */
+      pipelineContinues?: boolean;
+    } = {},
+  ) => {
+    const calls: string[] = [];
+    const track =
+      <T extends (...a: any[]) => any>(label: string, impl: T) =>
+      (...args: any[]) => {
+        calls.push(label);
+        return impl(...args);
+      };
+
+    const preflight = {
+      validateTypeSpecificPayload: jest.fn(
+        track('type', async () => undefined),
+      ),
+      // The real one refuses a missing `geo_focus`: re-enabling it for a KP must turn the spec red.
+      validateGeoFocus: jest.fn(
+        track('geo', async (dto: any) => {
+          if (!dto.geo_focus)
+            throw new BadRequestException('geo_focus is required');
+        }),
+      ),
+      assertNoDuplicateEvidenceLinks: jest.fn(
+        track('evidence', () => undefined),
+      ),
+      validateTocMappingInitiatives: jest.fn(
+        track('tocInitiatives', async () => undefined),
+      ),
+      resolveContributingProjects: jest.fn(
+        track('projects', async () => ({
+          resolvedProjects: new Map(),
+          payloadLeadProjectId: 77,
+          leadProjectCount: 1,
+        })),
+      ),
+      resolveInitiative: jest.fn(
+        track('initiative', async () => ({ id: 6, code: 'SP06' })),
+      ),
+      isAligned: jest.fn(track('aligned', async () => true)),
+      ensureUniqueTitle: jest.fn(track('title', async () => undefined)),
+      isLeadCenterResolvable: jest.fn(track('leadCenter', async () => true)),
+      resolveContributorInitiativeIds: jest.fn(
+        track('contributors', async () => [3, 4]),
+      ),
+      resolveUsers: jest.fn(
+        track('users', async () => ({ userId: 9, submittedUserId: 10 })),
+      ),
+      ...(opts.port ?? {}),
+    } as unknown as ResubmissionPreflightPort;
+
+    const knowledgeProduct = {
+      // The real normaliser of the create path (pure, reads no state), not a copy of it.
+      normalizeHandle: jest.fn((raw: string) =>
+        ResultsKnowledgeProductsService.prototype.extractHandleIdentifier.call(
+          null,
+          raw,
+        ),
+      ),
+      readStoredHandle: jest.fn(
+        track('kpStoredHandle', async () =>
+          'storedHandle' in opts ? opts.storedHandle : STORED_HANDLE,
+        ),
+      ),
+      fetchMetadata: jest.fn(
+        track('kpFetch', opts.fetch ?? (async () => FETCHED)),
+      ),
+    };
+
+    const world = createClosedWorld();
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes('GET_LOCK')) return [{ acquired: 1 }];
+      if (sql.includes('RELEASE_LOCK')) return [{ released: 1 }];
+      if (/select\s+status_id/i.test(sql))
+        return [{ status_id: opts.statusRead ?? REJECTED }];
+      world.violations.push(`queryRunner.query(${sql.slice(0, 40)})`);
+      throw new Error(`unexpected SQL in test: ${sql}`);
+    });
+    const dataSource = world.fake('dataSource', {
+      createQueryRunner: jest.fn().mockReturnValue(
+        world.fake('queryRunner', {
+          connect: jest.fn().mockResolvedValue(undefined),
+          query,
+          release: jest.fn().mockResolvedValue(undefined),
+        }),
+      ),
+    });
+    const service = new BilateralResubmissionService(dataSource as any);
+    ['log', 'warn', 'error'].forEach((level) =>
+      jest
+        .spyOn((service as any).logger, level)
+        .mockImplementation(() => undefined),
+    );
+    const writers = {
+      ...passingWriters(),
+      readOwnerInitiativeId: jest.fn(async () => {
+        if (opts.pipelineContinues) return 6;
+        throw new ConflictException(AFTER_PREFLIGHT);
+      }),
+    };
+    const paramsFor = (dto: any = dtoWith()): any => ({
+      target: opts.target ?? kpTarget,
+      bilateralDto: dto,
+      platform: { id: 12, acronym: 'STAR' },
+      preflight,
+      knowledgeProduct,
+      writers,
+    });
+    const run = (dto?: any) => service.resubmit(paramsFor(dto));
+    const issuedSql = () =>
+      query.mock.calls.map((call) => String(call[0])).join('\n');
+    const expectNothingWritten = () => {
+      expect(issuedSql()).not.toMatch(/\b(insert|update|delete|replace)\b/i);
+      expect(world.violations).toEqual([]);
+    };
+    return {
+      run,
+      service,
+      paramsFor,
+      preflight: preflight as unknown as Record<string, jest.Mock>,
+      knowledgeProduct,
+      calls,
+      query,
+      world,
+      writers,
+      expectNothingWritten,
+    };
+  };
+
+  // Falsifier 5 and 6: one rule for the lock re-read, by type (KPC-DD-2).
+  describe('the lock re-read uses the status rule of the type (KPC-R-1, KPC-DD-2)', () => {
+    it("a non-KP result re-read in Editing is refused with today's exact message", async () => {
+      const t = arrange({
+        target: { ...kpTarget, result_code: 28565, result_type_id: 8 },
+        statusRead: EDITING,
+      });
+      const pipeline = jest.spyOn(t.service as any, 'runResubmissionPipeline');
+
+      await expect(t.run()).rejects.toMatchObject({
+        status: 409,
+        message:
+          'Result 28565 cannot be resubmitted: its status is editing. Only rejected results can be resubmitted.',
+      });
+      expect(pipeline).not.toHaveBeenCalled();
+      t.expectNothingWritten();
+    });
+
+    it.each([
+      [ResultStatusData.Approved.value, 'approved'],
+      [ResultStatusData.PendingReview.value, 'pending review'],
+      [ResultStatusData.Draft.value, 'draft'],
+    ])(
+      'a KP re-read in status %s is refused with the KP message naming "%s"',
+      async (statusId, statusName) => {
+        const t = arrange({ statusRead: statusId });
+        const pipeline = jest.spyOn(
+          t.service as any,
+          'runResubmissionPipeline',
+        );
+
+        await expect(t.run()).rejects.toMatchObject({
+          status: 409,
+          message: `Result ${KP_CODE} cannot be corrected: its status is ${statusName}. Only rejected or editing knowledge products can be corrected.`,
+        });
+        expect(pipeline).not.toHaveBeenCalled();
+        expect(t.query).toHaveBeenLastCalledWith(
+          expect.stringContaining('RELEASE_LOCK'),
+          ['rsb:501'],
+        );
+        t.expectNothingWritten();
+      },
+    );
+
+    it.each([
+      [REJECTED, 'Rejected'],
+      [EDITING, 'Editing'],
+    ])(
+      'a KP re-read in %s (%s) goes on, and the pipeline receives the status read under the lock (for the CAS, KPC-DD-6)',
+      async (statusId) => {
+        const t = arrange({ statusRead: statusId });
+        const pipeline = jest
+          .spyOn(t.service as any, 'runResubmissionPipeline')
+          .mockResolvedValue({ id: 501 });
+
+        await t.run();
+
+        expect(pipeline).toHaveBeenCalledWith(
+          expect.objectContaining({ sourceStatusId: statusId }),
+        );
+      },
+    );
+
+    it('a non-KP result re-read in Rejected is recorded as source status 7', async () => {
+      const t = arrange({
+        target: { ...kpTarget, result_type_id: 8 },
+        statusRead: REJECTED,
+      });
+      const pipeline = jest
+        .spyOn(t.service as any, 'runResubmissionPipeline')
+        .mockResolvedValue({ id: 501 });
+
+      await t.run();
+
+      expect(pipeline).toHaveBeenCalledWith(
+        expect.objectContaining({ sourceStatusId: REJECTED }),
+      );
+    });
+  });
+
+  describe('the KP preflight (KPC-R-6, R-8, R-9, KPC-DD-4)', () => {
+    // Falsifier 1.
+    it('a different handle is refused with 409 and nothing is written, fetched or resolved', async () => {
+      const t = arrange({ pipelineContinues: true });
+      const dto = dtoWith({
+        knowledge_product: { handle: 'https://hdl.handle.net/10568/999999' },
+      });
+
+      await expect(t.run(dto)).rejects.toMatchObject({
+        status: 409,
+        message: `Result ${KP_CODE} is linked to handle ${STORED_HANDLE}; the payload sends https://hdl.handle.net/10568/999999. The handle of a knowledge product cannot change.`,
+      });
+
+      expect(t.knowledgeProduct.fetchMetadata).not.toHaveBeenCalled();
+      expect(t.preflight.resolveUsers).not.toHaveBeenCalled();
+      t.expectNothingWritten();
+    });
+
+    it('the same handle in another form is accepted as the same (KPC-R-6)', async () => {
+      const t = arrange();
+      const dto = dtoWith({
+        knowledge_product: {
+          handle: 'https://cgspace.cgiar.org/handle/10568/175322',
+        },
+      });
+
+      await expect(t.run(dto)).rejects.toMatchObject({
+        message: AFTER_PREFLIGHT,
+      });
+
+      expect(t.knowledgeProduct.fetchMetadata).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ['no knowledge_product block', { knowledge_product: undefined }],
+      ['an empty handle', { knowledge_product: { handle: '  ' } }],
+    ])(
+      '%s is refused with 400 and nothing is written',
+      async (_label, over) => {
+        const t = arrange({ pipelineContinues: true });
+
+        await expect(t.run(dtoWith(over))).rejects.toMatchObject({
+          status: 400,
+          message:
+            'knowledge_product.handle is required for KNOWLEDGE_PRODUCT results to fetch metadata from CGSpace.',
+        });
+
+        expect(t.knowledgeProduct.fetchMetadata).not.toHaveBeenCalled();
+        t.expectNothingWritten();
+      },
+    );
+
+    // Falsifier 2.
+    it('a DSpace read failure (502 from the fetch) is a 502 with nothing written and no user resolved', async () => {
+      const t = arrange({
+        pipelineContinues: true,
+        fetch: async () => {
+          throw new DspaceReadException(
+            `The DSpace record of result ${KP_CODE} (handle ${STORED_HANDLE}) could not be read. Nothing was changed; retry later.`,
+            502,
+            {},
+          );
+        },
+      });
+
+      await expect(t.run()).rejects.toMatchObject({
+        status: 502,
+        message: `The DSpace record of result ${KP_CODE} (handle ${STORED_HANDLE}) could not be read. Nothing was changed; retry later.`,
+      });
+
+      expect(t.preflight.resolveUsers).not.toHaveBeenCalled();
+      expect(t.writers.readOwnerInitiativeId).not.toHaveBeenCalled();
+      t.expectNothingWritten();
+    });
+
+    it('any other error thrown by the fetch (e.g. the KP row is missing) becomes a 502 naming the code and the stored handle', async () => {
+      const t = arrange({
+        pipelineContinues: true,
+        fetch: async () => {
+          throw new NotFoundException(
+            'A Result Knowledge Product does not exist.',
+          );
+        },
+      });
+
+      await expect(t.run()).rejects.toMatchObject({
+        status: 502,
+        message: `The DSpace record of result ${KP_CODE} (handle ${STORED_HANDLE}) could not be read. Nothing was changed; retry later.`,
+      });
+      t.expectNothingWritten();
+    });
+
+    // Falsifier 3.
+    it('a 422 from the fetch (reporting-cycle year rule) passes through with its own message', async () => {
+      const rule = 'Only journal articles published in 2026 are eligible.';
+      const t = arrange({
+        pipelineContinues: true,
+        fetch: async () => {
+          throw new DspaceReadException(rule, 422, { status: 422 });
+        },
+      });
+
+      await expect(t.run()).rejects.toMatchObject({
+        status: 422,
+        message: rule,
+      });
+
+      expect(t.preflight.resolveUsers).not.toHaveBeenCalled();
+      t.expectNothingWritten();
+    });
+
+    // Falsifier 4.
+    it('a KP payload without geo_focus passes the preflight; neither the geo check nor the title check runs', async () => {
+      const t = arrange();
+
+      await expect(t.run(dtoWith())).rejects.toMatchObject({
+        message: AFTER_PREFLIGHT,
+      });
+
+      expect(t.preflight.validateGeoFocus).not.toHaveBeenCalled();
+      expect(t.preflight.ensureUniqueTitle).not.toHaveBeenCalled();
+      expect(t.calls).toEqual([
+        'type',
+        'evidence',
+        'tocInitiatives',
+        'projects',
+        'initiative',
+        'aligned',
+        'leadCenter',
+        'contributors',
+        'kpStoredHandle',
+        'kpFetch',
+        'users',
+      ]);
+      t.expectNothingWritten();
+    });
+
+    it('the fetch gets the result id and the payload; the preflight result carries the fetched metadata', async () => {
+      const t = arrange();
+      const dto = dtoWith();
+
+      const result = await (t.service as any).runPreflight(t.paramsFor(dto));
+
+      expect(t.knowledgeProduct.fetchMetadata).toHaveBeenCalledWith(501, dto);
+      expect(result.kpMetadata).toBe(FETCHED);
+      expect(result).toMatchObject({
+        primary: { initiativeId: 6, code: 'SP06' },
+        leadProjectId: 77,
+        userId: 9,
+        submittedUserId: 10,
+        contributorInitiativeIds: [3, 4],
+      });
+    });
+
+    it('a non-KP resubmission still runs the geo and title checks, never the KP port, and carries no metadata', async () => {
+      const t = arrange({ target: { ...kpTarget, result_type_id: 8 } });
+      const dto = dtoWith({
+        result_type_id: 8,
+        title: 'T',
+        geo_focus: 'global',
+      });
+
+      const result = await (t.service as any).runPreflight(t.paramsFor(dto));
+
+      expect(t.preflight.validateGeoFocus).toHaveBeenCalledWith(dto);
+      expect(t.preflight.ensureUniqueTitle).toHaveBeenCalled();
+      expect(t.knowledgeProduct.readStoredHandle).not.toHaveBeenCalled();
+      expect(t.knowledgeProduct.fetchMetadata).not.toHaveBeenCalled();
+      expect(result.kpMetadata).toBeUndefined();
+    });
+
+    it.each([
+      [
+        'no primary Science Program',
+        { toc_mapping: {} },
+        {},
+        'cannot be resubmitted without a primary Science Program',
+      ],
+      [
+        'a primary not allocated to the lead project',
+        {},
+        { isAligned: jest.fn(async () => false) },
+        'is not allocated to the lead project',
+      ],
+      [
+        'a lead centre that does not resolve',
+        { lead_center: { acronym: 'XX' } },
+        { isLeadCenterResolvable: jest.fn(async () => false) },
+        'does not match a CGIAR center',
+      ],
+    ])(
+      'a KP correction keeps the RSB refusal for %s, before any DSpace call',
+      async (_label, over, port, text) => {
+        const t = arrange({ port: port as any });
+
+        await expect(t.run(dtoWith(over))).rejects.toMatchObject({
+          status: 400,
+          message: expect.stringContaining(text),
+        });
+
+        expect(t.knowledgeProduct.fetchMetadata).not.toHaveBeenCalled();
+        t.expectNothingWritten();
+      },
+    );
   });
 });
