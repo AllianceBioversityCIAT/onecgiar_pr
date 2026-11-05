@@ -6,7 +6,7 @@
 |---|---|
 | Spec Path | `changes/bilateral-kp-correction` |
 | Depth | Full |
-| Status | **approved**, user 2026-11-05 (Phase 3 gate) · in execution (`KPC-T-1..6` [x]) |
+| Status | **approved**, user 2026-11-05 (Phase 3 gate) · executed (`KPC-T-1..7` [x]) |
 | Date | 2026-11-05 |
 | Linked spec | `requirements.md` (`KPC-R-1..15`), `design.md` (`KPC-DD-1..6`, Premise Ledger `P-1..18`) — both approved by the user at their gates on 2026-11-05 |
 | Owner / driver | Juan David Delgado |
@@ -239,7 +239,7 @@ Scoped jest only, never the full suite: `npx jest --testPathPattern="<pattern>" 
   - [x] Doc updated; change-log row present; cross-check table in `execution.md`.
 - **Skills:** `api-design-principles`, `cognitive-doc-design`
 
-### `KPC-T-7` — Live run on PRTest
+### [x] `KPC-T-7` — Live run on PRTest
 
 - **Type:** rollout
 - **Description:** Once the code is deployed to PRTest, which happens only after the user merges it, run two corrections through a direct `create` call, with the platform key handled by the user and never echoed:
@@ -258,7 +258,7 @@ Scoped jest only, never the full suite: `npx jest --testPathPattern="<pattern>" 
   - **Disqualifier:** PRTest pipeline not pointing at the branch with the commit (memory: confirm the branch first) → the run is not evidence; report and stop
   - **Consumers:** none (no shared symbol changed)
 - **Definition of done:**
-  - [ ] Run log with result codes and SQL counts in `execution.md`; test data listed for purge.
+  - [x] Run log with result codes and SQL counts in `execution.md`; test data listed for purge.
 - **Skills:** `systematic-debugging` (only if a check fails)
 
 ## 4. Dependency graph
