@@ -626,9 +626,7 @@ describe('ProgressTrackerPrefillService', () => {
         10,
         false,
       );
-      expect(other.readiness_skipped_reason).toBe(
-        'not_innovation_development',
-      );
+      expect(other.readiness_skipped_reason).toBe('not_innovation_development');
       expect(innovationDevRepo.save).not.toHaveBeenCalled();
 
       resultRepo.findOne.mockResolvedValue({ id: 101, result_type_id: 7 });

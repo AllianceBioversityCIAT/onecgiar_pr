@@ -201,7 +201,8 @@ export class ProgressTrackerActivityService {
         !!row.pt_indicator_id &&
         row.match_quality !== 'none' &&
         !row.needs_review,
-      evidence_count: counts.get(row.pt_indicator_id ?? '')?.evidence_count ?? 0,
+      evidence_count:
+        counts.get(row.pt_indicator_id ?? '')?.evidence_count ?? 0,
       pt_indicator_id: row.pt_indicator_id ?? null,
       cached_results_count:
         counts.get(row.pt_indicator_id ?? '')?.cached_results_count ?? null,
