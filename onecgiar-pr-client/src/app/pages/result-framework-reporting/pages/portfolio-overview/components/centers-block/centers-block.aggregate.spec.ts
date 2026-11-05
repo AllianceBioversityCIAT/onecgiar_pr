@@ -1,5 +1,5 @@
 import { EMPTY_SELECTION, buildDimensionIndex, type PortfolioFilterSelection } from '../../services/portfolio-filters';
-import { CENTER_STATUS_IDS, applyGlobal, buildCenterRow, byOrigin, hasLeadProgram, isReplicatedRow, isW3Row, originCounts, dedupeById } from './centers-block.aggregate';
+import { CENTER_BASE_STATUS_IDS, CENTER_STATUS_IDS, applyGlobal, buildCenterRow, byOrigin, hasLeadProgram, isReplicatedRow, isW3Row, originCounts, dedupeById } from './centers-block.aggregate';
 
 describe('centers-block.aggregate (P2-3858, moved by P2-3928)', () => {
   describe('buildCenterRow', () => {
@@ -12,11 +12,29 @@ describe('centers-block.aggregate (P2-3858, moved by P2-3928)', () => {
       { status_id: '3' }
     ] as any[];
 
-    it('uses the four tiles of the Center Overview and counts every row in the total', () => {
+    it('counts every row in exactly one status (base tiles 1,5,6,7 plus 2,3,4 in the deck order) and in the total', () => {
       const row = buildCenterRow('CENTER-10', 'IFPRI', rows);
-      expect(CENTER_STATUS_IDS).toEqual([1, 5, 6, 7]);
-      expect(row.counts).toEqual([2, 1, 1, 1]);
+      expect(CENTER_STATUS_IDS).toEqual([1, 2, 3, 5, 6, 7, 4]);
+      expect(CENTER_BASE_STATUS_IDS).toEqual([1, 5, 6, 7]);
+      expect(row.counts).toEqual([2, 0, 1, 1, 1, 1, 0]);
       expect(row.total).toBe(6);
+    });
+
+    describe('CBT: every row in exactly one status bucket', () => {
+      const row = (id: number, status_id: unknown) => ({ id, status_id, source: 'API', submitter: 'SP01' }) as any;
+      // Counts follow the order 1, 2, 3, 5, 6, 7, 4 (Draft 8, null and unknown fold into Editing).
+      const fixture = [row(1, 1), row(2, '2'), row(3, 3), row(4, '4'), row(5, 5), row(6, '6'), row(7, 7), row(8, 8), row(9, '8'), row(10, null), row(11, 99)];
+
+      it('counts by status id in the deck slot order and the counts add up to rows.length', () => {
+        const result = buildCenterRow('CENTER-10', 'IFPRI', fixture);
+        expect(result.counts).toEqual([5, 1, 1, 1, 1, 1, 1]);
+        expect(result.counts.reduce((a, b) => a + b, 0)).toBe(result.total);
+        expect(result.total).toBe(11);
+      });
+
+      it('Draft only: all rows land in Editing', () => {
+        expect(buildCenterRow('C', 'C', [row(1, 8), row(2, 8), row(3, 8)]).counts).toEqual([3, 0, 0, 0, 0, 0, 0]);
+      });
     });
 
     it('links to the Center Overview with the acronym encoded', () => {

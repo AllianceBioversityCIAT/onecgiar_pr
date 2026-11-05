@@ -191,12 +191,12 @@ describe('PortfolioCentersBlockComponent (P2-3858, moved by P2-3928)', () => {
     };
     const mixedResults = () => jest.fn((code: string) => of({ response: mixed[code] ?? [] }));
 
-    it('1: the mixed fixture counts W3 only in kpis(), statusTotals() and segments(); status 3 counts in the total', async () => {
+    it('1: the mixed fixture counts W3 only in kpis(), statusTotals() and segments(); status 3 now has its own tile', async () => {
       centerResults = mixedResults();
       const component = (await create()).componentInstance;
       expect(component.kpis()).toEqual({ bilateral: 9, bilateralNew: 5, bilateralReplicated: 4 });
-      expect(component.statusTotals()).toEqual({ total: 9, counts: [1, 3, 2, 2] });
-      expect(component.segments().map(segment => segment.count)).toEqual([1, 3, 2, 2]);
+      expect(component.statusTotals()).toEqual({ total: 9, counts: [1, 1, 3, 2, 2] });
+      expect(component.segments().map(segment => segment.count)).toEqual([1, 1, 3, 2, 2]);
     });
 
     it('2: origin Replicated restricts segments() and statusTotals() while kpis() stays identical to origin All', async () => {
@@ -204,8 +204,8 @@ describe('PortfolioCentersBlockComponent (P2-3858, moved by P2-3928)', () => {
       const component = (await create()).componentInstance;
       const kpisAll = component.kpis();
       component.toggleOrigin('replicated');
-      expect(component.statusTotals()).toEqual({ total: 4, counts: [0, 0, 1, 2] });
-      expect(component.segments().map(segment => segment.count)).toEqual([0, 0, 1, 2]);
+      expect(component.statusTotals()).toEqual({ total: 4, counts: [0, 1, 0, 1, 2] });
+      expect(component.segments().map(segment => segment.count)).toEqual([0, 1, 0, 1, 2]);
       expect(component.kpis()).toEqual(kpisAll);
       component.toggleOrigin('new');
       expect(component.statusTotals()).toEqual({ total: 5, counts: [1, 3, 1, 0] });
@@ -280,8 +280,8 @@ describe('PortfolioCentersBlockComponent (P2-3858, moved by P2-3928)', () => {
       late.complete();
       fixture.detectChanges();
       expect(component.kpis()).toMatchObject({ bilateral: 9, bilateralNew: 5, bilateralReplicated: 4 });
-      expect(component.statusTotals()).toEqual({ total: 9, counts: [1, 3, 2, 2] });
-      expect(component.segments().map(segment => segment.count)).toEqual([1, 3, 2, 2]);
+      expect(component.statusTotals()).toEqual({ total: 9, counts: [1, 1, 3, 2, 2] });
+      expect(component.segments().map(segment => segment.count)).toEqual([1, 1, 3, 2, 2]);
       expect(centerResults).toHaveBeenCalledTimes(2);
     });
 
@@ -639,6 +639,125 @@ describe('PortfolioCentersBlockComponent (P2-3858, moved by P2-3928)', () => {
       c.toggleOrigin('replicated');
       expect(c.statusTotals().total).toBe(2);
       expect(c.kpis().bilateral).toBe(4);
+    });
+  });
+
+  describe('CBT: tiles sum to the block total (centers-block-status-tiles)', () => {
+    let nextId = 1;
+    const mk = (status_id: unknown, is_replicated: unknown = 0) => ({ id: nextId++, status_id, source: 'API', submitter: 'SP01', is_replicated });
+    const many = (n: number, status_id: unknown, is_replicated: unknown = 0) => Array.from({ length: n }, () => mk(status_id, is_replicated));
+    const serve = (rows: any[]) => {
+      centerResults = jest.fn((code: string) => of({ response: code === 'CENTER-10' ? rows : [] }));
+    };
+    const tileIds = (root: HTMLElement) =>
+      Array.from(root.querySelectorAll('[data-testid^="status-tile-"]')).map(el => (el as HTMLElement).dataset['testid']!.replace('status-tile-', ''));
+    const tileCount = (root: HTMLElement, id: number) => Number(root.querySelector(`[data-testid="status-tile-${id}"] .pr-figure-sm`)?.textContent?.trim());
+    const tileSum = (root: HTMLElement) => tileIds(root).reduce((sum, id) => sum + tileCount(root, Number(id)), 0);
+
+    beforeEach(() => {
+      nextId = 1;
+    });
+
+    // PRTest 2026-11-05: 399 Editing + 3 Draft, 1 Submitted, 1 Discontinued, 146 Pending, 40 Approved, 13 Rejected = 603 (the requirements text says 606, but 402+1+146+40+13+1 = 603).
+    const prtest = () => [...many(399, 1), ...many(3, 8), ...many(1, 3), ...many(1, 4), ...many(146, 5), ...many(40, 6), ...many(13, 7)];
+
+    it('R-1 PRTest reproduction: tiles 1,3,5,6,7,4 read 402/1/146/40/13/1 and sum to 603 = the block total (spec text says 606, arithmetic is 603)', async () => {
+      serve(prtest());
+      const fixture = await create();
+      const root = fixture.nativeElement as HTMLElement;
+      expect(tileIds(root)).toEqual(['1', '3', '5', '6', '7', '4']);
+      expect([1, 3, 5, 6, 7, 4].map(id => tileCount(root, id))).toEqual([402, 1, 146, 40, 13, 1]);
+      expect(tileSum(root)).toBe(603);
+      expect(tileSum(root)).toBe(fixture.componentInstance.kpis().bilateral);
+    });
+
+    it('R-1 Share: the donut table rows add up to statusTotals().total and each share is over that total', async () => {
+      serve(prtest());
+      const component = (await create()).componentInstance;
+      const rows = component.donutTable().rows;
+      expect(rows.reduce((sum, row) => sum + Number(row[1]), 0)).toBe(component.statusTotals().total);
+      expect(component.statusTotals().total).toBe(603);
+      expect(rows.map(row => row[2])).toContain('66.7%');
+    });
+
+    it('R-1 BUT: no row is counted in two tiles (sum of counts equals the row count exactly)', async () => {
+      const rows = [...many(2, 1), ...many(2, 2), ...many(2, 3), ...many(2, 4), ...many(2, 5), ...many(2, 6), ...many(2, 7), ...many(2, 8), mk(null)];
+      serve(rows);
+      const component = (await create()).componentInstance;
+      expect(component.statusTotals().counts.reduce((a, b) => a + b, 0)).toBe(rows.length);
+      expect(component.statusTotals().total).toBe(rows.length);
+    });
+
+    it('R-1 origin filter: under New and under Replicated the tiles sum to that origin count', async () => {
+      serve([...many(5, 1, 0), ...many(2, 8, 0), ...many(3, 3, 1), ...many(2, 4, 1), ...many(4, 6, 1), ...many(1, 5, 0)]);
+      const fixture = await create();
+      const root = fixture.nativeElement as HTMLElement;
+      const component = fixture.componentInstance;
+      component.toggleOrigin('new');
+      fixture.detectChanges();
+      expect(tileSum(root)).toBe(8);
+      expect(tileSum(root)).toBe(component.kpis().bilateralNew);
+      component.toggleOrigin('replicated');
+      fixture.detectChanges();
+      expect(tileSum(root)).toBe(9);
+      expect(tileSum(root)).toBe(component.kpis().bilateralReplicated);
+    });
+
+    it('R-2: 3 Draft + 0 Editing shows 3 in the Editing tile and no tile for id 8', async () => {
+      serve(many(3, 8));
+      const root = (await create()).nativeElement as HTMLElement;
+      expect(tileCount(root, 1)).toBe(3);
+      expect(root.querySelector('[data-testid="status-tile-8"]')).toBeNull();
+    });
+
+    it('R-2 / DD-2: a row with status_id null lands in Editing (sum equals total)', async () => {
+      serve([mk(null), mk(6)]);
+      const root = (await create()).nativeElement as HTMLElement;
+      expect(tileCount(root, 1)).toBe(1);
+      expect(tileSum(root)).toBe(2);
+    });
+
+    it('R-3 base-only: rows only in 1/5/6/7 render exactly 4 tiles in order 1,5,6,7 with today labels', async () => {
+      serve([mk(1), mk(5), mk(6), mk(7)]);
+      const fixture = await create();
+      expect(tileIds(fixture.nativeElement as HTMLElement)).toEqual(['1', '5', '6', '7']);
+      expect(fixture.componentInstance.columns().map(column => column.label)).toEqual(['Editing', 'Pending review', 'Approved', 'Rejected']);
+    });
+
+    it('R-3 BUT: no tile for 2, 3 or 4 when their count is 0', async () => {
+      serve([mk(1), mk(8)]);
+      const root = (await create()).nativeElement as HTMLElement;
+      [2, 3, 4].forEach(id => expect(root.querySelector(`[data-testid="status-tile-${id}"]`)).toBeNull());
+    });
+
+    it('R-3 AND IT MUST: a selected extra tile stays (count 0, aria-pressed) after a filter empties it', async () => {
+      serve([...many(2, 4, 1), ...many(3, 1, 0)]);
+      const fixture = await create();
+      const root = fixture.nativeElement as HTMLElement;
+      (root.querySelector('[data-testid="status-tile-4"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      fixture.componentInstance.toggleOrigin('new');
+      fixture.detectChanges();
+      const tile = root.querySelector('[data-testid="status-tile-4"]') as HTMLButtonElement;
+      expect(tile).not.toBeNull();
+      expect(tileCount(root, 4)).toBe(0);
+      expect(tile.getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('R-4: clicking the Discontinued tile selects it, labels the strip and links with status=4; Editing links status=1', async () => {
+      serve([mk(1), mk(4)]);
+      const fixture = await create();
+      const root = fixture.nativeElement as HTMLElement;
+      const component = fixture.componentInstance;
+      (root.querySelector('[data-testid="status-tile-4"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(component.selectedStatus()).toBe(4);
+      expect((root.querySelector('[data-testid="status-tile-4"]') as HTMLElement).getAttribute('aria-pressed')).toBe('true');
+      expect(root.querySelector('[data-testid="active-filter"]')?.textContent).toContain('Discontinued');
+      expect(component.resultsCenterParams()).toEqual({ funding: 'bilateral', status: 4 });
+      (root.querySelector('[data-testid="status-tile-1"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(component.resultsCenterParams()).toEqual({ funding: 'bilateral', status: 1 });
     });
   });
 });
