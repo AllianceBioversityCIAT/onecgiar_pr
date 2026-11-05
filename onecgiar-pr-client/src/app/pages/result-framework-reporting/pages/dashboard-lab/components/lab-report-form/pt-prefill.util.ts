@@ -1,5 +1,9 @@
 import { PtCenterRefDto, PtGeoDto, PtProposalDto, isSafeHttpUrl } from './components/pt-results-browse/pt-results-browse.component';
-import { PT_TEMPORARY_EVIDENCE_NOTICE } from '../../../../../../shared/constants/progress-tracker-evidence.constants';
+import {
+  PT_TEMPORARY_EVIDENCE_NOTICE,
+  PT_UNSAVED_EVIDENCE_DETAIL,
+  ptUnsavedEvidenceLabel
+} from '../../../../../../shared/constants/progress-tracker-evidence.constants';
 
 /**
  * Progress Tracker prefill, Phase 1 + matched partners (2026-10-19, `PTB-R-18a` — amends
@@ -115,7 +119,8 @@ export function ptEvidenceLinksToSave(proposal: PtProposalDto | null | undefined
 
 /**
  * Names of the proposal's evidence items PT holds without an http(s) link (e.g. `kind: "text"`,
- * `access: "upload_file"`). Nothing can be saved for them — the user has to upload the file.
+ * `access: "upload_file"`). Nothing can be saved for them — `evidence.link` is required, and a
+ * file name is not an uploaded file. The user has to supply the final file or link.
  */
 export function ptEvidenceWithoutLink(proposal: PtProposalDto | null | undefined): string[] {
   const names = new Set<string>();
@@ -125,6 +130,15 @@ export function ptEvidenceWithoutLink(proposal: PtProposalDto | null | undefined
     if (name) names.add(name);
   }
   return [...names];
+}
+
+/**
+ * Evidence names that stay out of the Evidence table: no http(s) link, and PT did not set the
+ * evidence policy to `none`. These names are the checklist and the post-create reminder.
+ */
+export function unsavedPtEvidenceNames(proposal: PtProposalDto | null | undefined): string[] {
+  if (!proposal || ptFieldPolicy(proposal, ...EVIDENCE_LINKS_POLICY_KEYS) === 'none') return [];
+  return ptEvidenceWithoutLink(proposal);
 }
 
 /**
@@ -481,10 +495,8 @@ export function buildPtPendingChecklist(proposal: PtProposalDto | null | undefin
   if (ptEvidenceLinksToSave(proposal).length) {
     items.push({ label: 'Temporary evidence', detail: PT_TEMPORARY_EVIDENCE_NOTICE });
   }
-  if (evidencePolicy !== 'none') {
-    for (const name of ptEvidenceWithoutLink(proposal)) {
-      items.push({ label: `Evidence in Progress Tracker without a link: ${name}`, detail: 'upload the final file in Evidence' });
-    }
+  for (const name of unsavedPtEvidenceNames(proposal)) {
+    items.push({ label: ptUnsavedEvidenceLabel(name), detail: PT_UNSAVED_EVIDENCE_DETAIL });
   }
 
   // PTB-R-18b: only what the geography / impact-area plans did not apply, or applied as a suggestion.

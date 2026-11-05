@@ -333,7 +333,34 @@
                across every tab, not just this one. This inline prompt is PT-tab-specific: a KP pick
                whose handle has not been synced yet cannot complete through this tab at all (`Sync`
                only lives on Manual entry), so say so here instead of leaving a dead end. -->
-          @if (currentResultIsKnowledgeProduct() && ptDraft() && !mqapJson()) {
+          @if (currentResultIsKnowledgeProduct() && ptDraft() && ptRejectedHandle(); as rejected) {
+            <div
+              class="mb-4 rounded-xl border border-amber-200 bg-amber-50/70 p-4 flex flex-col gap-2.5 shadow-xs"
+              data-testid="pt-handle-rejected">
+              <p class="m-0 text-[12.5px] leading-relaxed text-amber-900">
+                Progress Tracker suggested a link that is not a CGSpace, MELSpace or WorldFish repository handle.
+                It was not filled in and cannot be synced. Browse a repository item, or paste a valid handle in Manual entry.
+                PRMS does not turn a DOI or another link into a handle.
+              </p>
+              <p class="m-0 break-all font-mono text-[12px] text-amber-950" data-testid="pt-handle-rejected-value">{{ rejected }}</p>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  (click)="kpEntryMode.set('browse')"
+                  data-testid="pt-handle-rejected-browse"
+                  class="inline-flex items-center gap-1.5 rounded-lg border-0 bg-amber-600 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-amber-700 cursor-pointer">
+                  Browse repositories
+                </button>
+                <button
+                  type="button"
+                  (click)="kpEntryMode.set('manual')"
+                  data-testid="pt-handle-rejected-manual"
+                  class="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-100 cursor-pointer">
+                  Enter a valid handle
+                </button>
+              </div>
+            </div>
+          } @else if (currentResultIsKnowledgeProduct() && ptDraft() && !mqapJson() && createResultBody().handler) {
             <div
               class="mb-4 rounded-xl border border-amber-200 bg-amber-50/70 p-4 flex flex-col gap-2.5 shadow-xs"
               data-testid="pt-sync-required-prompt">
@@ -484,6 +511,17 @@
         <p class="m-0 text-[12px] font-semibold text-violet-700" data-testid="pt-nothing-saved-note">
           Nothing has been saved yet — press "Create and continue" below to create this result.
         </p>
+        @if (ptUnsavedEvidenceNames().length) {
+          <div class="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] leading-snug text-amber-950" data-testid="pt-unsaved-evidence-preview">
+            <p class="m-0 font-semibold">Temporary evidence, not saved</p>
+            <p class="m-0 mt-1">These Progress Tracker items are incomplete. They have no link or file PRMS can store, so they will not become evidence. After creating the result, supply the final file or link in Evidence.</p>
+            <ul class="m-0 mt-1 list-disc pl-4">
+              @for (name of ptUnsavedEvidenceNames(); track name) {
+                <li>{{ name }}</li>
+              }
+            </ul>
+          </div>
+        }
         <!-- PTB-R-18a: what PT suggested and this drawer does not apply. Repeated in the post-create alert. -->
         @if (ptPendingChecklist().length) {
           <details class="mt-1 rounded-lg border border-violet-200 bg-white/70 px-3 py-2" data-testid="pt-pending-checklist">

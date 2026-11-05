@@ -33,6 +33,8 @@ ese tipo no tiene página propia en `rd-result-types-pages/`.
   migration). `hasPtTemporaryEvidence()` reads that prefix and shows a warning
   `app-alert-status` (`pt-temporary-evidence-notice`). Prefix/notice live in
   `shared/constants/progress-tracker-evidence.constants.ts` and must match the server constant.
+  INC-167646: an item with no http(s) link is not inserted here (`evidence.link` is required).
+  The result page shows those names from this browser only (`pt-unsaved-evidence-notice`).
 - **IRD-T-6 (P2-3901):** `alertStatus()` appends the MELIA `<li>` only when `isP25ImpactResultSignal?.()`; PLACEHOLDER copy, confirmed at IRD-T-8. Spec locks it.
 
 ## Dónde se usa

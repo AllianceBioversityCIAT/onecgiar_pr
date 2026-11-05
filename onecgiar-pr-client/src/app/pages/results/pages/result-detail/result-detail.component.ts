@@ -16,6 +16,11 @@ import { ResultSectionsService } from './components/result-sections-sidebar/resu
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { ReportingGuideService } from '../../../result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
+import {
+  dismissPtUnsavedEvidence,
+  ptUnsavedEvidenceBannerHtml,
+  readPtUnsavedEvidence
+} from '../../../../shared/constants/pt-unsaved-evidence-notice';
 
 /** IPSR result types (P-6: type 11, Complementary innovation, is deliberately NOT included). */
 const IPSR_RESULT_TYPE_IDS = new Set([10]);
@@ -43,6 +48,12 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
   readonly availablePhases = signal<Phases[]>([]);
   /** Público: el template lee de aquí el número y el nombre de la sección abierta. */
   readonly sectionsSE = inject(ResultSectionsService);
+
+  /**
+   * INC-167646: names of Progress Tracker evidence that could not be saved (no http(s) link).
+   * Kept in this browser only. Empty HTML means no banner.
+   */
+  readonly ptUnsavedEvidenceNotice = signal('');
 
   /** Floor of the content column; each section's bottom bar teleports its host node in here. */
   @ViewChild('bottomBarSlot', { static: true }) bottomBarSlot!: ElementRef<HTMLElement>;
@@ -113,7 +124,8 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
         distinctUntilChanged(),
         takeUntilDestroyed()
       )
-      .subscribe(() => {
+      .subscribe(id => {
+        this.ptUnsavedEvidenceNotice.set(ptUnsavedEvidenceBannerHtml(readPtUnsavedEvidence(id)));
         // Entering a result collapses the app rail on EVERY viewport, not only the compact one:
         // the form is the whole job here and the rail is 260px of it. Remembered so leaving puts
         // it back exactly as the user had it — `collapseForCompactEntry` deliberately does not
@@ -170,6 +182,13 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
     // `static: true` on the query is what makes the element already available this early.
     this.bottomBarSlotSE.slot.set(this.bottomBarSlot.nativeElement);
     this.getData();
+  }
+
+  /** Hides the browser reminder. Does not delete evidence. */
+  dismissPtUnsavedEvidenceNotice(): void {
+    const code = this.activatedRoute.snapshot.paramMap.get('id');
+    dismissPtUnsavedEvidence(code);
+    this.ptUnsavedEvidenceNotice.set('');
   }
 
   ngOnDestroy(): void {

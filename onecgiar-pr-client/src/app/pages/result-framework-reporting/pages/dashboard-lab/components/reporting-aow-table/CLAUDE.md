@@ -63,7 +63,7 @@ de estado `border-l-[3px]` y botones con aislamiento de eventos.
 ## Badge `PT · N` (Progress Tracker)
 - Chip en ambos layouts (`data-testid="pt-activity-badge"`) solo si `ptCountOf(row) > 0`. `centerAcronymsOf` delega en
   `pt-activity.ts` (`centerAcronymsOfRow`): chips, filtro por centro y badge coinciden; cambia la regla allí.
-- Copy desde `pt-activity.ts`: `ptActivityLabel` (`PT · 2 evidence items` / singular) ≥640px, `ptActivityShortLabel` (`PT · 2`) debajo; tooltip fijo `PT_ACTIVITY_TOOLTIP` (no lleva la cifra) vía `prTooltip`, sin `title` nativo (doble tooltip).
+- Copy desde `pt-activity.ts` (INC-167646): `ptActivityLabel` (`PT activity · 2`) ≥640px, `ptActivityShortLabel` (`PT · 2`) debajo. El tooltip dice que el número es actividad de evidencia en Progress Tracker, no un resultado PRMS, ni un handle, ni una propuesta lista para reportar. `prTooltip`, sin `title` nativo.
 
 ## QA/Prel oculto tras `showQaPrelSplit` (ACS-R-5, `bugfix/achieved-counts-submitted`)
 - `showQaPrelSplit = SHOW_QA_PREL_SPLIT` (`shared/constants/achieved-display-basis.ts`, default `false`). Cada par

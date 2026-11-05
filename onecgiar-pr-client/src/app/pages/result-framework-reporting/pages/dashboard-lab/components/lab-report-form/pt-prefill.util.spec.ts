@@ -7,6 +7,7 @@ import {
   ptContributionToApply,
   ptEvidenceLinksToSave,
   ptEvidenceWithoutLink,
+  unsavedPtEvidenceNames,
   ptFieldPolicy,
   ptMatchedPartners,
   ptGeoLevel,
@@ -17,7 +18,7 @@ import {
   ptPrefillOutcomeItems,
   resolvePtCenters
 } from './pt-prefill.util';
-import { PT_TEMPORARY_EVIDENCE_NOTICE } from '../../../../../../shared/constants/progress-tracker-evidence.constants';
+import { PT_TEMPORARY_EVIDENCE_NOTICE, PT_UNSAVED_EVIDENCE_DETAIL, ptUnsavedEvidenceLabel } from '../../../../../../shared/constants/progress-tracker-evidence.constants';
 
 // PTB-R-18a (2026-10-19) — Progress Tracker prefill, Phase 1 + matched partners.
 const base: PtProposalDto = {
@@ -157,7 +158,7 @@ describe('pt-prefill.util', () => {
     expect(buildPtPendingChecklist(p(), catalogue).map(i => i.label)).not.toContain('Temporary evidence');
   });
 
-  it('lists PT evidence items that have no link, so the user uploads the final file', () => {
+  it('lists PT evidence items that have no link as temporary and not saved', () => {
     const name = '[Qualitative level: On Track] Collection of standardized data: User-friendly too';
     const proposal = p({
       evidence: [
@@ -169,9 +170,13 @@ describe('pt-prefill.util', () => {
       evidence_links: []
     });
     expect(ptEvidenceWithoutLink(proposal)).toEqual([name]);
+    expect(unsavedPtEvidenceNames(proposal)).toEqual([name]);
     const items = buildPtPendingChecklist(proposal, catalogue);
-    expect(items).toContainEqual({ label: `Evidence in Progress Tracker without a link: ${name}`, detail: 'upload the final file in Evidence' });
+    expect(items).toContainEqual({ label: ptUnsavedEvidenceLabel(name), detail: PT_UNSAVED_EVIDENCE_DETAIL });
+    expect(PT_UNSAVED_EVIDENCE_DETAIL).toContain('Temporary and incomplete');
+    expect(PT_UNSAVED_EVIDENCE_DETAIL).toContain('not added as evidence');
     expect(items.map(i => i.label)).not.toContain('Temporary evidence');
+    expect(unsavedPtEvidenceNames({ ...proposal, policy: { evidence_links: 'none' } })).toEqual([]);
     expect(buildPtPendingChecklist({ ...proposal, policy: { evidence_links: 'none' } }, catalogue)).toEqual([]);
   });
 

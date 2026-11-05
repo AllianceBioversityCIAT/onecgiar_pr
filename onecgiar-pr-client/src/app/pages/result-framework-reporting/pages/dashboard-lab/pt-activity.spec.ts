@@ -92,13 +92,17 @@ describe('pt-activity', () => {
     expect(centerAcronymsOfRow({ center_acronym: '—' })).toEqual([]);
   });
 
-  it('ptActivityLabel names the unit, singular for one', () => {
-    expect(ptActivityLabel(1)).toBe('PT · 1 evidence item');
-    expect(ptActivityLabel(2)).toBe('PT · 2 evidence items');
+  it('ptActivityLabel names Progress Tracker activity, not a result or a handle', () => {
+    expect(ptActivityLabel(1)).toBe('PT activity · 1');
+    expect(ptActivityLabel(2)).toBe('PT activity · 2');
     expect(ptActivityShortLabel(2)).toBe('PT · 2');
+    expect(ptActivityLabel(2)).not.toContain('evidence item');
   });
 
-  it('PT_ACTIVITY_TOOLTIP explains evidence items vs proposals', () => {
-    expect(PT_ACTIVITY_TOOLTIP).toBe('Evidence items in Progress Tracker. One proposal can group several evidence items.');
+  it('PT_ACTIVITY_TOOLTIP says the count is not a PRMS result, handle, or ready proposal', () => {
+    expect(PT_ACTIVITY_TOOLTIP).toContain('evidence items held in Progress Tracker');
+    expect(PT_ACTIVITY_TOOLTIP).toContain('not a PRMS result');
+    expect(PT_ACTIVITY_TOOLTIP).toContain('not a repository handle');
+    expect(PT_ACTIVITY_TOOLTIP).toContain('not a proposal ready to report');
   });
 });
