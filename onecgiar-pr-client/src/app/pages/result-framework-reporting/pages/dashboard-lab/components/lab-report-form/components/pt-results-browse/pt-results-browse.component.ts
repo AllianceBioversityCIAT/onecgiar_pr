@@ -3,6 +3,7 @@ import { outputFromObservable, takeUntilDestroyed, toObservable } from '@angular
 import { EMPTY, Observable, Subscription, catchError, concat, defer, distinctUntilChanged, filter, interval, map, of, switchMap, take, tap, timer } from 'rxjs';
 import { ResultsApiService } from '../../../../../../../../shared/services/api/results-api.service';
 import { ptTypologyTone, PtTypologyTone } from '../../../../pt-typology';
+import { alignPtEmptyNotice } from './pt-empty-notice';
 
 // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-results-browse (PTB-T-2)
 
@@ -468,9 +469,14 @@ export class PtResultsBrowseComponent {
   readonly emptyMessage = signal(PT_EMPTY_DEFAULT_MESSAGE);
   /**
    * PT's own plain-language explanation of an empty answer (`generated_by.notice`, else
-   * `preparation.no_results_reason`). Shown as text under the empty / preparing headline.
+   * `preparation.no_results_reason`), before it is worded for this indicator's category.
    */
-  readonly ptNotice = signal<string | null>(null);
+  private readonly ptNoticeRaw = signal<string | null>(null);
+  /**
+   * Shown as text under the empty / preparing headline. A stock "No knowledge product" sentence
+   * is retargeted to `expectedResultTypeLabel` so it does not assume a knowledge product.
+   */
+  readonly ptNotice = computed(() => alignPtEmptyNotice(this.ptNoticeRaw(), this.expectedResultTypeLabel()));
   /** The card shown as selected: the host's pick when bound, else the last click here. */
   readonly activeKey = computed<string | null>(() => {
     const bound = this.selectedResultKey();
@@ -542,7 +548,7 @@ export class PtResultsBrowseComponent {
           this.ptUrl.set(null);
           this.selectedKey.set(null);
           this.partialNotice.set(null);
-          this.ptNotice.set(null);
+          this.ptNoticeRaw.set(null);
           this.autoRetrying.set(false);
           this.stopCooldown();
         }),
@@ -647,7 +653,7 @@ export class PtResultsBrowseComponent {
       // Nothing to show: either PT is still preparing this KPI (template fallback for a
       // "not ready yet" reason, a retry hint, or a partial answer with nothing in it yet), or
       // there really is nothing to propose.
-      this.ptNotice.set(ptPlainNotice(generatedBy, body.preparation));
+      this.ptNoticeRaw.set(ptPlainNotice(generatedBy, body.preparation));
       const retryAfter = body.preparation?.retry_after_s;
       const hasRetryAfter = retryAfter !== null && retryAfter !== undefined;
       const preparing =
