@@ -4608,6 +4608,7 @@ export class BilateralService {
       // (RSB-R-21).
       //
       // RSB-DD-1 order (design §4 step 1): bilateral -> ownership -> KP -> Rejected -> same type.
+      // A stored KP skips the KP step and is allowed from Rejected or Editing (KPC-DD-1, KPC-DD-2).
       try {
         this._bilateralVersioningRulesService.assertIsBilateral(
           openPhaseResult,
@@ -4692,8 +4693,9 @@ export class BilateralService {
   }
 
   /**
-   * `RSB-R-2` (narrows `UBC-R-5`): an open-phase result is overwritten only from **Rejected**.
-   * Any other status is a 409 naming the code and the status.
+   * `RSB-R-2` (narrows `UBC-R-5`): an open-phase result is overwritten only from the statuses of
+   * `KPC-DD-2`: **Rejected** for every type except a Knowledge Product, which is also allowed from
+   * **Editing**. Any other status is a 409 naming the code and the status.
    */
   private assertResultCodeStatusIsEditable(
     target: Result,

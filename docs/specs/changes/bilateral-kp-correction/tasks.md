@@ -6,7 +6,7 @@
 |---|---|
 | Spec Path | `changes/bilateral-kp-correction` |
 | Depth | Full |
-| Status | **approved**, user 2026-11-05 (Phase 3 gate) · in execution (`KPC-T-1..5` [x]) |
+| Status | **approved**, user 2026-11-05 (Phase 3 gate) · in execution (`KPC-T-1..6` [x]) |
 | Date | 2026-11-05 |
 | Linked spec | `requirements.md` (`KPC-R-1..15`), `design.md` (`KPC-DD-1..6`, Premise Ledger `P-1..18`) — both approved by the user at their gates on 2026-11-05 |
 | Owner / driver | Juan David Delgado |
@@ -215,7 +215,7 @@ Scoped jest only, never the full suite: `npx jest --testPathPattern="<pattern>" 
   - [x] Scoped run `--testPathPattern="bilateral"` green; `npx tsc --noEmit` exit 0.
 - **Skills:** `nestjs-expert`, `tdd`
 
-### `KPC-T-6` — Contract doc
+### [x] `KPC-T-6` — Contract doc
 
 - **Type:** docs
 - **Description:** In `onecgiar-pr-server/docs/bilateral-result-summaries.en.md`:
@@ -236,7 +236,7 @@ Scoped jest only, never the full suite: `npx jest --testPathPattern="<pattern>" 
   - **Disqualifier:** a contract sentence with no matching test → the behaviour is unverified; add the test or drop the sentence
   - **Consumers:** the Fetcher docs (other repo) — listed in design §13, not edited here
 - **Definition of done:**
-  - [ ] Doc updated; change-log row present; cross-check table in `execution.md`.
+  - [x] Doc updated; change-log row present; cross-check table in `execution.md`.
 - **Skills:** `api-design-principles`, `cognitive-doc-design`
 
 ### `KPC-T-7` — Live run on PRTest

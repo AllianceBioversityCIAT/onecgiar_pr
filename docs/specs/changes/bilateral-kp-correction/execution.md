@@ -190,6 +190,40 @@
 - **Final verification:** green (re-run VERIFIED).
 - **Running totals (Budget, re-baselined ~750 prod / ~1 400 test):** tasks closed 5/7 · prod ≈ +748 / −273 · test ≈ +1 450 · review rounds 5/9.
 
+### `KPC-T-6` — Contract doc
+
+- **Final status:** PASS · 2026-11-05
+- **Attempts:** 1
+- **Skills:** `api-design-principles`, `cognitive-doc-design` · effort medium
+- **Attempt 1**
+  - **Implementer:** STATUS DONE. `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` (+54/−9): operations row `:448` (KP also corrected from Editing); rejections table — `:463` narrowed to the version path, new update-path "cannot be corrected" 409 row, 403 row reworded ("the version path and the update path, Knowledge Products included"); "What happens by status" KP row + `keep_editing` / title bullets; errors intro, retry table and History line; new "Correcting a Knowledge Product" subsection (status table, payload-owned vs DSpace-owned, handle rule, 422/502, errors); change-log row P2-4065. User-approved extra: two stale comments in `bilateral.service.ts` (`:4610`, `:4694`) now state the KPC-DD-1/DD-2 rule — comments only (+4/−2).
+  - **Evidence re-run (Leader, non-author):** `grep -c "checked on both paths"` → `0`; `grep -c "Knowledge Product"` → `25`; `git diff -U0 onecgiar-pr-server/src` shows comment lines only; `npx eslint src/api/bilateral/bilateral.service.ts --quiet` exit 0 → **VERIFIED**.
+  - **Reviewer (checklist):** **PASS**. Falsifier: every "Knowledge Product" hit is carry-forward (`:463`, `:531`, `:647`) or correction (`:448`, `:466`, `:518`, `:523`, `:526-527`, `:556`, `:605`, `:607-647`). Flagged items: 403 rewording kept; "other resubmission checks apply unchanged" kept — KP test exists (BRS:3523 `a KP correction keeps the RSB refusal for %s, before any DSpace call`); three handle forms acceptable (BRS:3350 runs the real normaliser, cgspace vs bare).
+  - **Cross-check (contract sentence → test, verified by the Reviewer by grep).** BRS = `bilateral-resubmission.service.spec.ts`, BS = `bilateral.service.spec.ts`, RKP = `results-knowledge-products.service.spec.ts`:
+
+    | Contract sentence / code | Test |
+    |---|---|
+    | 7→5; 1 + `keep_editing: true`→1 (no announce); 1 otherwise→5; one `RESUBMIT` row; `updated` | BRS:2575 `source %s, keep_editing %s -> status %s, one RESUBMIT row, announce=%s…` |
+    | 409 for 2/3/4/5/6/8, exact message | BS:3233, BRS:3275 |
+    | 403 another platform | BS:3253 |
+    | 409 different type | BS:3269 |
+    | 409 different handle | BRS:3334 |
+    | 400 no handle | BRS:3369 |
+    | Handle forms equivalent | BRS:3350 (real normaliser), RKP:65 |
+    | 422 passthrough | BRS:3425, RKP:686 |
+    | 502, nothing changed | BRS:3385, BRS:3407, RKP:673 |
+    | 409 status changed meanwhile | BRS:2611 |
+    | `geo_focus` not required; title not compared | BRS:3444 |
+    | Payload-owned writers; apply last; payload title/description never written | BS:6354, BS:6336 |
+    | DSpace-contributed partners kept | BS:5268, BS:5292, BS:5313 |
+    | Other resubmission checks apply unchanged | BRS:3523, BRS:3453, BRS:169 |
+    | Earlier-phase-only KP stays 409 | BS:3299 |
+    | Refusals before any write | `expectNothingWritten` in each refusal test above |
+  - **Advisories (non-gating):** RELIABILITY — no test sends the `hdl.handle.net` or bare form as payload through the real normaliser (BS:6184 uses a mock); suggest `it.each` over the three forms in BRS:3350. READABILITY — doc `:626` lists "The handle link (evidence)" under "Re-read from CGSpace" while the implementation keeps it as stored; change-log date `2026-11` vs full dates elsewhere.
+- **Requirements covered:** `KPC-R-14`.
+- **Final verification:** green (re-run VERIFIED).
+- **Running totals (Budget, re-baselined ~750 prod / ~1 400 test / ~60 doc):** tasks closed 6/7 · prod ≈ +752 / −275 (incl. 4 comment lines) · test ≈ +1 450 · doc +54/−9 · review rounds 6/9.
+
 ## Budget tripwire — `KPC-T-3` gate
 
 - **Fired:** 2026-11-05, after `KPC-T-3`. Measured `git diff --numstat a731286af..HEAD -- onecgiar-pr-server/src`: prod +537 / −197, test +771, vs §14 ~350 prod / ~650 test. Review rounds 3/9; tasks 3/7.
