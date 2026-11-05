@@ -599,3 +599,163 @@ describe('resolveKpResultDescription — the description a new KP result keeps',
     ).toBe('CGSpace abstract');
   });
 });
+
+/**
+ * KPC-T-1 (bilateral-kp-correction, KPC-DD-3): `syncAgain` split into a throwing fetch and an apply.
+ * The fetch carries no admin Journal Article gate; `syncAgain` keeps it and keeps returning (not throwing).
+ */
+describe('ResultsKnowledgeProductsService — DSpace fetch/apply split (KPC-T-1)', () => {
+  const user: TokenDto = {
+    id: 42,
+    email: 'center@cgiar.org',
+    first_name: 'Center',
+    last_name: 'User',
+  };
+
+  const KP_REPOSITORY = 0;
+  const HANDLERS_ERROR = 1;
+  const MQAP_SERVICE = 4;
+  const ROLE_BY_USER = 12;
+  const VERSIONING = 17;
+  const GLOBAL_PARAMETER = 25;
+
+  const storedKp = (type: string) => ({
+    result_knowledge_product_id: 7,
+    results_id: 31500,
+    handle: '10568/175322',
+    knowledge_product_type: type,
+    result_object: { result_code: 31500, obj_version: { cgspace_year: 2026 } },
+  });
+
+  const build = (opts: {
+    kp: any;
+    mqapResponse?: unknown;
+    isAdmin?: boolean;
+  }) => {
+    const deps: any[] = new Array(26).fill(null);
+    deps[KP_REPOSITORY] = { findOne: jest.fn().mockResolvedValue(opts.kp) };
+    deps[HANDLERS_ERROR] = {
+      returnErrorRes: ({ error }: any) => ({
+        response: error?.response ?? { error: true },
+        message: error?.message ?? 'INTERNAL_SERVER_ERROR',
+        status: error?.status ?? HttpStatus.INTERNAL_SERVER_ERROR,
+      }),
+    };
+    deps[MQAP_SERVICE] = {
+      getDataFromCGSpaceHandle: jest
+        .fn()
+        .mockResolvedValue(opts.mqapResponse ?? null),
+    };
+    deps[ROLE_BY_USER] = {
+      isUserAdmin: jest.fn().mockResolvedValue(opts.isAdmin ?? false),
+    };
+    deps[VERSIONING] = {
+      $_findActivePhase: jest.fn().mockResolvedValue({ phase_year: 2026 }),
+    };
+    deps[GLOBAL_PARAMETER] = {
+      findOne: jest.fn().mockResolvedValue({ value: '0.8' }),
+    };
+    return new (ResultsKnowledgeProductsService as any)(
+      ...deps,
+    ) as ResultsKnowledgeProductsService;
+  };
+
+  const thrownBy = async (fn: () => Promise<unknown>) => {
+    try {
+      await fn();
+    } catch (e) {
+      return e as any;
+    }
+    return undefined;
+  };
+
+  describe('fetchDspaceMetadata', () => {
+    it('throws 502 naming the code and the stored handle when MQAP answers nothing', async () => {
+      const service = build({ kp: storedKp('Report'), mqapResponse: null });
+
+      const error = await thrownBy(() =>
+        (service as any).fetchDspaceMetadata(31500, user),
+      );
+
+      expect(error?.getStatus?.()).toBe(HttpStatus.BAD_GATEWAY);
+      expect(error.message).toBe(
+        'The DSpace record of result 31500 (handle 10568/175322) could not be read. Nothing was changed; retry later.',
+      );
+    });
+
+    it('passes a 422 from findOnCGSpace through with its own message', async () => {
+      const service = build({ kp: storedKp('Report') });
+      jest.spyOn(service, 'findOnCGSpace').mockResolvedValue({
+        response: {},
+        message: 'Reporting knowledge products from years outside the cycle',
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+      } as any);
+
+      const error = await thrownBy(() =>
+        (service as any).fetchDspaceMetadata(31500, user),
+      );
+
+      expect(error?.getStatus?.()).toBe(HttpStatus.UNPROCESSABLE_ENTITY);
+      expect(error.message).toBe(
+        'Reporting knowledge products from years outside the cycle',
+      );
+    });
+
+    it('calls findOnCGSpace with the stored handle, the cgspace_year and validateExisting=false', async () => {
+      const service = build({ kp: storedKp('Report') });
+      const spy = jest.spyOn(service, 'findOnCGSpace').mockResolvedValue({
+        response: { title: 'T' },
+        message: 'ok',
+        status: HttpStatus.OK,
+      } as any);
+
+      const out = await (service as any).fetchDspaceMetadata(31500, user);
+
+      expect(spy).toHaveBeenCalledWith('10568/175322', user, 2026, false);
+      expect(out.newMetadata).toEqual({ title: 'T' });
+      expect(out.resultKnowledgeProduct.results_id).toBe(31500);
+    });
+
+    it('does not refuse a Journal Article to a non-admin user', async () => {
+      const service = build({
+        kp: storedKp('Journal Article'),
+        isAdmin: false,
+      });
+      jest.spyOn(service, 'findOnCGSpace').mockResolvedValue({
+        response: { title: 'T', Type: 'Journal Article' },
+        message: 'ok',
+        status: HttpStatus.OK,
+      } as any);
+
+      const out = await (service as any).fetchDspaceMetadata(31500, user);
+
+      expect(out.newMetadata.title).toBe('T');
+    });
+  });
+
+  describe('syncAgain', () => {
+    it('still refuses a Journal Article to a non-admin user (returned, 412)', async () => {
+      const service = build({
+        kp: storedKp('Journal Article'),
+        isAdmin: false,
+      });
+
+      const result: any = await service.syncAgain(31500, user);
+
+      expect(result.status).toBe(HttpStatus.PRECONDITION_FAILED);
+    });
+
+    it('returns the original MQAP error object instead of throwing', async () => {
+      const service = build({
+        kp: storedKp('Report'),
+        mqapResponse: null,
+        isAdmin: true,
+      });
+
+      const result: any = await service.syncAgain(31500, user);
+
+      expect(result.status).toBe(HttpStatus.BAD_REQUEST);
+      expect(result.message).toContain('Please add a valid handle');
+    });
+  });
+});

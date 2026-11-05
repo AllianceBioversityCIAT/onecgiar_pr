@@ -124,7 +124,8 @@ import { ClarisaApiKeyValidationMis } from './interfaces/clarisa-api-key-validat
 import { BilateralVersioningRulesService } from './versioning-rules/bilateral-versioning-rules.service';
 import {
   BilateralResubmissionService,
-  describeResultStatus,
+  resubmissionStatusRefusal,
+  ResubmissionKnowledgeProductPort,
   ResubmissionPreflightPort,
   ResubmissionWritersPort,
   ResubmissionWriteArgs,
@@ -377,6 +378,15 @@ export class BilateralService {
               preflight: this.buildResubmissionPreflightPort(),
               // RSB-T-5: the writers of the pipeline, same reason.
               writers: this.buildResubmissionWritersPort(),
+              // KPC-T-3: the reads of the KP preflight (handle compare, DSpace fetch). Only a KP
+              // target carries them, so the params of every other type are exactly what they were.
+              ...(Number(resultCodeTarget.target.result_type_id) ===
+              ResultTypeEnum.KNOWLEDGE_PRODUCT
+                ? {
+                    knowledgeProduct:
+                      this.buildResubmissionKnowledgeProductPort(),
+                  }
+                : {}),
             },
           );
           createdResults.push({
@@ -4598,6 +4608,7 @@ export class BilateralService {
       // (RSB-R-21).
       //
       // RSB-DD-1 order (design §4 step 1): bilateral -> ownership -> KP -> Rejected -> same type.
+      // A stored KP skips the KP step and is allowed from Rejected or Editing (KPC-DD-1, KPC-DD-2).
       try {
         this._bilateralVersioningRulesService.assertIsBilateral(
           openPhaseResult,
@@ -4608,10 +4619,17 @@ export class BilateralService {
           resultCode,
           platform,
         );
-        this._bilateralVersioningRulesService.assertNotKnowledgeProduct(
-          openPhaseResult,
-          resultCode,
-        );
+        // KPC-T-5 / KPC-DD-1: a Knowledge Product in the open phase is a correction (`KPC-R-1`), so
+        // it skips the KP guard; every other type keeps it. The `versioned` branch below is untouched.
+        if (
+          Number(openPhaseResult.result_type_id) !==
+          ResultTypeEnum.KNOWLEDGE_PRODUCT
+        ) {
+          this._bilateralVersioningRulesService.assertNotKnowledgeProduct(
+            openPhaseResult,
+            resultCode,
+          );
+        }
         this.assertResultCodeStatusIsEditable(openPhaseResult, resultCode);
         this.assertSameResultType(openPhaseResult, resultCode, bilateralDto);
       } catch (error) {
@@ -4675,18 +4693,21 @@ export class BilateralService {
   }
 
   /**
-   * `RSB-R-2` (narrows `UBC-R-5`): an open-phase result is overwritten only from **Rejected**.
-   * Any other status is a 409 naming the code and the status.
+   * `RSB-R-2` (narrows `UBC-R-5`): an open-phase result is overwritten only from the statuses of
+   * `KPC-DD-2`: **Rejected** for every type except a Knowledge Product, which is also allowed from
+   * **Editing**. Any other status is a 409 naming the code and the status.
    */
   private assertResultCodeStatusIsEditable(
     target: Result,
     resultCode: string,
   ): void {
-    if (Number(target.status_id) !== ResultStatusData.Rejected.value) {
-      throw new ConflictException(
-        `Result ${resultCode} cannot be resubmitted: its status is ${describeResultStatus(target.status_id)}. Only rejected results can be resubmitted.`,
-      );
-    }
+    // KPC-DD-2: the status rule is a function of the stored type (Rejected; plus Editing for a KP).
+    const refusal = resubmissionStatusRefusal(
+      resultCode,
+      target.status_id,
+      target.result_type_id,
+    );
+    if (refusal) throw new ConflictException(refusal);
   }
 
   /**
@@ -4784,6 +4805,44 @@ export class BilateralService {
   }
 
   /**
+   * @akili-spec changes/bilateral-kp-correction — KPC-T-3 (`KPC-DD-4`).
+   *
+   * The reads of the KP preflight. Neither writes: `readStoredHandle` is a SELECT and
+   * `fetchDspaceMetadata` only reads DSpace and the KP row (`KPC-DD-3`, no admin Journal Article gate).
+   * The fetch needs a user because `findOnCGSpace` applies the reporting-cycle year rule to non-admins
+   * (`KPC-R-8`, the 422): it is the platform user of the payload, looked up WITHOUT creating it (the
+   * preflight creates users last, after every refusal). An email nobody has yet cannot be an admin, so
+   * the id `0` makes the non-admin rule apply, as it will for the user `resolveUsers` creates.
+   */
+  private buildResubmissionKnowledgeProductPort(): ResubmissionKnowledgeProductPort {
+    return {
+      normalizeHandle: (raw) =>
+        this._resultsKnowledgeProductsService.extractHandleIdentifier(raw),
+      readStoredHandle: async (resultId) => {
+        const stored = await this._resultsKnowledgeProductsRepository.findOne({
+          where: { results_id: resultId },
+          select: ['handle'],
+        });
+        return stored?.handle ?? null;
+      },
+      readMqapLinkedPartnerRowIds: (resultId) =>
+        this._resultByIntitutionsRepository.getMqapLinkedPartnerRowIds(
+          resultId,
+        ),
+      fetchMetadata: async (resultId, dto) => {
+        const email = dto.created_by?.email;
+        const platformUser = email
+          ? await this._userRepository.findOne({ where: { email } })
+          : null;
+        return this._resultsKnowledgeProductsService.fetchDspaceMetadata(
+          resultId,
+          { id: platformUser?.id ?? 0, email: email ?? '' } as TokenDto,
+        );
+      },
+    };
+  }
+
+  /**
    * @akili-spec bilateral/resubmit-rejected-result — RSB-T-5.
    *
    * The writers and collaborators `BilateralResubmissionService` needs once the preflight has
@@ -4852,6 +4911,7 @@ export class BilateralService {
       userId,
       resolvedProjects,
       suppressPrimaryRole,
+      kp,
     } = args;
     const resultId = target.id;
 
@@ -4863,24 +4923,27 @@ export class BilateralService {
       replacePreviousLead: true,
     });
 
-    const { scope_code, scope_label, regions, countries, subnational_areas } =
-      dto.geo_focus;
-    const scope = await this.findScope(scope_code, scope_label);
-    this.validateGeoFocus(scope, regions, countries, subnational_areas);
+    // `KPC-DD-5`: a Knowledge Product has no geo writer (its geography is DSpace-owned, applied last).
+    if (!kp) {
+      const { scope_code, scope_label, regions, countries, subnational_areas } =
+        dto.geo_focus;
+      const scope = await this.findScope(scope_code, scope_label);
+      this.validateGeoFocus(scope, regions, countries, subnational_areas);
 
-    await this.handleRegions(header, scope, regions);
-    await this.handleCountries(
-      header,
-      countries,
-      subnational_areas,
-      scope.id,
-      userId,
-      { writeSubnationalsForAllCountries: true },
-    );
-    await this._resultRepository.save({
-      ...header,
-      geographic_scope_id: this.resolveScopeId(scope.id, countries),
-    });
+      await this.handleRegions(header, scope, regions);
+      await this.handleCountries(
+        header,
+        countries,
+        subnational_areas,
+        scope.id,
+        userId,
+        { writeSubnationalsForAllCountries: true },
+      );
+      await this._resultRepository.save({
+        ...header,
+        geographic_scope_id: this.resolveScopeId(scope.id, countries),
+      });
+    }
 
     await this.handleTocMapping(
       dto.toc_mapping,
@@ -4890,13 +4953,17 @@ export class BilateralService {
       dto.result_type_id,
       { suppressPrimaryRole },
     );
-    await this.handleInstitutions(
+    const partnerArgs = [
       resultId,
       dto.contributing_partners || [],
       userId,
       dto.result_type_id,
-    );
-    await this.handleEvidence(resultId, dto.evidence, userId);
+    ] as const;
+    await (kp
+      ? this.handleInstitutions(...partnerArgs, kp.keepPartnerRowIds)
+      : this.handleInstitutions(...partnerArgs));
+    // The handle link of a KP is its evidence and cannot change (`KPC-DD-5`).
+    if (!kp) await this.handleEvidence(resultId, dto.evidence, userId);
     await this.handleNonPooledProject(
       resultId,
       userId,
@@ -4905,12 +4972,15 @@ export class BilateralService {
       resolvedProjects,
     );
 
-    await this.runResultTypeHandlers({
-      resultId,
-      userId,
-      bilateralDto: dto,
-      isDuplicateResult: false,
-    });
+    // The KP handler would `populateKPFromCGSpace` a second KP row; the DSpace apply below replaces it.
+    if (!kp) {
+      await this.runResultTypeHandlers({
+        resultId,
+        userId,
+        bilateralDto: dto,
+        isDuplicateResult: false,
+      });
+    }
 
     await this.handleContributingCenters(
       resultId,
@@ -4919,6 +4989,16 @@ export class BilateralService {
       dto.lead_center,
     );
     await this.ensureDerivedContributingCenters(resultId, userId);
+
+    // `KPC-DD-5`: LAST, so the apply has the last word on the rows DSpace owns (title, description,
+    // KP row, MQAP institutions, geography). It never touches the payload rows written above.
+    if (kp) {
+      await this._resultsKnowledgeProductsService.applyDspaceMetadata(
+        kp.metadata.resultKnowledgeProduct,
+        kp.metadata.newMetadata,
+        { id: userId } as TokenDto,
+      );
+    }
   }
 
   /**
@@ -4945,8 +5025,10 @@ export class BilateralService {
     const identity = this.buildExternalIdentity(dto, platform);
 
     const columns: Record<string, unknown> = {
-      title: dto.title,
-      description: dto.description ?? null,
+      // `KPC-DD-5`: a KP's title and description are DSpace-owned (applied last, never the payload's).
+      ...(args.kp
+        ? {}
+        : { title: dto.title, description: dto.description ?? null }),
       result_level_id: dto.result_level_id,
       external_submitter: submittedUserId,
       external_submitted_date: dto.submitted_by?.submitted_date ?? null,
@@ -6158,6 +6240,7 @@ export class BilateralService {
     institutions: any[],
     userId: number,
     resultTypeId?: number,
+    keepRbiIds?: number[],
   ) {
     if (!Array.isArray(institutions) || !institutions.length) return;
 
@@ -6175,13 +6258,26 @@ export class BilateralService {
       institutions_id: id,
     }));
 
-    await this._resultByIntitutionsRepository.updateInstitutions(
-      resultId,
-      mappedInstitutions,
-      userId,
-      false,
-      [InstitutionRoleEnum.PARTNER],
-    );
+    // `KPC-DD-5`: the keep-list is passed only when there is one, so every other call stays as it was.
+    const partnerRole = [InstitutionRoleEnum.PARTNER];
+    if (keepRbiIds?.length) {
+      await this._resultByIntitutionsRepository.updateInstitutions(
+        resultId,
+        mappedInstitutions,
+        userId,
+        false,
+        partnerRole,
+        keepRbiIds,
+      );
+    } else {
+      await this._resultByIntitutionsRepository.updateInstitutions(
+        resultId,
+        mappedInstitutions,
+        userId,
+        false,
+        partnerRole,
+      );
+    }
 
     const toPersist: ResultsByInstitution[] = [];
     const partnerByInstitutionId = new Map<number, ResultsByInstitution>();

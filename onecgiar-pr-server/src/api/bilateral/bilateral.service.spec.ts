@@ -3169,26 +3169,149 @@ describe('BilateralService (unit)', () => {
         ).not.toHaveBeenCalled();
       });
 
-      it('a Knowledge Product target -> 409 (RSB-R-7); resubmit never called', async () => {
-        const { service } = arrangeCreateHarness();
-        service._bilateralVersioningRulesService.findInPhase.mockResolvedValue({
-          id: 501,
-          result_code: 28565,
-          status_id: ResultStatusData.Rejected.value,
-          result_type_id: ResultTypeEnum.KNOWLEDGE_PRODUCT,
-        });
-        service._bilateralVersioningRulesService.assertNotKnowledgeProduct.mockImplementation(
-          () => {
-            throw new ConflictException('Result 28565 is a Knowledge Product.');
+      // @akili-spec changes/bilateral-kp-correction — KPC-T-5 (flips the RSB-R-7 test): a KP in the open
+      // phase is a correction, so the KP guard is skipped and the KP status rule applies (KPC-DD-2).
+      describe('Knowledge Product correction (KPC-R-1)', () => {
+        const arrangeKp = (statusId: number) => {
+          const { service } = arrangeCreateHarness();
+          const kpRow = {
+            id: 501,
+            result_code: 28565,
+            status_id: statusId,
+            result_type_id: ResultTypeEnum.KNOWLEDGE_PRODUCT,
+          };
+          service._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
+            kpRow,
+          );
+          service._bilateralResubmissionService.resubmit.mockResolvedValue({
+            id: 501,
+            result_code: 28565,
+            status_id: ResultStatusData.PendingReview.value,
+            status: 'pending review',
+          });
+          const dto = buildDtoWithCode('28565');
+          (dto.result.data as any).result_type_id =
+            ResultTypeEnum.KNOWLEDGE_PRODUCT;
+          (dto.result.data as any).description = 'a private description';
+          return { service, dto, kpRow };
+        };
+
+        it.each([
+          [ResultStatusData.Rejected.value],
+          [ResultStatusData.Editing.value],
+        ])(
+          'a KP in status %s reaches resubmit() once, with the KP port, and the KP guard is skipped',
+          async (statusId) => {
+            const { service, dto, kpRow } = arrangeKp(statusId);
+
+            await service.create(dto, STAR as any);
+
+            expect(
+              service._bilateralResubmissionService.resubmit,
+            ).toHaveBeenCalledTimes(1);
+            expect(
+              service._bilateralResubmissionService.resubmit.mock.calls[0][0],
+            ).toMatchObject({
+              target: kpRow,
+              knowledgeProduct: expect.any(Object),
+            });
+            expect(
+              service._bilateralVersioningRulesService
+                .assertNotKnowledgeProduct,
+            ).not.toHaveBeenCalled();
           },
         );
 
-        await expect(
-          service.create(buildDtoWithCode('28565'), STAR as any),
-        ).rejects.toMatchObject({ status: 409 });
-        expect(
-          service._bilateralResubmissionService.resubmit,
-        ).not.toHaveBeenCalled();
+        it.each([
+          [2, 'quality assessed'],
+          [3, 'submitted'],
+          [4, 'discontinued'],
+          [5, 'pending review'],
+          [6, 'approved'],
+          [8, 'draft'],
+        ])(
+          'a KP in status %s (%s) -> 409 naming the code and the status; resubmit never called; one log line with operation=updated and no payload',
+          async (statusId, statusName) => {
+            const { service, dto } = arrangeKp(statusId);
+
+            const attempt = service.create(dto, STAR as any);
+            await expect(attempt).rejects.toMatchObject({ status: 409 });
+            await expect(attempt).rejects.toThrow('28565');
+            await expect(attempt).rejects.toThrow(statusName);
+
+            expect(
+              service._bilateralResubmissionService.resubmit,
+            ).not.toHaveBeenCalled();
+            const logged = (service.logger.log as jest.Mock).mock.calls
+              .map((call) => call.map(String).join(' '))
+              .join('\n');
+            expect(logged).toContain('operation=updated');
+            expect(logged).not.toContain('a private description');
+          },
+        );
+
+        it('a KP of another platform -> 403; resubmit never called', async () => {
+          const { service, dto } = arrangeKp(ResultStatusData.Editing.value);
+          service._bilateralVersioningRulesService.assertCallerMayVersion.mockRejectedValue(
+            new ForbiddenException(
+              'Result 28565 was reported by a different platform.',
+            ),
+          );
+
+          await expect(service.create(dto, STAR as any)).rejects.toBeInstanceOf(
+            ForbiddenException,
+          );
+          expect(
+            service._bilateralResubmissionService.resubmit,
+          ).not.toHaveBeenCalled();
+        });
+
+        it('a KP target with a payload of another type -> 409 (same-type guard); resubmit never called', async () => {
+          const { service } = arrangeKp(ResultStatusData.Rejected.value);
+          const dto = buildDtoWithCode('28565'); // OTHER_OUTPUT payload
+
+          await expect(service.create(dto, STAR as any)).rejects.toMatchObject({
+            status: 409,
+          });
+          expect(
+            service._bilateralResubmissionService.resubmit,
+          ).not.toHaveBeenCalled();
+        });
+
+        it('a policy change in Editing stays refused with the shipped message (KPC-R-13)', async () => {
+          const { service } = arrangeCreateHarness();
+          service._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
+            {
+              id: 501,
+              result_code: 28565,
+              status_id: ResultStatusData.Editing.value,
+              result_type_id: ResultTypeEnum.POLICY_CHANGE,
+            },
+          );
+
+          await expect(
+            service.create(buildDtoWithCode('28565'), STAR as any),
+          ).rejects.toThrow(
+            'Result 28565 cannot be resubmitted: its status is editing. Only rejected results can be resubmitted.',
+          );
+        });
+
+        it('a KP found only in an earlier phase stays a 409 Knowledge Product (versioned branch untouched)', async () => {
+          const { service } = arrangeCreateHarness();
+          service._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
+            undefined,
+          );
+          service._bilateralVersioningRulesService.resolveVersionableResult.mockRejectedValue(
+            new ConflictException('Result 28565 is a Knowledge Product.'),
+          );
+
+          await expect(
+            service.create(buildDtoWithCode('28565'), STAR as any),
+          ).rejects.toThrow('is a Knowledge Product');
+          expect(
+            service._bilateralResubmissionService.resubmit,
+          ).not.toHaveBeenCalled();
+        });
       });
 
       it('a payload of a different type than the stored one -> 409 naming code and both types (RSB-R-22); nothing written', async () => {
@@ -5042,6 +5165,175 @@ describe('BilateralService (unit)', () => {
         expect(institutions.save).not.toHaveBeenCalled();
       });
 
+      // @akili-spec changes/bilateral-kp-correction — KPC-T-4, falsifiers 2 and 3. A MODEL of
+      // `updateInstitutions` (the SQL of result_by_intitutions.repository.ts:403, proven in its own spec
+      // with the keep-list): deactivate the active rows of the role that are not incoming and not kept,
+      // activate the incoming ones.
+      describe('knowledge product: the rows DSpace owns survive the reset and the writers', () => {
+        const KP = ResultTypeEnum.KNOWLEDGE_PRODUCT;
+        const M = 3;
+        const partner = (id: number, institution: number, active = 1) => ({
+          id,
+          result_id: RESULT,
+          institutions_id: institution,
+          institution_roles_id: 2,
+          is_active: active,
+        });
+        const arrangeKp = (rows: any[]) => {
+          const { db, resubmission } = arrangeDb([
+            [ResultsByInstitution, rows],
+            [
+              Evidence,
+              [{ id: 9, result_id: RESULT, link: 'hdl', is_active: 1 }],
+            ],
+            [ResultCountry, [{ result_country_id: 4, result_id: RESULT }]],
+            [
+              ResultCountrySubnational,
+              [
+                {
+                  result_country_subnational_id: 5,
+                  result_country_id: 4,
+                  is_active: 1,
+                },
+              ],
+            ],
+          ]);
+          const table = () => db.rowsOf(ResultsByInstitution);
+          const institutions = {
+            updateInstitutions: jest.fn(
+              async (
+                resultId: number,
+                incoming: Array<{ institutions_id: number }>,
+                _userId: number,
+                _notApplicable: boolean,
+                roles: number[],
+                keep: number[] = [],
+              ) => {
+                const ids = incoming.map((i) => i.institutions_id);
+                for (const row of table()) {
+                  if (
+                    row.result_id !== resultId ||
+                    !roles.includes(row.institution_roles_id)
+                  )
+                    continue;
+                  if (ids.includes(row.institutions_id)) row.is_active = 1;
+                  else if (row.is_active && !keep.includes(row.id))
+                    row.is_active = 0;
+                }
+              },
+            ),
+            getResultByInstitutionExists: jest.fn(
+              async (_r: number, institution: number) =>
+                table().find((row) => row.institutions_id === institution) ??
+                null,
+            ),
+            save: jest.fn(async (toSave: any[]) =>
+              Promise.all(
+                toSave.map((row) =>
+                  db.repositoryOf(ResultsByInstitution).save({ ...row }),
+                ),
+              ),
+            ),
+          };
+          const { service } = makeService({
+            _clarisaInstitutionsRepository: {
+              findOne: jest.fn(async ({ where }: any) => ({ id: where.id })),
+              find: jest.fn().mockResolvedValue([]),
+            },
+            _resultByIntitutionsRepository: institutions,
+          });
+          const activePartners = () =>
+            table()
+              .filter((row) => db.isActive(ResultsByInstitution, row.id))
+              .map((row) => row.institutions_id)
+              .sort((a, b) => a - b);
+          const reset = (payloadSendsPartners: boolean, keep: number[]) =>
+            resubmission.resetSectionsForResubmission(RESULT, {
+              userId: USER,
+              resultTypeId: KP,
+              primaryChanged: false,
+              payloadSendsPartners,
+              contributorInitiativeIds: [],
+              keepPartnerRowIds: keep,
+            });
+          return {
+            db,
+            institutions,
+            svc: service as any,
+            activePartners,
+            reset,
+          };
+        };
+
+        it('PARTNERS A, B and the MQAP-linked M; the payload sends C -> the active rows are C and M', async () => {
+          const t = arrangeKp([partner(1, 71), partner(2, 72), partner(M, 90)]);
+
+          await t.reset(true, [M]);
+          await t.svc.handleInstitutions(
+            RESULT,
+            [{ institution_id: 74 }],
+            USER,
+            KP,
+            [M],
+          );
+
+          expect(t.activePartners()).toEqual([74, 90]);
+          expect(t.institutions.updateInstitutions).toHaveBeenCalledWith(
+            RESULT,
+            [{ institutions_id: 74 }],
+            USER,
+            false,
+            [2],
+            [M],
+          );
+        });
+
+        // `[advisory-grade]` KPC-T-2 Reviewer: a payload partner equal to a kept MQAP institution.
+        it('the payload names the institution DSpace also contributed -> both rows end active', async () => {
+          const t = arrangeKp([
+            partner(M, 90),
+            partner(4, 90, 0),
+            partner(1, 71),
+          ]);
+
+          await t.reset(true, [M]);
+          await t.svc.handleInstitutions(
+            RESULT,
+            [{ institution_id: 90 }],
+            USER,
+            KP,
+            [M],
+          );
+
+          expect(t.db.isActive(ResultsByInstitution, M)).toBe(true);
+          expect(t.db.isActive(ResultsByInstitution, 4)).toBe(true);
+          expect(t.db.isActive(ResultsByInstitution, 1)).toBe(false);
+        });
+
+        it('the payload sends no partner -> the reset retires A and B and keeps M', async () => {
+          const t = arrangeKp([partner(1, 71), partner(2, 72), partner(M, 90)]);
+
+          await t.reset(false, [M]);
+
+          expect(t.activePartners()).toEqual([90]);
+        });
+
+        it('EVIDENCE (the handle link) and the SUBNATIONALS are still active after the KP reset', async () => {
+          const t = arrangeKp([partner(M, 90)]);
+
+          await t.reset(false, [M]);
+
+          expect(t.db.isActive(Evidence, 9)).toBe(true);
+          expect(
+            t.db.isActive(
+              ResultCountrySubnational,
+              5,
+              'result_country_subnational_id',
+            ),
+          ).toBe(true);
+        });
+      });
+
       it('PARTNERS the payload sends none -> no active partner is left (the reset deactivates them; handleInstitutions returns early)', async () => {
         const { db, resubmission } = arrangeDb([
           [
@@ -5885,6 +6177,240 @@ describe('BilateralService (unit)', () => {
             .rowsOf(ResultInitiativeBudget)
             .filter((b) => visibleParents.includes(b.result_initiative_id)),
         ).toEqual([]);
+      });
+    });
+
+    describe('the knowledge product port (KPC-T-3)', () => {
+      it('normalizeHandle is the create path normaliser; readStoredHandle reads the KP row handle only', async () => {
+        const { service } = makeService();
+        const svc: any = service;
+        svc._resultsKnowledgeProductsRepository = {
+          findOne: jest
+            .fn()
+            .mockResolvedValueOnce({ handle: '10568/175322' })
+            .mockResolvedValueOnce(null),
+        };
+        const port = svc.buildResubmissionKnowledgeProductPort();
+
+        expect(
+          port.normalizeHandle('https://hdl.handle.net/10568/175322'),
+        ).toBe('10568/175322');
+        await expect(port.readStoredHandle(501)).resolves.toBe('10568/175322');
+        await expect(port.readStoredHandle(501)).resolves.toBeNull();
+        expect(
+          svc._resultsKnowledgeProductsRepository.findOne,
+        ).toHaveBeenCalledWith({
+          where: { results_id: 501 },
+          select: ['handle'],
+        });
+      });
+
+      it('fetchMetadata reads DSpace for the result as the existing platform user, or id 0 when the email is new, and creates no user', async () => {
+        const { service } = makeService();
+        const svc: any = service;
+        const fetched = { resultKnowledgeProduct: {}, newMetadata: {} };
+        svc._resultsKnowledgeProductsService.fetchDspaceMetadata = jest
+          .fn()
+          .mockResolvedValue(fetched);
+        svc._userRepository = {
+          findOne: jest
+            .fn()
+            .mockResolvedValueOnce({ id: 41 })
+            .mockResolvedValueOnce(null),
+        };
+        const port = svc.buildResubmissionKnowledgeProductPort();
+        const dto = (email: string) => ({ created_by: { email } });
+
+        await expect(port.fetchMetadata(501, dto('a@x.org'))).resolves.toBe(
+          fetched,
+        );
+        await port.fetchMetadata(501, dto('new@x.org'));
+
+        const fetchSpy =
+          svc._resultsKnowledgeProductsService.fetchDspaceMetadata;
+        expect(fetchSpy).toHaveBeenNthCalledWith(1, 501, {
+          id: 41,
+          email: 'a@x.org',
+        });
+        expect(fetchSpy).toHaveBeenNthCalledWith(2, 501, {
+          id: 0,
+          email: 'new@x.org',
+        });
+        expect(svc._userService.createFull).not.toHaveBeenCalled();
+      });
+    });
+
+    // @akili-spec changes/bilateral-kp-correction — KPC-T-4 (KPC-DD-5; design §5.1). The KP variant of
+    // the writers: payload-owned sections only, then the DSpace apply, last.
+    describe('writeResubmittedResult for a knowledge product (KPC-T-4)', () => {
+      const KEPT = [31];
+      const metadata: any = {
+        resultKnowledgeProduct: { results_id: 501, handle: '10568/1' },
+        newMetadata: { title: 'Title from DSpace', handle: '10568/1' },
+      };
+      const kpDto = (): any => ({
+        result_type_id: ResultTypeEnum.KNOWLEDGE_PRODUCT,
+        result_level_id: 3,
+        title: 'Edited title',
+        description: 'Edited description',
+        // Present on purpose: a KP has no geo writer, so it must be ignored, not written.
+        geo_focus: { scope_code: 4, countries: [{ id: 1 }] },
+        lead_center: { acronym: 'CIP' },
+        toc_mapping: { science_program_id: 'SP06' },
+        contributing_programs: [{ science_program_id: 'SP01' }],
+        contributing_partners: [{ name: 'Partner' }],
+        evidence: [{ link: 'https://example.org/a' }],
+        contributing_bilateral_projects: [{ grant_title: 'P1' }],
+        contributing_center: [{ acronym: 'ILRI' }],
+        submitted_by: { email: 's@example.org', name: 'S' },
+        created_by: { email: 'c@example.org' },
+      });
+
+      const arrange = () => {
+        const { service } = makeService();
+        const svc: any = service;
+        const order: string[] = [];
+        // The stored row of the result: what the header update and the DSpace apply write into.
+        const stored: any = {
+          id: 501,
+          title: 'Stored title',
+          description: 'Stored',
+        };
+        let titleWhenApplied: string;
+        svc._resultRepository = {
+          update: jest.fn(async (_id: number, columns: any) => {
+            order.push('header.update');
+            Object.assign(stored, columns);
+          }),
+          findOne: jest.fn(async () => ({ ...stored })),
+          save: jest.fn(async (row: any) => {
+            order.push('result.save');
+            return row;
+          }),
+        };
+        svc._resultsKnowledgeProductsService.applyDspaceMetadata = jest.fn(
+          async (_kp: any, newMetadata: any) => {
+            order.push('applyDspaceMetadata');
+            titleWhenApplied = stored.title;
+            stored.title = newMetadata.title;
+          },
+        );
+        for (const name of [
+          'handleLeadCenter',
+          'findScope',
+          'handleRegions',
+          'handleCountries',
+          'handleTocMapping',
+          'handleInstitutions',
+          'handleEvidence',
+          'handleNonPooledProject',
+          'runResultTypeHandlers',
+          'handleContributingCenters',
+          'ensureDerivedContributingCenters',
+        ]) {
+          jest.spyOn(svc, name).mockImplementation(async () => {
+            order.push(name);
+            return name === 'findScope' ? { id: 4 } : undefined;
+          });
+        }
+        const args = (): any => ({
+          target: { id: 501, result_code: 31500 },
+          bilateralDto: kpDto(),
+          platform: STAR,
+          userId: USER,
+          submittedUserId: SUBMITTER,
+          resolvedProjects: new Map([['P1', { id: 77 }]]),
+          suppressPrimaryRole: false,
+          kp: { metadata, keepPartnerRowIds: KEPT },
+        });
+        return {
+          svc,
+          order,
+          stored,
+          args,
+          titleAtApply: () => titleWhenApplied,
+        };
+      };
+
+      // Falsifier 1: the payload title never reaches the row, not even for an instant.
+      it("the payload's title and description are never written: the stored title is the DSpace one, and was still the old one when the apply ran", async () => {
+        const { svc, stored, args, titleAtApply } = arrange();
+
+        await svc.writeResubmittedResult(args());
+
+        const [, columns] = svc._resultRepository.update.mock.calls[0];
+        expect(columns).not.toHaveProperty('title');
+        expect(columns).not.toHaveProperty('description');
+        expect(columns).toMatchObject({
+          result_level_id: 3,
+          last_updated_by: USER,
+        });
+        expect(titleAtApply()).toBe('Stored title');
+        expect(stored.title).toBe('Title from DSpace');
+        expect(stored.description).toBe('Stored');
+      });
+
+      // Falsifier 1 (second half) and 3: no geo writer, no evidence writer, no KP handler.
+      it('writes lead centre, ToC, partners (with the keep-list), projects and centres, and the apply comes LAST; no geo, evidence or type-handler writer runs', async () => {
+        const { svc, order, args } = arrange();
+        const payload = args();
+
+        await svc.writeResubmittedResult(payload);
+
+        expect(order).toEqual([
+          'header.update',
+          'handleLeadCenter',
+          'handleTocMapping',
+          'handleInstitutions',
+          'handleNonPooledProject',
+          'handleContributingCenters',
+          'ensureDerivedContributingCenters',
+          'applyDspaceMetadata',
+        ]);
+        expect(svc.handleInstitutions).toHaveBeenCalledWith(
+          501,
+          payload.bilateralDto.contributing_partners,
+          USER,
+          ResultTypeEnum.KNOWLEDGE_PRODUCT,
+          KEPT,
+        );
+        expect(
+          svc._resultsKnowledgeProductsService.applyDspaceMetadata,
+        ).toHaveBeenCalledWith(
+          metadata.resultKnowledgeProduct,
+          metadata.newMetadata,
+          {
+            id: USER,
+          },
+        );
+      });
+
+      it('a throw of the apply is a throw of the writer (nothing after it, nothing swallowed)', async () => {
+        const { svc, args } = arrange();
+        svc._resultsKnowledgeProductsService.applyDspaceMetadata = jest
+          .fn()
+          .mockRejectedValue(new Error('KPC-T-4 spec: the apply failed'));
+
+        await expect(svc.writeResubmittedResult(args())).rejects.toThrow(
+          'the apply failed',
+        );
+      });
+
+      it('the read member of the KP port is the repository read of the MQAP-linked PARTNER rows', async () => {
+        const { service } = makeService();
+        const svc: any = service;
+        svc._resultByIntitutionsRepository.getMqapLinkedPartnerRowIds = jest
+          .fn()
+          .mockResolvedValue(KEPT);
+
+        await expect(
+          svc
+            .buildResubmissionKnowledgeProductPort()
+            .readMqapLinkedPartnerRowIds(501),
+        ).resolves.toBe(KEPT);
+        expect(
+          svc._resultByIntitutionsRepository.getMqapLinkedPartnerRowIds,
+        ).toHaveBeenCalledWith(501);
       });
     });
 
