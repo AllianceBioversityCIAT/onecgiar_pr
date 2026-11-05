@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, output, signal, untracked, viewChild } from '@angular/core';
+import { timeout } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -23,7 +24,7 @@ import {
 } from '../../../../shared/report-result/create-result-payload.util';
 // @akili-spec results/impact-results-reporting/sp-reporting-entry (IRE-T-3)
 import { ImpactArea } from '../../../../shared/report-result/impact-areas.constant';
-import { KP_HANDLE_NO_ERROR, KpHandleError, pickKpBrowseLink, validateKpHandle } from '../../../../shared/report-result/kp-handle.validator';
+import { KP_HANDLE_NO_ERROR, KpHandleError, normalizeKpHandle, pickKpBrowseLink, validateKpHandle } from '../../../../shared/report-result/kp-handle.validator';
 import {
   INNOVATION_LINK_QUESTION,
   QaInnovationDevelopmentResultsService,
@@ -53,6 +54,22 @@ import {
   unsavedPtEvidenceNames
 } from './pt-prefill.util';
 import { rememberPtUnsavedEvidence } from '../../../../../../shared/constants/pt-unsaved-evidence-notice';
+import {
+  PtCgspaceCandidate,
+  PtKpSearchSkipReason,
+  pickVerifiedCgspaceCandidate,
+  ptKpHandleSearchPlan
+} from './pt-kp-handle-search';
+
+/** How long a title search may run before the form stops waiting and leaves the handle empty. */
+const PT_CGSPACE_SEARCH_TIMEOUT_MS = 12_000;
+
+const PT_CGSPACE_SKIP_COPY: Partial<Record<PtKpSearchSkipReason, string>> = {
+  no_title: 'This proposal has no title long enough to search in CGSpace. Paste a repository handle or browse for one.',
+  no_evidence: 'This proposal does not cite evidence, so PRMS will not search CGSpace by title.',
+  confidence_missing: 'Progress Tracker did not send a confidence score, so PRMS will not guess a CGSpace handle from the title.',
+  confidence_low: 'Progress Tracker confidence is below 60%, so PRMS will not search CGSpace for a handle. Browse or paste one.'
+};
 
 // @akili-spec changes/kp-program-accelerator-match (KPAM-T-3, KPAM-R-2)
 export const SCIENCE_PROGRAM_NAMES: Record<string, string> = {
@@ -393,6 +410,11 @@ export class LabReportFormComponent {
    * It is not copied into the handle field and Sync is not offered for it.
    */
   readonly ptRejectedHandle = signal<string | null>(null);
+  /** A CGSpace title hit the user has not accepted. It is not written into the handle field. */
+  readonly ptCgspaceCandidate = signal<PtCgspaceCandidate | null>(null);
+  readonly ptCgspaceSearchState = signal<'idle' | 'loading' | 'none' | 'ambiguous' | 'error' | 'timeout' | 'skipped'>('idle');
+  readonly ptCgspaceSkipReason = signal<PtKpSearchSkipReason | null>(null);
+  private ptCgspaceSearchGen = 0;
   /** Evidence names PT holds without an http(s) link. Not saved as Evidence rows. */
   readonly ptUnsavedEvidenceNames = computed(() => unsavedPtEvidenceNames(this.ptDraft()));
   /**
@@ -462,6 +484,17 @@ export class LabReportFormComponent {
    */
   readonly ptIndicatorFixesResultType = computed<boolean>(() => this.resolvedIndicatorResultTypeId() != null);
 
+  /**
+   * Category the Progress Tracker typology flag is compared with: the indicator's fixed category,
+   * otherwise the category already chosen on the form. Empty when neither exists, so no flag.
+   */
+  readonly ptExpectedTypeLabel = computed(() => {
+    const fixed = this.resolvedIndicatorResultTypeId();
+    if (fixed != null) return resolveReportResultTypeName(this.indicator(), fixed);
+    const chosen = this.createResultBody().result_type_id;
+    return chosen != null ? resolveReportResultTypeName({ result_type_id: chosen }) : '';
+  });
+
   onOpenProgressTrackerTab(): void {
     this.kpEntryMode.set('progress-tracker');
     this.ptTabOpened.set(true);
@@ -474,6 +507,7 @@ export class LabReportFormComponent {
     this.ptDraft.set(null);
     this.ptTitleTruncated.set(false);
     this.ptRejectedHandle.set(null);
+    this.resetPtCgspaceSearch();
   }
 
   /**
@@ -523,6 +557,7 @@ export class LabReportFormComponent {
     // INC-167646: validate before copying. A DOI or other non-repository link is not patched and
     // Sync is not offered — the user must browse or paste a CGSpace, MELSpace or WorldFish handle.
     this.applyPtKnowledgeProductHandle(proposal);
+    this.suggestCgspaceHandle(proposal);
 
     this.applyPtContribution(proposal);
     void this.applyPtCenters(proposal);
@@ -533,6 +568,78 @@ export class LabReportFormComponent {
    * A known-invalid value (doi.org, another repository, a bare DOI) stays out of the field.
    * Nothing is derived from the DOI and no CGSpace lookup is added.
    */
+  /**
+   * INC-167646. For a knowledge product with evidence, a title, and confidence of at least 60%,
+   * and no valid repository handle, search CGSpace by that title. A single title-matched handle
+   * is offered for review. Accepting it fills the field and does not call Sync or MQAP. A DOI is
+   * not turned into a handle. Errors, timeouts, low confidence, and more than one match leave the
+   * field empty.
+   */
+  private suggestCgspaceHandle(proposal: PtProposalDto): void {
+    this.resetPtCgspaceSearch();
+    const plan = ptKpHandleSearchPlan(proposal, this.currentResultIsKnowledgeProduct());
+    if (plan.action === 'skip') {
+      this.ptCgspaceSearchState.set(plan.tellUser ? 'skipped' : 'idle');
+      this.ptCgspaceSkipReason.set(plan.tellUser ? plan.reason : null);
+      return;
+    }
+    const search = this.api.resultsSE?.GET_cgspaceSearch;
+    if (typeof search !== 'function') {
+      this.ptCgspaceSearchState.set('error');
+      return;
+    }
+    const gen = ++this.ptCgspaceSearchGen;
+    this.ptCgspaceSearchState.set('loading');
+    search
+      .call(this.api.resultsSE, { query: plan.query, repository: 'cgspace', size: 5, page: 0 })
+      .pipe(timeout(PT_CGSPACE_SEARCH_TIMEOUT_MS))
+      .subscribe({
+        next: (res: { response?: { items?: unknown } }) => {
+          if (gen !== this.ptCgspaceSearchGen || this.ptDraft() !== proposal) return;
+          const pick = pickVerifiedCgspaceCandidate(plan.query, res?.response?.items);
+          if (pick.status === 'one') {
+            this.ptCgspaceCandidate.set(pick.candidate);
+            this.ptCgspaceSearchState.set('idle');
+            return;
+          }
+          this.ptCgspaceSearchState.set(pick.status === 'ambiguous' ? 'ambiguous' : 'none');
+        },
+        error: (err: { name?: string }) => {
+          if (gen !== this.ptCgspaceSearchGen) return;
+          this.ptCgspaceSearchState.set(err?.name === 'TimeoutError' ? 'timeout' : 'error');
+        }
+      });
+  }
+
+  /** Writes the reviewed handle only. Sync stays a separate action and is not called here. */
+  acceptPtCgspaceCandidate(): void {
+    const candidate = this.ptCgspaceCandidate();
+    if (!candidate || validateKpHandle(candidate.handle).status) return;
+    this.patch('handler', normalizeKpHandle(candidate.handle));
+    this.ptRejectedHandle.set(null);
+    this.ptCgspaceCandidate.set(null);
+    this.ptCgspaceSearchState.set('idle');
+    this.markDirty();
+  }
+
+  ptCgspaceMessage(): string {
+    const state = this.ptCgspaceSearchState();
+    if (state === 'loading') return 'Searching CGSpace by this title. Nothing is filled in until you review a match.';
+    if (state === 'none') return 'CGSpace search by title did not find one item with the same title and a repository handle. Nothing was filled in.';
+    if (state === 'ambiguous') return 'CGSpace search found more than one item with this title. None was selected. Review them in Browse repositories.';
+    if (state === 'timeout') return 'CGSpace search timed out. Nothing was filled in. Browse or paste a repository handle.';
+    if (state === 'error') return 'CGSpace search failed. Nothing was filled in. Browse or paste a repository handle.';
+    if (state === 'skipped') return PT_CGSPACE_SKIP_COPY[this.ptCgspaceSkipReason() ?? 'no_evidence'] ?? '';
+    return '';
+  }
+
+  private resetPtCgspaceSearch(): void {
+    this.ptCgspaceSearchGen += 1;
+    this.ptCgspaceCandidate.set(null);
+    this.ptCgspaceSearchState.set('idle');
+    this.ptCgspaceSkipReason.set(null);
+  }
+
   private applyPtKnowledgeProductHandle(proposal: PtProposalDto): void {
     if (!this.currentResultIsKnowledgeProduct()) return;
     const raw = proposal.knowledge_product_handle;

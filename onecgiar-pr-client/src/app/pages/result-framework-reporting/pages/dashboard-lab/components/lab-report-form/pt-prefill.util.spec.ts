@@ -12,6 +12,7 @@ import {
   ptMatchedPartners,
   ptGeoLevel,
   ptGeographyPlan,
+  ptReadinessPlan,
   ptImpactAreaPlan,
   ptImpactAreaPolicy,
   ptPendingChecklistHtml,
@@ -268,9 +269,12 @@ describe('pt-prefill.util — geography (PTB-R-18b)', () => {
     expect(ptGeographyPlan(p())).toEqual({ geography: null, suggested: false, pending: [] });
   });
 
-  it('policy none on scope_level derives the focus from the countries; none on countries drops them', () => {
+  it('policy none on scope_level derives the focus from the countries; a delivered global scope with no countries is filled for review', () => {
     expect(plan({ level: 'global', countries: [mali] }, { scope_level: 'none' }).geography).toMatchObject({ geo_scope_id: 3, countries: [{ clarisa_id: 466 }] });
-    expect(plan({ level: 'global', countries: [] }, { scope_level: 'none' }).geography).toBeNull();
+    const deliveredGlobal = plan({ level: 'global', countries: [] }, { scope_level: 'none' });
+    expect(deliveredGlobal.geography).toMatchObject({ geo_scope_id: 1, countries: [] });
+    expect(deliveredGlobal.suggested).toBe(true);
+    expect(deliveredGlobal.pending[0].detail).toContain('not to apply');
     const dropped = plan({ level: 'national', countries: [mali] }, { countries: 'none' });
     expect(dropped.geography).toBeNull();
     expect(plan({ countries: [] }, { scope_level: 'none', countries: 'none', regions: 'none' }).pending).toEqual([]);
@@ -291,6 +295,38 @@ describe('pt-prefill.util — geography (PTB-R-18b)', () => {
     const applied = plan({}, { countries: 'apply', scope_level: 'apply' });
     expect(applied.suggested).toBe(false);
     expect(applied.pending).toEqual([]);
+  });
+});
+
+describe('pt-prefill.util — innovation readiness (INC-167646)', () => {
+  const innovation = (level: number | null, name: string | null = 'Model/Early Prototype') => ({
+    readiness_level: level,
+    readiness_level_name: name,
+    typology: 'Policy, organizational or institutional innovation',
+    developers: ['CIAT']
+  });
+
+  it('fills an integer 0-9 for an innovation development, and explains a none policy instead of writing it', () => {
+    const suggested = ptReadinessPlan(p({ result_type: 'innovation_development', result_type_label: 'Innovation development', innovation: innovation(5), policy: { readiness_level: 'suggest' } }));
+    expect(suggested.level).toBe(5);
+    expect(suggested.suggested).toBe(true);
+    expect(suggested.pending[0].detail).toContain('5 (Model/Early Prototype)');
+
+    const blocked = ptReadinessPlan(p({ result_type: 'innovation_development', innovation: innovation(4, null), policy: { readiness_level: 'none' } }));
+    expect(blocked.level).toBeNull();
+    expect(blocked.pending[0].detail).toContain('not to apply');
+    expect(buildPtPrefillBlock(p({ result_type: 'innovation_development', innovation: innovation(4, null), policy: { readiness_level: 'none' } }))).toBeNull();
+  });
+
+  it('does not invent a level for another result type, a name alone, or a value outside 0-9', () => {
+    expect(ptReadinessPlan(p({ result_type: 'knowledge_product', innovation: innovation(5) })).level).toBeNull();
+    expect(ptReadinessPlan(p({ result_type: 'innovation_development', innovation: innovation(null) })).level).toBeNull();
+    expect(ptReadinessPlan(p({ result_type: 'innovation_development', innovation: innovation(11) })).level).toBeNull();
+    const block = buildPtPrefillBlock(p({ result_type: 'innovation_development', result_type_label: 'Innovation development', innovation: innovation(5), policy: { readiness_level: 'apply' } }));
+    expect(block?.readiness).toEqual({ level: 5 });
+    expect(JSON.stringify(block)).not.toMatch(/typology|CIAT|Model/);
+    const labels = buildPtPendingChecklist(p({ result_type: 'innovation_development', innovation: innovation(5) }), []).map(i => i.label);
+    expect(labels).toEqual(expect.arrayContaining(['Innovation typology', 'Innovation developers']));
   });
 });
 

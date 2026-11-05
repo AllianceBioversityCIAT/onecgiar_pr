@@ -18,6 +18,8 @@ import { ResultsByInstitution } from '../results/results_by_institutions/entitie
 import { ClarisaInstitution } from '../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
 import { InstitutionRoleEnum } from '../results/results_by_institutions/entities/institution_role.enum';
 import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
+import { ClarisaInnovationReadinessLevel } from '../../clarisa/clarisa-innovation-readiness-levels/entities/clarisa-innovation-readiness-level.entity';
+import { ResultsInnovationsDev } from '../results/summary/entities/results-innovations-dev.entity';
 
 // PTB-R-18a (2026-10-19) — evidence links + matched partners saved best-effort after create.
 describe('ProgressTrackerPrefillService', () => {
@@ -38,6 +40,12 @@ describe('ProgressTrackerPrefillService', () => {
   const clarisaCountryRepo = { find: jest.fn() };
   const clarisaRegionRepo = { find: jest.fn() };
   const clarisaSubnationalRepo = { find: jest.fn() };
+  const readinessRepo = { findOne: jest.fn() };
+  const innovationDevRepo = {
+    findOne: jest.fn(),
+    create: jest.fn((v) => v),
+    save: jest.fn(async (v) => v),
+  };
   const geographicLocation = { saveGeoScopeV2: jest.fn() };
   const moduleRef = { get: jest.fn(() => geographicLocation) };
   let service: ProgressTrackerPrefillService;
@@ -57,6 +65,8 @@ describe('ProgressTrackerPrefillService', () => {
     clarisaCountryRepo.find.mockResolvedValue([]);
     clarisaRegionRepo.find.mockResolvedValue([]);
     clarisaSubnationalRepo.find.mockResolvedValue([]);
+    readinessRepo.findOne.mockResolvedValue(null);
+    innovationDevRepo.findOne.mockResolvedValue(null);
     geographicLocation.saveGeoScopeV2.mockResolvedValue({
       status: HttpStatus.OK,
     });
@@ -92,6 +102,14 @@ describe('ProgressTrackerPrefillService', () => {
         {
           provide: getRepositoryToken(ClarisaSubnationalScope),
           useValue: clarisaSubnationalRepo,
+        },
+        {
+          provide: getRepositoryToken(ClarisaInnovationReadinessLevel),
+          useValue: readinessRepo,
+        },
+        {
+          provide: getRepositoryToken(ResultsInnovationsDev),
+          useValue: innovationDevRepo,
         },
         { provide: ModuleRef, useValue: moduleRef },
       ],
@@ -137,6 +155,7 @@ describe('ProgressTrackerPrefillService', () => {
         partners: [],
         geography: null,
         impact_areas: {},
+        readiness: null,
       };
       expect(ProgressTrackerPrefillService.sanitize(null)).toEqual(empty);
       expect(ProgressTrackerPrefillService.sanitize('x')).toEqual(empty);
@@ -550,6 +569,101 @@ describe('ProgressTrackerPrefillService', () => {
       ).resolves.toMatchObject({
         geography_skipped_reason: 'failed',
         impact_areas_applied: ['gender'],
+      });
+    });
+  });
+
+  describe('innovation readiness (INC-167646)', () => {
+    it('drops a non-integer, a level outside 0-9, and a bare number that is not under readiness.level', () => {
+      expect(
+        ProgressTrackerPrefillService.sanitize({
+          readiness: { level: 5 },
+        }).readiness,
+      ).toBe(5);
+      expect(
+        ProgressTrackerPrefillService.sanitize({ readiness: { level: '5' } })
+          .readiness,
+      ).toBeNull();
+      expect(
+        ProgressTrackerPrefillService.sanitize({ readiness: { level: 5.5 } })
+          .readiness,
+      ).toBeNull();
+      expect(
+        ProgressTrackerPrefillService.sanitize({ readiness: { level: 12 } })
+          .readiness,
+      ).toBeNull();
+    });
+
+    it('resolves the level against the catalogue and creates the innovation row when the result has none', async () => {
+      resultRepo.findOne.mockResolvedValue({ id: 101, result_type_id: 7 });
+      readinessRepo.findOne.mockResolvedValue({ id: 15, level: 5 });
+      const summary = await service.apply(
+        101,
+        { readiness: { level: 5 } },
+        10,
+        false,
+      );
+      expect(summary.readiness_applied).toBe(5);
+      expect(summary.readiness_skipped_reason).toBeNull();
+      expect(readinessRepo.findOne).toHaveBeenCalledWith({
+        where: { level: 5 },
+      });
+      expect(innovationDevRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          results_id: 101,
+          is_active: true,
+          created_by: 10,
+          innovation_readiness_level: { id: 15 },
+        }),
+      );
+    });
+
+    it('does not write a level onto another result type, an unknown level, or a row that already has one', async () => {
+      resultRepo.findOne.mockResolvedValue({ id: 101, result_type_id: 6 });
+      const other = await service.apply(
+        101,
+        { readiness: { level: 5 } },
+        10,
+        false,
+      );
+      expect(other.readiness_skipped_reason).toBe(
+        'not_innovation_development',
+      );
+      expect(innovationDevRepo.save).not.toHaveBeenCalled();
+
+      resultRepo.findOne.mockResolvedValue({ id: 101, result_type_id: 7 });
+      readinessRepo.findOne.mockResolvedValue(null);
+      const unknown = await service.apply(
+        101,
+        { readiness: { level: 4 } },
+        10,
+        false,
+      );
+      expect(unknown.readiness_skipped_reason).toBe('unknown_level');
+
+      readinessRepo.findOne.mockResolvedValue({ id: 15, level: 4 });
+      innovationDevRepo.findOne.mockResolvedValue({
+        results_id: 101,
+        innovation_readiness_level_id: 11,
+        is_active: true,
+      });
+      const filled = await service.apply(
+        101,
+        { readiness: { level: 4 } },
+        10,
+        false,
+      );
+      expect(filled.readiness_skipped_reason).toBe('not_empty');
+      expect(innovationDevRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('reports a failure and does not throw', async () => {
+      resultRepo.findOne.mockRejectedValue(new Error('db down'));
+      await expect(
+        service.apply(101, { readiness: { level: 2 } }, 10, false),
+      ).resolves.toMatchObject({
+        readiness_applied: null,
+        readiness_skipped_reason: 'failed',
       });
     });
   });

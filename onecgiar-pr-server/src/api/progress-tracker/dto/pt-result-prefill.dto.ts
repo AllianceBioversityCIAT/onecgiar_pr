@@ -112,6 +112,12 @@ export class PtResultPrefillDto {
       'Impact-area scores (0 | 1 | 2) by PT key: gender, climate, nutrition, environment, poverty.',
   })
   impact_areas?: Partial<Record<PtImpactAreaKey, number>>;
+
+  @ApiPropertyOptional({
+    description:
+      'Innovation readiness as the 0-9 level Progress Tracker sent. The server resolves the CLARISA id. Not a CLARISA id.',
+  })
+  readiness?: { level: number };
 }
 
 /** What the prefill step did — returned as `response.progressTrackerPrefill`. */
@@ -130,4 +136,8 @@ export interface PtPrefillSummary {
   impact_areas_applied: PtImpactAreaKey[];
   /** PT impact-area keys not written (already scored on the result, or a failure). */
   impact_areas_skipped: PtImpactAreaKey[];
+  /** INC-167646: the 0-9 level written, or `null` when none was. */
+  readiness_applied?: number | null;
+  /** `not_innovation_development` · `unknown_level` · `not_empty` · `failed`. */
+  readiness_skipped_reason?: string | null;
 }

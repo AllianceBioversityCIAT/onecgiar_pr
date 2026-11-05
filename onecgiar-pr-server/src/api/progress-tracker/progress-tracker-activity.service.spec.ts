@@ -122,6 +122,8 @@ describe('ProgressTrackerActivityService', () => {
             matched: true,
             evidence_count: 13,
             pt_indicator_id: '8006329bfd49',
+            cached_results_count: null,
+            result_types: [],
           },
           {
             toc_results_indicator_id: '5d51da6c6916',
@@ -130,10 +132,45 @@ describe('ProgressTrackerActivityService', () => {
             matched: true,
             evidence_count: 8,
             pt_indicator_id: '906bb71c7c54',
+            cached_results_count: null,
+            result_types: [],
           },
         ],
       },
     });
+  });
+
+  it('INC-167646: copies cached_results_count and result_types only when the ready-counts item sends them', async () => {
+    ptService.getProgramReadyCounts.mockResolvedValue(
+      readyCounts('ok', [
+        {
+          indicator_id: '8006329bfd49',
+          evidence_count: 4,
+          cached_results_count: 2,
+          result_types: ['knowledge_product', ' knowledge_product ', 7, ''],
+        },
+        {
+          indicator_id: '906bb71c7c54',
+          evidence_count: 3,
+          cached_results_count: 0,
+        },
+      ]),
+    );
+    mappingRepository.find.mockResolvedValue([
+      mapRow(),
+      mapRow({
+        id: 2,
+        center: 'IRRI',
+        pt_indicator_id: '906bb71c7c54',
+      }),
+    ]);
+
+    const res = await service.getProgramIndicatorActivity('SP01');
+    const [withTypes, withoutTypes] = res.response.items;
+    expect(withTypes.cached_results_count).toBe(2);
+    expect(withTypes.result_types).toEqual(['knowledge_product']);
+    expect(withoutTypes.cached_results_count).toBe(0);
+    expect(withoutTypes.result_types).toEqual([]);
   });
 
   it('marks needs_review and match_quality none rows as not matched (same gate as the proposals route)', async () => {

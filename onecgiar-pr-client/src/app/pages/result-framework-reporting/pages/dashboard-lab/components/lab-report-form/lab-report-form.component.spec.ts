@@ -3,7 +3,7 @@ import { join } from 'path';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, throwError, TimeoutError } from 'rxjs';
 import { LabReportFormComponent } from './lab-report-form.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
@@ -32,6 +32,7 @@ function makeApiMock(phaseYear?: number) {
       GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
       GET_W3BilateralProjectsByProgram: jest.fn().mockReturnValue(of({ response: [] })),
       GET_mqapValidation: jest.fn().mockReturnValue(of({ response: { title: 'Retrieved title', metadata: [{ source: 'CGSpace' }] } })),
+      GET_cgspaceSearch: jest.fn().mockReturnValue(of({ response: { items: [] } })),
       POST_createResult: jest.fn().mockReturnValue(of({ response: { result: { result_code: 'R-1', version_id: 9 } } })),
       // P2-3420 — catalogue behind the link-to-a-QA'd-innovation dropdown.
       GET_qaInnovationDevelopmentResults: jest.fn().mockReturnValue(
@@ -2543,6 +2544,106 @@ describe('LabReportFormComponent — Progress Tracker entry mode (PTB-T-3)', () 
       expect(rejected.textContent).toContain('not a CGSpace, MELSpace or WorldFish');
       expect(rejected.textContent).toContain(doi);
       expect(rejected.textContent).not.toContain('press Sync');
+    });
+
+    it('INC-167646: a KP with evidence and no valid handle searches CGSpace by title and does not treat a DOI as a handle', async () => {
+      const doi = 'https://doi.org/10.1234/example.paper';
+      const title = 'Conflict sensitivity repository framework';
+      const fix = await mountPt({ indicator: kpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
+      const api: any = TestBed.inject(ApiService);
+      const handle = 'https://cgspace.cgiar.org/items/679513e4-eeba-4a06-a017-015862e7b9b3';
+      api.resultsSE.GET_cgspaceSearch.mockReturnValue(
+        of({
+          response: {
+            items: [
+              {
+                repository: 'cgspace',
+                title,
+                doi,
+                handle: '10568/182598',
+                handleUrl: 'https://hdl.handle.net/10568/182598',
+                itemUrl: handle
+              }
+            ]
+          }
+        })
+      );
+      fix.componentInstance.onOpenProgressTrackerTab();
+      fix.componentInstance.onPtResultSelected(
+        proposal({
+          result_type: 'knowledge_product',
+          result_type_label: 'Knowledge product',
+          title,
+          confidence: 0.9,
+          evidence: [{ name: 'Centre consultation note' }],
+          knowledge_product_handle: doi
+        })
+      );
+      fix.detectChanges();
+
+      expect(api.resultsSE.GET_cgspaceSearch).toHaveBeenCalledWith({ query: title, repository: 'cgspace', size: 5, page: 0 });
+      expect(JSON.stringify(api.resultsSE.GET_cgspaceSearch.mock.calls[0][0])).not.toContain('doi.org');
+      expect(fix.componentInstance.createResultBody().handler).toBe('');
+      expect(api.resultsSE.GET_mqapValidation).not.toHaveBeenCalled();
+      expect(fix.nativeElement.querySelector('[data-testid="pt-cgspace-candidate-handle"]')?.textContent).toContain(handle);
+
+      fix.nativeElement.querySelector('[data-testid="pt-cgspace-candidate-accept"]')?.click();
+      fix.detectChanges();
+      expect(fix.componentInstance.createResultBody().handler).toBe(handle);
+      expect(fix.componentInstance.mqapJson()).toBeNull();
+      expect(api.resultsSE.GET_mqapValidation).not.toHaveBeenCalled();
+      expect(fix.nativeElement.querySelector('[data-testid="pt-sync-required-prompt"]')).toBeTruthy();
+    });
+
+    it('INC-167646: low confidence, a missing confidence, an empty search, an ambiguous search, an error and a timeout leave the handle empty', async () => {
+      const title = 'Conflict sensitivity repository framework';
+      const base = {
+        result_type: 'knowledge_product',
+        result_type_label: 'Knowledge product',
+        title,
+        evidence: [{ name: 'Centre consultation note' }],
+        knowledge_product_handle: null as string | null
+      };
+      const fix = await mountPt({ indicator: kpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
+      const api: any = TestBed.inject(ApiService);
+      fix.componentInstance.onOpenProgressTrackerTab();
+
+      fix.componentInstance.onPtResultSelected(proposal({ ...base, confidence: 0.4 }));
+      expect(api.resultsSE.GET_cgspaceSearch).not.toHaveBeenCalled();
+      expect(fix.componentInstance.ptCgspaceMessage()).toContain('below 60%');
+
+      fix.componentInstance.onPtResultSelected(proposal({ ...base, confidence: null }));
+      expect(api.resultsSE.GET_cgspaceSearch).not.toHaveBeenCalled();
+      expect(fix.componentInstance.ptCgspaceMessage()).toContain('did not send a confidence');
+
+      api.resultsSE.GET_cgspaceSearch.mockReturnValue(of({ response: { items: [] } }));
+      fix.componentInstance.onPtResultSelected(proposal({ ...base, confidence: 0.9 }));
+      expect(fix.componentInstance.createResultBody().handler).toBe('');
+      expect(fix.componentInstance.ptCgspaceMessage()).toContain('did not find one item');
+
+      api.resultsSE.GET_cgspaceSearch.mockReturnValue(
+        of({
+          response: {
+            items: [
+              { repository: 'cgspace', title, itemUrl: 'https://cgspace.cgiar.org/items/679513e4-eeba-4a06-a017-015862e7b9b3', handleUrl: '', handle: '10568/1' },
+              { repository: 'cgspace', title, itemUrl: 'https://cgspace.cgiar.org/items/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', handleUrl: '', handle: '10568/2' }
+            ]
+          }
+        })
+      );
+      fix.componentInstance.onPtResultSelected(proposal({ ...base, confidence: 0.9, result_key: 'pt-ambiguous' }));
+      expect(fix.componentInstance.createResultBody().handler).toBe('');
+      expect(fix.componentInstance.ptCgspaceMessage()).toContain('more than one item');
+
+      api.resultsSE.GET_cgspaceSearch.mockReturnValue(throwError(() => new Error('down')));
+      fix.componentInstance.onPtResultSelected(proposal({ ...base, confidence: 0.9, result_key: 'pt-error' }));
+      expect(fix.componentInstance.ptCgspaceMessage()).toContain('search failed');
+
+      api.resultsSE.GET_cgspaceSearch.mockReturnValue(throwError(() => new TimeoutError()));
+      fix.componentInstance.onPtResultSelected(proposal({ ...base, confidence: 0.9, result_key: 'pt-timeout' }));
+      expect(fix.componentInstance.createResultBody().handler).toBe('');
+      expect(fix.componentInstance.ptCgspaceMessage()).toContain('timed out');
+      expect(api.resultsSE.GET_mqapValidation).not.toHaveBeenCalled();
     });
 
     it('INC-167646: a valid bare CGSpace handle is still prefilled and can go to Sync', async () => {

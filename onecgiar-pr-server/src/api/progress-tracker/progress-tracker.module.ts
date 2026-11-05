@@ -21,6 +21,8 @@ import { ResultRegion } from '../results/result-regions/entities/result-region.e
 import { ClarisaCountry } from '../../clarisa/clarisa-countries/entities/clarisa-country.entity';
 import { ClarisaRegion } from '../../clarisa/clarisa-regions/entities/clarisa-region.entity';
 import { ClarisaSubnationalScope } from '../../clarisa/clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
+import { ClarisaInnovationReadinessLevel } from '../../clarisa/clarisa-innovation-readiness-levels/entities/clarisa-innovation-readiness-level.entity';
+import { ResultsInnovationsDev } from '../results/summary/entities/results-innovations-dev.entity';
 
 /**
  * `PTM-T-2` — module skeleton for the Progress Tracker Interoperability surface
@@ -74,6 +76,8 @@ import { ClarisaSubnationalScope } from '../../clarisa/clarisa-subnational-scope
       ClarisaCountry,
       ClarisaRegion,
       ClarisaSubnationalScope,
+      ClarisaInnovationReadinessLevel,
+      ResultsInnovationsDev,
     ]),
   ],
   controllers: [ProgressTrackerController],
