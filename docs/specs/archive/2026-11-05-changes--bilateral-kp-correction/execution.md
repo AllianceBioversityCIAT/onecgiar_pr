@@ -224,6 +224,12 @@
 - **Final verification:** green (re-run VERIFIED).
 - **Running totals (Budget, re-baselined ~750 prod / ~1 400 test / ~60 doc):** tasks closed 6/7 · prod ≈ +752 / −275 (incl. 4 comment lines) · test ≈ +1 450 · doc +54/−9 · review rounds 6/9.
 
+### `KPC-T-7` — Live run on PRTest
+
+- **Final status:** PASS (user-run) · 2026-11-05 — the user ran the PRTest checks with their own agent and reported: "Ya hice las pruebas de mi lado y todo OK". The detailed run log (result codes, SQL counts, test data to purge) stays with the user; it is not reproduced here.
+- **Merge:** on the user's order ("commit de todo y merge en performance-refactor"), `JuanGuzman-io/fix-p2-4065-kp` (`4e39d5b99`) merged `--no-ff` into `origin/performance-refactor` (`0a457395f`) in a temporary detached worktree, with no conflicts → `3d2096eae`, pushed. Merged tree checked before the push: `npx tsc --noEmit` exit 0; `npx jest --testPathPattern="bilateral|results-knowledge-products|result_by_intitutions"` → `Test Suites: 61 passed, 61 total` / `Tests: 2143 passed, 2143 total`. Deploy follows the merge automatically.
+- **Live run:** the user runs it ("De las pruebas me encargo yo"). The checks to cover are the `KPC-T-7` task text plus the `KPC-T-7` forward pointers below (P-11 `items/<uuid>` edge; contributor drafts released; `from_cgspace` centres; duplicate PARTNER rows).
+
 ## Budget tripwire — `KPC-T-3` gate
 
 - **Fired:** 2026-11-05, after `KPC-T-3`. Measured `git diff --numstat a731286af..HEAD -- onecgiar-pr-server/src`: prod +537 / −197, test +771, vs §14 ~350 prod / ~650 test. Review rounds 3/9; tasks 3/7.
