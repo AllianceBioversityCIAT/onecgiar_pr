@@ -158,7 +158,13 @@
     [(ngModel)]="innovationDevInfoBody.innovation_collaborators">
   </app-pr-textarea>
 
-  <app-innovation-team-diversity [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-innovation-team-diversity>
+  <!-- changes/remove-innovation-team-diversity (ITD-R-1): the Innovation team diversity question is dropped
+       from the 2026 form. Same phase-year gate as P2-3264 (Megatrends), never isP25(): a 2025-phase result
+       still renders the question with what was answered. Render-only: the .ts load/map path and the save
+       body are untouched (ITD-DD-2), so stored answers are never wiped. -->
+  @if (!this.fieldsManagerSE.isInnovationDevFormReduced2026()) {
+    <app-innovation-team-diversity [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-innovation-team-diversity>
+  }
 
   <app-pr-field-header
     label="How would you assess the current readiness of this innovation?"

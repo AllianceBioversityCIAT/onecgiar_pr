@@ -1,33 +1,44 @@
-import { buildStatusModel } from '../../../../../bilateral/pages/bilateral-overview/bilateral-overview.aggregate';
 import { BilateralCenterResult } from '../../../../../bilateral/services/bilateral-center-result.interface';
 import { DimensionIndex, FilterRow, PortfolioFilterSelection, isActive, matchesRow } from '../../services/portfolio-filters';
 
 /**
  * P2-3858 — pure aggregation of the CGIAR Centers block (moved from Admin › All P/As and Centers into
- * the Portfolio overview by P2-3928). Rows are W3 (bilateral) only (CNR-1: the caller drops W1/W2), deduped by result id across Centers (PCA-R-4). It still
- * uses that page's `buildStatusModel` for the four status tiles (Editing · Pending review · Approved ·
- * Rejected) over the rows it is given.
+ * the Portfolio overview by P2-3928). Rows are W3 (bilateral) only (CNR-1: the caller drops W1/W2), deduped by result id across Centers (PCA-R-4).
+ * CBT-DD-1: it counts each row in exactly ONE status id itself (the Center Overview's `buildStatusModel` stays its own 4-tile model):
+ * ids 1-7 count as themselves; Draft (8), null and unknown ids fold into Editing (CBT-DD-2), so the counts always add up to `rows.length`.
  */
-export const CENTER_STATUS_IDS = [1, 5, 6, 7] as const;
+/** Every status a tile can show, in the deck's slot order (CBT-DD-4). A row's `counts` follow this order. */
+export const CENTER_STATUS_IDS = [1, 2, 3, 5, 6, 7, 4] as const;
+/** Tiles that always show (Editing · Pending review · Approved · Rejected); the others show when > 0 or selected (CBT-R-3). */
+export const CENTER_BASE_STATUS_IDS: readonly number[] = [1, 5, 6, 7];
+
+/** The one status id a row counts in (CBT-DD-2). */
+export function statusBucket(row: BilateralCenterResult): number {
+  const id = Number(row.status_id);
+  return (CENTER_STATUS_IDS as readonly number[]).includes(id) ? id : 1;
+}
 
 export interface EntityOverviewRow {
   code: string;
   name: string;
   link: string;
   total: number;
-  /** Count per status id, in the order of the table's columns. */
+  /** Count per status id, in the order of `CENTER_STATUS_IDS`. */
   counts: number[];
 }
 
 export function buildCenterRow(code: string, acronym: string, rows: readonly BilateralCenterResult[]): EntityOverviewRow {
-  const tiles = buildStatusModel(rows).tiles;
-  const countFor = (id: number) => tiles.find(tile => tile.statusIds.includes(id))?.count ?? 0;
+  const byId = new Map<number, number>();
+  rows.forEach(row => {
+    const id = statusBucket(row);
+    byId.set(id, (byId.get(id) ?? 0) + 1);
+  });
   return {
     code,
     name: acronym,
     link: `/bilateral/${encodeURIComponent(acronym)}/overview`,
     total: rows.length,
-    counts: CENTER_STATUS_IDS.map(countFor)
+    counts: CENTER_STATUS_IDS.map(id => byId.get(id) ?? 0)
   };
 }
 

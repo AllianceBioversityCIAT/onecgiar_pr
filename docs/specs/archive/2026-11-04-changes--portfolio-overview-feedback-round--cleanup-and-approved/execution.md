@@ -163,3 +163,7 @@ Dedupe, no-Center note (2 attempts) and DD-6 lead-P/A rule each got a Reviewer P
 - **Spec amendments:** PCA-R-4 +1 clause, PCA-DD-6 (pivot). No server change, no migration.
 - **Open follow-ups (outside this spec):** (1) check prod for W3 results linked only to CENTER-16 (SMO), using the same fix. (2) The `submitter` predicate equals the deck only while no lead initiative is inactive or blank (accepted risk; fix = server `has_active_lead_pa` flag). (3) `npm run test:local` exits 1 silently on this machine. (4) Optional product decision: sr-only "Share %" column and donut tooltip `({d}%)`. (5) The 30 replicated innovations without a P/A are hidden from the Portfolio until they get one (PAA follow-up). (6) Guide is at 127+ lines vs 120 cap.
 - **No commit yet** — awaiting the user.
+
+## Prod pre-check (user, PRMSPROD, 2026-11-04 — code not yet deployed)
+
+P1: `deck_w3` 288 · `centers_w3_con_regla` 287 · `sin_center` 1 · `sin_lead_pa` 0 → 287 + 1 = 288, so once this ships the deck, Centers block and note will reconcile in prod. P2 (W3 linked only to CENTER-16): no rows. P3: `inactive_lead` 0 · `blank_code` 0, so the accepted risk holds in prod. Prod follow-ups 1 and 2 from the Summary are closed. V-1's earlier 324 counted every API row with no lead-P/A and type rule; the extra 36 are API results with no lead P/A and no Center, which neither side counts.

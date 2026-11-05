@@ -23,7 +23,7 @@ import {
 } from './centers-block.charts';
 import { BilateralCenterResult } from '../../../../../bilateral/services/bilateral-center-result.interface';
 import { DimensionIndex, EMPTY_SELECTION, PortfolioFilterSelection, isActive, notAffectedBy } from '../../services/portfolio-filters';
-import { CENTER_STATUS_IDS, CenterOrigin, applyGlobal, buildCenterRow, byOrigin, dedupeById, hasLeadProgram, isW3Row, originCounts } from './centers-block.aggregate';
+import { CENTER_BASE_STATUS_IDS, CENTER_STATUS_IDS, CenterOrigin, applyGlobal, buildCenterRow, byOrigin, dedupeById, hasLeadProgram, isW3Row, originCounts } from './centers-block.aggregate';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -80,9 +80,17 @@ export class PortfolioCentersBlockComponent {
   /** PCA-R-4: every loaded Center's W3 rows under the global selection, one row per result (a shared result counts once). */
   private readonly distinctRows = computed(() => dedupeById(this.globalCenters().flatMap(center => center.w3Rows)));
   /** Status counts of the distinct rows of the selected origin (CNR-3), for the donut and the tiles. */
+  private readonly statusRow = computed(() => buildCenterRow('all', '', byOrigin(this.distinctRows(), this.origin())));
+  /** CBT-R-3 / DD-3: the base tiles always; Quality Assessed / Submitted / Discontinued when their count is > 0 or they are selected. Deck order. */
+  readonly visibleStatusIds = computed<number[]>(() => {
+    const counts = this.statusRow().counts;
+    const selected = this.selectedStatus();
+    return CENTER_STATUS_IDS.filter((id, index) => CENTER_BASE_STATUS_IDS.includes(id) || counts[index] > 0 || id === selected);
+  });
+  /** Counts of the visible ids, in the same order (`buildSegments` pairs by index); `total` is the distinct row count, so the counts add up to it. */
   readonly statusTotals = computed(() => {
-    const row = buildCenterRow('all', '', byOrigin(this.distinctRows(), this.origin()));
-    return { total: row.total, counts: row.counts };
+    const row = this.statusRow();
+    return { total: row.total, counts: this.visibleStatusIds().map(id => row.counts[CENTER_STATUS_IDS.indexOf(id as (typeof CENTER_STATUS_IDS)[number])]) };
   });
   readonly centersPartial = computed(() => this.centerRows().some(center => center.state === 'error'));
   readonly centersLoading = computed(() => this.centerRows().some(center => center.state === 'loading'));
@@ -129,7 +137,7 @@ export class PortfolioCentersBlockComponent {
 
   /** Status columns with the colour the charts paint. */
   readonly columns = computed<StatusColumn[]>(() =>
-    CENTER_STATUS_IDS.map(id => ({ id, label: resultStatusLabel(id), color: resolveCssColor(`var(${STATUS_CHART_TOKEN[id] ?? '--pr-text-subtle'})`) }))
+    this.visibleStatusIds().map(id => ({ id, label: resultStatusLabel(id), color: resolveCssColor(`var(${STATUS_CHART_TOKEN[id] ?? '--pr-text-subtle'})`) }))
   );
   /** Same columns in the tile colours (tiles, dots) — the Portfolio overview uses a separate set there. */
   private readonly tileColumns = computed<StatusColumn[]>(() => this.columns().map(column => ({ ...column, color: resolveCssColor(this.statusDot(column.id)) })));
