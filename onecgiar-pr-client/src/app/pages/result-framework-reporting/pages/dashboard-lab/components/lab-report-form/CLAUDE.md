@@ -164,6 +164,7 @@ no switcher and no PT panel.
   `shared/constants/progress-tracker-evidence.constants.ts`) and one item per evidence without a link
   (`Temporary evidence not saved` — not an Evidence row; INC-167646). A DOI or other non-repository
   `knowledge_product_handle` is rejected before Sync (`pt-handle-rejected`).
+  Successful create calls `rememberPtUnsavedEvidence` (sessionStorage); result-detail shows that list until dismiss. Browser session only.
 - **Center (2026-10-13):** PT keeps one KPI per (indicator, center), so the request carries the
   row center: `ptCenterOptions()` = the row `center_acronym`, else the deduped
   `targets_by_center.centers[]`. One option → `ptCenter()` uses it; several → an `app-pr-select`

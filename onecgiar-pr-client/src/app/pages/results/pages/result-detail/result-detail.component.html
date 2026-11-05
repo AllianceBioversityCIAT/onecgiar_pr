@@ -27,12 +27,20 @@
       }
 
       <div class="section_container">
-        @if (ptUnsavedEvidenceNotice()) {
+        @if (ptUnsavedEvidenceNotice().length) {
           <div
             class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] leading-snug text-amber-950"
             data-testid="pt-unsaved-evidence-notice"
             role="status">
-            <div [innerHTML]="ptUnsavedEvidenceNotice()"></div>
+            <p class="m-0">
+              Progress Tracker listed evidence that is temporary and incomplete. It was not saved, because there is no link or file PRMS can store.
+            </p>
+            <ul class="m-0 mt-2 list-disc pl-4">
+              @for (name of ptUnsavedEvidenceNotice(); track name) {
+                <li data-testid="pt-unsaved-evidence-name">{{ name }}</li>
+              }
+            </ul>
+            <p class="m-0 mt-2">{{ ptUnsavedEvidenceDetail }} This reminder stays in this browser only. It is not an evidence record.</p>
             <button
               type="button"
               (click)="dismissPtUnsavedEvidenceNotice()"
