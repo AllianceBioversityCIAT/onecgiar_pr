@@ -52,7 +52,7 @@
 
 ### `KPC-T-1` — Split `syncAgain` into a throwing fetch and an apply
 
-- **Final status:** `[~]` — Reviewer PASS; **HITL pending** (DoD: KP module owner confirms the correction may skip the in-app admin Journal Article gate, DD-3). Code uncommitted until the HITL answer.
+- **Final status:** PASS (was `[~]` pending HITL) (DoD: KP module owner confirms the correction may skip the in-app admin Journal Article gate, DD-3). Code uncommitted until the HITL answer.
 - **Attempts:** 1
 - **Skills:** `nestjs-expert`, `error-handling-patterns`, `tdd` (task defaults) · effort medium
 - **Attempt 1**
@@ -80,7 +80,8 @@
   - RELIABILITY: fetch maps non-OK *answers* only; a thrown `NotFoundException` or other escape from `findOnCGSpace` propagates as-is. DD-4 requires "every other non-OK answer or thrown error becomes 502" → **forward pointer to `KPC-T-3`**: the preflight must wrap the fetch so any non-422 throw becomes 502.
   - READABILITY: pre-existing null-deref in `syncAgain`'s not-found branch (`service.ts:158-160`).
 - **Requirements covered:** `KPC-R-5` (DSpace values stored; Journal Article not refused for non-admin — fetch side), `KPC-R-8` (422/502 mapping at the source).
-- **HITL:** asked 2026-11-05; user asked for clarification twice; question restated as yes/no ("¿un Journal Article reenviado por la API debe actualizarse con lo nuevo de CGSpace aunque quien lo envía no sea admin?"). Awaiting answer.
+- **HITL:** asked 2026-11-05; user asked for clarification twice; question restated as yes/no ("¿un Journal Article reenviado por la API debe actualizarse con lo nuevo de CGSpace aunque quien lo envía no sea admin?"). **Answered 2026-11-05 by Juan David Delgado (owner/driver):** "Si claro, debemos actualizarlo, no sabemos si son admins o no, mayoritariamente son external users al PRMS" → DD-3 confirmed: the correction skips the admin Journal Article gate; the in-app re-sync keeps it.
+- **Final status (updated):** PASS · 2026-11-05 — HITL closed, all DoD items met.
 
 ## Forward pointers
 

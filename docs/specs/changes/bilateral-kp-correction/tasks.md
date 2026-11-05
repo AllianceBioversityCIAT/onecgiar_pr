@@ -6,7 +6,7 @@
 |---|---|
 | Spec Path | `changes/bilateral-kp-correction` |
 | Depth | Full |
-| Status | **approved**, user 2026-11-05 (Phase 3 gate) · in execution (`KPC-T-2` [x], `KPC-T-1` [~] HITL pending) |
+| Status | **approved**, user 2026-11-05 (Phase 3 gate) · in execution (`KPC-T-1` [x], `KPC-T-2` [x]) |
 | Date | 2026-11-05 |
 | Linked spec | `requirements.md` (`KPC-R-1..15`), `design.md` (`KPC-DD-1..6`, Premise Ledger `P-1..18`) — both approved by the user at their gates on 2026-11-05 |
 | Owner / driver | Juan David Delgado |
@@ -36,7 +36,7 @@ Before `KPC-T-1`:
 
 Scoped jest only, never the full suite: `npx jest --testPathPattern="<pattern>" --silent --reporters=summary --forceExit`.
 
-### [~] `KPC-T-1` — Split `syncAgain` into a throwing fetch and an apply
+### [x] `KPC-T-1` — Split `syncAgain` into a throwing fetch and an apply
 
 - **Type:** server
 - **Description:** In `ResultsKnowledgeProductsService`, extract:
@@ -60,7 +60,7 @@ Scoped jest only, never the full suite: `npx jest --testPathPattern="<pattern>" 
   - [x] Fetch and apply exist; `syncAgain` answers unchanged for both callers (tests above green).
   - [x] The four falsifiers executed against the post-change code, each red observed and quoted in `execution.md`.
   - [x] `npx tsc --noEmit` exit 0; `npx eslint` on touched files clean.
-  - [ ] **HITL:** the KP module owner confirms that the correction may skip the in-app admin Journal Article gate (DD-3 challenge). The answer is recorded in `execution.md`.
+  - [x] **HITL:** the KP module owner confirms that the correction may skip the in-app admin Journal Article gate (DD-3 challenge). The answer is recorded in `execution.md`.
 - **Skills:** `nestjs-expert`, `error-handling-patterns`, `tdd`
 
 ### [x] `KPC-T-2` — Additive keep-list on `updateInstitutions`, and the MQAP-linked row read
