@@ -1160,7 +1160,51 @@ describe('InnovationDevInfoComponent', () => {
 
     it('leaves the blocks outside the epic untouched', () => {
       const el = render(true);
+      expect(el.querySelector('app-intellectual-property-considerations')).toBeTruthy();
+      expect(el.querySelector('app-pr-textarea')).toBeTruthy();
+    });
+  });
+
+  /**
+   * changes/remove-innovation-team-diversity (ITD-R-1 / ITD-R-2 / ITD-R-4): the Innovation team diversity
+   * question leaves the 2026 form only. These tests render the real template.
+   */
+  describe('remove innovation team diversity from the 2026 form (ITD)', () => {
+    const render = (reduced: boolean) => {
+      jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(reduced as any);
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    };
+
+    it('does not render the team diversity block on the 2026 phase, and keeps its siblings', () => {
+      const el = render(true);
+      expect(el.querySelector('app-innovation-team-diversity')).toBeNull();
+      expect(el.querySelector('app-intellectual-property-considerations')).toBeTruthy();
+      expect(el.querySelectorAll('app-pr-textarea').length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('still renders the team diversity block on a 2025-phase result', () => {
+      const el = render(false);
       expect(el.querySelector('app-innovation-team-diversity')).toBeTruthy();
+      expect(el.querySelector('app-megatrends')).toBeTruthy();
+    });
+
+    it('2026 save still carries innovation_team_diversity unchanged from the GET (no wipe)', async () => {
+      jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+      jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(true as any);
+      const stored = { radioButtonValue: '112', options: [{ result_question_id: '112', answer_boolean: true, answer_text: null }] };
+      (component as any).innovationDevInfoBody = { innovation_nature_id: 1, innovatonUse: { organization: [] } };
+      (component as any).evidencesBody = { evidences: [] };
+      (component as any).innovationDevelopmentQuestions = { innovation_team_diversity: stored };
+      jest.spyOn(component as any, 'getSectionInformationp25').mockImplementation(() => undefined);
+      jest.spyOn(component as any, 'uploadPendingFiles').mockResolvedValue([]);
+      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDevP25').mockReturnValue(of({}));
+
+      await component.onSaveSection();
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy.mock.calls[0][0]['innovation_team_diversity']).toEqual(stored);
     });
   });
 

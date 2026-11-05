@@ -37,7 +37,7 @@ x-api-key: <CLARISA key registered for QA>
 {
   "portfolio": "P25",
   "phase": 2026,
-  "catalog_version": "2026.33",
+  "catalog_version": "2026.34",
   "generated_at": "2026-10-06T12:00:00.000Z",
   "result_types": [
     { "key": "innovation_development", "label": "Innovation development", "level": "output" }
@@ -198,7 +198,7 @@ A condition is plain data, never evaluated by PRMS:
 | `$result_type` | the type key equals `value` (a string) | the type key is one of the listed keys (each must exist in `result_types[]`) |
 
 - `not_null` (any type) is true when the field has an answer. An empty string `""` counts as **null**; an empty list `[]` (a `multi_select` or a `list`) counts as **null**; `false` and `0` are **not** null.
-- When a `single_select` / `multi_select` is over a **closed control list** (a fixed set of ids defined by PRMS: `tag_levels` 1 Not Targeted, 2 Significant, 3 Principal; `result_types`; `assessed_workshop_options`; the innovation team diversity lists `question_options_team_diversity` 113 to 115 and `question_options_team_diversity_actions` 116 to 121; `capdev_training_lengths` 3 Short-term, 4 Long-term; `capdev_degrees` 1 PhD, 2 Master; `geographic_scopes` 1 Global, 2 Regional, 3 Country, 4 single-country package (legacy, read as Country), 5 Sub-national, 50 To be determined; `extra_geographic_scopes` (the scope of `geo.extra_scope`, the scopes the form offers in the extra block: 1, 2, 3 and 5, plus the stored legacy country scope 4 so that conditions can name 3, 4 and 5; without 50, because the form hides "This is yet to be determined" there); `ipsr_geographic_scopes` (the scope of `ipsr_step_1.geo_scope`: 1, 2, 3, 5 offered by the IPSR form plus the stored single-country id 4; never 50); `evidence_sources` 0 Link, 1 Upload file), every id in `value` must exist in that list. Reference lists (results, projects, directory users, institutions, initiatives, centers, countries, regions, CLARISA lists, ...) change at runtime and are not checked.
+- When a `single_select` / `multi_select` is over a **closed control list** (a fixed set of ids defined by PRMS: `tag_levels` 1 Not Targeted, 2 Significant, 3 Principal; `result_types`; `assessed_workshop_options`; `capdev_training_lengths` 3 Short-term, 4 Long-term; `capdev_degrees` 1 PhD, 2 Master; `geographic_scopes` 1 Global, 2 Regional, 3 Country, 4 single-country package (legacy, read as Country), 5 Sub-national, 50 To be determined; `extra_geographic_scopes` (the scope of `geo.extra_scope`, the scopes the form offers in the extra block: 1, 2, 3 and 5, plus the stored legacy country scope 4 so that conditions can name 3, 4 and 5; without 50, because the form hides "This is yet to be determined" there); `ipsr_geographic_scopes` (the scope of `ipsr_step_1.geo_scope`: 1, 2, 3, 5 offered by the IPSR form plus the stored single-country id 4; never 50); `evidence_sources` 0 Link, 1 Upload file), every id in `value` must exist in that list. Reference lists (results, projects, directory users, institutions, initiatives, centers, countries, regions, CLARISA lists, ...) change at runtime and are not checked.
 - `visible_when` absent means always shown for the entry's `result_types`.
 - **Selecting a field includes the fields named in its `visible_when` (transitively); subfields always travel with their parent.** (Owner decision 2026-10-07; no new field. The rule governs what a consumer takes when it selects a field: the fields its display condition depends on come along, and so do theirs.)
 - When both a `required_when` and `required: false` are present, the entry is required only while the condition holds.
@@ -292,22 +292,22 @@ Notes:
 
 ---
 
-## Catalog at revision 33 (2026.33)
+## Catalog at revision 34 (2026.34)
 
-Counts measured on the code catalog on 2026-10-09 (the same data the endpoint returns); revision 31 (QRF-T-9) changes no count, only value bindings; revision 33 (IFC-T-6) adds 4 subfields (2 per Innovation Use actor list) and 4 conditional subfield requirements, counts below updated by hand:
+Counts measured on the code catalog on 2026-10-09 (the same data the endpoint returns); revision 31 (QRF-T-9) changes no count, only value bindings; revision 33 (IFC-T-6) adds 4 subfields (2 per Innovation Use actor list) and 4 conditional subfield requirements; revision 34 (ITD-T-2) removes the team diversity field (1 field, 2 subfields, 2 conditional subfield requirements); counts below updated by hand:
 
 | Item | Count |
 |---|---|
 | Result types | 9 |
 | Sections | 25 |
-| Catalogued fields (top level) | 161 |
-| Catalogued subfields | 253 (of which 32 at the second level) |
-| Fields with `required: true` (unconditional) | 54 |
+| Catalogued fields (top level) | 160 |
+| Catalogued subfields | 251 (of which 32 at the second level) |
+| Fields with `required: true` (unconditional) | 53 |
 | Fields with a conditional requirement (`required: false` plus `required_when`) | 47 |
-| Subfields with `required: true` / with a conditional requirement | 64 / 74 |
-| Fields by type | `single_select` 37 · `multi_select` 16 · `boolean` 25 · `text` 21 · `list` 46 · `number` 13 · `object` 2 · `date` 1 |
+| Subfields with `required: true` / with a conditional requirement | 64 / 72 |
+| Fields by type | `single_select` 36 · `multi_select` 16 · `boolean` 25 · `text` 21 · `list` 46 · `number` 13 · `object` 2 · `date` 1 |
 | Fields applying to every type (`["*"]`) | 30 |
-| Fields naming a result type explicitly (the `["*"]` fields above are not repeated here) | `innovation_development` 40 · `innovation_use` 40 · `innovation_package` 35 · `knowledge_product` 39 · `capacity_sharing` 21 · `policy_change` 20 · `other_outcome` 13 · `other_output` 13 · `impact_contribution` 13 |
+| Fields naming a result type explicitly (the `["*"]` fields above are not repeated here) | `innovation_development` 39 · `innovation_use` 40 · `innovation_package` 35 · `knowledge_product` 39 · `capacity_sharing` 21 · `policy_change` 20 · `other_outcome` 13 · `other_output` 13 · `impact_contribution` 13 |
 | `PENDING_CATALOG` entries (columns known, for QA, not yet described) | 52 columns across 14 in-scope tables |
 | `NOT_FOR_QA` entries (columns that are never for QA, each with a reason) | 377 columns |
 
@@ -425,7 +425,7 @@ An unknown property of the body is ignored.
 ```json
 {
   "phase": 2026,
-  "catalog_version": "2026.33",
+  "catalog_version": "2026.34",
   "results": [
     {
       "result_id": 900001,
@@ -485,7 +485,7 @@ A scalar field that declares subfields (`text`, `date`, `number`, `boolean`, `si
 
 #### Question answers and stored NULL
 
-- **Question-backed fields read only the answers to their own question.** `innovation_dev.gesi_stage`, `innovation_dev.risk_stage`, `innovation_dev.ipr_consideration`, `innovation_dev.team_diversity` and its `actions` subfield bind to the result's active, ticked answers. A binding whose field names a **closed** control list reads only the rows whose value is one of that list's ids (an `IN (...)` term of the same batched statement, QRF-DD-13), so an answer to another question is never returned as the value. A result with no answer to the question has `null` (`[]` for `actions`).
+- **Question-backed fields read only the answers to their own question.** `innovation_dev.gesi_stage`, `innovation_dev.risk_stage` and `innovation_dev.ipr_consideration` bind to the result's active, ticked answers. A binding whose field names a **closed** control list reads only the rows whose value is one of that list's ids (an `IN (...)` term of the same batched statement, QRF-DD-13), so an answer to another question is never returned as the value. A result with no answer to the question has `null` (`[]` for `actions`).
 - **`linked.has_innovation_link` stays `null` when the stored value is NULL.** The 2026 form shows a stored NULL as "No" (the client model defaults it to `false`); the feed sends `null`, the stored value, not the form's display. Read `null` as "not answered", and do not treat it as `false`.
 
 ### Errors
@@ -536,7 +536,7 @@ These are deliberate and tracked; each one is **additive** when resolved.
 2. **Subfield conditions (resolved in the model, v1.5).** Subfields may carry `required_when` / `visible_when`; the catalog content that uses them arrives per field in later revisions.
 3. **Conditional requirements (resolved in the model, v1.5; transcription incomplete).** `required_when` and `visible_when` are returned wherever the catalog states them (see [display rules](#display-rules)); entries whose rule has not yet been transcribed still read `required: false` without a condition, so the absence of a condition does not prove that an entry is optional.
 4. **Year coverage.** 2026 only.
-   - **Question fields (innovation development).** `innovation_dev.gesi_stage`, `innovation_dev.risk_stage`, `innovation_dev.ipr_consideration` and `innovation_dev.team_diversity` bind to the answered rows of the result's answers (one row per option marked, active). A row belongs to a question through the field's control list, by id: the team diversity lists, and, since QRF-T-9 (QRF-DD-13), the GESI stage (152..156), risk stage (157..161) and IPR (163..165) lists, whose ids the owner verified identical in test and prod on 2026-10-28. The feed applies the closed list as a row filter (see [Question answers and stored NULL](#question-answers-and-stored-null)).
+   - **Question fields (innovation development).** `innovation_dev.gesi_stage`, `innovation_dev.risk_stage` and `innovation_dev.ipr_consideration` bind to the answered rows of the result's answers (one row per option marked, active). A row belongs to a question through the field's control list, by id: since QRF-T-9 (QRF-DD-13), the GESI stage (152..156), risk stage (157..161) and IPR (163..165) lists, whose ids the owner verified identical in test and prod on 2026-10-28. The feed applies the closed list as a row filter (see [Question answers and stored NULL](#question-answers-and-stored-null)).
 5. **Live verification (2026-10-06, local instance, CLARISA test key with permission `/api/qa/catalog`):** `phase_year=2026` → 200 with the 2026.5 content (body identical to the committed catalog, apart from `generated_at`); `phase_year=2023` → 404; `phase_year=abc` → 400; no key, unknown key or user `auth` header → 401. Not yet verified on a deployed environment.
 6. **Control-list contents are not served** by this endpoint.
 7. **`visible_when` is not persisted in `qa_catalog_field`** (migration pending; the owner runs it). The endpoint serves it from the code catalog, so the response is correct; the stored catalog tables do not yet carry the rule.
@@ -591,3 +591,4 @@ These are deliberate and tracked; each one is **additive** when resolved.
 | 2026-10-28 | **v1.27 — 2026-10-28: value-binding fixes from the results-feed golden comparison (spec `quality-assurance/qa-results-feed`, QRF-T-9); catalog_version 2026.31; the public shape is unchanged.** The revision is bumped because the catalog content hash covers the value bindings; no key, type, condition, label or response shape changes. The fixes are G-1 (lead center and lead partner) and G-2 (closed-list row filter). (a) `contributors.lead_center` now returns the center code (`center_id`, for example `CENTER-02`) of the active row with `is_leading_result = 1`; it returned the flag (1 or 0). `partners.lead_partner` now returns the `institutions_id` of the active leading row, with the same fix. (b) The innovation development question fields (`innovation_dev.gesi_stage`, `risk_stage`, `ipr_consideration`, `team_diversity` and its `actions`) read only the answers to their own question: closed lists `question_options_gesi_stage` (152..156), `question_options_risk_stage` (157..161) and `question_options_ipr` (163..165) are added and the value read applies a closed list as a row filter (QRF-DD-13). Before, each field returned any answered row of the result. (c) `linked.has_innovation_link` is documented: a stored NULL is sent as `null`, while the form displays "No". (d) Known gap 18 recorded (`policy_change.related_to`). |
 | 2026-10-31 | **v1.28 — 2026-10-31: revision reconciliation; catalog_version 2026.32; the public shape is unchanged.** Two independent changes had both bumped 2026 from revision 30 to 31 with different content: P2-4037 (QRF-T-9 value-binding fixes, v1.27) and P2-4061 (spec `bugfix/toc-kpi-optional-green-check`: `toc.planned_result` is no longer required for 2026, the 2026 green check no longer blocks on an unanswered planned-result question). Revision 32 is the merged content of both; nothing else changes. Consumers holding `2026.31` re-read the catalog. |
 | 2026-11-03 | **v1.29 — 2026-11-03: Farmers follow-up subfields in Innovation Use; catalog_version 2026.33.** The actor list of both Innovation Use blocks (`innovation_use.current_use.actors` and `innovation_use.projection_2030.actors`) gains two optional-by-shape subfields, `count_unit` (single_select over the closed list `households` / `individuals`) and `use_nature` (single_select over `information_received` / `innovation_applied`), both stored as codes in `result_actors` (varchar), valid from 2026, shown and required (`visible_when` / `required_when`) only when the row's `actor_type` equals 1 (Farmers). The values are codes (strings), not option ids; a row of another actor type may still hold a stored code. Additive only: no key is renamed or removed. Consumers holding `2026.32` re-read the catalog. Spec `changes/innovation-use-farmer-count-nature`, IFC-T-6. |
+| 2026-11-05 | **v1.30 — 2026-11-05: team diversity removed from Innovation development; catalog_version 2026.34.** The field `innovation_dev.team_diversity` and its subfields `actions` and `other_text` are no longer in the catalog, and the closed lists `question_options_team_diversity` (113 to 115) and `question_options_team_diversity_actions` (116 to 121) are gone with them: the 2026 Innovation development form no longer asks the question (phase-gated 2026 removal, like Megatrends). Answers already stored for 2025 results stay in the database but are not exposed through the catalog or the results feed; the bilateral key is unchanged. Consumers holding `2026.33` re-read the catalog and stop expecting the field. Spec `changes/remove-innovation-team-diversity`, ITD-T-2. |

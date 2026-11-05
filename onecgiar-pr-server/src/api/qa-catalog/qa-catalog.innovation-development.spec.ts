@@ -5,12 +5,7 @@ import { NOT_FOR_QA } from './definitions/not-for-qa';
 import { CLOSED_CONTROL_LISTS } from './definitions/closed-control-lists';
 import { validateCatalogShape } from './definitions/shape-validator';
 import { PENDING_CATALOG } from './definitions/pending-catalog';
-import {
-  CatalogField,
-  CatalogSubField,
-  Condition,
-  PathBinding,
-} from './definitions/types';
+import { CatalogField, CatalogSubField, Condition } from './definitions/types';
 
 /**
  * QAC-T-18: Innovation development (Results) fully parametrized. Expected values come from the 2026 client form
@@ -30,11 +25,6 @@ const sub = (f: CatalogField, key: string): CatalogSubField => {
 const eq = (field: string, value: string | number | boolean): Condition => ({
   field,
   operator: 'eq',
-  value,
-});
-const inn = (field: string, value: number[]): Condition => ({
-  field,
-  operator: 'in',
   value,
 });
 
@@ -62,7 +52,6 @@ describe('QAC-T-18 innovation development (Results)', () => {
       'innovation_dev.ipr_consideration',
       'innovation_dev.developers',
       'innovation_dev.collaborators',
-      'innovation_dev.team_diversity',
       'innovation_dev.readiness_level',
       'innovation_dev.readiness_justification',
       'innovation_dev.estimates_pooled',
@@ -89,13 +78,13 @@ describe('QAC-T-18 innovation development (Results)', () => {
   });
 
   describe('closed lists', () => {
-    it('team diversity options are 113/114/115 and the actions 116..121 (owner-verified ids)', () => {
-      expect(CLOSED_CONTROL_LISTS.question_options_team_diversity).toEqual([
-        113, 114, 115,
-      ]);
-      expect(
-        CLOSED_CONTROL_LISTS.question_options_team_diversity_actions,
-      ).toEqual([116, 117, 118, 119, 120, 121]);
+    it('team diversity lists are gone (ITD-R-5, removed in catalog 2026.34)', () => {
+      expect(CLOSED_CONTROL_LISTS).not.toHaveProperty(
+        'question_options_team_diversity',
+      );
+      expect(CLOSED_CONTROL_LISTS).not.toHaveProperty(
+        'question_options_team_diversity_actions',
+      );
     });
 
     it('stage and IPR option lists are closed with the P-20 ids (QRF-DD-13, owner-verified identical in test and prod)', () => {
@@ -164,7 +153,6 @@ describe('QAC-T-18 innovation development (Results)', () => {
       ['innovation_dev.gesi_stage', 'question_options_gesi_stage'],
       ['innovation_dev.risk_stage', 'question_options_risk_stage'],
       ['innovation_dev.ipr_consideration', 'question_options_ipr'],
-      ['innovation_dev.team_diversity', 'question_options_team_diversity'],
     ])(
       '%s binds through result_answers (active, answered) with list %s',
       (key, list) => {
@@ -217,43 +205,6 @@ describe('QAC-T-18 innovation development (Results)', () => {
 
     it('ipr_consideration has no follow-ups in the 2026 form', () => {
       expect(get('innovation_dev.ipr_consideration').subfields).toBeUndefined();
-    });
-
-    describe('team diversity', () => {
-      const f = () => get('innovation_dev.team_diversity');
-
-      it('actions: shown and required only when option 113 is chosen', () => {
-        const a = sub(f(), 'actions');
-        expect(a.type).toBe('multi_select');
-        expect(a.control_list).toBe('question_options_team_diversity_actions');
-        expect(a.visible_when).toEqual(
-          eq('innovation_dev.team_diversity', 113),
-        );
-        expect(a.required_when).toEqual(
-          eq('innovation_dev.team_diversity', 113),
-        );
-        const path = a.storage as PathBinding;
-        expect(path.kind).toBe('path');
-        expect(path.steps[0].table).toBe('result_answers');
-        expect(path.steps[0].filter).toEqual({
-          answer_boolean: 1,
-          is_active: 1,
-        });
-        expect(path.value_column).toBe('result_question_id');
-      });
-
-      it('other_text: shown and required when action 121 (Other) is ticked; reads the answer_text of row 121', () => {
-        const o = sub(f(), 'other_text');
-        expect(o.visible_when).toEqual(inn('actions', [121]));
-        expect(o.required_when).toEqual(inn('actions', [121]));
-        const path = o.storage as PathBinding;
-        expect(path.steps[0].filter).toEqual({
-          result_question_id: 121,
-          answer_boolean: 1,
-          is_active: 1,
-        });
-        expect(path.value_column).toBe('answer_text');
-      });
     });
   });
 
@@ -342,6 +293,7 @@ describe('QAC-T-18 innovation development (Results)', () => {
         'innovation_dev.megatrends',
         'innovation_dev.has_scaling_studies',
         'innovation_dev.reference_materials',
+        'innovation_dev.team_diversity',
       ]) {
         expect(keys).not.toContain(gone);
       }
@@ -349,45 +301,6 @@ describe('QAC-T-18 innovation development (Results)', () => {
   });
 
   describe('falsifiers', () => {
-    it('a team-diversity option id outside the closed list is rejected (122)', () => {
-      const fields = CATALOG_FIELDS.map((f) =>
-        f.key === 'innovation_dev.team_diversity'
-          ? {
-              ...f,
-              subfields: f.subfields?.map((s) =>
-                s.key === 'actions'
-                  ? {
-                      ...s,
-                      visible_when: eq('innovation_dev.team_diversity', 122),
-                    }
-                  : s,
-              ),
-            }
-          : f,
-      );
-      expect(shapeErrors(fields).map((e) => e.rule)).toContain(
-        'CONDITION_VALUE_NOT_IN_LIST',
-      );
-    });
-
-    it('an "Other" tick on an action outside 116..121 is rejected (122)', () => {
-      const fields = CATALOG_FIELDS.map((f) =>
-        f.key === 'innovation_dev.team_diversity'
-          ? {
-              ...f,
-              subfields: f.subfields?.map((s) =>
-                s.key === 'other_text'
-                  ? { ...s, visible_when: inn('actions', [122]) }
-                  : s,
-              ),
-            }
-          : f,
-      );
-      expect(shapeErrors(fields).map((e) => e.rule)).toContain(
-        'CONDITION_VALUE_NOT_IN_LIST',
-      );
-    });
-
     it('a condition naming a stage-field key that does not exist is rejected', () => {
       const fields = CATALOG_FIELDS.map((f) =>
         f.key === 'innovation_dev.number_of_varieties'
