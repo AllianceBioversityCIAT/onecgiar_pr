@@ -1,10 +1,14 @@
 import { canonicalResultType } from '../../../../pt-typology';
 
+const COUNTED_NOTICE = /^([\s\S]*), which (don['’]t|doesn['’]t|do not|does not) count([\s\S]*)$/i;
+
 /**
  * INC-167646 — Progress Tracker writes its empty notice as if every indicator were a knowledge
- * product ("No knowledge product … an innovation (innovation development) … don't count").
- * The panel names the indicator's own category instead, and drops any "don't count" example
- * that is that same category. A missing or unrecognised category is left as PT sent it.
+ * product ("No knowledge product … (innovation development) … don't count"). Examples of the
+ * missing type can sit before "such as" ("shows an innovation (…) and another kind of output,
+ * such as …") or only inside it. The panel names the indicator's own category and drops every
+ * example of that same category on either side. A missing or unrecognised category is left as
+ * PT sent it.
  */
 export function alignPtEmptyNotice(notice: string | null | undefined, expectedTypeLabel: string | null | undefined): string | null {
   const text = (notice ?? '').trim();
@@ -15,14 +19,25 @@ export function alignPtEmptyNotice(notice: string | null | undefined, expectedTy
   if (!canonical || !phrase || canonicalResultType(phrase) !== canonical) return text;
   if (!/\bNo knowledge products?\b/i.test(text)) return text;
 
-  const split = text.match(/^([\s\S]*), such as ([\s\S]+), which (don['’]t|doesn['’]t|do not|does not) count([\s\S]*)$/i);
-  if (!split) return replaceSoughtType(text, phrase);
+  const counted = text.match(COUNTED_NOTICE);
+  if (!counted) return replaceSoughtType(text, phrase);
 
-  const kept = splitExamples(split[2]).filter(example => !exampleIsType(example, canonical));
-  const list = joinExamples(kept);
-  const verb = countVerb(split[3], kept.length);
-  const head = replaceSoughtType(split[1], phrase);
-  return list ? `${head}, such as ${list}, which ${verb} count${split[4]}` : `${head}, which ${verb} count${split[4]}`;
+  const shown = counted[1].match(/^(.*)The evidence shows ([\s\S]*)$/i);
+  if (!shown) return replaceSoughtType(text, phrase);
+
+  const clause = shown[2].match(/^(.*?)(?: and )?another kind of output(?:, such as ([\s\S]+))?$/i);
+  if (!clause) return replaceSoughtType(text, phrase);
+
+  const before = splitExamples(clause[1]).filter(example => !exampleIsType(example, canonical));
+  const after = splitExamples(clause[2] ?? '').filter(example => !exampleIsType(example, canonical));
+  const verb = countVerb(counted[2], before.length + after.length);
+  const lead = replaceSoughtType(shown[1], phrase);
+
+  let evidence = 'The evidence shows ';
+  if (before.length) evidence += `${joinExamples(before)} and `;
+  evidence += 'another kind of output';
+  if (after.length) evidence += `, such as ${joinExamples(after)}`;
+  return `${lead}${evidence}, which ${verb} count${counted[3]}`;
 }
 
 /** Lower-case display phrase for a recognised category label or slug. */
