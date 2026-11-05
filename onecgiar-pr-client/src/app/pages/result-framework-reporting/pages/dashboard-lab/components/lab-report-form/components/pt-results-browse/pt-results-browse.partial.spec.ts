@@ -125,17 +125,14 @@ describe('PtResultsBrowseComponent — partial and slow answers', () => {
   });
 
   describe('empty state variants', () => {
-    it.each(['preparing', 'live_drafting_busy', 'live_draft_in_progress'])(
-      'template fallback "%s" → preparing, with Check again',
-      reason => {
-        api.GET_progressTrackerResults.mockReturnValue(of(ok([proposal], { generated_by: { mode: 'template', fallback_reason: reason } })));
-        open();
-        expect(component.status()).toBe('preparing');
-        expect(el('pt-preparing')?.textContent).toContain('The Progress Tracker is preparing this KPI, check again in a few minutes');
-        expect(el('pt-check-again-preparing')).toBeTruthy();
-        expect(el('pt-empty')).toBeNull();
-      }
-    );
+    it.each(['preparing', 'live_drafting_busy', 'live_draft_in_progress'])('template fallback "%s" → preparing, with Check again', reason => {
+      api.GET_progressTrackerResults.mockReturnValue(of(ok([proposal], { generated_by: { mode: 'template', fallback_reason: reason } })));
+      open();
+      expect(component.status()).toBe('preparing');
+      expect(el('pt-preparing')?.textContent).toContain('The Progress Tracker is preparing this KPI, check again in a few minutes');
+      expect(el('pt-check-again-preparing')).toBeTruthy();
+      expect(el('pt-empty')).toBeNull();
+    });
 
     it('preparation.retry_after_s → preparing, Check again enabled only after the countdown', () => {
       jest.useFakeTimers();
@@ -190,27 +187,89 @@ describe('PtResultsBrowseComponent — partial and slow answers', () => {
       expect(el('pt-check-again-preparing')).toBeNull();
     });
 
+    const kpEmptyNotice =
+      "No knowledge product for this KPI was found in the Progress Tracker evidence. The evidence shows another kind of output, such as an event or meeting (other output) and an innovation (innovation development), which don't count toward this indicator. The Progress Tracker lists them with the reason.";
+
     it('shows PT generated_by.notice as plain text under the empty headline', () => {
-      const notice =
-        'No knowledge product for this KPI was found in the Progress Tracker evidence. The evidence shows another kind of output, such as an event or meeting (other output) and an innovation (innovation development), which don\'t count toward this indicator. The Progress Tracker lists them with the reason.';
-      api.GET_progressTrackerResults.mockReturnValue(of(ok([], { generated_by: { mode: 'ai', notice: `<b>${notice}</b>` }, preparation: { no_results_reason: null } })));
+      api.GET_progressTrackerResults.mockReturnValue(
+        of(ok([], { generated_by: { mode: 'ai', notice: `<b>${kpEmptyNotice}</b>` }, preparation: { no_results_reason: null } }))
+      );
       open();
       expect(component.status()).toBe('empty');
       const p = el('pt-empty-notice') as HTMLElement;
-      expect(p.textContent?.replace(/\s+/g, ' ').trim()).toBe(`Progress Tracker says: <b>${notice}</b>`);
+      expect(p.textContent?.replace(/\s+/g, ' ').trim()).toBe(`Progress Tracker says: <b>${kpEmptyNotice}</b>`);
       expect(p.querySelector('b')).toBeNull();
       expect(el('pt-empty-open-in-tracker')).not.toBeNull();
     });
 
+    it.each([
+      [
+        'Innovation development',
+        "No innovation development for this KPI was found in the Progress Tracker evidence. The evidence shows another kind of output, such as an event or meeting (other output), which doesn't count toward this indicator. The Progress Tracker lists them with the reason."
+      ],
+      ['Knowledge product', kpEmptyNotice],
+      [
+        'Policy change',
+        "No policy change for this KPI was found in the Progress Tracker evidence. The evidence shows another kind of output, such as an event or meeting (other output) and an innovation (innovation development), which don't count toward this indicator. The Progress Tracker lists them with the reason."
+      ]
+    ])('empty notice names the indicator category %s', (label, expected) => {
+      api.GET_progressTrackerResults.mockReturnValue(of(ok([], { generated_by: { mode: 'ai', notice: kpEmptyNotice } })));
+      fixture.componentRef.setInput('expectedResultTypeLabel', label);
+      open();
+      expect(component.status()).toBe('empty');
+      expect(el('pt-empty-message')?.textContent?.trim()).toBe(PT_EMPTY_DEFAULT_MESSAGE);
+      expect(el('pt-empty-notice')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(`Progress Tracker says: ${expected}`);
+    });
+
+    it('drops a leading same-category example from the Progress Tracker sentence observed on CARR-F', () => {
+      const original =
+        "No knowledge product for this KPI was found in the Progress Tracker evidence. The evidence shows an innovation (innovation development) and another kind of output, such as an event or meeting (other output), which don't count toward this indicator. The Progress Tracker lists them with the reason.";
+      api.GET_progressTrackerResults.mockReturnValue(of(ok([], { generated_by: { mode: 'ai', notice: original } })));
+      fixture.componentRef.setInput('expectedResultTypeLabel', 'Innovation development');
+      open();
+      const text = el('pt-empty-notice')?.textContent?.replace(/\s+/g, ' ').trim();
+      expect(text).toContain('No innovation development for this KPI was found');
+      expect(text).toContain('such as an event or meeting (other output)');
+      expect(text).toContain("which doesn't count toward this indicator");
+      expect(text).not.toContain('(innovation development)');
+      expect(el('pt-empty-message')?.textContent?.trim()).toBe(PT_EMPTY_DEFAULT_MESSAGE);
+    });
+
+    it('shows that same Progress Tracker sentence unchanged for a knowledge product', () => {
+      const original =
+        "No knowledge product for this KPI was found in the Progress Tracker evidence. The evidence shows an innovation (innovation development) and another kind of output, such as an event or meeting (other output), which don't count toward this indicator. The Progress Tracker lists them with the reason.";
+      api.GET_progressTrackerResults.mockReturnValue(of(ok([], { generated_by: { mode: 'ai', notice: original } })));
+      fixture.componentRef.setInput('expectedResultTypeLabel', 'Knowledge product');
+      open();
+      expect(el('pt-empty-notice')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(`Progress Tracker says: ${original}`);
+    });
+
+    it('preparing uses the same category wording when PT sends the knowledge-product empty sentence', () => {
+      api.GET_progressTrackerResults.mockReturnValue(
+        of(ok([], { generated_by: { mode: 'template', fallback_reason: 'live_drafting_busy', notice: kpEmptyNotice } }))
+      );
+      fixture.componentRef.setInput('expectedResultTypeLabel', 'Innovation development');
+      open();
+      expect(component.status()).toBe('preparing');
+      const text = el('pt-preparing-notice')?.textContent?.replace(/\s+/g, ' ').trim();
+      expect(text).toContain('No innovation development for this KPI was found');
+      expect(text).not.toContain('(innovation development)');
+      expect(text).not.toMatch(/\bNo knowledge product\b/);
+    });
+
     it('falls back to preparation.no_results_reason when there is no notice', () => {
-      api.GET_progressTrackerResults.mockReturnValue(of(ok([], { generated_by: { mode: 'ai' }, preparation: { no_results_reason: 'Nothing reportable yet.' } })));
+      api.GET_progressTrackerResults.mockReturnValue(
+        of(ok([], { generated_by: { mode: 'ai' }, preparation: { no_results_reason: 'Nothing reportable yet.' } }))
+      );
       open();
       expect(el('pt-empty-notice')?.textContent).toContain('Nothing reportable yet.');
     });
 
     it('shows the notice while PT is busy drafting (template live_drafting_busy)', () => {
       const notice = 'AI drafting is busy. Open this KPI again in 6 s.';
-      api.GET_progressTrackerResults.mockReturnValue(of(ok([], { generated_by: { mode: 'template', fallback_reason: 'live_drafting_busy', notice } })));
+      api.GET_progressTrackerResults.mockReturnValue(
+        of(ok([], { generated_by: { mode: 'template', fallback_reason: 'live_drafting_busy', notice } }))
+      );
       open();
       expect(component.status()).toBe('preparing');
       expect(el('pt-preparing-notice')?.textContent).toContain(notice);

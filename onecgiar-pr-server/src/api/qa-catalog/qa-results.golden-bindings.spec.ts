@@ -54,7 +54,6 @@ const FEED_FIELDS = [
   'innovation_dev.gesi_stage',
   'innovation_dev.risk_stage',
   'innovation_dev.ipr_consideration',
-  'innovation_dev.team_diversity',
   'contributors.lead_center',
   'partners.lead_partner',
 ];
@@ -89,21 +88,11 @@ const valueOf = (v: unknown) =>
 
 describe('QRF-T-9 golden bindings (G-1 / G-2, QRF-DD-13)', () => {
   describe('G-2 answer-bound fields of innovation development', () => {
-    it('result 8799 (17 answered rows, none of GESI / risk / IPR): the three stage questions are empty, team diversity is 113', async () => {
+    it('result 8799 (17 answered rows, none of GESI / risk / IPR): the three stage questions are empty', async () => {
       const values = await read(dbWith(answered8799()));
       expect(valueOf(values['innovation_dev.gesi_stage'])).toBeNull();
       expect(valueOf(values['innovation_dev.risk_stage'])).toBeNull();
       expect(valueOf(values['innovation_dev.ipr_consideration'])).toBeNull();
-      expect(valueOf(values['innovation_dev.team_diversity'])).toBe(113);
-    });
-
-    it('team diversity actions are the ticked children of 113 only: [116, 117]', async () => {
-      const values = await read(dbWith(answered8799()), [
-        'innovation_dev.team_diversity',
-      ]);
-      expect(values['innovation_dev.team_diversity'].actions).toEqual([
-        116, 117,
-      ]);
     });
 
     it('answered GESI 153 (Foundational) and IPR 165 (No) are read; the others stay empty', async () => {
@@ -116,14 +105,6 @@ describe('QRF-T-9 golden bindings (G-1 / G-2, QRF-DD-13)', () => {
       );
       expect(valueOf(values['innovation_dev.ipr_consideration'])).toBe(165);
       expect(valueOf(values['innovation_dev.risk_stage'])).toBeNull();
-      expect(valueOf(values['innovation_dev.team_diversity'])).toBe(113);
-    });
-
-    it('team diversity with an answered 80 and an answered 113 reads 113 (not 80, not both)', async () => {
-      const values = await read(dbWith([answer(1, 80), answer(2, 113)]), [
-        'innovation_dev.team_diversity',
-      ]);
-      expect(valueOf(values['innovation_dev.team_diversity'])).toBe(113);
     });
 
     it('an inactive or unticked answer of the own question is not read', async () => {

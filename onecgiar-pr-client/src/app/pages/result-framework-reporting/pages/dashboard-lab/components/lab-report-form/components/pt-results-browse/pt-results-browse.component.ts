@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input
 import { outputFromObservable, takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { EMPTY, Observable, Subscription, catchError, concat, defer, distinctUntilChanged, filter, interval, map, of, switchMap, take, tap, timer } from 'rxjs';
 import { ResultsApiService } from '../../../../../../../../shared/services/api/results-api.service';
+import { ptTypologyTone, PtTypologyTone } from '../../../../pt-typology';
+import { alignPtEmptyNotice } from './pt-empty-notice';
 
 // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-results-browse (PTB-T-2)
 
@@ -145,6 +147,18 @@ export interface PtProposalDto {
   /** Envelope-level provenance, copied onto each proposal — see class doc above. */
   generated_at?: string;
   evidence_fingerprint?: string;
+  /**
+   * INC-167646 — `innovation` as the staging fixture sends it. Only the fields PRMS can show or
+   * store. `readiness_level` is the 0–9 number, never a CLARISA id. Absent on older payloads.
+   */
+  innovation?: PtInnovationDto | null;
+}
+
+export interface PtInnovationDto {
+  readiness_level: number | null;
+  readiness_level_name: string | null;
+  typology: string | null;
+  developers: string[];
 }
 
 /**
@@ -286,6 +300,7 @@ interface PtRawProposal {
   led_by_external_partner?: unknown;
   to_complete_in_prms?: unknown[] | null;
   policy?: Record<string, unknown> | null;
+  innovation?: unknown;
 }
 
 /** Labels for the CGIAR impact-area keys PT uses; anything else is title-cased from its key. */
@@ -417,6 +432,11 @@ export class PtResultsBrowseComponent {
   readonly tocIndicatorId = input<string | number | null>(null);
   readonly indicatorFixesResultType = input<boolean>(false);
   readonly isKnowledgeProduct = input<boolean>(false);
+  /**
+   * The indicator's PRMS category (`Innovation development`, …). Empty when the indicator does not
+   * fix a type and the user has not chosen one — then the proposal carries no typology flag.
+   */
+  readonly expectedResultTypeLabel = input<string | null>(null);
   readonly busy = input<boolean>(false);
   /**
    * PRMS center acronym of the row being reported — PT keeps one KPI per (indicator, center), so
@@ -449,9 +469,14 @@ export class PtResultsBrowseComponent {
   readonly emptyMessage = signal(PT_EMPTY_DEFAULT_MESSAGE);
   /**
    * PT's own plain-language explanation of an empty answer (`generated_by.notice`, else
-   * `preparation.no_results_reason`). Shown as text under the empty / preparing headline.
+   * `preparation.no_results_reason`), before it is worded for this indicator's category.
    */
-  readonly ptNotice = signal<string | null>(null);
+  private readonly ptNoticeRaw = signal<string | null>(null);
+  /**
+   * Shown as text under the empty / preparing headline. A stock "No knowledge product" sentence
+   * is retargeted to `expectedResultTypeLabel` so it does not assume a knowledge product.
+   */
+  readonly ptNotice = computed(() => alignPtEmptyNotice(this.ptNoticeRaw(), this.expectedResultTypeLabel()));
   /** The card shown as selected: the host's pick when bound, else the last click here. */
   readonly activeKey = computed<string | null>(() => {
     const bound = this.selectedResultKey();
@@ -523,7 +548,7 @@ export class PtResultsBrowseComponent {
           this.ptUrl.set(null);
           this.selectedKey.set(null);
           this.partialNotice.set(null);
-          this.ptNotice.set(null);
+          this.ptNoticeRaw.set(null);
           this.autoRetrying.set(false);
           this.stopCooldown();
         }),
@@ -628,7 +653,7 @@ export class PtResultsBrowseComponent {
       // Nothing to show: either PT is still preparing this KPI (template fallback for a
       // "not ready yet" reason, a retry hint, or a partial answer with nothing in it yet), or
       // there really is nothing to propose.
-      this.ptNotice.set(ptPlainNotice(generatedBy, body.preparation));
+      this.ptNoticeRaw.set(ptPlainNotice(generatedBy, body.preparation));
       const retryAfter = body.preparation?.retry_after_s;
       const hasRetryAfter = retryAfter !== null && retryAfter !== undefined;
       const preparing =
@@ -685,8 +710,28 @@ export class PtResultsBrowseComponent {
       to_complete_in_prms: (Array.isArray(item.to_complete_in_prms) ? item.to_complete_in_prms : []).map(toCompleteItem).filter(nonNull),
       policy: asRecord(item.policy),
       generated_at: body.generated_at,
-      evidence_fingerprint: body.evidence_fingerprint
+      evidence_fingerprint: body.evidence_fingerprint,
+      innovation: this.toInnovation(item.innovation)
     };
+  }
+
+  /**
+   * Copies only what the fixture actually has and PRMS can use. The numeric readiness level is
+   * kept when it is an integer 0–9. The name, typology label and developer names are display-only.
+   * `typology_code` is not copied: it is not a PRMS innovation-nature id.
+   */
+  private toInnovation(raw: unknown): PtInnovationDto | null {
+    const rec = asRecord(raw);
+    if (!rec) return null;
+    const level = rec['readiness_level'];
+    const readiness = typeof level === 'number' && Number.isInteger(level) && level >= 0 && level <= 9 ? level : null;
+    const developers = Array.isArray(rec['developers'])
+      ? (rec['developers'] as unknown[]).map(asText).filter(Boolean)
+      : [];
+    const name = asTextOrNull(rec['readiness_level_name']);
+    const typology = asTextOrNull(rec['typology']);
+    if (readiness === null && !name && !typology && !developers.length) return null;
+    return { readiness_level: readiness, readiness_level_name: name, typology, developers };
   }
 
   /**
@@ -806,6 +851,15 @@ export class PtResultsBrowseComponent {
 
   onSwitchToManual(): void {
     this.switchToManual.emit();
+  }
+
+  /**
+   * INC-167646. Blue when this proposal's type is the indicator's category, yellow when it is
+   * another category, and no flag when either side has no recognised type. Template answers never
+   * reach this method: `applyEnvelope` does not list them as proposals.
+   */
+  typologyTone(proposal: PtProposalDto): PtTypologyTone {
+    return ptTypologyTone(this.expectedResultTypeLabel(), [proposal.result_type, proposal.result_type_label]);
   }
 
   confidencePercent(confidence: number | null): string {

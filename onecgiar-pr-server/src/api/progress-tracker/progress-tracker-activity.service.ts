@@ -29,6 +29,17 @@ export interface ProgressTrackerIndicatorActivityItem {
   evidence_count: number;
   /** PT KPI id (permitted as opaque provenance, `PTM-R-3c`) — lets a shared target de-duplicate centers mapped to one KPI. */
   pt_indicator_id: string | null;
+  /**
+   * Guide §4.3 `cached_results_count`, or `null` when the upstream item does not send it.
+   * `0` means no draft is cached yet. It is not a result type.
+   */
+  cached_results_count: number | null;
+  /**
+   * Drafted result-type slugs, only when the ready-counts item sends a `result_types` string
+   * array. The Guide §4.3 capture (2026-09-15) does not include that array, so this stays `[]`.
+   * An empty list means the type is unknown — the client must not treat it as "no typology".
+   */
+  result_types: string[];
 }
 
 export interface ProgressTrackerIndicatorActivityBody {
@@ -41,6 +52,23 @@ export interface ProgressTrackerIndicatorActivityResponse {
   statusCode: 200;
   message: string;
   response: ProgressTrackerIndicatorActivityBody;
+}
+
+interface ReadyIndicatorCount {
+  evidence_count: number;
+  cached_results_count: number | null;
+  result_types: string[];
+}
+
+function readResultTypes(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const types: string[] = [];
+  for (const entry of value) {
+    if (typeof entry !== 'string') continue;
+    const trimmed = entry.trim();
+    if (trimmed && !types.includes(trimmed)) types.push(trimmed);
+  }
+  return types;
 }
 
 const ACTIVITY_MESSAGES: Record<ProgressTrackerProposalsStatus, string> = {
@@ -173,22 +201,27 @@ export class ProgressTrackerActivityService {
         !!row.pt_indicator_id &&
         row.match_quality !== 'none' &&
         !row.needs_review,
-      evidence_count: counts.get(row.pt_indicator_id ?? '') ?? 0,
+      evidence_count:
+        counts.get(row.pt_indicator_id ?? '')?.evidence_count ?? 0,
       pt_indicator_id: row.pt_indicator_id ?? null,
+      cached_results_count:
+        counts.get(row.pt_indicator_id ?? '')?.cached_results_count ?? null,
+      result_types: counts.get(row.pt_indicator_id ?? '')?.result_types ?? [],
     }));
 
     return this.buildEnvelope({ status: 'ok', items, ...base });
   }
 
   /**
-   * `items[]` of the upstream ready-counts (Guide §4.3: `{ indicator_id, evidence_count }`),
-   * reduced to a PT id → count map. Malformed entries are skipped; a repeated id keeps
-   * the highest count.
+   * `items[]` of the upstream ready-counts (Guide §4.3: `{ indicator_id, evidence_count,
+   * cached_results_count, cached_at }`). Malformed entries are skipped; a repeated id keeps
+   * the highest evidence count. `result_types` is copied only when the item sends a string
+   * array — the verified capture does not, and a missing array stays empty.
    */
   private countsByPtIndicator(
     items: unknown[] | undefined,
-  ): Map<string, number> {
-    const counts = new Map<string, number>();
+  ): Map<string, ReadyIndicatorCount> {
+    const counts = new Map<string, ReadyIndicatorCount>();
     for (const item of items ?? []) {
       const id = (item as any)?.indicator_id;
       const count = Number((item as any)?.evidence_count);
@@ -200,7 +233,28 @@ export class ProgressTrackerActivityService {
       ) {
         continue;
       }
-      counts.set(id, Math.max(counts.get(id) ?? 0, count));
+      const cachedRaw = (item as any)?.cached_results_count;
+      const cached =
+        typeof cachedRaw === 'number' &&
+        Number.isFinite(cachedRaw) &&
+        cachedRaw >= 0
+          ? cachedRaw
+          : null;
+      const resultTypes = readResultTypes((item as any)?.result_types);
+      const prev = counts.get(id);
+      if (!prev || count >= prev.evidence_count) {
+        counts.set(id, {
+          evidence_count: count,
+          cached_results_count: cached,
+          result_types: resultTypes.length
+            ? resultTypes
+            : (prev?.result_types ?? []),
+        });
+      } else if (resultTypes.length) {
+        prev.result_types = [
+          ...new Set([...prev.result_types, ...resultTypes]),
+        ];
+      }
     }
     return counts;
   }

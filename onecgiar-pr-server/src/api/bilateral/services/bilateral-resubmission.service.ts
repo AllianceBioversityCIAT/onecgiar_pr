@@ -1,4 +1,5 @@
 import {
+  BadGatewayException,
   BadRequestException,
   ConflictException,
   Injectable,
@@ -40,6 +41,8 @@ import { ResultsByInstitutionType } from '../../results/results_by_institution_t
 import { ResultIpMeasure } from '../../ipsr/result-ip-measures/entities/result-ip-measure.entity';
 import { ClarisaApiKeyValidationMis } from '../interfaces/clarisa-api-key-validation.interface';
 import { CreateBilateralDto } from '../dto/create-bilateral.dto';
+import type { ResultsKnowledgeProduct } from '../../results/results-knowledge-products/entities/results-knowledge-product.entity';
+import type { ResultsKnowledgeProductDto } from '../../results/results-knowledge-products/dto/results-knowledge-product.dto';
 
 /**
  * Human wording of a `status_id` for refusal messages (`pending-review` -> `pending review`).
@@ -49,6 +52,52 @@ import { CreateBilateralDto } from '../dto/create-bilateral.dto';
 export function describeResultStatus(statusId: number | string): string {
   const status = ResultStatusData.getFromValue(Number(statusId));
   return status ? status.name.replace(/-/g, ' ') : String(statusId);
+}
+
+/**
+ * `KPC-DD-2`: the ONE status rule of a resubmission. The statuses a result may be resubmitted from are
+ * a function of its stored type: Rejected for everything, plus Editing for a Knowledge Product (its
+ * correction, `KPC-R-1`). The resolver guard and the lock re-read both call it, so they cannot disagree.
+ */
+export function allowedResubmissionStatuses(resultTypeId: unknown): number[] {
+  return Number(resultTypeId) === ResultTypeEnum.KNOWLEDGE_PRODUCT
+    ? [ResultStatusData.Rejected.value, ResultStatusData.Editing.value]
+    : [ResultStatusData.Rejected.value];
+}
+
+/**
+ * `KPC-DD-6` / design §5.2: the status a resubmission ends in. A non-KP result, and a KP read as
+ * Rejected, always go to Pending Review; only a KP read as Editing may stay there (`keep_editing: true`).
+ */
+export function resubmissionTargetStatus(
+  resultTypeId: unknown,
+  sourceStatusId: number,
+  keepEditing: unknown,
+): number {
+  const staysEditing =
+    Number(resultTypeId) === ResultTypeEnum.KNOWLEDGE_PRODUCT &&
+    sourceStatusId === ResultStatusData.Editing.value &&
+    keepEditing === true;
+  return staysEditing
+    ? ResultStatusData.Editing.value
+    : ResultStatusData.PendingReview.value;
+}
+
+/**
+ * The refusal message of the status rule, or `null` when `statusId` is allowed. Non-KP wording is the
+ * one `RSB-R-2` shipped, byte for byte (`KPC-R-13`); a KP gets the `KPC-R-1` wording (design §4.1).
+ */
+export function resubmissionStatusRefusal(
+  resultCode: string | number,
+  statusId: number | string,
+  resultTypeId: unknown,
+): string | null {
+  if (allowedResubmissionStatuses(resultTypeId).includes(Number(statusId))) {
+    return null;
+  }
+  return Number(resultTypeId) === ResultTypeEnum.KNOWLEDGE_PRODUCT
+    ? `Result ${resultCode} cannot be corrected: its status is ${describeResultStatus(statusId)}. Only rejected or editing knowledge products can be corrected.`
+    : `Result ${resultCode} cannot be resubmitted: its status is ${describeResultStatus(statusId)}. Only rejected results can be resubmitted.`;
 }
 
 /**
@@ -124,6 +173,44 @@ export interface ResubmissionPreflightPort {
   ): Promise<{ userId: number; submittedUserId: number }>;
 }
 
+/** What the DSpace fetch of `KPC-DD-3` returns: the stored KP and the metadata read from DSpace. */
+export interface ResubmissionKpMetadata {
+  resultKnowledgeProduct: ResultsKnowledgeProduct;
+  newMetadata: ResultsKnowledgeProductDto;
+}
+
+/**
+ * @akili-spec changes/bilateral-kp-correction — KPC-T-3 (`KPC-DD-4`). The two reads the KP preflight
+ * needs from `BilateralService` (same reason as the other ports: its helpers are private and it
+ * injects this service). Neither writes. Only passed for a Knowledge Product target; kept apart from
+ * `ResubmissionPreflightPort` so the non-KP preflight, and everything that builds it, is untouched.
+ */
+export interface ResubmissionKnowledgeProductPort {
+  /**
+   * `ResultsKnowledgeProductsService.extractHandleIdentifier`: the form the create path stores a
+   * handle in (`10568/175322` for a full handle URL). Pure; here so this service keeps its
+   * constructor and the compare still goes through the one normaliser (`KPC-R-6`).
+   */
+  normalizeHandle(raw: string): string;
+  /** The handle stored on the KP's `results_knowledge_product` row, or `null` when there is none. */
+  readStoredHandle(resultId: number): Promise<string | null>;
+  /**
+   * `KPC-T-4` (`KPC-DD-5`): ids of the active PARTNER rows DSpace contributed
+   * (`ResultByIntitutionsRepository.getMqapLinkedPartnerRowIds`). A read; the reset and the partners
+   * writer both keep these rows.
+   */
+  readMqapLinkedPartnerRowIds(resultId: number): Promise<number[]>;
+  /**
+   * `ResultsKnowledgeProductsService.fetchDspaceMetadata` for the stored handle, as the platform
+   * user of the payload. Throws: 422 (cycle-year rule) and 502 as a `DspaceReadException`, anything
+   * else as it was thrown (the preflight maps it to 502).
+   */
+  fetchMetadata(
+    resultId: number,
+    dto: CreateBilateralDto,
+  ): Promise<ResubmissionKpMetadata>;
+}
+
 /** What `ResubmissionWritersPort.writeResult` needs (`RSB-T-5`): everything the preflight resolved. */
 export interface ResubmissionWriteArgs {
   target: Result;
@@ -143,6 +230,11 @@ export interface ResubmissionWriteArgs {
    * off the requested primary (`DD-6`).
    */
   suppressPrimaryRole: boolean;
+  /**
+   * `KPC-T-4`: set for a Knowledge Product only. The writers then skip title, description, geo and
+   * evidence, keep the `keepPartnerRowIds`, and finish with the DSpace apply of this metadata.
+   */
+  kp?: { metadata: ResubmissionKpMetadata; keepPartnerRowIds: number[] };
 }
 
 /**
@@ -204,6 +296,13 @@ export interface ResubmissionParams {
   preflight: ResubmissionPreflightPort;
   /** `RSB-T-5`: the writers of the pipeline (see `ResubmissionWritersPort`). */
   writers: ResubmissionWritersPort;
+  /** `KPC-T-3`: the KP preflight reads. Required when `target` is a Knowledge Product. */
+  knowledgeProduct?: ResubmissionKnowledgeProductPort;
+  /**
+   * `KPC-DD-6`: the status the lock re-read found. Set by `resubmit()` after the re-read, never by the
+   * caller; the CAS of the final write compares against it (`KPC-T-4`).
+   */
+  sourceStatusId?: number;
 }
 
 /** What the preflight resolved and the T-5 writers will need again (so they do not re-query). */
@@ -222,6 +321,8 @@ export interface ResubmissionPreflightResult {
    * Nothing consumes it yet.
    */
   contributorInitiativeIds: number[];
+  /** `KPC-DD-4`: the DSpace metadata the KP preflight fetched, for the writers (`KPC-T-4`). KP only. */
+  kpMetadata?: ResubmissionKpMetadata;
 }
 
 /** What `resetSectionsForResubmission` needs besides the result id (`RSB-T-4`). */
@@ -244,6 +345,11 @@ export interface ResubmissionResetOptions {
    * preflight). Active role-2 rows of any other initiative are deactivated. `[]` retires them all.
    */
   contributorInitiativeIds: number[];
+  /**
+   * `KPC-DD-5`: PARTNER rows DSpace contributed. The PARTNER block of the reset leaves them active.
+   * A Knowledge Product reset (`resultTypeId`) also leaves the evidence and the subnationals alone.
+   */
+  keepPartnerRowIds?: number[];
 }
 
 /** One `outcomes[]` row's worth of data once a resubmission has been accepted (RSB-R-5). */
@@ -329,10 +435,20 @@ export class BilateralResubmissionService {
       // The resolver read the status BEFORE the lock. Someone may have flipped it between
       // that read and now (the first of two concurrent attempts moves it to Pending Review),
       // so the decision is taken again here, under the lock (DD-4).
-      await this.assertStillRejected(queryRunner, target, resultCode, params);
+      // `KPC-DD-6`: the status read here travels with the params, so the final CAS can compare
+      // against exactly what this re-read saw.
+      const sourceStatusId = await this.assertSourceStatusStillAllowed(
+        queryRunner,
+        target,
+        resultCode,
+        params,
+      );
 
       try {
-        return await this.runResubmissionPipeline(params);
+        return await this.runResubmissionPipeline({
+          ...params,
+          sourceStatusId,
+        });
       } catch (error) {
         // RSB-R-21: one line per refusal, with the status it ends in. Never the payload.
         this.logRefusal(
@@ -393,12 +509,19 @@ export class BilateralResubmissionService {
     const payloadSendsPartners =
       (await writers.countResolvablePartners(dto)) > 0;
 
+    // `KPC-DD-5`: the PARTNER rows DSpace contributed, read (like the two reads above) before the
+    // reset, so the reset and the partners writer keep exactly these.
+    const keepPartnerRowIds = preflight.kpMetadata
+      ? await params.knowledgeProduct.readMqapLinkedPartnerRowIds(target.id)
+      : undefined;
+
     await this.resetSectionsForResubmission(target.id, {
       userId: preflight.userId,
       resultTypeId: target.result_type_id,
       primaryChanged,
       payloadSendsPartners,
       contributorInitiativeIds: preflight.contributorInitiativeIds,
+      keepPartnerRowIds,
     });
 
     await writers.writeResult({
@@ -409,7 +532,18 @@ export class BilateralResubmissionService {
       submittedUserId: preflight.submittedUserId,
       resolvedProjects: preflight.resolvedProjects,
       suppressPrimaryRole: primaryChanged,
+      ...(preflight.kpMetadata
+        ? { kp: { metadata: preflight.kpMetadata, keepPartnerRowIds } }
+        : {}),
     });
+
+    // `KPC-DD-6` / §5.2: Pending Review unless a KP read as Editing asks to stay there.
+    const targetStatusId = resubmissionTargetStatus(
+      target.result_type_id,
+      params.sourceStatusId,
+      dto.keep_editing,
+    );
+    const announced = targetStatusId === ResultStatusData.PendingReview.value;
 
     // The lead project row exists now and the result is still Rejected, with its previous primary
     // (the reset and the writers never retire it). The CAS, the direct primary transfer (only when
@@ -418,8 +552,12 @@ export class BilateralResubmissionService {
     // its previous primary and the platform retries.
     const transfer = await this.commitResubmission(target, preflight, {
       transferPrimary: primaryChanged ? writers.transferPrimary : undefined,
-      stampPrimaryCardSubmitted: writers.stampPrimaryCardSubmitted,
+      stampPrimaryCardSubmitted: announced
+        ? writers.stampPrimaryCardSubmitted
+        : undefined,
       resultCode,
+      sourceStatusId: params.sourceStatusId ?? ResultStatusData.Rejected.value,
+      targetStatusId,
     });
 
     // RSB-R-21: the committed outcome. Never the payload, never a key.
@@ -436,25 +574,28 @@ export class BilateralResubmissionService {
     // RRC-R-17 / RRC-DD-7: ALWAYS announced. With the same primary the owner never moved; with a
     // different one the direct transfer has just made it the owner, so the review queue of that
     // Science Program gets the ordinary notice (no acceptance round is left to defer it to).
-    try {
-      await writers.announcePendingReview(
-        target.id,
-        preflight.submittedUserId ?? preflight.userId,
-      );
-    } catch (error) {
-      // `announcePendingReview` never throws; this keeps a faulty double from turning a
-      // COMMITTED resubmission into an error response.
-      this.logger.error(
-        `Bilateral resubmission: the Pending Review announcement failed for result ${resultCode}.`,
-        error as Error,
-      );
+    // `KPC-R-7`: a KP that stays in Editing is NOT announced.
+    if (announced) {
+      try {
+        await writers.announcePendingReview(
+          target.id,
+          preflight.submittedUserId ?? preflight.userId,
+        );
+      } catch (error) {
+        // `announcePendingReview` never throws; this keeps a faulty double from turning a
+        // COMMITTED resubmission into an error response.
+        this.logger.error(
+          `Bilateral resubmission: the Pending Review announcement failed for result ${resultCode}.`,
+          error as Error,
+        );
+      }
     }
 
     return {
       id: target.id,
       result_code: target.result_code,
-      status_id: ResultStatusData.PendingReview.value,
-      status: describeResultStatus(ResultStatusData.PendingReview.value),
+      status_id: targetStatusId,
+      status: describeResultStatus(targetStatusId),
     };
   }
 
@@ -480,17 +621,21 @@ export class BilateralResubmissionService {
     preflight: ResubmissionPreflightResult,
     request: {
       transferPrimary?: ResubmissionWritersPort['transferPrimary'];
-      stampPrimaryCardSubmitted: ResubmissionWritersPort['stampPrimaryCardSubmitted'];
+      /** `KPC-DD-6`: omitted when the target is not Pending Review (nothing to re-date). */
+      stampPrimaryCardSubmitted?: ResubmissionWritersPort['stampPrimaryCardSubmitted'];
       resultCode: string;
+      /** The status the lock re-read found: the CAS compares against it (7 for a non-KP result). */
+      sourceStatusId: number;
+      targetStatusId: number;
     },
   ): Promise<PrimaryTransferResult | null> {
     const resultCode = request.resultCode;
     return this.dataSource.transaction(async (manager) => {
       const flipped = await manager.update(
         Result,
-        { id: target.id, status_id: ResultStatusData.Rejected.value },
+        { id: target.id, status_id: request.sourceStatusId },
         {
-          status_id: ResultStatusData.PendingReview.value,
+          status_id: request.targetStatusId,
           last_updated_by: preflight.userId,
         },
       );
@@ -520,7 +665,7 @@ export class BilateralResubmissionService {
       // `PNR-T-2`: re-date the primary card in this same transaction, after the CAS and after the
       // optional transfer (which retires the row a too-early stamp would have touched). An error
       // propagates and rolls the whole resubmission back (`PNR-NFR-1`); a lost CAS never gets here.
-      await request.stampPrimaryCardSubmitted(target.id, manager);
+      await request.stampPrimaryCardSubmitted?.(target.id, manager);
 
       await manager.save(
         ResultReviewHistory,
@@ -583,8 +728,13 @@ export class BilateralResubmissionService {
     const { target, bilateralDto: dto, preflight: port } = params;
     const resultCode = String(target.result_code);
 
+    // `KPC-DD-1`: KP mode comes from the stored type, like the status rule.
+    const isKnowledgeProduct =
+      Number(target.result_type_id) === ResultTypeEnum.KNOWLEDGE_PRODUCT;
+
     await port.validateTypeSpecificPayload(dto);
-    await port.validateGeoFocus(dto);
+    // `KPC-R-9`: a KP correction does not need `geo_focus` (DSpace owns the geography).
+    if (!isKnowledgeProduct) await port.validateGeoFocus(dto);
     port.assertNoDuplicateEvidenceLinks(dto.evidence);
     await port.validateTocMappingInitiatives(
       dto.toc_mapping,
@@ -633,8 +783,15 @@ export class BilateralResubmissionService {
       );
     }
 
-    // RSB-R-16: the result own title is not a duplicate; another result title is.
-    await port.ensureUniqueTitle(dto.title ?? '', target.version_id, target.id);
+    // RSB-R-16: the result own title is not a duplicate; another result title is. `KPC-R-9`: a KP
+    // takes its title from DSpace, so there is nothing to compare.
+    if (!isKnowledgeProduct) {
+      await port.ensureUniqueTitle(
+        dto.title ?? '',
+        target.version_id,
+        target.id,
+      );
+    }
 
     // RSF-R-5 / RSF-DD-6 (resubmission branch only; the no-code create warns and continues): a
     // `lead_center` object that matches no centre is refused, because `handleLeadCenter` would
@@ -650,6 +807,12 @@ export class BilateralResubmissionService {
       dto.contributing_programs,
     );
 
+    // `KPC-DD-4`: the handle compare and the DSpace fetch, BEFORE the users: the fetch only reads, and a
+    // refusal here must not leave even a user row behind.
+    const kpMetadata = isKnowledgeProduct
+      ? await this.checkKnowledgeProductHandleAndFetch(params)
+      : undefined;
+
     // T-4 (T-3 review): the users, last. It can refuse (400 "User email is required.").
     const { userId, submittedUserId } = await port.resolveUsers(dto);
 
@@ -660,7 +823,65 @@ export class BilateralResubmissionService {
       userId,
       submittedUserId,
       contributorInitiativeIds,
+      ...(kpMetadata ? { kpMetadata } : {}),
     };
+  }
+
+  /**
+   * `KPC-DD-4` / `KPC-R-6` / `KPC-R-8`: the two KP-only steps of the preflight, both reads.
+   *
+   *  1. the payload handle must be present (400) and equal the stored one once both go through
+   *     `extractHandleIdentifier`, so `https://hdl.handle.net/10568/175322` and `10568/175322` are the
+   *     same handle (409 otherwise, the handle of a KP cannot change)
+   *  2. DSpace is read for the stored handle. A 422 (reporting-cycle year rule) passes through; any
+   *     other failure, thrown by the fetch or by whatever it called, is a 502 naming the code and the
+   *     stored handle. Nothing was written, so the platform just retries.
+   */
+  private async checkKnowledgeProductHandleAndFetch(
+    params: ResubmissionParams,
+  ): Promise<ResubmissionKpMetadata> {
+    const { target, bilateralDto: dto, knowledgeProduct } = params;
+    const resultCode = String(target.result_code);
+    if (!knowledgeProduct) {
+      throw new Error(
+        `Result ${resultCode} is a knowledge product but no knowledge product port was provided.`,
+      );
+    }
+
+    const sentHandle = String(dto.knowledge_product?.handle ?? '').trim();
+    if (!sentHandle) {
+      throw new BadRequestException(
+        'knowledge_product.handle is required for KNOWLEDGE_PRODUCT results to fetch metadata from CGSpace.',
+      );
+    }
+
+    const storedHandle =
+      (await knowledgeProduct.readStoredHandle(target.id)) ?? '';
+    const sameHandle =
+      storedHandle !== '' &&
+      knowledgeProduct.normalizeHandle(sentHandle) ===
+        knowledgeProduct.normalizeHandle(storedHandle);
+    if (!sameHandle) {
+      throw new ConflictException(
+        `Result ${resultCode} is linked to handle ${storedHandle}; the payload sends ${sentHandle}. The handle of a knowledge product cannot change.`,
+      );
+    }
+
+    try {
+      return await knowledgeProduct.fetchMetadata(target.id, dto);
+    } catch (error) {
+      const status =
+        (error as any)?.getStatus?.() ?? (error as any)?.status ?? undefined;
+      if (status === 422) throw error;
+      this.logger.error(
+        `Bilateral resubmission: the DSpace read failed for result ${resultCode}: ${
+          (error as Error)?.message ?? 'unknown error'
+        }`,
+      );
+      throw new BadGatewayException(
+        `The DSpace record of result ${resultCode} (handle ${storedHandle}) could not be read. Nothing was changed; retry later.`,
+      );
+    }
   }
 
   /**
@@ -766,8 +987,14 @@ export class BilateralResubmissionService {
         if (keys.length) await deactivate(entity, { [key]: In(keys) }, set);
       };
 
+      // `KPC-DD-5`: a Knowledge Product keeps its evidence (the handle link, which cannot change) and
+      // its subnationals (no KP writer would rewrite them; the geography is DSpace-owned, §5.1).
+      const isKnowledgeProduct =
+        Number(options.resultTypeId) === ResultTypeEnum.KNOWLEDGE_PRODUCT;
+
       // ---- evidence ------------------------------------------------------------------------
-      await deactivate(Evidence, { result_id: resultId });
+      if (!isKnowledgeProduct)
+        await deactivate(Evidence, { result_id: resultId });
 
       // ---- projects, and the budget that hangs off each project row -----------------------
       const projects = await activeRows(ResultsByProjects, {
@@ -862,23 +1089,39 @@ export class BilateralResubmissionService {
       );
 
       // ---- subnationals of EVERY country row (an inactive country can still hold them) ----
-      const countries = await manager.find(ResultCountry, {
-        where: { result_id: resultId },
-      });
-      await deactivateByKeys(
-        ResultCountrySubnational,
-        'result_country_id',
-        countries.map((country) => country.result_country_id),
-      );
+      if (!isKnowledgeProduct) {
+        const countries = await manager.find(ResultCountry, {
+          where: { result_id: resultId },
+        });
+        await deactivateByKeys(
+          ResultCountrySubnational,
+          'result_country_id',
+          countries.map((country) => country.result_country_id),
+        );
+      }
 
       // ---- PARTNER institutions, only when the payload sends none --------------------------
       // When it sends some, `updateInstitutions` replaces them itself (deactivates the ones not
       // listed, reactivates the ones that are), so deactivating them here would only add churn.
       if (!options.payloadSendsPartners) {
-        await deactivate(ResultsByInstitution, {
+        const partnerRows = {
           result_id: resultId,
           institution_roles_id: InstitutionRoleEnum.PARTNER,
-        });
+        };
+        if (options.keepPartnerRowIds?.length) {
+          // `KPC-DD-5`: the rows DSpace contributed stay. Filtered in code, keyed by row id.
+          const kept = new Set(options.keepPartnerRowIds.map(Number));
+          const partners = await activeRows(ResultsByInstitution, partnerRows);
+          await deactivateByKeys(
+            ResultsByInstitution,
+            'id',
+            partners
+              .filter((row) => !kept.has(Number(row.id)))
+              .map((r) => r.id),
+          );
+        } else {
+          await deactivate(ResultsByInstitution, partnerRows);
+        }
       }
 
       // ---- Innovation Use: actors, organisation types and measures -------------------------
@@ -930,12 +1173,17 @@ export class BilateralResubmissionService {
     return code || null;
   }
 
-  private async assertStillRejected(
+  /**
+   * The lock re-read (`RSB-DD-4`, `KPC-DD-2`): the status is checked again under the lock, with the
+   * same rule the resolver applies (`allowedResubmissionStatuses`). Returns the status it read, which
+   * the final CAS compares against (`KPC-DD-6`).
+   */
+  private async assertSourceStatusStillAllowed(
     queryRunner: QueryRunner,
     target: Result,
     resultCode: string,
     params: ResubmissionParams,
-  ): Promise<void> {
+  ): Promise<number> {
     const rows: Array<{ status_id: number | string }> = await queryRunner.query(
       `SELECT status_id FROM result WHERE id = ? AND is_active = 1`,
       [target.id],
@@ -945,12 +1193,16 @@ export class BilateralResubmissionService {
       this.logRefusal(resultCode, params.platform, 404);
       throw new NotFoundException(`Result ${resultCode} was not found.`);
     }
-    if (Number(current.status_id) !== ResultStatusData.Rejected.value) {
+    const refusal = resubmissionStatusRefusal(
+      resultCode,
+      current.status_id,
+      target.result_type_id,
+    );
+    if (refusal) {
       this.logRefusal(resultCode, params.platform, 409);
-      throw new ConflictException(
-        `Result ${resultCode} cannot be resubmitted: its status is ${describeResultStatus(current.status_id)}. Only rejected results can be resubmitted.`,
-      );
+      throw new ConflictException(refusal);
     }
+    return Number(current.status_id);
   }
 
   /** RSB-R-21: the committed outcome, in the same format as the refusals. */

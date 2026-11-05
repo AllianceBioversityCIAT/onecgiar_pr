@@ -6,6 +6,8 @@
  * load, one item per mapped (ToC indicator, center) of the active reporting version.
  */
 
+import { ptTypologyTone } from './pt-typology';
+
 export interface PtActivityItem {
   /** Integration `related_node_id`. */
   toc_results_indicator_id: string;
@@ -16,6 +18,17 @@ export interface PtActivityItem {
   matched: boolean;
   evidence_count: number;
   pt_indicator_id: string | null;
+  /**
+   * Guide §4.3 `cached_results_count`. `null` when the activity payload does not carry it
+   * (older responses). A `0` means Progress Tracker has not cached a draft yet — it is not,
+   * by itself, "the evidence leads to nothing".
+   */
+  cached_results_count: number | null;
+  /**
+   * Drafted result-type slugs, only when the ready-counts item actually sends `result_types`.
+   * The 2026-09-15 capture does not. An empty list means "types unknown", never "no type".
+   */
+  result_types: string[];
 }
 
 /** Items grouped per indicator, reachable by either identifier the row may carry. */
@@ -27,6 +40,8 @@ export interface PtActivityRow {
   indicator_related_node_id?: string | null;
   center_acronym?: string | null;
   centers?: Array<{ center_acronym?: string | null }> | null;
+  /** PRMS category label on the Reporting row (`Knowledge product`, …). */
+  result_type_name?: string | null;
 }
 
 /** The client gives up on the call after this long and renders the page without badges. */
@@ -72,13 +87,20 @@ export function buildPtActivityIndex(items: unknown): PtActivityIndex | null {
     if (!nodeId && !hasIntId) continue;
 
     const count = Number(r['evidence_count']);
+    const cachedRaw = r['cached_results_count'];
+    const cached = typeof cachedRaw === 'number' && Number.isFinite(cachedRaw) && cachedRaw >= 0 ? cachedRaw : null;
+    const resultTypes = Array.isArray(r['result_types'])
+      ? (r['result_types'] as unknown[]).filter((type): type is string => typeof type === 'string' && !!type.trim()).map(type => type.trim())
+      : [];
     const item: PtActivityItem = {
       toc_results_indicator_id: nodeId,
       toc_indicator_integration_id: hasIntId ? Number(intId) : null,
       center: typeof r['center'] === 'string' ? (r['center'] as string) : '',
       matched: r['matched'] === true,
       evidence_count: Number.isFinite(count) && count > 0 ? count : 0,
-      pt_indicator_id: typeof r['pt_indicator_id'] === 'string' ? (r['pt_indicator_id'] as string) : null
+      pt_indicator_id: typeof r['pt_indicator_id'] === 'string' ? (r['pt_indicator_id'] as string) : null,
+      cached_results_count: cached,
+      result_types: resultTypes
     };
     if (hasIntId) push(byIntegrationId(intId), item);
     if (nodeId) push(byNodeId(nodeId), item);
@@ -128,15 +150,60 @@ export function ptActivityHasAny(index: PtActivityIndex | null | undefined): boo
   return false;
 }
 
-/** Badge tooltip copy — explains the unit, since one proposal can group several evidence items. */
-export const PT_ACTIVITY_TOOLTIP = 'Evidence items in Progress Tracker. One proposal can group several evidence items.';
+/**
+ * Badge tooltip. The count is `evidence_count` only: Progress Tracker activity, not a PRMS result,
+ * not a repository handle, and not a proposal that can be accepted as-is.
+ */
+export const PT_ACTIVITY_TOOLTIP =
+  'Progress Tracker evidence activity for this indicator. The number counts evidence items held in Progress Tracker. It is not a PRMS result, not a repository handle, and not a proposal ready to report.';
 
-/** Full badge label: `PT · 1 evidence item` / `PT · 2 evidence items`. */
+/** Full badge label: `PT activity · 1` / `PT activity · 2`. */
 export function ptActivityLabel(count: number): string {
-  return `PT · ${count} evidence ${count === 1 ? 'item' : 'items'}`;
+  return `PT activity · ${count}`;
 }
 
 /** Compact badge label for narrow viewports (<640px): `PT · 2`. */
 export function ptActivityShortLabel(count: number): string {
   return `PT · ${count}`;
+}
+
+/**
+ * Colour of the Reporting-tab badge.
+ *
+ * - `none` — no evidence activity, so no badge.
+ * - `aligned` — blue: every drafted result type the activity payload actually carries matches the row.
+ * - `divergent` — yellow: a drafted type is a different PRMS category.
+ * - `activity` — blue, the first-delivery badge. Ready-counts (Guide §4.3, captured 2026-09-15) has
+ *   `evidence_count` and `cached_results_count` and no result types. An empty `result_types` means
+ *   the type is unknown, so the badge stays the activity counter and does not claim a typology.
+ *   `cached_results_count === 0` only means no draft is cached yet; it does not hide the counter.
+ */
+export type PtActivityTone = 'aligned' | 'divergent' | 'activity' | 'none';
+
+function activityCandidates(row: PtActivityRow | null | undefined, index: PtActivityIndex | null | undefined): PtActivityItem[] {
+  if (!row || !index || index.size === 0) return [];
+  const hasIntId = row.indicator_id !== null && row.indicator_id !== undefined && String(row.indicator_id).trim() !== '';
+  const list =
+    (hasIntId ? index.get(byIntegrationId(row.indicator_id)) : undefined) ??
+    (row.indicator_related_node_id ? index.get(byNodeId(row.indicator_related_node_id)) : undefined);
+  if (!list?.length) return [];
+  const centers = centerAcronymsOfRow(row).map(centerKey);
+  const candidates = centers.length ? list.filter(i => centers.includes(centerKey(i.center))) : list.length === 1 ? list : [];
+  return candidates.filter(item => item.matched && item.evidence_count > 0);
+}
+
+export function ptActivityToneOf(row: PtActivityRow | null | undefined, index: PtActivityIndex | null | undefined): PtActivityTone {
+  const candidates = activityCandidates(row, index);
+  if (!candidates.length) return 'none';
+  const types = [...new Set(candidates.flatMap(item => item.result_types))];
+  const tone = ptTypologyTone(row?.result_type_name, types);
+  if (tone === 'none') return 'activity';
+  return tone;
+}
+
+/** The first-delivery tooltip, plus a typology sentence only when the payload actually carried types. */
+export function ptActivityTooltipFor(tone: PtActivityTone): string {
+  if (tone === 'aligned') return `${PT_ACTIVITY_TOOLTIP} The drafted result type matches this indicator.`;
+  if (tone === 'divergent') return `${PT_ACTIVITY_TOOLTIP} The drafted result type does not match this indicator.`;
+  return PT_ACTIVITY_TOOLTIP;
 }

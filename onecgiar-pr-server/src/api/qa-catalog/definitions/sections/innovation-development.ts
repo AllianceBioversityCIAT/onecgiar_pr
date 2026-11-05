@@ -23,10 +23,7 @@
 // checkboxes `answer_boolean = true`, free text in `answer_text`; a re-answer deactivates the older row). The relation filter only
 // filters `result_answers`, and the question an option belongs to lives on `result_questions` (an excluded table), so the control
 // list key carries the parent question: one list per question (`question_options_<question>`), the same decision as T-9.
-//  - Team diversity (question 112; options 113/114/115; children of 113 = 116..121): ids are IDENTICAL in test and prod (owner check
-//    2026-10-06/07: Innovation P25 questions 101-121, 138, 147-149, execution.md "result_questions check run by the owner in test and
-//    prod"), so both lists are CLOSED (closed-control-lists.ts) and conditions compare ids. No migration in this repository seeds them
-//    (they were cloned from the P22 rows by 1762398554711-PopulateDataResultQuestions without literal ids).
+//  - Team diversity (question 112) was catalogued here until catalog 2026.33 and is removed as of 2026.34 (see the removals note below).
 //  - GESI stage, risk stage and the consolidated IPR question are NOT in that verified set: they were inserted by
 //    1787842155469-AddGesiRiskStageQuestionsP25 / 1788441000000-AddConsolidatedIprQuestionP25 with AUTO_INCREMENT ids, and the client,
 //    the server (innovation-dev-questions.const.ts) and V-ID:26-62 all resolve them BY TEXT because the ids may differ per environment.
@@ -42,7 +39,7 @@
 //    The Yes / Not sure notice is help text, carried as the field description.
 //  - Phase-gated 2026 removals stay out of the catalog: anticipated innovation user (IDI.html:52-54), evidence of user need (:63-76),
 //    Megatrends (:78-83), GESI / risk open questions, assumptions and partners-policies (:106-130), scaling studies (:207-225) and the
-//    reference materials (:230-232; `isInnovationReferenceMaterialsRemoved2026`). Their columns are NOT_FOR_QA / not catalogued.
+//    reference materials (:230-232; `isInnovationReferenceMaterialsRemoved2026`), and team diversity (IDI.html:161; `isInnovationDevFormReduced2026`, spec `changes/remove-innovation-team-diversity`, catalog 2026.34; bilateral key kept). Their columns are NOT_FOR_QA / not catalogued.
 //  - Investment tables: the form lists the BUDGET rows (one per active parent row, EST.html:21,74,147); each list is modelled on the PARENT
 //    row (initiative / project / institution, active) with the budget row reached by a path, which is also how V-ID:644-680 iterates.
 //    The same tables serve the investment blocks of innovation use and IPSR step 4 (cataloged separately).
@@ -52,7 +49,7 @@ import {
   CatalogSubField,
   PathBinding,
 } from '../types';
-import { FROM_2026, whenEq, whenIn } from './shared';
+import { FROM_2026, whenEq } from './shared';
 
 export const INNOVATION_DEVELOPMENT_SECTION: CatalogSection = {
   key: 'innovation_development',
@@ -72,38 +69,12 @@ const NOT_APPLICABLE_LABEL = 'Not applicable';
 /** Typology (`innovation_nature_id`, stored as the typology CODE) of a variety or breed (IDI.html:30). */
 const VARIETY_NATURE = 12;
 
-/** `result_questions` ids of the team-diversity question (owner-verified identical in test and prod). */
-const TEAM_DIVERSITY_YES_ACTIONS = 113;
-const TEAM_DIVERSITY_OTHER_ACTION = 121;
-
 const answerBinding = () => ({
   kind: 'relation' as const,
   table: 'result_answers',
   fk_to_result: 'result_id',
   value_column: 'result_question_id',
   filter: { answer_boolean: 1, is_active: 1 },
-});
-
-/**
- * The OTHER active answered rows of the same result, reached from the parent option's row (DD-12: a subfield path starts at the
- * parent row, here a `result_answers` row). Which question they belong to is carried by the subfield's control list (closed ids).
- */
-const sameResultAnswers = (
-  valueColumn: string,
-  filter: PathBinding['steps'][number]['filter'] = {
-    answer_boolean: 1,
-    is_active: 1,
-  },
-): PathBinding => ({
-  kind: 'path',
-  steps: [
-    {
-      table: 'result_answers',
-      join: [{ from: 'result_id', to: 'result_id' }],
-      filter,
-    },
-  ],
-  value_column: valueColumn,
 });
 
 /** Read-only label of the option a stage question's answer row points at (reference text of `result_questions`). */
@@ -367,56 +338,6 @@ export const INNOVATION_DEVELOPMENT_FIELDS: CatalogField[] = [
     },
   },
   {
-    key: 'innovation_dev.team_diversity',
-    label:
-      'Innovation team diversity - Have concrete actions been taken to promote diversity in the composition of the CGIAR and partner innovation team?',
-    type: 'single_select',
-    control_list: 'question_options_team_diversity',
-    section: SECTION,
-    order: 11,
-    result_types: TYPES,
-    // IDI.html:161 -> TD.html:5-13 (pr-radio-button default required; options 113 / 114 / 115 = children of question 112); V-ID:522-531, 559-568
-    required: true,
-    required_confirmed: true,
-    ...FROM_2026,
-    storage: answerBinding(),
-    subfields: [
-      {
-        // RB.html:92-107: the checkboxes show under the option that has sub-options (113) while it is selected; V-ID:569-587 requires
-        // >= 1 ticked child when 113 is answered
-        key: 'actions',
-        label: 'Multiple answers can be selected.',
-        type: 'multi_select',
-        control_list: 'question_options_team_diversity_actions',
-        required: false,
-        visible_when: whenEq(
-          'innovation_dev.team_diversity',
-          TEAM_DIVERSITY_YES_ACTIONS,
-        ),
-        required_when: whenEq(
-          'innovation_dev.team_diversity',
-          TEAM_DIVERSITY_YES_ACTIONS,
-        ),
-        // the ticked rows (`answer_boolean = 1`) of the same result; the closed list restricts them to the children of 113 (116..121)
-        storage: sameResultAnswers('result_question_id'),
-      },
-      {
-        // RB.html:108-114: the text box of the "Other" checkbox (disabled until ticked; pr-input default required); V-ID:588-607
-        key: 'other_text',
-        label: 'Other',
-        type: 'text',
-        required: false,
-        visible_when: whenIn('actions', [TEAM_DIVERSITY_OTHER_ACTION]),
-        required_when: whenIn('actions', [TEAM_DIVERSITY_OTHER_ACTION]),
-        storage: sameResultAnswers('answer_text', {
-          result_question_id: TEAM_DIVERSITY_OTHER_ACTION,
-          answer_boolean: 1,
-          is_active: 1,
-        }),
-      },
-    ],
-  },
-  {
     key: 'innovation_dev.readiness_level',
     label: 'How would you assess the current readiness of this innovation?',
     description:
@@ -424,7 +345,7 @@ export const INNOVATION_DEVELOPMENT_FIELDS: CatalogField[] = [
     type: 'single_select',
     control_list: 'readiness_levels',
     section: SECTION,
-    order: 12,
+    order: 11,
     result_types: TYPES,
     // IDI.html:163-174 (pr-field-header default required, pr-range-level 0-9); V-ID:76
     required: true,
@@ -444,7 +365,7 @@ export const INNOVATION_DEVELOPMENT_FIELDS: CatalogField[] = [
       'Example: We chose readiness level 6 (semi-controlled testing) for the genetically improved farm tilapia (GIFT) because it is currently being tested under semi-controlled conditions in the multiplication center and hatchery in the selected countries as shown in the provided evidence.',
     type: 'text',
     section: SECTION,
-    order: 13,
+    order: 12,
     result_types: TYPES,
     // IDI.html:198-204 (pr-textarea default required, max 50 words); V-ID:77
     required: true,
@@ -464,7 +385,7 @@ export const INNOVATION_DEVELOPMENT_FIELDS: CatalogField[] = [
       'Innovation development team estimates the total investment (in-cash + in-kind) in innovation development made by the leading Science Program/Accelerator and the contributing Science Program/Accelerator during the reporting period. Includes Science Program/Accelerator funds allocated to CGIAR and/or partners. Innovation development team works with contributing Science Program/Accelerator to estimate the total (co-) investment (in-cash + in-kind) in innovation development made by each of the contributing Science Program/Accelerator during the reporting period.',
     type: 'list',
     section: SECTION,
-    order: 14,
+    order: 13,
     result_types: TYPES,
     // IDI.html:228 -> EST.html:1-55 (one row per active initiative row, any role); V-ID:633-648 reads no value as required
     required: false,
@@ -502,7 +423,7 @@ export const INNOVATION_DEVELOPMENT_FIELDS: CatalogField[] = [
       'Innovation development team works with W3/ bilateral projects to estimate the total (co-) investment (in-cash + in-kind) in innovation development made by each of the contributing W3/ Bilaterals during the reporting period. Includes W3/ Bilateral funds allocated to CGIAR and/or partners',
     type: 'list',
     section: SECTION,
-    order: 15,
+    order: 14,
     result_types: TYPES,
     // EST.html:57-130 (one row per active project row; projects are added in Contributors & partners); V-ID:650-666
     required: false,
@@ -540,7 +461,7 @@ export const INNOVATION_DEVELOPMENT_FIELDS: CatalogField[] = [
       'Innovation development team works with partnersprojects to estimate the total (co-) investment (in-cash + in-kind) in innovation development made by each partner during the reporting period. This concerns the investment of partner resources (in-cash and/or in-kind) that were not provided by CGIAR Science Program/Accelerator or projects',
     type: 'list',
     section: SECTION,
-    order: 16,
+    order: 15,
     result_types: TYPES,
     // EST.html:132-198 (one row per active institution row, any role; partners are added in Contributors & partners); V-ID:668-684
     required: false,

@@ -1,4 +1,5 @@
 import {
+  HttpException,
   HttpStatus,
   Injectable,
   Logger,
@@ -67,6 +68,24 @@ export function resolveKpResultDescription(
   const explicit = dto?.result_data?.description;
   if (typeof explicit === 'string' && explicit.trim()) return explicit.trim();
   return dto?.description;
+}
+
+/**
+ * KPC-DD-3: raised by `fetchDspaceMetadata` when DSpace could not be read. Carries the original
+ * `findOnCGSpace` answer so `syncAgain` can keep returning exactly what it returned before the split.
+ */
+export class DspaceReadException extends HttpException {
+  constructor(
+    message: string,
+    status: number,
+    readonly cgspaceResponse: {
+      response?: any;
+      message?: string;
+      status?: number;
+    },
+  ) {
+    super(message, status);
+  }
 }
 
 @Injectable()
@@ -158,216 +177,16 @@ export class ResultsKnowledgeProductsService {
         }
       }
 
-      const globalParameter = await this._globalParameterRepository.findOne({
-        where: { name: 'kp_mqap_institutions_confidence' },
-        select: ['value'],
-      });
-
-      if (!globalParameter) {
-        throw new Error(
-          "Global parameter 'kp_mqap_institutions_confidence' not found",
-        );
-      }
-
-      const confidenceThreshold = +globalParameter.value;
-
-      const cgspaceResponse = await this.findOnCGSpace(
-        resultKnowledgeProduct.handle,
+      const { newMetadata } = await this.fetchDspaceMetadata(
+        resultId,
         user,
-        resultKnowledgeProduct.result_object?.obj_version?.cgspace_year,
-        false,
+        resultKnowledgeProduct,
       );
 
-      if (cgspaceResponse.status !== HttpStatus.OK) {
-        throw this._handlersError.returnErrorRes({ error: cgspaceResponse });
-      }
-
-      const newMetadata =
-        cgspaceResponse.response as ResultsKnowledgeProductDto;
-
-      const updatedKnowledgeProduct =
-        this._resultsKnowledgeProductMapper.updateEntity(
-          resultKnowledgeProduct,
-          newMetadata,
-          user.id,
-          resultKnowledgeProduct.results_id,
-        );
-
-      updatedKnowledgeProduct.result_knowledge_product_id =
-        resultKnowledgeProduct.result_knowledge_product_id;
-
-      this._resultsKnowledgeProductMapper.patchAltmetricData(
-        updatedKnowledgeProduct,
+      const updatedKnowledgeProduct = await this.applyDspaceMetadata(
+        resultKnowledgeProduct,
         newMetadata,
-        true,
-      );
-
-      //authors
-      updatedKnowledgeProduct.result_knowledge_product_author_array =
-        await this._resultsKnowledgeProductAuthorRepository.find({
-          where: {
-            result_knowledge_product_id:
-              updatedKnowledgeProduct.result_knowledge_product_id,
-            is_active: true,
-          },
-        });
-      this._resultsKnowledgeProductMapper.patchAuthors(
-        updatedKnowledgeProduct,
-        newMetadata,
-        true,
-      );
-      this._resultsKnowledgeProductMapper.patchInstitutions(
-        updatedKnowledgeProduct,
-        newMetadata,
-        confidenceThreshold,
-        true,
-      );
-      await this.validateAndSanitizePredictedInstitutions(
-        updatedKnowledgeProduct.result_knowledge_product_institution_array ??
-          [],
-      );
-
-      //keywords
-      updatedKnowledgeProduct.result_knowledge_product_keyword_array =
-        await this._resultsKnowledgeProductKeywordRepository.find({
-          where: {
-            result_knowledge_product_id:
-              updatedKnowledgeProduct.result_knowledge_product_id,
-            is_active: true,
-          },
-        });
-      this._resultsKnowledgeProductMapper.patchKeywords(
-        updatedKnowledgeProduct,
-        newMetadata,
-        true,
-      );
-      this._resultsKnowledgeProductMapper.patchMetadata(
-        updatedKnowledgeProduct,
-        newMetadata,
-        true,
-      );
-      this._resultsKnowledgeProductMapper.patchRegions(
-        updatedKnowledgeProduct,
-        newMetadata,
-        true,
-      );
-
-      await this._resultsKnowledgeProductRepository.update(
-        {
-          result_knowledge_product_id:
-            updatedKnowledgeProduct.result_knowledge_product_id,
-        },
-        {
-          findable: updatedKnowledgeProduct.findable,
-          accesible: updatedKnowledgeProduct.accesible,
-          interoperable: updatedKnowledgeProduct.interoperable,
-          reusable: updatedKnowledgeProduct.reusable,
-          cgspace_countries: updatedKnowledgeProduct.cgspace_countries,
-          cgspace_regions: updatedKnowledgeProduct.cgspace_regions,
-          last_updated_by: user.id,
-          comodity: updatedKnowledgeProduct.comodity,
-          sponsors: updatedKnowledgeProduct.sponsors,
-          description: updatedKnowledgeProduct.description,
-          doi: updatedKnowledgeProduct.doi,
-          knowledge_product_type:
-            updatedKnowledgeProduct.knowledge_product_type,
-          licence: updatedKnowledgeProduct.licence,
-        },
-      );
-
-      //updating general result tables
-      await this._resultRepository.update(
-        { id: resultId },
-        {
-          title: newMetadata.title,
-          description: newMetadata.description,
-        },
-      );
-
-      //updating relations
-      await this._resultsKnowledgeProductAltmetricRepository.save(
-        updatedKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
-      );
-      await this._resultsKnowledgeProductAuthorRepository.save(
-        updatedKnowledgeProduct.result_knowledge_product_author_array ?? [],
-      );
-
-      // rbi && rkpi save
-
-      updatedKnowledgeProduct.result_knowledge_product_institution_array =
-        await this._resultsKnowledgeProductInstitutionRepository.save(
-          updatedKnowledgeProduct.result_knowledge_product_institution_array ??
-            [],
-        );
-
-      const resultByInstitutions =
-        updatedKnowledgeProduct.result_knowledge_product_institution_array
-          .map((rkpi) => {
-            if (rkpi.result_by_institution_object) {
-              rkpi.result_by_institution_object.result_kp_mqap_institution_id =
-                rkpi.result_kp_mqap_institution_id;
-            }
-            return rkpi.result_by_institution_object;
-          })
-          .filter((rbi) => rbi);
-      await this._resultByInstitutionRepository.save(
-        resultByInstitutions ?? [],
-      );
-
-      await this._resultsKnowledgeProductKeywordRepository.save(
-        updatedKnowledgeProduct.result_knowledge_product_keyword_array ?? [],
-      );
-      await this._resultsKnowledgeProductMetadataRepository.save(
-        updatedKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
-      );
-
-      await this.separateCentersFromCgspacePartners(
-        updatedKnowledgeProduct,
-        true,
-      );
-
-      //geolocation
-      await this.updateCountries(updatedKnowledgeProduct, newMetadata, true);
-
-      for (const country of updatedKnowledgeProduct.result_object
-        .result_country_array ?? []) {
-        country.geo_scope_role_id = 1;
-      }
-      await this._resultCountryRepository.save(
-        updatedKnowledgeProduct.result_object.result_country_array ?? [],
-      );
-
-      await this.updateGeoLocation(
-        updatedKnowledgeProduct.result_object,
-        updatedKnowledgeProduct,
-        newMetadata,
-      );
-
-      for (const region of updatedKnowledgeProduct.result_object
-        .result_region_array ?? []) {
-        region.geo_scope_role_id = 1;
-      }
-      await this._resultRegionRepository.save(
-        updatedKnowledgeProduct.result_object.result_region_array ?? [],
-      );
-
-      //fair
-      updatedKnowledgeProduct.result_knowledge_product_fair_score_array =
-        await this._resultsKnowledgeProductFairScoreRepository.find({
-          where: {
-            result_knowledge_product_id:
-              updatedKnowledgeProduct.result_knowledge_product_id,
-            is_active: true,
-          },
-          relations: {
-            fair_field_object: {
-              parent_object: true,
-            },
-          },
-        });
-      await this.updateFair(updatedKnowledgeProduct, newMetadata, true);
-      await this._resultsKnowledgeProductFairScoreRepository.save(
-        updatedKnowledgeProduct.result_knowledge_product_fair_score_array ?? [],
+        user,
       );
 
       return {
@@ -376,8 +195,277 @@ export class ResultsKnowledgeProductsService {
         status: HttpStatus.CREATED,
       };
     } catch (error) {
+      if (error instanceof DspaceReadException) {
+        return this._handlersError.returnErrorRes({
+          error: error.cgspaceResponse,
+        });
+      }
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  /**
+   * KPC-DD-3 (fetch): loads the KP of a result (unless already loaded) and reads its DSpace record by the
+   * stored handle. Writes nothing and has no admin Journal Article gate. Throws 422 when `findOnCGSpace`
+   * answered 422 (message passed through), otherwise 502 naming the result code and the handle.
+   */
+  async fetchDspaceMetadata(
+    resultId: number,
+    user: TokenDto,
+    preloaded?: ResultsKnowledgeProduct,
+  ): Promise<{
+    resultKnowledgeProduct: ResultsKnowledgeProduct;
+    newMetadata: ResultsKnowledgeProductDto;
+  }> {
+    const resultKnowledgeProduct: ResultsKnowledgeProduct =
+      preloaded ??
+      (await this._resultsKnowledgeProductRepository.findOne({
+        where: { results_id: resultId },
+        relations: this._resultsKnowledgeProductRelations,
+      }));
+
+    if (!resultKnowledgeProduct) {
+      throw new NotFoundException(
+        `A Result Knowledge Product with result_id '${resultId}' does not exist.`,
+      );
+    }
+
+    const cgspaceResponse = await this.findOnCGSpace(
+      resultKnowledgeProduct.handle,
+      user,
+      resultKnowledgeProduct.result_object?.obj_version?.cgspace_year,
+      false,
+    );
+
+    if (cgspaceResponse.status !== HttpStatus.OK) {
+      if (cgspaceResponse.status === HttpStatus.UNPROCESSABLE_ENTITY) {
+        throw new DspaceReadException(
+          cgspaceResponse.message,
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          cgspaceResponse,
+        );
+      }
+      const code =
+        resultKnowledgeProduct.result_object?.result_code ?? resultId;
+      throw new DspaceReadException(
+        `The DSpace record of result ${code} (handle ${resultKnowledgeProduct.handle}) could not be read. Nothing was changed; retry later.`,
+        HttpStatus.BAD_GATEWAY,
+        cgspaceResponse,
+      );
+    }
+
+    return {
+      resultKnowledgeProduct,
+      newMetadata: cgspaceResponse.response as ResultsKnowledgeProductDto,
+    };
+  }
+
+  /**
+   * KPC-DD-3 (apply): the write sequence of the former `syncAgain` (KP row, authors, institutions,
+   * keywords, metadata, regions, countries, geo, FAIR, result title/description) from already-fetched
+   * metadata. Returns the updated knowledge product.
+   */
+  async applyDspaceMetadata(
+    resultKnowledgeProduct: ResultsKnowledgeProduct,
+    newMetadata: ResultsKnowledgeProductDto,
+    user: TokenDto,
+  ): Promise<ResultsKnowledgeProduct> {
+    const resultId = resultKnowledgeProduct.results_id;
+    const globalParameter = await this._globalParameterRepository.findOne({
+      where: { name: 'kp_mqap_institutions_confidence' },
+      select: ['value'],
+    });
+
+    if (!globalParameter) {
+      throw new Error(
+        "Global parameter 'kp_mqap_institutions_confidence' not found",
+      );
+    }
+
+    const confidenceThreshold = +globalParameter.value;
+
+    const updatedKnowledgeProduct =
+      this._resultsKnowledgeProductMapper.updateEntity(
+        resultKnowledgeProduct,
+        newMetadata,
+        user.id,
+        resultKnowledgeProduct.results_id,
+      );
+
+    updatedKnowledgeProduct.result_knowledge_product_id =
+      resultKnowledgeProduct.result_knowledge_product_id;
+
+    this._resultsKnowledgeProductMapper.patchAltmetricData(
+      updatedKnowledgeProduct,
+      newMetadata,
+      true,
+    );
+
+    //authors
+    updatedKnowledgeProduct.result_knowledge_product_author_array =
+      await this._resultsKnowledgeProductAuthorRepository.find({
+        where: {
+          result_knowledge_product_id:
+            updatedKnowledgeProduct.result_knowledge_product_id,
+          is_active: true,
+        },
+      });
+    this._resultsKnowledgeProductMapper.patchAuthors(
+      updatedKnowledgeProduct,
+      newMetadata,
+      true,
+    );
+    this._resultsKnowledgeProductMapper.patchInstitutions(
+      updatedKnowledgeProduct,
+      newMetadata,
+      confidenceThreshold,
+      true,
+    );
+    await this.validateAndSanitizePredictedInstitutions(
+      updatedKnowledgeProduct.result_knowledge_product_institution_array ?? [],
+    );
+
+    //keywords
+    updatedKnowledgeProduct.result_knowledge_product_keyword_array =
+      await this._resultsKnowledgeProductKeywordRepository.find({
+        where: {
+          result_knowledge_product_id:
+            updatedKnowledgeProduct.result_knowledge_product_id,
+          is_active: true,
+        },
+      });
+    this._resultsKnowledgeProductMapper.patchKeywords(
+      updatedKnowledgeProduct,
+      newMetadata,
+      true,
+    );
+    this._resultsKnowledgeProductMapper.patchMetadata(
+      updatedKnowledgeProduct,
+      newMetadata,
+      true,
+    );
+    this._resultsKnowledgeProductMapper.patchRegions(
+      updatedKnowledgeProduct,
+      newMetadata,
+      true,
+    );
+
+    await this._resultsKnowledgeProductRepository.update(
+      {
+        result_knowledge_product_id:
+          updatedKnowledgeProduct.result_knowledge_product_id,
+      },
+      {
+        findable: updatedKnowledgeProduct.findable,
+        accesible: updatedKnowledgeProduct.accesible,
+        interoperable: updatedKnowledgeProduct.interoperable,
+        reusable: updatedKnowledgeProduct.reusable,
+        cgspace_countries: updatedKnowledgeProduct.cgspace_countries,
+        cgspace_regions: updatedKnowledgeProduct.cgspace_regions,
+        last_updated_by: user.id,
+        comodity: updatedKnowledgeProduct.comodity,
+        sponsors: updatedKnowledgeProduct.sponsors,
+        description: updatedKnowledgeProduct.description,
+        doi: updatedKnowledgeProduct.doi,
+        knowledge_product_type: updatedKnowledgeProduct.knowledge_product_type,
+        licence: updatedKnowledgeProduct.licence,
+      },
+    );
+
+    //updating general result tables
+    await this._resultRepository.update(
+      { id: resultId },
+      {
+        title: newMetadata.title,
+        description: newMetadata.description,
+      },
+    );
+
+    //updating relations
+    await this._resultsKnowledgeProductAltmetricRepository.save(
+      updatedKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
+    );
+    await this._resultsKnowledgeProductAuthorRepository.save(
+      updatedKnowledgeProduct.result_knowledge_product_author_array ?? [],
+    );
+
+    // rbi && rkpi save
+
+    updatedKnowledgeProduct.result_knowledge_product_institution_array =
+      await this._resultsKnowledgeProductInstitutionRepository.save(
+        updatedKnowledgeProduct.result_knowledge_product_institution_array ??
+          [],
+      );
+
+    const resultByInstitutions =
+      updatedKnowledgeProduct.result_knowledge_product_institution_array
+        .map((rkpi) => {
+          if (rkpi.result_by_institution_object) {
+            rkpi.result_by_institution_object.result_kp_mqap_institution_id =
+              rkpi.result_kp_mqap_institution_id;
+          }
+          return rkpi.result_by_institution_object;
+        })
+        .filter((rbi) => rbi);
+    await this._resultByInstitutionRepository.save(resultByInstitutions ?? []);
+
+    await this._resultsKnowledgeProductKeywordRepository.save(
+      updatedKnowledgeProduct.result_knowledge_product_keyword_array ?? [],
+    );
+    await this._resultsKnowledgeProductMetadataRepository.save(
+      updatedKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
+    );
+
+    await this.separateCentersFromCgspacePartners(
+      updatedKnowledgeProduct,
+      true,
+    );
+
+    //geolocation
+    await this.updateCountries(updatedKnowledgeProduct, newMetadata, true);
+
+    for (const country of updatedKnowledgeProduct.result_object
+      .result_country_array ?? []) {
+      country.geo_scope_role_id = 1;
+    }
+    await this._resultCountryRepository.save(
+      updatedKnowledgeProduct.result_object.result_country_array ?? [],
+    );
+
+    await this.updateGeoLocation(
+      updatedKnowledgeProduct.result_object,
+      updatedKnowledgeProduct,
+      newMetadata,
+    );
+
+    for (const region of updatedKnowledgeProduct.result_object
+      .result_region_array ?? []) {
+      region.geo_scope_role_id = 1;
+    }
+    await this._resultRegionRepository.save(
+      updatedKnowledgeProduct.result_object.result_region_array ?? [],
+    );
+
+    //fair
+    updatedKnowledgeProduct.result_knowledge_product_fair_score_array =
+      await this._resultsKnowledgeProductFairScoreRepository.find({
+        where: {
+          result_knowledge_product_id:
+            updatedKnowledgeProduct.result_knowledge_product_id,
+          is_active: true,
+        },
+        relations: {
+          fair_field_object: {
+            parent_object: true,
+          },
+        },
+      });
+    await this.updateFair(updatedKnowledgeProduct, newMetadata, true);
+    await this._resultsKnowledgeProductFairScoreRepository.save(
+      updatedKnowledgeProduct.result_knowledge_product_fair_score_array ?? [],
+    );
+
+    return updatedKnowledgeProduct;
   }
 
   async updateFair(

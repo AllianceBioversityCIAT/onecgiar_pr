@@ -1,8 +1,8 @@
 {
   "years": {
     "2026": {
-      "revision": 33,
-      "content_hash": "1d96e7e229ba14c1e620e6db60772704b441cf07c9538b78a42578acfa0f82e3"
+      "revision": 34,
+      "content_hash": "d74d5930dbf1af53a205a4a77ce843ac785df55379baa4428dde78de8af54b84"
     }
   },
   "keys": [
@@ -74,7 +74,6 @@
     "field:innovation_dev.readiness_level",
     "field:innovation_dev.risk_stage",
     "field:innovation_dev.short_title",
-    "field:innovation_dev.team_diversity",
     "field:innovation_use.current_use.actors",
     "field:innovation_use.current_use.measures",
     "field:innovation_use.current_use.organizations",
@@ -259,8 +258,6 @@
     "subfield:innovation_dev.gesi_stage/option_label",
     "subfield:innovation_dev.risk_stage/not_applicable_reason",
     "subfield:innovation_dev.risk_stage/option_label",
-    "subfield:innovation_dev.team_diversity/actions",
-    "subfield:innovation_dev.team_diversity/other_text",
     "subfield:innovation_use.current_use.actors/actor_type",
     "subfield:innovation_use.current_use.actors/age_disaggregation_not_available",
     "subfield:innovation_use.current_use.actors/count_unit",

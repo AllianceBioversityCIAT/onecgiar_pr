@@ -65,24 +65,47 @@ describe('ReportingAowTableComponent — Progress Tracker badge', () => {
     openAow();
     const visible = badges().filter(b => b.closest('.pr-collapse.is-open .pr-collapse.is-open'));
     expect(visible.length).toBe(1);
-    expect(visible[0].querySelector('[data-testid="pt-activity-badge-full"]')?.textContent?.trim()).toBe('PT · 7 evidence items');
+    expect(visible[0].querySelector('[data-testid="pt-activity-badge-full"]')?.textContent?.trim()).toBe('PT activity · 7');
     expect(visible[0].querySelector('[data-testid="pt-activity-badge-short"]')?.textContent?.trim()).toBe('PT · 7');
-    expect(component.ptTooltip).toBe('Evidence items in Progress Tracker. One proposal can group several evidence items.');
-    expect(visible[0].querySelector('.sr-only')?.textContent?.trim()).toBe(
-      'PT · 7 evidence items. Evidence items in Progress Tracker. One proposal can group several evidence items.'
-    );
+    expect(component.ptTooltip).toContain('not a PRMS result');
+    expect(visible[0].querySelector('.sr-only')?.textContent?.trim()).toContain('PT activity · 7');
+    expect(visible[0].querySelector('.sr-only')?.textContent).not.toContain('evidence items.');
   });
 
   it('flat view: renders the badge in the title cell', async () => {
     await build([row(), row({ indicator_id: 102 })], { ptActivity: index, viewMode: 'flat' });
     const flat = badges().filter(b => b.closest('.pr-flat-cell'));
     expect(flat.length).toBe(1);
-    expect(flat[0].textContent).toContain('PT · 7 evidence items');
+    expect(flat[0].textContent).toContain('PT activity · 7');
   });
 
   it('ptCountOf reads the input index', async () => {
     await build([row()], { ptActivity: index });
     expect(component.ptCountOf(row())).toBe(7);
     expect(component.ptCountOf(row({ center_acronym: 'IRRI' }))).toBe(0);
+  });
+
+  it('INC-167646: blue when the drafted type matches, yellow when it does not, and the activity colour when types are absent', async () => {
+    const typed = buildPtActivityIndex([
+      { toc_results_indicator_id: 'n1', toc_indicator_integration_id: 101, center: 'CIAT', matched: true, evidence_count: 7, pt_indicator_id: 'pt-a', result_types: ['knowledge_product'] },
+      { toc_results_indicator_id: 'n2', toc_indicator_integration_id: 102, center: 'CIAT', matched: true, evidence_count: 3, pt_indicator_id: 'pt-b', result_types: ['innovation_development'] }
+    ]);
+    await build(
+      [
+        row({ result_type_name: 'Knowledge product' }),
+        row({ indicator_id: 102, result_type_name: 'Knowledge product' }),
+        row({ indicator_id: 103, result_type_name: 'Knowledge product' })
+      ],
+      { ptActivity: typed }
+    );
+    openAow();
+    const visible = badges().filter(b => b.closest('.pr-collapse.is-open .pr-collapse.is-open'));
+    const byTone = (tone: string) => visible.filter(b => b.getAttribute('data-pt-tone') === tone);
+    expect(byTone('aligned').length).toBe(1);
+    expect(byTone('divergent').length).toBe(1);
+    expect(byTone('aligned')[0].className).toContain('bg-sky-50');
+    expect(byTone('divergent')[0].className).toContain('bg-amber-50');
+    expect(byTone('divergent')[0].querySelector('.sr-only')?.textContent).toContain('does not match this indicator');
+    expect(byTone('aligned')[0].textContent).toContain('PT activity · 7');
   });
 });

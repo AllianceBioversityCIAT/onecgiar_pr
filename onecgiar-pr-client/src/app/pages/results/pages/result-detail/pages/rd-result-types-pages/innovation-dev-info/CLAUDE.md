@@ -1,6 +1,6 @@
 # innovation-dev-info
 
-**Verified:** 2026-09-11 · branch qa-development-2026-ss · UCA-T-11 rework attempt 2 (`docs/specs/changes/unsaved-changes-alert/`, execution.md); prior: 2026-09-10 · UCA-T-11 attempt 1; prior: 2026-09-10 · branch performance-refactor · P2-3642 drops question 136 (end users/stakeholders in defining assumptions, with its "Why?" box) from the 2026 form and omits its `q3` slot from the save; prior: 2026-09-09 · P2-3641 drops the "Evidence of user need/user demand" block from the 2026 form: its gate is no longer `isP25()` alone, and the evidence POST is now omitted instead of sent empty; prior: 2026-09-03 · `innovation-team-diversity/` completeness tracking.
+**Verified:** 2026-11-05 · branch qa-development-2026-ss · ITD-T-1 hides team diversity from the 2026 form (`docs/specs/changes/remove-innovation-team-diversity/`); prior: 2026-09-11 · UCA-T-11 rework attempt 2 (`docs/specs/changes/unsaved-changes-alert/`, execution.md); prior: 2026-09-10 · UCA-T-11 attempt 1; prior: 2026-09-10 · branch performance-refactor · P2-3642 drops question 136 (end users/stakeholders in defining assumptions, with its "Why?" box) from the 2026 form and omits its `q3` slot from the save; prior: 2026-09-09 · P2-3641 drops the "Evidence of user need/user demand" block from the 2026 form: its gate is no longer `isP25()` alone, and the evidence POST is now omitted instead of sent empty; prior: 2026-09-03 · `innovation-team-diversity/` completeness tracking.
 
 ## `CanComponentDeactivate` (UCA-T-11)
 
@@ -57,7 +57,7 @@ confuse: fields owned by the summary (`InnovationDevInfoBody`) and a **backend-s
 | `assumptions-examination/` | questionnaire (q3, ≤ 2025 only) | ✅ `isP25()` + `!isInnovationDevFormReduced2026()` — P2-3642 |
 | `partners-policies-safeguards/` | questionnaire (q4 up to 2025) | ✅ `isP25()` + `!isInnovationDevFormReduced2026()` — P2-3467 |
 | `intellectual-property-rights/` | questionnaire (q1..q4) | ❌ none |
-| `innovation-team-diversity/` | questionnaire (question 112, 3 levels) | ❌ none |
+| `innovation-team-diversity/` | questionnaire (question 112, 3 levels) | ✅ `!isInnovationDevFormReduced2026()` — `changes/remove-innovation-team-diversity` (green check: `validation_innovation_dev_P25` phase short-circuit, ITD-T-3) |
 | `user-evidence/` | evidences (upload → `SharePointUploadService`) | ✅ `isP25()` + `!isInnovationDevFormReduced2026()` — P2-3641 |
 | `innovation-links/` | summary (`body.reference_materials`) | ✅ `!isInnovationReferenceMaterialsRemoved2026()` — P2-3550 |
 

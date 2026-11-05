@@ -445,7 +445,7 @@ Send `data.result_code` — either a string of digits (`"28565"`) or a JSON inte
 |---|---|---|
 | absent | `created` | Ships — unchanged behaviour |
 | matches a result **Approved** in an earlier phase, with no row for it in the open phase | `versioned` | **Ships.** A brand-new row is created in the open phase from this payload, then stamped with the source's code. |
-| matches a result that already has a row in the **open phase**, and that row is **Rejected** | `updated` | **Ships** (resubmission). Replaces the data on the same record and returns it to review. See "Resubmitting a rejected result" below. Any other status in the open phase is `409`. |
+| matches a result that already has a row in the **open phase**, and that row is **Rejected** (a **Knowledge Product** is also corrected from **Editing**) | `updated` | **Ships** (resubmission). Replaces the data on the same record and returns it to review. See "Resubmitting a rejected result" below; a Knowledge Product follows "Correcting a Knowledge Product". Any other status in the open phase is `409`. |
 
 A `versioned` result is **not** a copy of the earlier-phase row — it is a fresh result built entirely from this payload, which then inherits the old `result_code`. See "What a version does not carry" below.
 
@@ -457,12 +457,13 @@ A `result_code` is checked against two different candidate rows depending on whe
 |---|---|---|
 | `409` | No reporting phase is currently open. Checked first, before any code lookup, whenever `result_code` is present. | `There is no open reporting phase, so no result can be carried forward right now.` |
 | `404` | No active result anywhere carries this code. | `No active result found for result_code {code}.` |
-| `403` | The result was reported by a different platform than the caller (checked on both paths — this is the same ownership rule `POST /version` enforces). | `Result {code} was reported by a different platform. Only the platform that reported a result can carry it forward.` |
+| `403` | The result was reported by a different platform than the caller (the version path and the update path, Knowledge Products included — this is the same ownership rule `POST /version` enforces). | `Result {code} was reported by a different platform. Only the platform that reported a result can carry it forward.` |
 | `403` | The API key did not resolve to any platform. | `The calling platform could not be identified from the API key.` |
 | `403` | The result has no originating platform recorded, and the caller's platform has no centre scope configured to claim it. | `Result {code} has no originating platform, and {platform} has no centre scope configured to claim it.` |
-| `409` | The code belongs to a **Knowledge Product** — checked on both paths. | `Result {code} is a Knowledge Product. Knowledge Products cannot be carried into a new phase; report the new knowledge product with its own CGSpace handle instead.` |
+| `409` | **(version path)** The code belongs to a **Knowledge Product** whose only row is in an earlier phase. Carry-forward stays closed for Knowledge Products. A Knowledge Product that has a row in the open phase is not refused here: see "Correcting a Knowledge Product". | `Result {code} is a Knowledge Product. Knowledge Products cannot be carried into a new phase; report the new knowledge product with its own CGSpace handle instead.` |
 | `409` | **(version path)** Rows for this code are looked at most-recent-phase-first, and the first one found outside the open phase is not **Approved**. An Approved row sitting in an *older* phase does not help if a more recent, non-open phase holds a later, non-Approved row for the same code. | `Result {code} is not approved (status_id {n}). Only an approved result from a previous phase can be carried forward.` |
 | `409` | **(update path)** The open-phase row's status is not Rejected. The full resubmission rules and errors are in "Resubmitting a rejected result" below. | `Result {code} cannot be resubmitted: its status is {status name}. Only rejected results can be resubmitted.` |
+| `409` | **(update path, Knowledge Product)** The open-phase row's status is neither Rejected nor Editing. See "Correcting a Knowledge Product" below. | `Result {code} cannot be corrected: its status is {status name}. Only rejected or editing knowledge products can be corrected.` |
 | `400` | **(version path only — this check does not run on the update path)** The most-recent non-open-phase row for this code is not a W3/Bilateral result (e.g. a pool-funded result). | `Result {code} is not a W3/Bilateral result, so it cannot be carried forward through this flow.` |
 
 **Per-result write guarantee (amended 2026-09-30):** a rejected result never writes its own row. The guarantee is **per result** — in a request carrying several results, results processed before the rejected one stay written. But the request as a whole still fails on the first rejection: later results in the same request are never attempted, and — see below — the response for a failed request carries no `outcomes[]` at all, so a producer cannot read back the codes of the earlier, already-written results from that response.
@@ -477,8 +478,23 @@ A `result_code` is checked against two different candidate rows depending on whe
 | `operation` | `created`, `versioned`, or `updated` (a resubmission of a Rejected result, see below). |
 | `status_id` / `status` | The resulting workflow status. |
 | `external_reference` | Echoed from the request when the producer sent one. |
+| `warnings` | Always an array; empty when nothing needs attention. Each entry describes one `contributing_partners[]` entry that was **not linked** to the result — see "Contributing partners on `POST /create`" below. The result itself was still written. |
 
 **Why `outcomes`, not `results`:** the Fetcher's ingestion client (`external-api.mjs:139-157`) special-cases a `response` that is itself an array, or that carries `response.results[]`, when counting what it sent. Naming this array `outcomes` keeps that counting logic from misreading it. Nothing already on `response` was removed or renamed.
+
+### Contributing partners on `POST /create`
+
+Send each partner with its **CLARISA institution id** (`institution_id`). `name` / `acronym` are a fallback only.
+
+| What you send | What happens |
+|---|---|
+| `institution_id` of an existing CLARISA institution | Linked to exactly that institution. |
+| No `institution_id` (or one that does not exist), with `name` and/or `acronym` | Matched **exactly** (case-insensitive, either value against either column: name or acronym). One match is linked; no partial or "contains" matching. |
+| A value that matches several institutions | **Not linked.** `warnings[]` gets `partner_ambiguous` with `candidate_institution_ids`. |
+| Nothing matches | **Not linked.** `warnings[]` gets `partner_unresolved`. |
+| An institution that is a **CGIAR center** | **Not linked as a partner** — centers are reported only through `lead_center` / `contributing_center`. `warnings[]` gets `partner_is_cgiar_center` with `resolved_institution_id`. |
+
+A warning never fails the request. Each entry carries `field: "contributing_partners"`, `index` (position in your `contributing_partners[]`), `code`, `message`, and the `institution_id` / `name` / `acronym` you sent. Fix the entry and resend (for a Rejected result, through the resubmission below).
 
 ### What a `versioned` result does not carry
 
@@ -514,19 +530,20 @@ The open-phase row for the code decides. In the message, the status name is lowe
 |---|---|
 | **Rejected** (7) | Resubmitted. Ends in **Pending Review** (5), whatever `keep_editing` says. |
 | Editing (1), Quality assessed (2), Submitted (3), Discontinued (4), Pending review (5), Approved (6), Draft (8) | `409` naming the code and the status. Nothing is written. |
+| A **Knowledge Product**, in Rejected (7) or Editing (1) | Corrected, not resubmitted as above: see "Correcting a Knowledge Product". Any other status is refused with its own `409`. |
 
 Other rules, all checked before anything is written:
 
 - **Same platform.** A result reported by another platform is refused (`403`, see the Rejections table above).
-- **Not a Knowledge Product.** Refused with the `409` of the Rejections table above.
+- **A Knowledge Product follows its own rules.** See "Correcting a Knowledge Product" below; the `409` of the Rejections table above now applies only to carry-forward.
 - **Same type.** `result_type_id` in the payload must equal the stored type (`409`, below). A different type means a new result.
 - **Open phase only.** A Rejected result whose only row is in an earlier phase is not an update target. It follows the `versioned` path and gets that path's `409` ("is not approved").
-- **`keep_editing` is ignored.** A resubmission always ends in Pending Review.
-- **A title equal to the result's own title is accepted.** A title equal to **another** result's title in the phase is still refused.
+- **`keep_editing` is ignored.** A resubmission always ends in Pending Review. The one exception is a Knowledge Product corrected from Editing.
+- **A title equal to the result's own title is accepted.** A title equal to **another** result's title in the phase is still refused. A Knowledge Product takes its title from CGSpace, so the payload title is ignored and not compared.
 
 ### Errors specific to a resubmission
 
-Every other refusal reuses the Rejections table above (`404` code not found, `403` platform, `409` Knowledge Product, `409` no open phase) and the payload messages of a regular `create` (geography, evidence, Science Program codes, projects, type-specific blocks). Every `4xx` below is raised **before the first write** to the result: the stored result stays as it was.
+Every other refusal reuses the Rejections table above (`404` code not found, `403` platform, `409` no open phase, and, for a code that exists only in an earlier phase, `409` Knowledge Product) and the payload messages of a regular `create` (geography, evidence, Science Program codes, projects, type-specific blocks). Every `4xx` below is raised **before the first write** to the result: the stored result stays as it was.
 
 | Status | When | Message |
 |---|---|---|
@@ -551,7 +568,7 @@ The data writes are not one database transaction. The **status flips last**, in 
 
 | What you see | What it means | What to do |
 |---|---|---|
-| `400`, `403`, `404`, or `409` (not Rejected, type, Knowledge Product) | Refused before any write. | Fix the payload or the target. Do not resend unchanged. |
+| `400`, `403`, `404`, `409` (not Rejected, type, Knowledge Product, handle), or `422` / `502` (CGSpace read) | Refused before any write. | Fix the payload or the target. Do not resend unchanged. |
 | `5xx`, or a timeout, and no later `409` | Failed before the commit. The result is still **Rejected**, keeps its **previous primary**, may hold partial data, and is **retryable**. | **Resend the same request.** The reset cleans up the partial data and the writers rewrite it. |
 | `409` with `its status is pending review`, after a timeout | Your earlier attempt **committed**. | **Do not resend.** The resubmission is done. Any other status in the message means someone moved the result afterwards. |
 | `409` with `is already being resubmitted` | A concurrent attempt holds the lock. | Wait, then send again. If that attempt succeeded you get the `pending review` `409`. If it failed, the resend goes through. |
@@ -600,7 +617,49 @@ Contributing programs are written as draft contribution requests owned by the re
 
 ### History
 
-A successful resubmission adds one `RESUBMIT` entry to the result's review history. Its Science Program is the **requested primary** and its user is the external submitter. The earlier rejection stays, so three cycles read `REJECT`, `RESUBMIT`, `REJECT`, `RESUBMIT`, `REJECT`, `RESUBMIT` in order.
+A successful resubmission, or Knowledge Product correction, adds one `RESUBMIT` entry to the result's review history. Its Science Program is the **requested primary** and its user is the external submitter. The earlier rejection stays, so three cycles read `REJECT`, `RESUBMIT`, `REJECT`, `RESUBMIT`, `REJECT`, `RESUBMIT` in order.
+
+### Correcting a Knowledge Product
+
+A Knowledge Product is corrected through the same call: send `POST /create` with `data.result_code` of a Knowledge Product that has a row in the **open phase**. The record is updated in place (same `id` and `result_code`); no second result is created. CGSpace remains the source of the bibliographic data, so the correction rewrites what your platform owns and re-reads the rest from CGSpace.
+
+| Status of the Knowledge Product | Outcome |
+|---|---|
+| **Rejected** (7) | Corrected. Ends in **Pending Review** (5), whatever `keep_editing` says. |
+| **Editing** (1), `keep_editing: true` | Corrected. **Stays in Editing**; the result is not announced for review. |
+| **Editing** (1), `keep_editing` absent or `false` | Corrected. Ends in **Pending Review** (5). |
+| Quality assessed (2), Submitted (3), Discontinued (4), Pending review (5), Approved (6), Draft (8) | `409` naming the code and the status. Nothing is written. |
+
+In every corrected case the outcome row is `operation: "updated"` with the resulting `status_id` and `status`, and the review history gains one `RESUBMIT` entry (also when the result stays in Editing).
+
+**Who owns each field**
+
+| Rewritten from your payload | Re-read from CGSpace (the payload value is ignored) |
+|---|---|
+| Lead centre and contributing centres | Title and description |
+| Theory of Change mapping, contributing programs | Geography (countries, regions, scope) |
+| Partners. Partners that CGSpace contributed are kept | The handle link (evidence) and the Knowledge Product metadata |
+| Bilateral projects and budgets | |
+| Users, including the primary Science Program | |
+
+`geo_focus` is not required for a Knowledge Product correction.
+
+**The handle rule.** `knowledge_product.handle` must be present (`400` otherwise) and must be the handle already stored for the result (`409` if it differs). The forms `https://hdl.handle.net/10568/175322`, `https://cgspace.cgiar.org/handle/10568/175322` and `10568/175322` count as the same handle. The handle of a Knowledge Product never changes through a correction.
+
+**Reading CGSpace.** The record is read before anything is written. If the reporting-cycle rule refuses it, you get the `422` with its own message, unchanged. Any other failure of the read is a `502`; nothing was changed, so resend later.
+
+| Status | When | Message |
+|---|---|---|
+| `409` | The status is not Rejected or Editing. | `Result {code} cannot be corrected: its status is {status name}. Only rejected or editing knowledge products can be corrected.` |
+| `409` | The payload handle differs from the stored one. | `Result {code} is linked to handle {stored}; the payload sends {sent}. The handle of a knowledge product cannot change.` |
+| `400` | The payload has no `knowledge_product.handle`. | `knowledge_product.handle is required for KNOWLEDGE_PRODUCT results to fetch metadata from CGSpace.` |
+| `422` | CGSpace answers with the reporting-cycle rule. | The CGSpace rule message, unchanged. |
+| `502` | Any other failure reading CGSpace. | `The DSpace record of result {code} (handle {stored}) could not be read. Nothing was changed; retry later.` |
+| `403` | The result was reported by a different platform. | As in the Rejections table above. |
+| `409` | The payload type differs from the stored type. | As in "Errors specific to a resubmission" above. |
+| `409` | The result changed status between the check and the final write. | `Result {code} cannot be resubmitted: its status changed while the resubmission was being processed.` Nothing is written. |
+
+Every refusal above is raised **before the first write**. The other checks of "Errors specific to a resubmission" (primary Science Program, lead project, lead centre, concurrent resubmission) apply to a Knowledge Product unchanged. A Knowledge Product that exists only in an earlier phase is still not carried forward: it gets the `409` Knowledge Product of the Rejections table.
 
 ### Known limitations of a resubmission
 
@@ -612,6 +671,8 @@ A successful resubmission adds one `RESUBMIT` entry to the result's review histo
 
 | Date (approx.) | Change |
 |----------------|--------|
+| 2026-11-05 | **`POST /create`: `contributing_partners[]` are no longer dropped silently or matched loosely (P2-4067).** A partner is linked only on its CLARISA `institution_id` or an **exact**, unique name/acronym match; the previous `LIKE %x%` + first-row match (which linked e.g. `CIAT` to any "Association…") is gone. A CGIAR center sent as a partner is not linked as a partner (centers belong in `lead_center` / `contributing_center`). Every entry that is not linked is reported on the new **`response.outcomes[].warnings`** array (`partner_unresolved`, `partner_ambiguous` + `candidate_institution_ids`, `partner_is_cgiar_center` + `resolved_institution_id`); the result is still written. **Additive:** `warnings` is always present (empty when every partner was linked); nothing removed or renamed. A partner that used to resolve only through partial matching now comes back as `partner_unresolved` — send its `institution_id`. Same rules on the resubmission path. See "Contributing partners on `POST /create`". |
+| 2026-11 | **`POST /create` corrects a Knowledge Product when `data.result_code` matches an open-phase Knowledge Product in Rejected or Editing (P2-4065, spec `changes/bilateral-kp-correction`, KPC-T-6, `KPC-R-14`; narrows the Knowledge Product `409` of 2026-08-26 and 2026-10-06).** The record is updated in place and returns `operation: "updated"` with the resulting `status_id` and `status`; no duplicate is created. **Status:** from Rejected the result ends in Pending Review; from Editing it stays in Editing when `keep_editing` is `true` and goes to Pending Review otherwise; any other status is `409 "Result {code} cannot be corrected: its status is {status name}. Only rejected or editing knowledge products can be corrected."`. A `RESUBMIT` history entry is written in every case. **Ownership of fields:** lead centre, Theory of Change, partners (those CGSpace contributed are kept), projects, contributing centres and users come from the payload; title, description, geography, the handle link and the Knowledge Product metadata are re-read from CGSpace and the payload values are ignored. `geo_focus` is not required. **New refusals, all before the first write:** `400` no `knowledge_product.handle`; `409` handle differs from the stored one (the forms `hdl.handle.net`, `cgspace.cgiar.org/handle/` and bare `10568/x` compare as equal); `422` CGSpace reporting-cycle rule, passed through unchanged; `502 "The DSpace record of result {code} (handle {handle}) could not be read. Nothing was changed; retry later."` for any other CGSpace read failure; `409` status changed during processing. **Unchanged:** a Knowledge Product found only in an earlier phase still gets `409 "Result {code} is a Knowledge Product. ..."` (carry-forward stays closed, on `POST /create` and `POST /version`); every non-Knowledge Product message is byte for byte the same. Additive: no field removed or renamed. See "Correcting a Knowledge Product" above. |
 | 2026-10-26 | **`justification` on `PATCH /api/bilateral/center/change-type/:resultId` is now optional (spec `bilateral/change-type-optional-justification`, BIL-CTJ-T-2, `BIL-CTJ-R-2`, `BIL-CTJ-R-3`).** The body may omit `justification` or send it empty/blank; the change is processed exactly as with a reason. Without a reason the review-history comment is `Result type changed from level X, type Y to level A, type B.` (no reason text, no trailing space); with one, the trimmed reason follows after a single space. Input-side only: no read-payload change, no other validation change. |
 | 2026-10-13 | **`GET /api/bilateral/center/ai/jobs` (list) and `GET .../jobs/:jobId` gain `program_name` (additive) (spec `results/program-full-names-labels-part-2`, PF2-T-3, `PF2-R-4`, DD-4).** Each job item in the list, and the single-job response, now carries `program_name: string \| null` immediately after `program_code`: the full name of the Program/Accelerator whose official code equals `program_code` (`clarisa_initiatives.official_code` -> `name`). It is resolved with **one** batched lookup per response (never one per job). When a code matches several initiatives (different portfolios) the active one is used; if that is still ambiguous (none active, or more than one active) or the code matches nothing, `program_name` is `null` (never a guess), and `program_code` is unchanged either way. Every existing job field keeps its name, type and position; `program_code` stays the identifier. The list item key set is now the §4.1 set above plus `program_name`. |
 | 2026-10-07 | **`GET /api/platform-report/result/:code` (P25 result PDF), phase 2026+ only — Contributors and Partners (P2-3095).** The data sent to the PDF template gains two additive keys, both `null` for every phase before 2026 and for IPSR types: `contributors_split` (when the result is mapped to a ToC KPI: Science Programs, CGIAR Centers and External Partners split into `toc_*` and `other_*` lists by `from_toc`) and `toc_unplanned` (when it is not mapped: `program_invested_financial_resources` `Yes`/`No`/`null` and `why_reported`, with `show_*` flags; *why* is hidden for Program 41, same as the form). Built in the service after the SQL report function returns; the function is untouched. A failure reading them never blocks the PDF — it is logged and the PDF keeps today's data. No existing key changes. |

@@ -27,6 +27,29 @@
       }
 
       <div class="section_container">
+        @if (ptUnsavedEvidenceNotice().length) {
+          <div
+            class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] leading-snug text-amber-950"
+            data-testid="pt-unsaved-evidence-notice"
+            role="status">
+            <p class="m-0">
+              Progress Tracker listed evidence that is temporary and incomplete. It was not saved, because there is no link or file PRMS can store.
+            </p>
+            <ul class="m-0 mt-2 list-disc pl-4">
+              @for (name of ptUnsavedEvidenceNotice(); track name) {
+                <li data-testid="pt-unsaved-evidence-name">{{ name }}</li>
+              }
+            </ul>
+            <p class="m-0 mt-2">{{ ptUnsavedEvidenceDetail }} This reminder stays in this browser only. It is not an evidence record.</p>
+            <button
+              type="button"
+              (click)="dismissPtUnsavedEvidenceNotice()"
+              data-testid="pt-unsaved-evidence-dismiss"
+              class="mt-2 inline-flex cursor-pointer items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-[12px] font-semibold text-amber-900">
+              Hide this reminder
+            </button>
+          </div>
+        }
         <!-- Encabezado de la card: pastilla con el NÚMERO de la sección + su nombre, y el check
              verde cuando está completa (mockup: 24px `#ede9fe`/`#5733c4` 13px/600, h2 16px/700
              con tracking -.01em). Vive aquí, en el layout, y no en cada una de las 11 secciones:

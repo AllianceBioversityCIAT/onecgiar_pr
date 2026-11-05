@@ -406,6 +406,7 @@ export class ResultByIntitutionsRepository
     userId: number,
     notApplicablePartner = false,
     institutionRole: InstitutionRoleEnum[] = [InstitutionRoleEnum.PARTNER],
+    keepRbiIds: number[] = [],
   ) {
     const institutions = notApplicablePartner
       ? institutionsArray.filter(
@@ -430,6 +431,11 @@ export class ResultByIntitutionsRepository
           ? `and institutions_id not in (${
               institutionIds?.toString() || 'null'
             })`
+          : ''
+      }${
+        keepRbiIds?.length
+          ? `
+      and id not in (?)`
           : ''
       };
     `;
@@ -499,7 +505,12 @@ export class ResultByIntitutionsRepository
       const isKP: boolean =
         (await this.$_getResultTypeFromResultId(resultId)) == 6;
 
-      await this.query(upDateInactiveRBI, [userId, resultId, institutionRole]);
+      await this.query(
+        upDateInactiveRBI,
+        keepRbiIds?.length
+          ? [userId, resultId, institutionRole, keepRbiIds]
+          : [userId, resultId, institutionRole],
+      );
 
       if (isKP) {
         executionResult = await this.query(removeRelationRKPMI, [
@@ -544,6 +555,36 @@ export class ResultByIntitutionsRepository
       throw this._handlersError.returnErrorRepository({
         className: ResultByIntitutionsRepository.name,
         error: `updateInstitutions ${error}`,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * Ids of the active PARTNER rows of a result that DSpace (MQAP) contributed,
+   * i.e. linked through an active results_kp_mqap_institutions row.
+   */
+  async getMqapLinkedPartnerRowIds(resultId: number): Promise<number[]> {
+    const query = `
+    select rbi.id
+    from results_by_institution rbi
+    inner join results_kp_mqap_institutions rkpmi
+      on rkpmi.result_kp_mqap_institution_id = rbi.result_kp_mqap_institution_id
+    where rbi.result_id = ?
+      and rbi.is_active > 0
+      and rbi.institution_roles_id = ?
+      and rkpmi.is_active > 0;
+    `;
+    try {
+      const rows: { id: number }[] = await this.query(query, [
+        resultId,
+        InstitutionRoleEnum.PARTNER,
+      ]);
+      return rows.map((row) => row.id);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultByIntitutionsRepository.name,
+        error: `getMqapLinkedPartnerRowIds ${error}`,
         debug: true,
       });
     }

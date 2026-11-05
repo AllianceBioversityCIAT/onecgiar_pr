@@ -1,4 +1,14 @@
-import { buildPtActivityIndex, centerAcronymsOfRow, ptActivityCountOf, ptActivityHasAny, ptActivityLabel, ptActivityShortLabel, PT_ACTIVITY_TOOLTIP } from './pt-activity';
+import {
+  buildPtActivityIndex,
+  centerAcronymsOfRow,
+  ptActivityCountOf,
+  ptActivityHasAny,
+  ptActivityLabel,
+  ptActivityShortLabel,
+  ptActivityToneOf,
+  ptActivityTooltipFor,
+  PT_ACTIVITY_TOOLTIP
+} from './pt-activity';
 
 const item = (over: Record<string, unknown> = {}) => ({
   toc_results_indicator_id: 'node-1',
@@ -92,13 +102,36 @@ describe('pt-activity', () => {
     expect(centerAcronymsOfRow({ center_acronym: '—' })).toEqual([]);
   });
 
-  it('ptActivityLabel names the unit, singular for one', () => {
-    expect(ptActivityLabel(1)).toBe('PT · 1 evidence item');
-    expect(ptActivityLabel(2)).toBe('PT · 2 evidence items');
-    expect(ptActivityShortLabel(2)).toBe('PT · 2');
+  it('ptActivityToneOf stays the activity badge when types are absent, and colours only a real type list', () => {
+    const plain = buildPtActivityIndex([item()]);
+    expect(ptActivityToneOf({ indicator_id: 101, center_acronym: 'CIAT', result_type_name: 'Knowledge product' }, plain)).toBe('activity');
+    expect(ptActivityToneOf({ indicator_id: 999, result_type_name: 'Knowledge product' }, plain)).toBe('none');
+    expect(ptActivityTooltipFor('activity')).toBe(PT_ACTIVITY_TOOLTIP);
+
+    const typed = buildPtActivityIndex([
+      item({ result_types: ['knowledge_product'], cached_results_count: 1 }),
+      item({ center: 'IRRI', pt_indicator_id: 'pt-b', evidence_count: 2, result_types: ['innovation_development'], cached_results_count: 0 })
+    ]);
+    expect(ptActivityToneOf({ indicator_id: 101, center_acronym: 'CIAT', result_type_name: 'Knowledge product' }, typed)).toBe('aligned');
+    expect(ptActivityToneOf({ indicator_id: 101, center_acronym: 'IRRI', result_type_name: 'Knowledge product' }, typed)).toBe('divergent');
+    expect(ptActivityTooltipFor('aligned')).toContain(PT_ACTIVITY_TOOLTIP);
+    expect(ptActivityTooltipFor('aligned')).toContain('matches this indicator');
+    expect(ptActivityTooltipFor('divergent')).toContain('does not match this indicator');
+    // A cached draft count of 0 does not hide the evidence counter.
+    expect(ptActivityCountOf({ indicator_id: 101, center_acronym: 'IRRI' }, typed)).toBe(2);
   });
 
-  it('PT_ACTIVITY_TOOLTIP explains evidence items vs proposals', () => {
-    expect(PT_ACTIVITY_TOOLTIP).toBe('Evidence items in Progress Tracker. One proposal can group several evidence items.');
+  it('ptActivityLabel names Progress Tracker activity, not a result or a handle', () => {
+    expect(ptActivityLabel(1)).toBe('PT activity · 1');
+    expect(ptActivityLabel(2)).toBe('PT activity · 2');
+    expect(ptActivityShortLabel(2)).toBe('PT · 2');
+    expect(ptActivityLabel(2)).not.toContain('evidence item');
+  });
+
+  it('PT_ACTIVITY_TOOLTIP says the count is not a PRMS result, handle, or ready proposal', () => {
+    expect(PT_ACTIVITY_TOOLTIP).toContain('evidence items held in Progress Tracker');
+    expect(PT_ACTIVITY_TOOLTIP).toContain('not a PRMS result');
+    expect(PT_ACTIVITY_TOOLTIP).toContain('not a repository handle');
+    expect(PT_ACTIVITY_TOOLTIP).toContain('not a proposal ready to report');
   });
 });

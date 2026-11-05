@@ -7,17 +7,19 @@ import {
   ptContributionToApply,
   ptEvidenceLinksToSave,
   ptEvidenceWithoutLink,
+  unsavedPtEvidenceNames,
   ptFieldPolicy,
   ptMatchedPartners,
   ptGeoLevel,
   ptGeographyPlan,
+  ptReadinessPlan,
   ptImpactAreaPlan,
   ptImpactAreaPolicy,
   ptPendingChecklistHtml,
   ptPrefillOutcomeItems,
   resolvePtCenters
 } from './pt-prefill.util';
-import { PT_TEMPORARY_EVIDENCE_NOTICE } from '../../../../../../shared/constants/progress-tracker-evidence.constants';
+import { PT_TEMPORARY_EVIDENCE_NOTICE, PT_UNSAVED_EVIDENCE_DETAIL, ptUnsavedEvidenceLabel } from '../../../../../../shared/constants/progress-tracker-evidence.constants';
 
 // PTB-R-18a (2026-10-19) — Progress Tracker prefill, Phase 1 + matched partners.
 const base: PtProposalDto = {
@@ -157,7 +159,7 @@ describe('pt-prefill.util', () => {
     expect(buildPtPendingChecklist(p(), catalogue).map(i => i.label)).not.toContain('Temporary evidence');
   });
 
-  it('lists PT evidence items that have no link, so the user uploads the final file', () => {
+  it('lists PT evidence items that have no link as temporary and not saved', () => {
     const name = '[Qualitative level: On Track] Collection of standardized data: User-friendly too';
     const proposal = p({
       evidence: [
@@ -169,9 +171,13 @@ describe('pt-prefill.util', () => {
       evidence_links: []
     });
     expect(ptEvidenceWithoutLink(proposal)).toEqual([name]);
+    expect(unsavedPtEvidenceNames(proposal)).toEqual([name]);
     const items = buildPtPendingChecklist(proposal, catalogue);
-    expect(items).toContainEqual({ label: `Evidence in Progress Tracker without a link: ${name}`, detail: 'upload the final file in Evidence' });
+    expect(items).toContainEqual({ label: ptUnsavedEvidenceLabel(name), detail: PT_UNSAVED_EVIDENCE_DETAIL });
+    expect(PT_UNSAVED_EVIDENCE_DETAIL).toContain('Temporary and incomplete');
+    expect(PT_UNSAVED_EVIDENCE_DETAIL).toContain('not added as evidence');
     expect(items.map(i => i.label)).not.toContain('Temporary evidence');
+    expect(unsavedPtEvidenceNames({ ...proposal, policy: { evidence_links: 'none' } })).toEqual([]);
     expect(buildPtPendingChecklist({ ...proposal, policy: { evidence_links: 'none' } }, catalogue)).toEqual([]);
   });
 
@@ -263,9 +269,12 @@ describe('pt-prefill.util — geography (PTB-R-18b)', () => {
     expect(ptGeographyPlan(p())).toEqual({ geography: null, suggested: false, pending: [] });
   });
 
-  it('policy none on scope_level derives the focus from the countries; none on countries drops them', () => {
+  it('policy none on scope_level derives the focus from the countries; a delivered global scope with no countries is filled for review', () => {
     expect(plan({ level: 'global', countries: [mali] }, { scope_level: 'none' }).geography).toMatchObject({ geo_scope_id: 3, countries: [{ clarisa_id: 466 }] });
-    expect(plan({ level: 'global', countries: [] }, { scope_level: 'none' }).geography).toBeNull();
+    const deliveredGlobal = plan({ level: 'global', countries: [] }, { scope_level: 'none' });
+    expect(deliveredGlobal.geography).toMatchObject({ geo_scope_id: 1, countries: [] });
+    expect(deliveredGlobal.suggested).toBe(true);
+    expect(deliveredGlobal.pending[0].detail).toContain('not to apply');
     const dropped = plan({ level: 'national', countries: [mali] }, { countries: 'none' });
     expect(dropped.geography).toBeNull();
     expect(plan({ countries: [] }, { scope_level: 'none', countries: 'none', regions: 'none' }).pending).toEqual([]);
@@ -286,6 +295,38 @@ describe('pt-prefill.util — geography (PTB-R-18b)', () => {
     const applied = plan({}, { countries: 'apply', scope_level: 'apply' });
     expect(applied.suggested).toBe(false);
     expect(applied.pending).toEqual([]);
+  });
+});
+
+describe('pt-prefill.util — innovation readiness (INC-167646)', () => {
+  const innovation = (level: number | null, name: string | null = 'Model/Early Prototype') => ({
+    readiness_level: level,
+    readiness_level_name: name,
+    typology: 'Policy, organizational or institutional innovation',
+    developers: ['CIAT']
+  });
+
+  it('fills an integer 0-9 for an innovation development, and explains a none policy instead of writing it', () => {
+    const suggested = ptReadinessPlan(p({ result_type: 'innovation_development', result_type_label: 'Innovation development', innovation: innovation(5), policy: { readiness_level: 'suggest' } }));
+    expect(suggested.level).toBe(5);
+    expect(suggested.suggested).toBe(true);
+    expect(suggested.pending[0].detail).toContain('5 (Model/Early Prototype)');
+
+    const blocked = ptReadinessPlan(p({ result_type: 'innovation_development', innovation: innovation(4, null), policy: { readiness_level: 'none' } }));
+    expect(blocked.level).toBeNull();
+    expect(blocked.pending[0].detail).toContain('not to apply');
+    expect(buildPtPrefillBlock(p({ result_type: 'innovation_development', innovation: innovation(4, null), policy: { readiness_level: 'none' } }))).toBeNull();
+  });
+
+  it('does not invent a level for another result type, a name alone, or a value outside 0-9', () => {
+    expect(ptReadinessPlan(p({ result_type: 'knowledge_product', innovation: innovation(5) })).level).toBeNull();
+    expect(ptReadinessPlan(p({ result_type: 'innovation_development', innovation: innovation(null) })).level).toBeNull();
+    expect(ptReadinessPlan(p({ result_type: 'innovation_development', innovation: innovation(11) })).level).toBeNull();
+    const block = buildPtPrefillBlock(p({ result_type: 'innovation_development', result_type_label: 'Innovation development', innovation: innovation(5), policy: { readiness_level: 'apply' } }));
+    expect(block?.readiness).toEqual({ level: 5 });
+    expect(JSON.stringify(block)).not.toMatch(/typology|CIAT|Model/);
+    const labels = buildPtPendingChecklist(p({ result_type: 'innovation_development', innovation: innovation(5) }), []).map(i => i.label);
+    expect(labels).toEqual(expect.arrayContaining(['Innovation typology', 'Innovation developers']));
   });
 });
 
@@ -354,5 +395,20 @@ describe('pt-prefill.util — block + outcome (PTB-R-18b)', () => {
     expect(items[2].detail).toContain('Climate adaptation & mitigation 2');
     expect(ptPrefillOutcomeItems(sent, undefined).map(i => i.label)).toEqual(['Geographic location', 'Impact area scores']);
     expect(ptPrefillOutcomeItems(null, {})).toEqual([]);
+  });
+
+  it('ptPrefillOutcomeItems treats readiness_applied as the 0-9 level, not a CLARISA id', () => {
+    const sent = { evidence_links: [], partners: [], readiness: { level: 5 } };
+    expect(ptPrefillOutcomeItems(sent, { readiness_applied: 5 })).toEqual([]);
+    expect(ptPrefillOutcomeItems(sent, { readiness_applied: null, readiness_skipped_reason: 'not_empty' })[0]).toEqual({
+      label: 'Innovation readiness level',
+      detail: 'Not prefilled — the result already had a readiness level'
+    });
+    expect(ptPrefillOutcomeItems(sent, { readiness_applied: null, readiness_skipped_reason: 'unknown_level' })[0].detail).toContain(
+      'not in the PRMS catalogue'
+    );
+    // A missing summary is not applied. A CLARISA id (15) is not the level 5 the server returns.
+    expect(ptPrefillOutcomeItems(sent, undefined)[0].detail).toContain('Could not be saved');
+    expect(ptPrefillOutcomeItems(sent, { readiness_applied: 15 })[0].label).toBe('Innovation readiness level');
   });
 });
