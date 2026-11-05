@@ -123,6 +123,59 @@
 - **Final verification:** green (re-run VERIFIED).
 - **Running totals (Budget tripwire):** tasks closed 3/7 · LOC ≈ 1 360 diff lines incl. tests (prod ≈ 230+43+~200, test ≈ 87+160+524) vs ~1 060 budget (~350 prod / ~650 test / ~60 doc) — **production ≈ 470 vs ~350; tests ≈ 770 vs ~650** · review rounds 3/9.
 
+### `KPC-T-4` — KP mode: reset, writers, DSpace apply, CAS and history
+
+- **Final status:** PASS · 2026-11-05
+- **Attempts:** 1
+- **Skills:** `nestjs-expert`, `tdd`, `error-handling-patterns` · effort **high** (all-or-nothing write + status transition)
+- **Premise Ledger hand-off — P-12 holds.** Static: mysql2 default flags include `FOUND_ROWS` (`node_modules/mysql2/lib/connection_config.js:218`); `orm.config.ts` sets no `flags`. Empirical (Implementer, shared dev DB, session-scoped `CREATE TEMPORARY TABLE` only, dropped after): 1→1 `UPDATE … WHERE id=1 AND status_id=1` → `affected = 1` (`affectedRows 1`, `changedRows 0`); lost CAS (`WHERE status_id=5` on a status-1 row) → `affected = 0`. No always-changing column needed; non-KP CAS unchanged.
+- **Attempt 1**
+  - **Implementer:** STATUS COMPLETE. Files: `bilateral-resubmission.service.ts` (+115/−30), `bilateral.service.ts` (+77/−36), `bilateral-resubmission.service.spec.ts` (+196/−4), `bilateral.service.spec.ts` (+343/−0). 20 new tests (12 RSB, 8 bilateral).
+    - Reset KP variant skips evidence and subnational retire; MQAP-linked PARTNER rows (new port member `readMqapLinkedPartnerRowIds`, read under the lock before the reset) stay active.
+    - Writers KP variant (`ResubmissionWriteArgs.kp = { metadata, keepPartnerRowIds }`): header without title/description; no geo, evidence or KP type handler (would `populateKPFromCGSpace` a second KP row); keep-list as 6th arg of `updateInstitutions` only when non-empty; `applyDspaceMetadata` last.
+    - Commit: `resubmissionTargetStatus(type, source, keep_editing)` per §5.2; CAS `status_id = params.sourceStatusId`; stamp + announce only when target is 5; `RESUBMIT` row for sources 7 and 1; response carries resulting status.
+  - **Falsifiers (each red observed by temporarily breaking the guarded line, then restored):**
+
+    | # | Mutation | Red |
+    |---|---|---|
+    | 1 | Header writes title | `Expected path: not "title"` / `Received value: "Edited title"` |
+    | 1 | Apply moved right after header | `Expected: "Stored title"` / `Received: "Title from DSpace"` |
+    | 1 | Geo writers run for KP | order array `Expected -0 / Received +4` |
+    | 1 | KP type handler runs | order array `Received +1` |
+    | 2 | Keep-list dropped in `handleInstitutions` | active partners `Expected -1` (M missing from {C, M}) |
+    | 2 | Reset without MQAP exclusion | `Expected: true` / `Received: false` for M |
+    | 3 | Reset deactivates KP evidence | `Expected: true` / `Received: false` |
+    | 3 | Evidence writer runs for KP | order array `Received +1` |
+    | 4 | `keep_editing` ignored | source 1 + true: `Expected -2 / Received +2` |
+    | 4 | Announce always | `Expected number of calls: 0 / Received number of calls: 1` |
+    | 4 | Stamp always | `Expected number of calls: 0 / Received number of calls: 1` |
+    | 4 | No history row when staying in Editing | `Expected length: 1 / Received length: 0` |
+    | 4 | CAS fixed to status 7 | 3 failures (source-1 rows) |
+    | 5 | CAS without status condition | `Received promise resolved instead of rejected` (7→5 and 1→1) |
+    | 6 | Writer failure swallowed | `Received promise resolved instead of rejected` (sources 7 and 1) |
+    | extra | Reset retires KP subnationals | `Expected: true` / `Received: false` |
+
+    Falsifier 7: no existing test case modified; only the RSB-T-5 `arrange` helper gained an optional `kp` setup with old-behaviour defaults. Advisory-grade forward pointer from `KPC-T-2` done (payload partner = kept MQAP institution → both rows active).
+  - **Evidence re-run (Leader, non-author):** `npx jest --testPathPattern="bilateral-resubmission.service|bilateral.service" --silent --reporters=summary --forceExit` → `Test Suites: 16 passed, 16 total` / `Tests: 1008 passed, 1008 total`; `npx tsc --noEmit` exit 0; `npx eslint` on the 4 touched files `--quiet` exit 0 → **VERIFIED**.
+  - **Reviewer (lenses: spec conformance, atomicity/concurrency, non-KP regression, test validity):** **PASS**, no blocking issue. Deviations adjudicated: subnational retire skip conformant (§5.1 geo row "no KP writer"; subnationals not payload-owned in R-4); keep-list only when non-empty conformant (DD-5); type-handler skip required by R-2 / DD-1(b); `transferPrimary` "as today" per task text; lost-CAS wording unspecified for KP (§4.1); new port read conformant (§2.2 step 4).
+  - **Advisories (non-gating):**
+    - RISK: `transferPrimary` hard-wires `releaseContributors: true` — a KP kept in Editing with a changed primary releases contributor drafts → check at `KPC-T-7` HITL.
+    - READABILITY: lost-CAS message (`bilateral-resubmission.service.ts:644`) says "cannot be resubmitted" for KPs too.
+    - RISK: `separateCentersFromCgspacePartners` (apply) can add `from_cgspace` contributing centres beyond the payload `contributing_center` — DSpace-derived (R-5) vs strict R-4 → confirm at `KPC-T-7`.
+    - RELIABILITY: payload partner equal to a kept MQAP institution leaves two active PARTNER rows with the same `institutions_id`; `validation_*` functions count roles → check against live data at `KPC-T-7`.
+    - RESILIENCE: CAS falls back to `params.sourceStatusId ?? Rejected`; unreachable today, an assertion would be stricter.
+- **Requirements covered:** `KPC-R-2`, `KPC-R-4`, `KPC-R-5`, `KPC-R-7`, `KPC-R-10` (post-write atomicity), `KPC-R-11`.
+- **Final verification:** green (re-run VERIFIED).
+- **Running totals (Budget, re-baselined ~750 prod / ~1 400 test):** tasks closed 4/7 · prod ≈ +729 / −263 · test ≈ +1 310 · review rounds 4/9.
+
+## Budget tripwire — `KPC-T-3` gate
+
+- **Fired:** 2026-11-05, after `KPC-T-3`. Measured `git diff --numstat a731286af..HEAD -- onecgiar-pr-server/src`: prod +537 / −197, test +771, vs §14 ~350 prod / ~650 test. Review rounds 3/9; tasks 3/7.
+- **Cause:** ~190 lines of `syncAgain` body moved verbatim (counted as both removal and addition); per-falsifier tests written against post-change code (`KPC-T-3` alone ~520 test lines).
+- **Re-baseline proposed:** ~750 prod net / ~1 400 test for the whole spec.
+- **Decision:** user answered "Continue T-4" (2026-11-05) → re-baseline accepted; execution continues.
+- **Open (unanswered):** missing stored handle → 409 (current, malformed message) vs 502 (Reviewer suggestion, `KPC-R-8`). Not in `KPC-T-4` scope; re-raised at the `KPC-T-4` gate.
+
 ## Forward pointers
 
 | To task | Item | From |
@@ -133,3 +186,4 @@
 | `KPC-T-4` | One assertion for a payload partner equal to a kept MQAP institution (reactivation of both rows) `[advisory-grade]` | `KPC-T-2` Reviewer advisory |
 | `KPC-T-4` | KP reads live in the optional `ResubmissionKnowledgeProductPort` (`buildResubmissionKnowledgeProductPort`, `bilateral.service.ts`), not in `ResubmissionPreflightPort`; preflight result carries `kpMetadata`; CAS source is `params.sourceStatusId` | `KPC-T-3` |
 | `KPC-T-7` | P-11 edge: confirm MQAP never stores/returns a DSpace 7 `items/<uuid>` handle for the corrected KPs | `KPC-T-3` |
+| `KPC-T-7` | HITL on PRTest: (a) KP kept in Editing with a changed primary releases contributor drafts (`releaseContributors: true`); (b) apply may add `from_cgspace` contributing centres beyond the payload; (c) duplicate active PARTNER rows when a payload partner equals a kept MQAP institution vs `validation_*` role counts | `KPC-T-4` Reviewer advisories |

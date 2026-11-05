@@ -4814,6 +4814,10 @@ export class BilateralService {
         });
         return stored?.handle ?? null;
       },
+      readMqapLinkedPartnerRowIds: (resultId) =>
+        this._resultByIntitutionsRepository.getMqapLinkedPartnerRowIds(
+          resultId,
+        ),
       fetchMetadata: async (resultId, dto) => {
         const email = dto.created_by?.email;
         const platformUser = email
@@ -4896,6 +4900,7 @@ export class BilateralService {
       userId,
       resolvedProjects,
       suppressPrimaryRole,
+      kp,
     } = args;
     const resultId = target.id;
 
@@ -4907,24 +4912,27 @@ export class BilateralService {
       replacePreviousLead: true,
     });
 
-    const { scope_code, scope_label, regions, countries, subnational_areas } =
-      dto.geo_focus;
-    const scope = await this.findScope(scope_code, scope_label);
-    this.validateGeoFocus(scope, regions, countries, subnational_areas);
+    // `KPC-DD-5`: a Knowledge Product has no geo writer (its geography is DSpace-owned, applied last).
+    if (!kp) {
+      const { scope_code, scope_label, regions, countries, subnational_areas } =
+        dto.geo_focus;
+      const scope = await this.findScope(scope_code, scope_label);
+      this.validateGeoFocus(scope, regions, countries, subnational_areas);
 
-    await this.handleRegions(header, scope, regions);
-    await this.handleCountries(
-      header,
-      countries,
-      subnational_areas,
-      scope.id,
-      userId,
-      { writeSubnationalsForAllCountries: true },
-    );
-    await this._resultRepository.save({
-      ...header,
-      geographic_scope_id: this.resolveScopeId(scope.id, countries),
-    });
+      await this.handleRegions(header, scope, regions);
+      await this.handleCountries(
+        header,
+        countries,
+        subnational_areas,
+        scope.id,
+        userId,
+        { writeSubnationalsForAllCountries: true },
+      );
+      await this._resultRepository.save({
+        ...header,
+        geographic_scope_id: this.resolveScopeId(scope.id, countries),
+      });
+    }
 
     await this.handleTocMapping(
       dto.toc_mapping,
@@ -4934,13 +4942,17 @@ export class BilateralService {
       dto.result_type_id,
       { suppressPrimaryRole },
     );
-    await this.handleInstitutions(
+    const partnerArgs = [
       resultId,
       dto.contributing_partners || [],
       userId,
       dto.result_type_id,
-    );
-    await this.handleEvidence(resultId, dto.evidence, userId);
+    ] as const;
+    await (kp
+      ? this.handleInstitutions(...partnerArgs, kp.keepPartnerRowIds)
+      : this.handleInstitutions(...partnerArgs));
+    // The handle link of a KP is its evidence and cannot change (`KPC-DD-5`).
+    if (!kp) await this.handleEvidence(resultId, dto.evidence, userId);
     await this.handleNonPooledProject(
       resultId,
       userId,
@@ -4949,12 +4961,15 @@ export class BilateralService {
       resolvedProjects,
     );
 
-    await this.runResultTypeHandlers({
-      resultId,
-      userId,
-      bilateralDto: dto,
-      isDuplicateResult: false,
-    });
+    // The KP handler would `populateKPFromCGSpace` a second KP row; the DSpace apply below replaces it.
+    if (!kp) {
+      await this.runResultTypeHandlers({
+        resultId,
+        userId,
+        bilateralDto: dto,
+        isDuplicateResult: false,
+      });
+    }
 
     await this.handleContributingCenters(
       resultId,
@@ -4963,6 +4978,16 @@ export class BilateralService {
       dto.lead_center,
     );
     await this.ensureDerivedContributingCenters(resultId, userId);
+
+    // `KPC-DD-5`: LAST, so the apply has the last word on the rows DSpace owns (title, description,
+    // KP row, MQAP institutions, geography). It never touches the payload rows written above.
+    if (kp) {
+      await this._resultsKnowledgeProductsService.applyDspaceMetadata(
+        kp.metadata.resultKnowledgeProduct,
+        kp.metadata.newMetadata,
+        { id: userId } as TokenDto,
+      );
+    }
   }
 
   /**
@@ -4989,8 +5014,10 @@ export class BilateralService {
     const identity = this.buildExternalIdentity(dto, platform);
 
     const columns: Record<string, unknown> = {
-      title: dto.title,
-      description: dto.description ?? null,
+      // `KPC-DD-5`: a KP's title and description are DSpace-owned (applied last, never the payload's).
+      ...(args.kp
+        ? {}
+        : { title: dto.title, description: dto.description ?? null }),
       result_level_id: dto.result_level_id,
       external_submitter: submittedUserId,
       external_submitted_date: dto.submitted_by?.submitted_date ?? null,
@@ -6202,6 +6229,7 @@ export class BilateralService {
     institutions: any[],
     userId: number,
     resultTypeId?: number,
+    keepRbiIds?: number[],
   ) {
     if (!Array.isArray(institutions) || !institutions.length) return;
 
@@ -6219,13 +6247,26 @@ export class BilateralService {
       institutions_id: id,
     }));
 
-    await this._resultByIntitutionsRepository.updateInstitutions(
-      resultId,
-      mappedInstitutions,
-      userId,
-      false,
-      [InstitutionRoleEnum.PARTNER],
-    );
+    // `KPC-DD-5`: the keep-list is passed only when there is one, so every other call stays as it was.
+    const partnerRole = [InstitutionRoleEnum.PARTNER];
+    if (keepRbiIds?.length) {
+      await this._resultByIntitutionsRepository.updateInstitutions(
+        resultId,
+        mappedInstitutions,
+        userId,
+        false,
+        partnerRole,
+        keepRbiIds,
+      );
+    } else {
+      await this._resultByIntitutionsRepository.updateInstitutions(
+        resultId,
+        mappedInstitutions,
+        userId,
+        false,
+        partnerRole,
+      );
+    }
 
     const toPersist: ResultsByInstitution[] = [];
     const partnerByInstitutionId = new Map<number, ResultsByInstitution>();

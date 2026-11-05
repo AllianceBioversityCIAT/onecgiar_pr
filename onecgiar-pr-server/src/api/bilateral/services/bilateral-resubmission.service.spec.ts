@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import {
   BilateralResubmissionService,
+  describeResultStatus,
   ResubmissionPreflightPort,
   ResubmissionWritersPort,
 } from './bilateral-resubmission.service';
@@ -1636,6 +1637,11 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
     /** Runs inside `writeResult`, after the snapshot (to simulate a fault or a concurrent change). */
     onWrite?: (db: ReturnType<typeof createInMemoryDb>) => void | Promise<void>;
     failOnInsertInto?: EntityClass;
+    /**
+     * `KPC-T-4`: arrange a Knowledge Product correction instead. `source` is the stored status (7 or
+     * 1); the port answers the kept MQAP-linked partner rows; the evidence row E is seeded active.
+     */
+    kp?: { source: number; mqapRows?: number[] };
   }
 
   const baseTarget = () =>
@@ -1660,6 +1666,7 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
 
   const arrange = (setup: Setup = {}) => {
     const owner = 'owner' in setup ? setup.owner : SP01;
+    const kpSource = setup.kp?.source ?? REJECTED;
     // Declared before `db` so the data source can hand the lock runner out.
     let statusRead: () => number = () => REJECTED;
     const world = createClosedWorld();
@@ -1684,8 +1691,8 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
             {
               id: RESULT,
               result_code: 28565,
-              status_id: REJECTED,
-              result_type_id: 8,
+              status_id: kpSource,
+              result_type_id: setup.kp ? ResultTypeEnum.KNOWLEDGE_PRODUCT : 8,
               version_id: 36,
               is_active: 1,
             },
@@ -1721,6 +1728,12 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
         [ResultsTocResult, setup.toc ?? []],
         [ResultReviewHistory, setup.history ?? []],
         [ResultsByInstitution, setup.partners ?? []],
+        [
+          Evidence,
+          setup.kp
+            ? [{ id: 1, result_id: RESULT, link: 'h', is_active: 1 }]
+            : [],
+        ],
         // What `ppr.transferPrimary` reads THROUGH THE TRANSACTION MANAGER (`RRC-T-6`: the transfer
         // runs inside the final transaction).
         [
@@ -1950,19 +1963,43 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
     );
 
     const dto = (extra: Record<string, unknown> = {}): any => ({
-      result_type_id: 8,
+      result_type_id: setup.kp ? ResultTypeEnum.KNOWLEDGE_PRODUCT : 8,
       title: 'Corrected title',
       toc_mapping: { science_program_id: setup.primary ?? 'SP01' },
       keep_editing: setup.keepEditing,
+      ...(setup.kp ? { knowledge_product: { handle: '10568/1' } } : {}),
       ...extra,
     });
+    const kpMetadata = {
+      resultKnowledgeProduct: { results_id: RESULT },
+      newMetadata: { title: 'Title from DSpace' },
+    } as any;
+    // `KPC-T-3` port, as the preflight reads it (the real members are proven in bilateral.service.spec).
+    const knowledgeProduct = setup.kp
+      ? {
+          normalizeHandle: (raw: string) => raw,
+          readStoredHandle: jest.fn(async () => '10568/1'),
+          readMqapLinkedPartnerRowIds: jest.fn(async () => [
+            ...(setup.kp.mqapRows ?? []),
+          ]),
+          fetchMetadata: jest.fn(async () => kpMetadata),
+        }
+      : undefined;
     const run = (payload: any = dto()) =>
       service.resubmit({
-        target: baseTarget(),
+        target: setup.kp
+          ? {
+              ...baseTarget(),
+              result_code: 31500,
+              status_id: kpSource,
+              result_type_id: ResultTypeEnum.KNOWLEDGE_PRODUCT,
+            }
+          : baseTarget(),
         bilateralDto: payload,
         platform: { id: 12, acronym: 'STAR' } as any,
         preflight,
         writers,
+        ...(knowledgeProduct ? { knowledgeProduct } : {}),
       });
     return {
       db,
@@ -1975,6 +2012,8 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
       dto,
       resetSpy,
       logSpy,
+      knowledgeProduct,
+      kpMetadata,
       calls,
       seen,
       ownerAt,
@@ -2507,6 +2546,159 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
       );
       expect(flips).toHaveLength(1);
       expect(flips[0].where).toEqual({ id: RESULT, status_id: REJECTED });
+    });
+  });
+
+  // @akili-spec changes/bilateral-kp-correction — KPC-T-4 (KPC-R-2, R-4, R-5, R-7, R-10, R-11; KPC-DD-5,
+  // DD-6; design §5.1, §5.2). The REAL reset and the REAL final transaction over the in-memory model.
+  describe('KPC-T-4: a knowledge product correction', () => {
+    const EDITING = ResultStatusData.Editing.value;
+    const M_ROW = 3;
+    const partnerRow = (id: number, institution: number): Row => ({
+      id,
+      result_id: RESULT,
+      institutions_id: institution,
+      institution_roles_id: 2,
+      is_active: 1,
+    });
+    const resubmits = (t: ReturnType<typeof arrange>) =>
+      t.history().filter((row) => row.action === 'RESUBMIT');
+
+    // Falsifier 4: the source status x keep_editing table of the task.
+    it.each([
+      [REJECTED, true, PENDING_REVIEW, true],
+      [EDITING, true, EDITING, false],
+      [EDITING, undefined, PENDING_REVIEW, true],
+      [REJECTED, undefined, PENDING_REVIEW, true],
+      [EDITING, false, PENDING_REVIEW, true],
+    ])(
+      'source %s, keep_editing %s -> status %s, one RESUBMIT row, announce=%s, and the CAS names the source status',
+      async (source, keepEditing, status, announce) => {
+        const t = arrange({ kp: { source }, keepEditing });
+
+        const outcome = await t.run();
+
+        expect(outcome).toEqual({
+          id: RESULT,
+          result_code: 31500,
+          status_id: status,
+          status: describeResultStatus(status),
+        });
+        expect(t.statusOf()).toBe(status);
+        expect(resubmits(t)).toHaveLength(1);
+        expect(t.history()).toHaveLength(1);
+        expect(t.writers.announcePendingReview).toHaveBeenCalledTimes(
+          announce ? 1 : 0,
+        );
+        // The card is re-dated only when the result goes to review.
+        expect(t.writers.stampPrimaryCardSubmitted).toHaveBeenCalledTimes(
+          announce ? 1 : 0,
+        );
+        const flips = t.db.updated.filter(
+          (u) => u.entity === 'Result' && u.set.status_id === status,
+        );
+        expect(flips).toHaveLength(1);
+        expect(flips[0].where).toEqual({ id: RESULT, status_id: source });
+      },
+    );
+
+    // Falsifier 5: the status moved after the lock re-read. 1 -> 1 is the case P-12 is about: the
+    // CAS must lose even though the target equals the source.
+    it.each([
+      [REJECTED, true],
+      [EDITING, true],
+    ])(
+      'source %s, moved to Pending Review between the re-read and the CAS: 409, no history row, no announce',
+      async (source, keepEditing) => {
+        const t = arrange({
+          kp: { source },
+          keepEditing,
+          onWrite: (db) => {
+            db.rowsOf(Result)[0].status_id = PENDING_REVIEW;
+          },
+        });
+
+        await expect(t.run()).rejects.toMatchObject({ status: 409 });
+
+        expect(t.history()).toEqual([]);
+        expect(t.statusOf()).toBe(PENDING_REVIEW);
+        expect(t.writers.announcePendingReview).not.toHaveBeenCalled();
+        expect(t.writers.stampPrimaryCardSubmitted).not.toHaveBeenCalled();
+      },
+    );
+
+    // Falsifier 6: the DSpace apply is the last step of `writeResult`; a throw there is a throw of it.
+    it.each([[REJECTED], [EDITING]])(
+      'the DSpace apply throws (source %s): the status stays, no history row, no announce, the lock is released',
+      async (source) => {
+        const t = arrange({
+          kp: { source },
+          onWrite: () => {
+            throw new Error('KPC-T-4 spec: the DSpace apply failed');
+          },
+        });
+
+        await expect(t.run()).rejects.toThrow('the DSpace apply failed');
+
+        expect(t.statusOf()).toBe(source);
+        expect(t.history()).toEqual([]);
+        expect(t.writers.announcePendingReview).not.toHaveBeenCalled();
+        expect(t.runner.query).toHaveBeenLastCalledWith(
+          expect.stringContaining('RELEASE_LOCK'),
+          ['rsb:501'],
+        );
+      },
+    );
+
+    it('hands the writers the preflight metadata and the kept rows; a non-KP result gets no `kp`', async () => {
+      const t = arrange({ kp: { source: REJECTED, mqapRows: [M_ROW] } });
+      await t.run();
+      expect(t.writers.writeResult).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kp: { metadata: t.kpMetadata, keepPartnerRowIds: [M_ROW] },
+        }),
+      );
+
+      const plain = arrange();
+      await plain.run();
+      expect(
+        (plain.writers.writeResult as jest.Mock).mock.calls[0][0],
+      ).not.toHaveProperty('kp');
+    });
+
+    // Falsifier 3 (evidence) and the partners of falsifier 2, at the reset: the payload sends no
+    // partner, so the reset retires A and B but not the MQAP-linked row M.
+    it('the reset keeps the evidence, the subnationals and the MQAP-linked partner row', async () => {
+      const t = arrange({
+        kp: { source: REJECTED, mqapRows: [M_ROW] },
+        partnersResolved: 0,
+        partners: [partnerRow(1, 71), partnerRow(2, 72), partnerRow(M_ROW, 90)],
+      });
+
+      await t.run();
+
+      expect(t.db.isActive(Evidence, 1)).toBe(true);
+      expect(t.db.isActive(ResultsByInstitution, 1)).toBe(false);
+      expect(t.db.isActive(ResultsByInstitution, 2)).toBe(false);
+      expect(t.db.isActive(ResultsByInstitution, M_ROW)).toBe(true);
+    });
+
+    it('the same reset for a non-KP result still deactivates the evidence and every partner', async () => {
+      const t = arrange({
+        partnersResolved: 0,
+        partners: [partnerRow(1, 71), partnerRow(M_ROW, 90)],
+      });
+      t.db.rowsOf(Evidence).push({
+        id: 1,
+        result_id: RESULT,
+        link: 'h',
+        is_active: 1,
+      });
+
+      await t.run();
+
+      expect(t.db.isActive(Evidence, 1)).toBe(false);
+      expect(t.db.isActive(ResultsByInstitution, M_ROW)).toBe(false);
     });
   });
 

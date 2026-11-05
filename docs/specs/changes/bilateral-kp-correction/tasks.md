@@ -6,7 +6,7 @@
 |---|---|
 | Spec Path | `changes/bilateral-kp-correction` |
 | Depth | Full |
-| Status | **approved**, user 2026-11-05 (Phase 3 gate) · in execution (`KPC-T-1..3` [x]) |
+| Status | **approved**, user 2026-11-05 (Phase 3 gate) · in execution (`KPC-T-1..4` [x]) |
 | Date | 2026-11-05 |
 | Linked spec | `requirements.md` (`KPC-R-1..15`), `design.md` (`KPC-DD-1..6`, Premise Ledger `P-1..18`) — both approved by the user at their gates on 2026-11-05 |
 | Owner / driver | Juan David Delgado |
@@ -130,7 +130,7 @@ Scoped jest only, never the full suite: `npx jest --testPathPattern="<pattern>" 
   - [x] `npx tsc --noEmit` exit 0.
 - **Skills:** `nestjs-expert`, `error-handling-patterns`, `tdd`
 
-### `KPC-T-4` — KP mode: reset, writers, DSpace apply, CAS and history
+### [x] `KPC-T-4` — KP mode: reset, writers, DSpace apply, CAS and history
 
 - **Type:** server
 - **Description:**
@@ -177,10 +177,10 @@ Scoped jest only, never the full suite: `npx jest --testPathPattern="<pattern>" 
   - **Disqualifier:** if the DSpace apply cannot run after the payload writers without re-deactivating payload rows, or P-12 forces a change to the non-KP CAS, stop: Pivot
   - **Consumers:** `writeResubmittedResult` and `updateResubmissionHeader` are private; `ResubmissionWritersPort` / `ResubmissionPreflightPort` are consumed by `bilateral.service.ts` and both specs (`bilateral.service.spec.ts:199` mocks the rules service; the port builders' tests). Union with the Premise Ledger consumers: none outside `api/bilateral`
 - **Definition of done:**
-  - [ ] P-12 settled and recorded.
-  - [ ] Every falsifier executed; reds quoted.
-  - [ ] Existing RSB / RRC / RSF tests green unchanged.
-  - [ ] `npx tsc --noEmit` exit 0; eslint clean on touched files.
+  - [x] P-12 settled and recorded.
+  - [x] Every falsifier executed; reds quoted.
+  - [x] Existing RSB / RRC / RSF tests green unchanged.
+  - [x] `npx tsc --noEmit` exit 0; eslint clean on touched files.
 - **Skills:** `nestjs-expert`, `tdd`, `error-handling-patterns`
 
 ### `KPC-T-5` — Lift the KP guard in the `updated` branch

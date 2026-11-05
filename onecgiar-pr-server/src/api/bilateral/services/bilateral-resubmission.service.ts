@@ -66,6 +66,24 @@ export function allowedResubmissionStatuses(resultTypeId: unknown): number[] {
 }
 
 /**
+ * `KPC-DD-6` / design §5.2: the status a resubmission ends in. A non-KP result, and a KP read as
+ * Rejected, always go to Pending Review; only a KP read as Editing may stay there (`keep_editing: true`).
+ */
+export function resubmissionTargetStatus(
+  resultTypeId: unknown,
+  sourceStatusId: number,
+  keepEditing: unknown,
+): number {
+  const staysEditing =
+    Number(resultTypeId) === ResultTypeEnum.KNOWLEDGE_PRODUCT &&
+    sourceStatusId === ResultStatusData.Editing.value &&
+    keepEditing === true;
+  return staysEditing
+    ? ResultStatusData.Editing.value
+    : ResultStatusData.PendingReview.value;
+}
+
+/**
  * The refusal message of the status rule, or `null` when `statusId` is allowed. Non-KP wording is the
  * one `RSB-R-2` shipped, byte for byte (`KPC-R-13`); a KP gets the `KPC-R-1` wording (design §4.1).
  */
@@ -177,6 +195,12 @@ export interface ResubmissionKnowledgeProductPort {
   /** The handle stored on the KP's `results_knowledge_product` row, or `null` when there is none. */
   readStoredHandle(resultId: number): Promise<string | null>;
   /**
+   * `KPC-T-4` (`KPC-DD-5`): ids of the active PARTNER rows DSpace contributed
+   * (`ResultByIntitutionsRepository.getMqapLinkedPartnerRowIds`). A read; the reset and the partners
+   * writer both keep these rows.
+   */
+  readMqapLinkedPartnerRowIds(resultId: number): Promise<number[]>;
+  /**
    * `ResultsKnowledgeProductsService.fetchDspaceMetadata` for the stored handle, as the platform
    * user of the payload. Throws: 422 (cycle-year rule) and 502 as a `DspaceReadException`, anything
    * else as it was thrown (the preflight maps it to 502).
@@ -206,6 +230,11 @@ export interface ResubmissionWriteArgs {
    * off the requested primary (`DD-6`).
    */
   suppressPrimaryRole: boolean;
+  /**
+   * `KPC-T-4`: set for a Knowledge Product only. The writers then skip title, description, geo and
+   * evidence, keep the `keepPartnerRowIds`, and finish with the DSpace apply of this metadata.
+   */
+  kp?: { metadata: ResubmissionKpMetadata; keepPartnerRowIds: number[] };
 }
 
 /**
@@ -316,6 +345,11 @@ export interface ResubmissionResetOptions {
    * preflight). Active role-2 rows of any other initiative are deactivated. `[]` retires them all.
    */
   contributorInitiativeIds: number[];
+  /**
+   * `KPC-DD-5`: PARTNER rows DSpace contributed. The PARTNER block of the reset leaves them active.
+   * A Knowledge Product reset (`resultTypeId`) also leaves the evidence and the subnationals alone.
+   */
+  keepPartnerRowIds?: number[];
 }
 
 /** One `outcomes[]` row's worth of data once a resubmission has been accepted (RSB-R-5). */
@@ -475,12 +509,19 @@ export class BilateralResubmissionService {
     const payloadSendsPartners =
       (await writers.countResolvablePartners(dto)) > 0;
 
+    // `KPC-DD-5`: the PARTNER rows DSpace contributed, read (like the two reads above) before the
+    // reset, so the reset and the partners writer keep exactly these.
+    const keepPartnerRowIds = preflight.kpMetadata
+      ? await params.knowledgeProduct.readMqapLinkedPartnerRowIds(target.id)
+      : undefined;
+
     await this.resetSectionsForResubmission(target.id, {
       userId: preflight.userId,
       resultTypeId: target.result_type_id,
       primaryChanged,
       payloadSendsPartners,
       contributorInitiativeIds: preflight.contributorInitiativeIds,
+      keepPartnerRowIds,
     });
 
     await writers.writeResult({
@@ -491,7 +532,18 @@ export class BilateralResubmissionService {
       submittedUserId: preflight.submittedUserId,
       resolvedProjects: preflight.resolvedProjects,
       suppressPrimaryRole: primaryChanged,
+      ...(preflight.kpMetadata
+        ? { kp: { metadata: preflight.kpMetadata, keepPartnerRowIds } }
+        : {}),
     });
+
+    // `KPC-DD-6` / §5.2: Pending Review unless a KP read as Editing asks to stay there.
+    const targetStatusId = resubmissionTargetStatus(
+      target.result_type_id,
+      params.sourceStatusId,
+      dto.keep_editing,
+    );
+    const announced = targetStatusId === ResultStatusData.PendingReview.value;
 
     // The lead project row exists now and the result is still Rejected, with its previous primary
     // (the reset and the writers never retire it). The CAS, the direct primary transfer (only when
@@ -500,8 +552,12 @@ export class BilateralResubmissionService {
     // its previous primary and the platform retries.
     const transfer = await this.commitResubmission(target, preflight, {
       transferPrimary: primaryChanged ? writers.transferPrimary : undefined,
-      stampPrimaryCardSubmitted: writers.stampPrimaryCardSubmitted,
+      stampPrimaryCardSubmitted: announced
+        ? writers.stampPrimaryCardSubmitted
+        : undefined,
       resultCode,
+      sourceStatusId: params.sourceStatusId ?? ResultStatusData.Rejected.value,
+      targetStatusId,
     });
 
     // RSB-R-21: the committed outcome. Never the payload, never a key.
@@ -518,25 +574,28 @@ export class BilateralResubmissionService {
     // RRC-R-17 / RRC-DD-7: ALWAYS announced. With the same primary the owner never moved; with a
     // different one the direct transfer has just made it the owner, so the review queue of that
     // Science Program gets the ordinary notice (no acceptance round is left to defer it to).
-    try {
-      await writers.announcePendingReview(
-        target.id,
-        preflight.submittedUserId ?? preflight.userId,
-      );
-    } catch (error) {
-      // `announcePendingReview` never throws; this keeps a faulty double from turning a
-      // COMMITTED resubmission into an error response.
-      this.logger.error(
-        `Bilateral resubmission: the Pending Review announcement failed for result ${resultCode}.`,
-        error as Error,
-      );
+    // `KPC-R-7`: a KP that stays in Editing is NOT announced.
+    if (announced) {
+      try {
+        await writers.announcePendingReview(
+          target.id,
+          preflight.submittedUserId ?? preflight.userId,
+        );
+      } catch (error) {
+        // `announcePendingReview` never throws; this keeps a faulty double from turning a
+        // COMMITTED resubmission into an error response.
+        this.logger.error(
+          `Bilateral resubmission: the Pending Review announcement failed for result ${resultCode}.`,
+          error as Error,
+        );
+      }
     }
 
     return {
       id: target.id,
       result_code: target.result_code,
-      status_id: ResultStatusData.PendingReview.value,
-      status: describeResultStatus(ResultStatusData.PendingReview.value),
+      status_id: targetStatusId,
+      status: describeResultStatus(targetStatusId),
     };
   }
 
@@ -562,17 +621,21 @@ export class BilateralResubmissionService {
     preflight: ResubmissionPreflightResult,
     request: {
       transferPrimary?: ResubmissionWritersPort['transferPrimary'];
-      stampPrimaryCardSubmitted: ResubmissionWritersPort['stampPrimaryCardSubmitted'];
+      /** `KPC-DD-6`: omitted when the target is not Pending Review (nothing to re-date). */
+      stampPrimaryCardSubmitted?: ResubmissionWritersPort['stampPrimaryCardSubmitted'];
       resultCode: string;
+      /** The status the lock re-read found: the CAS compares against it (7 for a non-KP result). */
+      sourceStatusId: number;
+      targetStatusId: number;
     },
   ): Promise<PrimaryTransferResult | null> {
     const resultCode = request.resultCode;
     return this.dataSource.transaction(async (manager) => {
       const flipped = await manager.update(
         Result,
-        { id: target.id, status_id: ResultStatusData.Rejected.value },
+        { id: target.id, status_id: request.sourceStatusId },
         {
-          status_id: ResultStatusData.PendingReview.value,
+          status_id: request.targetStatusId,
           last_updated_by: preflight.userId,
         },
       );
@@ -602,7 +665,7 @@ export class BilateralResubmissionService {
       // `PNR-T-2`: re-date the primary card in this same transaction, after the CAS and after the
       // optional transfer (which retires the row a too-early stamp would have touched). An error
       // propagates and rolls the whole resubmission back (`PNR-NFR-1`); a lost CAS never gets here.
-      await request.stampPrimaryCardSubmitted(target.id, manager);
+      await request.stampPrimaryCardSubmitted?.(target.id, manager);
 
       await manager.save(
         ResultReviewHistory,
@@ -924,8 +987,14 @@ export class BilateralResubmissionService {
         if (keys.length) await deactivate(entity, { [key]: In(keys) }, set);
       };
 
+      // `KPC-DD-5`: a Knowledge Product keeps its evidence (the handle link, which cannot change) and
+      // its subnationals (no KP writer would rewrite them; the geography is DSpace-owned, §5.1).
+      const isKnowledgeProduct =
+        Number(options.resultTypeId) === ResultTypeEnum.KNOWLEDGE_PRODUCT;
+
       // ---- evidence ------------------------------------------------------------------------
-      await deactivate(Evidence, { result_id: resultId });
+      if (!isKnowledgeProduct)
+        await deactivate(Evidence, { result_id: resultId });
 
       // ---- projects, and the budget that hangs off each project row -----------------------
       const projects = await activeRows(ResultsByProjects, {
@@ -1020,23 +1089,39 @@ export class BilateralResubmissionService {
       );
 
       // ---- subnationals of EVERY country row (an inactive country can still hold them) ----
-      const countries = await manager.find(ResultCountry, {
-        where: { result_id: resultId },
-      });
-      await deactivateByKeys(
-        ResultCountrySubnational,
-        'result_country_id',
-        countries.map((country) => country.result_country_id),
-      );
+      if (!isKnowledgeProduct) {
+        const countries = await manager.find(ResultCountry, {
+          where: { result_id: resultId },
+        });
+        await deactivateByKeys(
+          ResultCountrySubnational,
+          'result_country_id',
+          countries.map((country) => country.result_country_id),
+        );
+      }
 
       // ---- PARTNER institutions, only when the payload sends none --------------------------
       // When it sends some, `updateInstitutions` replaces them itself (deactivates the ones not
       // listed, reactivates the ones that are), so deactivating them here would only add churn.
       if (!options.payloadSendsPartners) {
-        await deactivate(ResultsByInstitution, {
+        const partnerRows = {
           result_id: resultId,
           institution_roles_id: InstitutionRoleEnum.PARTNER,
-        });
+        };
+        if (options.keepPartnerRowIds?.length) {
+          // `KPC-DD-5`: the rows DSpace contributed stay. Filtered in code, keyed by row id.
+          const kept = new Set(options.keepPartnerRowIds.map(Number));
+          const partners = await activeRows(ResultsByInstitution, partnerRows);
+          await deactivateByKeys(
+            ResultsByInstitution,
+            'id',
+            partners
+              .filter((row) => !kept.has(Number(row.id)))
+              .map((r) => r.id),
+          );
+        } else {
+          await deactivate(ResultsByInstitution, partnerRows);
+        }
       }
 
       // ---- Innovation Use: actors, organisation types and measures -------------------------
