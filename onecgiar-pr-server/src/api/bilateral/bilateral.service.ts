@@ -235,6 +235,25 @@ type ResolvedResultCodeTarget =
   | { operation: 'versioned'; resultCode: number }
   | { operation: 'updated'; target: Result };
 
+/**
+ * P2-4067 — one `contributing_partners[]` entry that was NOT linked to the result, returned on
+ * `response.outcomes[].warnings` so the platform is told instead of the partner disappearing.
+ */
+export interface BilateralPartnerWarning {
+  field: 'contributing_partners';
+  /** Position of the entry in the payload's `contributing_partners[]`. */
+  index: number;
+  code: 'partner_unresolved' | 'partner_ambiguous' | 'partner_is_cgiar_center';
+  message: string;
+  institution_id: number | null;
+  name: string | null;
+  acronym: string | null;
+  /** `partner_ambiguous` only: the CLARISA ids that matched. */
+  candidate_institution_ids?: number[];
+  /** `partner_is_cgiar_center` only: the CLARISA institution the entry resolved to. */
+  resolved_institution_id?: number;
+}
+
 @Injectable()
 export class BilateralService {
   constructor(
@@ -362,6 +381,20 @@ export class BilateralService {
           platform,
         );
 
+        // P2-4067: the partners this result will NOT link (unresolved, ambiguous, CGIAR centre),
+        // reported on its outcome row. A read, resolved by the same lookup `handleInstitutions`
+        // makes below, so the warning and the write cannot disagree.
+        const partnerWarnings = Array.isArray(
+          bilateralDto.contributing_partners,
+        )
+          ? (
+              await this.resolvePartnerInstitutions(
+                bilateralDto.contributing_partners,
+                bilateralDto.result_type_id,
+              )
+            ).warnings
+          : [];
+
         // @akili-spec bilateral/resubmit-rejected-result — RSB-T-2/DD-1: only an `updated`
         // target (open-phase, Rejected, owned, same type) leaves the normal create sequence. A
         // no-code create and a `versioned` target never enter this branch: their order and
@@ -394,6 +427,7 @@ export class BilateralService {
             result_code: resubmitted.result_code,
             external_reference: bilateralDto.external_reference?.trim() || null,
             is_duplicate_kp: false,
+            warnings: partnerWarnings,
             operation: 'updated',
             status_id: resubmitted.status_id,
             status: resubmitted.status,
@@ -668,6 +702,7 @@ export class BilateralService {
               // response without holding on to request order.
               external_reference: externalIdentity.external_reference,
               is_duplicate_kp: false,
+              warnings: partnerWarnings,
               // @akili-spec changes/bilateral-create-upsert-by-code — UBC-DD-5/R-10: this is
               // always a fresh insert (DD-2 restores the code afterwards for a version target),
               // so `operation` is 'created' unless the resolve step matched an eligible
@@ -729,6 +764,8 @@ export class BilateralService {
         status_id: created.status_id,
         status: created.status,
         external_reference: created.external_reference,
+        // P2-4067: additive. Always an array; empty when every partner was linked.
+        warnings: created.warnings ?? [],
       }));
     }
 
@@ -6147,15 +6184,29 @@ export class BilateralService {
   }
 
   /**
-   * The CLARISA resolution of the payload's `contributing_partners`, lifted out of
-   * `handleInstitutions` verbatim (same lookups, same order) so the resubmission can ask how many
-   * partners resolve BEFORE it resets (`countResolvablePartners`, RSB-T-4 forward pointer 2). Reads
-   * only.
+   * The CLARISA resolution of the payload's `contributing_partners`, shared by `handleInstitutions`
+   * and `countResolvablePartners` so the resubmission can ask how many partners resolve BEFORE it
+   * resets (RSB-T-4 forward pointer 2). Reads only.
+   *
+   * P2-4067 — a partner is linked only when it resolves to exactly ONE CLARISA institution:
+   *  1. by `institution_id` (always that institution when it exists);
+   *  2. otherwise by an EXACT name/acronym match (either value against either column). The old
+   *     `LIKE %x%` + first row linked arbitrary institutions (`%CIAT%` matches every "Association…").
+   * Every entry that is not linked comes back in `warnings` instead of disappearing: unresolved,
+   * ambiguous (several institutions match), or a CGIAR centre — centres are reported only in the
+   * centres section, never as partners (product rule, 2026-11-05).
    */
   private async resolvePartnerInstitutions(
     institutions: any[],
     resultTypeId?: number,
-  ) {
+  ): Promise<{
+    resolvedInstitutionIds: number[];
+    investmentByInstitutionId: Map<
+      number,
+      { amount: number | null; isDetermined: boolean | null }
+    >;
+    warnings: BilateralPartnerWarning[];
+  }> {
     const resolvedInstitutionIds: number[] = [];
     // The amount each resolved institution arrived with. `resolvedInstitutionIds` is a flat id
     // list, so without this the link back to the payload entry — and its `usd_budget` — is lost
@@ -6164,46 +6215,83 @@ export class BilateralService {
       number,
       { amount: number | null; isDetermined: boolean | null }
     >();
+    const warnings: BilateralPartnerWarning[] = [];
 
-    for (const input of institutions) {
+    for (const [index, input] of (institutions ?? []).entries()) {
       if (!input) continue;
       // Normalize ABC to CIAT
-      const normalizedName = this.normalizeInstitutionValue(input.name);
-      const normalizedAcronym = this.normalizeInstitutionValue(input.acronym);
-      const { institution_id } = input;
-      const name = normalizedName;
-      const acronym = normalizedAcronym;
+      const name = this.normalizeInstitutionValue(input.name)?.trim() || '';
+      const acronym =
+        this.normalizeInstitutionValue(input.acronym)?.trim() || '';
+      const institutionId = input.institution_id ?? null;
+      const sent = {
+        institution_id: institutionId,
+        name: input.name ?? null,
+        acronym: input.acronym ?? null,
+      };
       let matched: ClarisaInstitution | null = null;
 
-      if (institution_id) {
+      if (institutionId) {
         matched = await this._clarisaInstitutionsRepository.findOne({
-          where: { id: institution_id },
+          where: { id: institutionId },
+          relations: { clarisa_center: true },
         });
       }
 
       if (!matched && (name || acronym)) {
-        const fuzzyConds = [];
-        // Build flexible search conditions: if name is provided, search in both name and acronym
-        // and vice versa to handle cases where users send acronym in name field or name in acronym field
-        if (name) {
-          fuzzyConds.push({ name: Like(`%${name}%`) });
-          // Also search in acronym field using the name value (flexible matching)
-          fuzzyConds.push({ acronym: Like(`%${name}%`) });
+        // Either value against either column: producers send acronyms in `name` and vice versa.
+        const exactConds = [];
+        for (const value of new Set([name, acronym].filter(Boolean))) {
+          exactConds.push({ name: value }, { acronym: value });
         }
-        if (acronym) {
-          fuzzyConds.push({ acronym: Like(`%${acronym}%`) });
-          // Also search in name field using the acronym value (flexible matching)
-          fuzzyConds.push({ name: Like(`%${acronym}%`) });
-        }
-        if (fuzzyConds.length) {
-          const fuzzy = await this._clarisaInstitutionsRepository.find({
-            where: fuzzyConds,
+        const found = await this._clarisaInstitutionsRepository.find({
+          where: exactConds,
+          relations: { clarisa_center: true },
+        });
+        const candidates = [
+          ...new Map((found ?? []).map((inst) => [inst.id, inst])).values(),
+        ];
+        if (candidates.length > 1) {
+          warnings.push({
+            field: 'contributing_partners',
+            index,
+            code: 'partner_ambiguous',
+            message: `Partner "${name || acronym}" matches ${candidates.length} CLARISA institutions; it was not linked. Send its CLARISA institution_id.`,
+            ...sent,
+            candidate_institution_ids: candidates.map((inst) => inst.id),
           });
-          if (fuzzy?.length) matched = fuzzy[0];
+          continue;
         }
+        matched = candidates[0] ?? null;
       }
 
-      if (matched && !resolvedInstitutionIds.includes(matched.id)) {
+      if (!matched) {
+        warnings.push({
+          field: 'contributing_partners',
+          index,
+          code: 'partner_unresolved',
+          message:
+            institutionId && !(name || acronym)
+              ? `CLARISA institution_id ${institutionId} does not exist; the partner was not linked.`
+              : `Partner "${name || acronym || institutionId}" does not match any CLARISA institution exactly; it was not linked. Send its CLARISA institution_id.`,
+          ...sent,
+        });
+        continue;
+      }
+
+      if (matched.clarisa_center) {
+        warnings.push({
+          field: 'contributing_partners',
+          index,
+          code: 'partner_is_cgiar_center',
+          message: `"${matched.acronym || matched.name}" is a CGIAR center; centers are reported in contributing_center / lead_center, never as partners. It was not linked as a partner.`,
+          ...sent,
+          resolved_institution_id: matched.id,
+        });
+        continue;
+      }
+
+      if (!resolvedInstitutionIds.includes(matched.id)) {
         resolvedInstitutionIds.push(matched.id);
         investmentByInstitutionId.set(
           matched.id,
@@ -6214,7 +6302,7 @@ export class BilateralService {
       }
     }
 
-    return { resolvedInstitutionIds, investmentByInstitutionId };
+    return { resolvedInstitutionIds, investmentByInstitutionId, warnings };
   }
 
   /**
@@ -6244,8 +6332,14 @@ export class BilateralService {
   ) {
     if (!Array.isArray(institutions) || !institutions.length) return;
 
-    const { resolvedInstitutionIds, investmentByInstitutionId } =
+    const { resolvedInstitutionIds, investmentByInstitutionId, warnings } =
       await this.resolvePartnerInstitutions(institutions, resultTypeId);
+    if (warnings.length) {
+      // Codes only: the entries themselves go back to the platform on `outcomes[].warnings`.
+      this.logger.warn(
+        `handleInstitutions: result ${resultId} — ${warnings.length} partner(s) not linked (${warnings.map((w) => w.code).join(', ')}).`,
+      );
+    }
 
     if (!resolvedInstitutionIds.length) {
       this.logger.warn(

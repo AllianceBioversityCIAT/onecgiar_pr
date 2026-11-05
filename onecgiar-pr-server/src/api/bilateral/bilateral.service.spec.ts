@@ -2526,6 +2526,7 @@ describe('BilateralService (unit)', () => {
           status_id: ResultStatusData.PendingReview.value,
           status: ResultStatusData.PendingReview.name,
           external_reference: null,
+          warnings: [],
         },
       ]);
       expect(service.announcePendingReview).toHaveBeenCalledTimes(1);
@@ -2534,6 +2535,44 @@ describe('BilateralService (unit)', () => {
 
     // @akili-spec changes/bilateral-create-upsert-by-code — UBC-T-1/DD-5/R-10: additive
     // per-result outcomes, `operation: 'created'` for the unchanged (no-code) path.
+    // P2-4067: a partner that is not linked is told to the platform on its outcome row.
+    it('reports unlinked contributing_partners on outcomes[].warnings', async () => {
+      const { service } = arrangeCreateHarness();
+      (service.initializeResultHeader as jest.Mock).mockResolvedValue({
+        id: 10,
+        result_code: 'RC-1',
+        status_id: ResultStatusData.PendingReview.value,
+      });
+      const warning = {
+        field: 'contributing_partners',
+        index: 0,
+        code: 'partner_unresolved',
+        message: 'not linked',
+        institution_id: null,
+        name: 'Nobody Inc.',
+        acronym: null,
+      };
+      const resolveSpy = jest
+        .spyOn(service as any, 'resolvePartnerInstitutions')
+        .mockResolvedValue({
+          resolvedInstitutionIds: [],
+          investmentByInstitutionId: new Map(),
+          warnings: [warning],
+        });
+
+      const dto = buildDto();
+      (dto.result.data as any).contributing_partners = [
+        { name: 'Nobody Inc.' },
+      ];
+      const result = await service.create(dto);
+
+      expect(resolveSpy).toHaveBeenCalledWith(
+        [{ name: 'Nobody Inc.' }],
+        expect.anything(),
+      );
+      expect(result.response.outcomes[0].warnings).toEqual([warning]);
+    });
+
     it('stamps response.outcomes with operation "created" for a codeless create', async () => {
       const { service } = arrangeCreateHarness();
       (service.initializeResultHeader as jest.Mock).mockResolvedValue({
@@ -2551,6 +2590,7 @@ describe('BilateralService (unit)', () => {
           status_id: ResultStatusData.PendingReview.value,
           status: ResultStatusData.PendingReview.name,
           external_reference: null,
+          warnings: [],
         },
       ]);
     });
@@ -3138,6 +3178,7 @@ describe('BilateralService (unit)', () => {
               status_id: ResultStatusData.PendingReview.value,
               status: 'pending review',
               external_reference: null,
+              warnings: [],
             },
           ]);
           const logged = (service.logger.error as jest.Mock).mock.calls
@@ -6559,6 +6600,100 @@ describe('BilateralService (unit)', () => {
             result_type_id: ResultTypeEnum.OTHER_OUTPUT,
           }),
         ).resolves.toBe(2);
+      });
+    });
+
+    // P2-4067: partners are linked only on an exact, unique CLARISA match; everything else comes
+    // back as a warning instead of disappearing.
+    describe('resolvePartnerInstitutions (P2-4067)', () => {
+      const MEL = { id: 10, name: 'MEL Partner', acronym: 'MELP' };
+      const IITA = {
+        id: 46,
+        name: 'International Institute of Tropical Agriculture',
+        acronym: 'IITA',
+        clarisa_center: { code: 'CENTER-08' },
+      };
+      const arrange = (opts: {
+        byId?: Record<number, any>;
+        byExact?: (where: any[]) => any[];
+      }) => {
+        const { service } = makeService({
+          _clarisaInstitutionsRepository: {
+            findOne: jest.fn(
+              async ({ where }: any) => opts.byId?.[where.id] ?? null,
+            ),
+            find: jest.fn(async ({ where }: any) =>
+              opts.byExact ? opts.byExact(where) : [],
+            ),
+          },
+        });
+        return service as any;
+      };
+      const resolve = (svc: any, partners: any[]) =>
+        svc.resolvePartnerInstitutions(partners, ResultTypeEnum.OTHER_OUTPUT);
+
+      it('a partner sent by CLARISA id is linked to that institution, without a name lookup', async () => {
+        const svc = arrange({ byId: { 10: MEL } });
+        const out = await resolve(svc, [{ institution_id: 10, name: 'x' }]);
+        expect(out.resolvedInstitutionIds).toEqual([10]);
+        expect(out.warnings).toEqual([]);
+        expect(svc._clarisaInstitutionsRepository.find).not.toHaveBeenCalled();
+      });
+
+      it('matches name/acronym EXACTLY (no LIKE) and links a unique match', async () => {
+        const svc = arrange({ byExact: () => [MEL] });
+        const out = await resolve(svc, [{ name: ' MELP ' }]);
+        expect(out.resolvedInstitutionIds).toEqual([10]);
+        const where =
+          svc._clarisaInstitutionsRepository.find.mock.calls[0][0].where;
+        expect(where).toEqual([{ name: 'MELP' }, { acronym: 'MELP' }]);
+      });
+
+      it('an ambiguous name/acronym is not linked and is reported with its candidates', async () => {
+        const svc = arrange({
+          byExact: () => [MEL, { id: 11, name: 'MELP', acronym: 'Z' }],
+        });
+        const out = await resolve(svc, [{ acronym: 'MELP' }]);
+        expect(out.resolvedInstitutionIds).toEqual([]);
+        expect(out.warnings).toEqual([
+          expect.objectContaining({
+            field: 'contributing_partners',
+            index: 0,
+            code: 'partner_ambiguous',
+            acronym: 'MELP',
+            candidate_institution_ids: [10, 11],
+          }),
+        ]);
+      });
+
+      it('an unresolvable partner is reported, never dropped silently', async () => {
+        const svc = arrange({});
+        const out = await resolve(svc, [
+          { name: 'Nobody Inc.' },
+          { institution_id: 999 },
+        ]);
+        expect(out.resolvedInstitutionIds).toEqual([]);
+        expect(out.warnings.map((w: any) => [w.index, w.code])).toEqual([
+          [0, 'partner_unresolved'],
+          [1, 'partner_unresolved'],
+        ]);
+        expect(out.warnings[1].message).toContain('institution_id 999');
+      });
+
+      it('a CGIAR center is never linked as a partner, and is reported', async () => {
+        const svc = arrange({ byId: { 46: IITA }, byExact: () => [MEL] });
+        const out = await resolve(svc, [
+          { institution_id: 46 },
+          { name: 'MELP' },
+        ]);
+        expect(out.resolvedInstitutionIds).toEqual([10]);
+        expect(out.warnings).toEqual([
+          expect.objectContaining({
+            index: 0,
+            code: 'partner_is_cgiar_center',
+            resolved_institution_id: 46,
+          }),
+        ]);
       });
     });
 
