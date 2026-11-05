@@ -3426,9 +3426,6 @@ select *
 
       const hasTitle = !!result_title?.trim();
       const hasAow = !!aow_compose_code?.trim();
-      const hasIndicatorFilter =
-        !!result_indicator_description?.trim() ||
-        !!result_indicator_type_name?.trim();
 
       const conditions: string[] = [];
       const params: any[] = [];
@@ -3449,14 +3446,19 @@ select *
         conditions.push('tr.result_title LIKE ?');
         params.push(`%${result_title.trim()}%`);
       }
-      if (hasIndicatorFilter) {
-        conditions.push(
-          '(tri.indicator_description LIKE ? OR tri.type_value = ?)',
-        );
-        params.push(
-          `%${(result_indicator_description || '').trim()}%`,
-          result_indicator_type_name || '',
-        );
+      // P2-4068: each indicator field narrows the match on its own (AND), and only when it carries a
+      // value. The old `(description LIKE ? OR type_value = ?)` turned an absent description into
+      // `LIKE '%%'`, which is true for every row, so sending only the type filtered nothing; and
+      // with both sent the OR widened the match to any indicator of that type.
+      const indicatorDescription = result_indicator_description?.trim();
+      const indicatorTypeName = result_indicator_type_name?.trim();
+      if (indicatorDescription) {
+        conditions.push('tri.indicator_description LIKE ?');
+        params.push(`%${indicatorDescription}%`);
+      }
+      if (indicatorTypeName) {
+        conditions.push('tri.type_value = ?');
+        params.push(indicatorTypeName);
       }
       conditions.push('y.active = 1');
       conditions.push(`
@@ -3485,8 +3487,22 @@ select *
         CROSS JOIN ${env.DB_NAME}.year y
         WHERE
           ${conditions.join(' AND ')}
+        ORDER BY tr.id ASC, tri.id ASC, trit.id ASC
       `;
       let tocResultData = await this.query(tocResultQuery, params);
+
+      // P2-4068: the caller keeps row [0]. The ORDER BY makes that pick repeatable; when the filters
+      // still leave more than one distinct indicator the pick is a guess, so it is logged loudly.
+      const distinctMatches = new Set(
+        (tocResultData ?? []).map(
+          (row) => `${row.toc_result_id}|${row.toc_results_indicator_id}`,
+        ),
+      );
+      if (distinctMatches.size > 1) {
+        this._logger.warn(
+          `[TOC] Ambiguous ToC mapping for ${science_program_id}: ${distinctMatches.size} distinct result/indicator pairs matched (${[...distinctMatches].join(', ')}); using the first (${[...distinctMatches][0]}). Send result_indicator_description and/or result_indicator_type_name to narrow it.`,
+        );
+      }
 
       // Fallback 1: by initiative + title via toc_work_packages (when wp_id is set)
       if (
@@ -3512,6 +3528,7 @@ select *
           JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = twp.toc_id
           WHERE
             ${titleOnlyConditions.join(' AND ')}
+          ORDER BY tr.id ASC
           LIMIT 1
         `;
         const titleOnlyData = await this.query(titleOnlyQuery, titleOnlyParams);
@@ -3539,6 +3556,7 @@ select *
             tr.official_code = ?
             AND tr.result_title LIKE ?
             AND tr.is_active = 1
+          ORDER BY tr.id ASC
           LIMIT 1
         `;
         const byOfficialCodeData = await this.query(byOfficialCodeQuery, [

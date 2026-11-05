@@ -1211,3 +1211,125 @@ describe('ResultsTocResultRepository.saveInditicatorsContributing — TTD-TEST-4
     expect(operator!.value).toEqual([KEPT_PK]);
   });
 });
+
+/**
+ * P2-4068 — `findTocResultsForBilateral` picked the wrong indicator: `(description LIKE ? OR
+ * type_value = ?)` made an absent description `LIKE '%%'` (always true), the OR widened the match,
+ * and without ORDER BY the caller's `[0]` was whatever MySQL returned first.
+ */
+describe('ResultsTocResultRepository.findTocResultsForBilateral — indicator filters (P2-4068)', () => {
+  let repository: ResultsTocResultRepository;
+  let query: jest.Mock;
+
+  beforeEach(() => {
+    const dataSource: any = {
+      createEntityManager: jest.fn().mockReturnValue({}),
+    };
+    const handlersError: any = { returnErrorRepository: jest.fn((e) => e) };
+    repository = new ResultsTocResultRepository(
+      dataSource,
+      handlersError,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    query = jest.fn().mockResolvedValue([{ toc_result_id: 1 }]);
+    (repository as any).query = query;
+  });
+
+  const base = {
+    science_program_id: 'SP13',
+    initiative_id: 'SP13',
+    result_title: 'Improved fisheries',
+  };
+  const mainCall = () => query.mock.calls[0] as [string, any[]];
+
+  it('sends only the type: filters by type_value and never adds a catch-all LIKE', async () => {
+    await repository.findTocResultsForBilateral({
+      ...base,
+      result_indicator_type_name: 'Number of knowledge products',
+    });
+    const [sql, params] = mainCall();
+    expect(sql).toContain('tri.type_value = ?');
+    expect(sql).not.toContain('tri.indicator_description LIKE ?');
+    expect(sql).not.toMatch(/OR tri\.type_value/);
+    expect(params).toContain('Number of knowledge products');
+    expect(params).not.toContain('%%');
+  });
+
+  it('sends description and type: both narrow the match (AND, not OR)', async () => {
+    await repository.findTocResultsForBilateral({
+      ...base,
+      result_indicator_description: 'peer reviewed',
+      result_indicator_type_name: 'Number of knowledge products',
+    });
+    const [sql, params] = mainCall();
+    expect(sql).toMatch(
+      /tri\.indicator_description LIKE \? AND tri\.type_value = \?/,
+    );
+    expect(params).toEqual(
+      expect.arrayContaining([
+        '%peer reviewed%',
+        'Number of knowledge products',
+      ]),
+    );
+  });
+
+  it('sends only the description: no type condition, no empty-string param', async () => {
+    await repository.findTocResultsForBilateral({
+      ...base,
+      result_indicator_description: 'peer reviewed',
+    });
+    const [sql, params] = mainCall();
+    expect(sql).toContain('tri.indicator_description LIKE ?');
+    expect(sql).not.toContain('tri.type_value = ?');
+    expect(params).not.toContain('');
+  });
+
+  it('orders the main query and both fallbacks deterministically', async () => {
+    query.mockResolvedValue([]);
+    await repository.findTocResultsForBilateral({ ...base });
+    expect(query).toHaveBeenCalledTimes(3);
+    expect(query.mock.calls[0][0]).toContain(
+      'ORDER BY tr.id ASC, tri.id ASC, trit.id ASC',
+    );
+    expect(query.mock.calls[1][0]).toMatch(/ORDER BY tr\.id ASC\s+LIMIT 1/);
+    expect(query.mock.calls[2][0]).toMatch(/ORDER BY tr\.id ASC\s+LIMIT 1/);
+  });
+
+  it('warns when several distinct indicators still match, and keeps the first row', async () => {
+    const warn = jest
+      .spyOn((repository as any)._logger, 'warn')
+      .mockImplementation(() => undefined);
+    query.mockResolvedValue([
+      { toc_result_id: 10, toc_results_indicator_id: 'a' },
+      { toc_result_id: 10, toc_results_indicator_id: 'b' },
+    ]);
+    const rows = await repository.findTocResultsForBilateral({
+      ...base,
+      result_indicator_type_name: 'Number of knowledge products',
+    });
+    expect(rows[0]).toEqual({
+      toc_result_id: 10,
+      toc_results_indicator_id: 'a',
+    });
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('2 distinct result/indicator pairs'),
+    );
+  });
+
+  it('does not warn when the rows are the same indicator (one per target year)', async () => {
+    const warn = jest
+      .spyOn((repository as any)._logger, 'warn')
+      .mockImplementation(() => undefined);
+    query.mockResolvedValue([
+      { toc_result_id: 10, toc_results_indicator_id: 'a' },
+      { toc_result_id: 10, toc_results_indicator_id: 'a' },
+    ]);
+    await repository.findTocResultsForBilateral({ ...base });
+    expect(warn).not.toHaveBeenCalled();
+  });
+});
