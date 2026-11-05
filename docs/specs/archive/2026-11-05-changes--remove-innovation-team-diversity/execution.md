@@ -109,3 +109,9 @@ CREATE DEFINER = `prmsadmin` @ `%` FUNCTION `prdb` . `validation_innovation_dev_
 ## Summary
 
 All 4 tasks PASS on 2026-11-05. Client gate (T-1) and QA catalog removal (T-2) each passed a Reviewer on the first attempt. The DB short-circuit (T-3) is applied in PROD (13:48) and TEST (14:10), with positive proof on TEST and no regression on PROD 2025. Data safety and the visual check passed (T-4). Budget: 4 tasks, 1 review round each, within the tripwire.
+
+## PRTest smoke (2026-11-05, after performance-refactor 3f88c9c2b deploy, read-only)
+- 2026 result 9771 (phase 36): `app-innovation-team-diversity` is not rendered and the page has no "team diversity" text. Server green check `innovation-dev-info: true`. The bottom bar shows "1 field missing": the W3 project T-PJ-003211 "Total USD Value" budget input, unrelated to ITD (the DB function accepts an empty budget row).
+- 2025 result 5921 (phase 34): the component renders with its question ✔.
+- QA catalog 2026.34 on PRTest was not checked: `/api/qa/*` needs a CLARISA key grant.
+- Resolved the "1 field missing" on 9771 (test data, user-asked write): marked "This is yet to be determined" on the T-PJ-003211 W3 budget row and saved on PRTest. After a reload the bar reads "Section complete" and the green check `innovation-dev-info: true`.
