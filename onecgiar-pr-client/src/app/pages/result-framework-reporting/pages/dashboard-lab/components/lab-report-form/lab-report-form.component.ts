@@ -49,8 +49,10 @@ import {
   ptContributionToApply,
   ptPendingChecklistHtml,
   ptPrefillOutcomeItems,
-  resolvePtCenters
+  resolvePtCenters,
+  unsavedPtEvidenceNames
 } from './pt-prefill.util';
+import { rememberPtUnsavedEvidence } from '../../../../../../shared/constants/pt-unsaved-evidence-notice';
 
 // @akili-spec changes/kp-program-accelerator-match (KPAM-T-3, KPAM-R-2)
 export const SCIENCE_PROGRAM_NAMES: Record<string, string> = {
@@ -387,6 +389,13 @@ export class LabReportFormComponent {
    */
   readonly ptDraft = signal<PtProposalDto | null>(null);
   /**
+   * INC-167646: a Progress Tracker handle that is not CGSpace, MELSpace or WorldFish.
+   * It is not copied into the handle field and Sync is not offered for it.
+   */
+  readonly ptRejectedHandle = signal<string | null>(null);
+  /** Evidence names PT holds without an http(s) link. Not saved as Evidence rows. */
+  readonly ptUnsavedEvidenceNames = computed(() => unsavedPtEvidenceNames(this.ptDraft()));
+  /**
    * `PTB-R-22`: the panel is mounted once the tab is opened for the first time, then kept mounted
    * and `[hidden]`-toggled so switching away and back never remounts it (and never re-fetches).
    * Reset alongside the rest of the form in `resetForm()` — a fresh indicator gets a fresh mount.
@@ -464,6 +473,7 @@ export class LabReportFormComponent {
     this.undoPtPrefill();
     this.ptDraft.set(null);
     this.ptTitleTruncated.set(false);
+    this.ptRejectedHandle.set(null);
   }
 
   /**
@@ -476,6 +486,7 @@ export class LabReportFormComponent {
   onPtResultSelected(proposal: PtProposalDto): void {
     this.undoPtPrefill();
     this.ptDraft.set(proposal);
+    this.ptRejectedHandle.set(null);
 
     // PTB-R-9 / PTB-AC-8: truncate to 30 words, always noting whether truncation happened so the
     // template can show a visible notice — never a silent truncation.
@@ -503,17 +514,37 @@ export class LabReportFormComponent {
         this.mqapJson.set(null);
         this.mqapUrlError.set({ ...KP_HANDLE_NO_ERROR });
         this.patch('handler', '');
+        this.ptRejectedHandle.set(null);
       }
     }
 
     // PTB-R-11: KP handle pre-fill. Read AFTER the type patch above so a proposal that resolves an
     // open-type indicator's category TO Knowledge product is correctly recognised as KP here too.
-    if (this.currentResultIsKnowledgeProduct() && proposal.knowledge_product_handle) {
-      this.patch('handler', proposal.knowledge_product_handle);
-    }
+    // INC-167646: validate before copying. A DOI or other non-repository link is not patched and
+    // Sync is not offered — the user must browse or paste a CGSpace, MELSpace or WorldFish handle.
+    this.applyPtKnowledgeProductHandle(proposal);
 
     this.applyPtContribution(proposal);
     void this.applyPtCenters(proposal);
+  }
+
+  /**
+   * Copies a Progress Tracker handle only when `validateKpHandle` already accepts it.
+   * A known-invalid value (doi.org, another repository, a bare DOI) stays out of the field.
+   * Nothing is derived from the DOI and no CGSpace lookup is added.
+   */
+  private applyPtKnowledgeProductHandle(proposal: PtProposalDto): void {
+    if (!this.currentResultIsKnowledgeProduct()) return;
+    const raw = proposal.knowledge_product_handle;
+    const handle = typeof raw === 'string' ? raw.trim() : '';
+    if (!handle) return;
+    if (validateKpHandle(handle).status) {
+      this.patch('handler', '');
+      this.mqapUrlError.set({ ...KP_HANDLE_NO_ERROR });
+      this.ptRejectedHandle.set(handle);
+      return;
+    }
+    this.patch('handler', handle);
   }
 
   /**
@@ -872,6 +903,7 @@ export class LabReportFormComponent {
     this.kpEntryMode.set(this.currentResultIsKnowledgeProduct() ? 'browse' : 'manual');
     this.handleSource.set('browse');
     this.ptDraft.set(null);
+    this.ptRejectedHandle.set(null);
     this.ptTabOpened.set(false);
     this.ptProposalCount.set(0);
     this.ptTitleTruncated.set(false);
@@ -1280,6 +1312,7 @@ export class LabReportFormComponent {
         this.showCreatedAlert(ptPending, resp?.response?.progressTrackerPrefill, ptPrefill);
         const code = resp?.response?.result?.result_code;
         const phase = resp?.response?.result?.version_id;
+        if (code != null && ptDraft) rememberPtUnsavedEvidence(String(code), unsavedPtEvidenceNames(ptDraft));
         if (code == null) {
           // Nothing to navigate to — close the drawer; the result exists and is listed on the Results tab.
           this.created.emit();

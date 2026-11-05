@@ -36,6 +36,7 @@ import { ResultMetadataWindowComponent } from '../../../../shared/components/res
 import { ResultMetadataPanelService } from '../../../../shared/components/result-metadata/result-metadata-panel.service';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { ReportingGuideService } from '../../../result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
+import { readPtUnsavedEvidence, rememberPtUnsavedEvidence } from '../../../../shared/constants/pt-unsaved-evidence-notice';
 
 jest.useFakeTimers();
 
@@ -809,6 +810,33 @@ describe('ResultDetailComponent', () => {
       resolveResult(11, 11719);
 
       expect(navigateSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Progress Tracker unsaved evidence reminder (INC-167646)', () => {
+    const resultCode = 'R-77';
+
+    afterEach(() => sessionStorage.clear());
+
+    it('shows the seeded names for the open result and dismiss removes them from storage', () => {
+      sessionStorage.clear();
+      rememberPtUnsavedEvidence(resultCode, ['Field note', 'Photo <draft>']);
+
+      paramsSubject.next({ id: resultCode });
+      fixture.detectChanges();
+
+      const banner: HTMLElement | null = fixture.nativeElement.querySelector('[data-testid="pt-unsaved-evidence-notice"]');
+      expect(banner).toBeTruthy();
+      const names = Array.from(banner!.querySelectorAll('[data-testid="pt-unsaved-evidence-name"]')).map(node => node.textContent?.trim());
+      expect(names).toEqual(['Field note', 'Photo <draft>']);
+      expect(banner!.querySelector('draft')).toBeNull();
+      expect(banner!.textContent).toContain('not an evidence record');
+
+      fixture.nativeElement.querySelector('[data-testid="pt-unsaved-evidence-dismiss"]').click();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="pt-unsaved-evidence-notice"]')).toBeNull();
+      expect(readPtUnsavedEvidence(resultCode)).toEqual([]);
     });
   });
 });

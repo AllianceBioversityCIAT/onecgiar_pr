@@ -13,6 +13,7 @@ import { NO_ERRORS_SCHEMA, WritableSignal, computed, signal } from '@angular/cor
 // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-results-browse (PTB-T-3)
 import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
 import { PtProposalDto, PtResultsBrowseComponent } from './components/pt-results-browse/pt-results-browse.component';
+import { readPtUnsavedEvidence } from '../../../../../../shared/constants/pt-unsaved-evidence-notice';
 
 /**
  * The template is replaced with an empty one on purpose: these tests are about the rules the form
@@ -2391,6 +2392,30 @@ describe('LabReportFormComponent — Progress Tracker entry mode (PTB-T-3)', () 
       expect(alert.description).toContain('Partner: Gone Org');
     });
 
+    it('INC-167646: remembers unsaved PT evidence names on the created result, without sending them as evidence links', async () => {
+      sessionStorage.clear();
+      const fix = await mountPt({ indicator: nonKpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
+      const api: any = TestBed.inject(ApiService);
+      const name = 'Field note without a link';
+      fix.componentInstance.onPtResultSelected(
+        proposal({
+          evidence: [{ item_key: 'E1', kind: 'text', name, url: null }],
+          evidence_links: [{ url: 'https://example.org/saved', title: 'Saved link', kind: null }]
+        })
+      );
+      fix.componentInstance.patch('contribution_to_indicator_target', 1);
+      fix.componentInstance.createResult();
+
+      const body = api.resultsSE.POST_createResult.mock.calls.at(-1)[0];
+      expect(body.progress_tracker_prefill.evidence_links).toEqual([{ url: 'https://example.org/saved', title: 'Saved link' }]);
+      expect(JSON.stringify(body.progress_tracker_prefill.evidence_links)).not.toContain(name);
+      expect(readPtUnsavedEvidence('R-1')).toEqual([name]);
+      const alert = api.alertsFe.show.mock.calls.at(-1)[0];
+      expect(alert.description).toContain('Temporary evidence not saved');
+      expect(alert.description).toContain('not added as evidence');
+      sessionStorage.clear();
+    });
+
     it('PTB-AC-13: a manual (non-Progress-Tracker) create still sends an empty narrative and no provenance block', async () => {
       const fix = await mountPt({ indicator: nonKpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
       const api: any = TestBed.inject(ApiService);
@@ -2497,6 +2522,41 @@ describe('LabReportFormComponent — Progress Tracker entry mode (PTB-T-3)', () 
       fix.detectChanges();
 
       expect(fix.componentInstance.kpEntryMode()).toBe('manual');
+    });
+
+    it('INC-167646: a DOI is not prefilled and Sync is not offered', async () => {
+      const doi = 'https://doi.org/10.1234/example.paper';
+      const fix = await mountPt({ indicator: kpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
+      const api: any = TestBed.inject(ApiService);
+      fix.componentInstance.onOpenProgressTrackerTab();
+
+      fix.componentInstance.onPtResultSelected(proposal({ knowledge_product_handle: doi }));
+      fix.detectChanges();
+
+      expect(fix.componentInstance.createResultBody().handler).toBe('');
+      expect(fix.componentInstance.ptRejectedHandle()).toBe(doi);
+      expect(fix.componentInstance.mqapJson()).toBeNull();
+      expect(api.resultsSE.GET_mqapValidation).not.toHaveBeenCalled();
+      expect(fix.nativeElement.querySelector('[data-testid="pt-sync-required-prompt"]')).toBeNull();
+      const rejected = fix.nativeElement.querySelector('[data-testid="pt-handle-rejected"]') as HTMLElement;
+      expect(rejected).toBeTruthy();
+      expect(rejected.textContent).toContain('not a CGSpace, MELSpace or WorldFish');
+      expect(rejected.textContent).toContain(doi);
+      expect(rejected.textContent).not.toContain('press Sync');
+    });
+
+    it('INC-167646: a valid bare CGSpace handle is still prefilled and can go to Sync', async () => {
+      const handle = '10568/182598';
+      const fix = await mountPt({ indicator: kpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
+      fix.componentInstance.onOpenProgressTrackerTab();
+
+      fix.componentInstance.onPtResultSelected(proposal({ knowledge_product_handle: handle }));
+      fix.detectChanges();
+
+      expect(fix.componentInstance.createResultBody().handler).toBe(handle);
+      expect(fix.componentInstance.ptRejectedHandle()).toBeNull();
+      expect(fix.nativeElement.querySelector('[data-testid="pt-handle-rejected"]')).toBeNull();
+      expect(fix.nativeElement.querySelector('[data-testid="pt-sync-required-prompt"]')).toBeTruthy();
     });
 
     it('the inline sync-required prompt disappears once the handle is synced', async () => {
