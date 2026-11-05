@@ -168,13 +168,35 @@
 - **Final verification:** green (re-run VERIFIED).
 - **Running totals (Budget, re-baselined ~750 prod / ~1 400 test):** tasks closed 4/7 · prod ≈ +729 / −263 · test ≈ +1 310 · review rounds 4/9.
 
+### `KPC-T-5` — Lift the KP guard in the `updated` branch
+
+- **Final status:** PASS · 2026-11-05
+- **Attempts:** 1
+- **Skills:** `nestjs-expert`, `tdd` · effort medium
+- **Attempt 1**
+  - **Implementer:** STATUS DONE. `bilateral.service.ts` (+19/−10), `bilateral.service.spec.ts` (+140/−17). In `resolveResultCodeTarget` (`updated` branch) a stored KP skips `assertNotKnowledgeProduct`; `assertResultCodeStatusIsEditable` now throws 409 with `resubmissionStatusRefusal(code, status_id, result_type_id)` (KP passes in 1 and 7; non-KP wording unchanged). Guard order bilateral → ownership → status → same type; `versioned` branch untouched. Unused `describeResultStatus` import removed. RSB-R-7 test replaced by a `Knowledge Product correction (KPC-R-1)` describe; `:2942` ("rejects a Knowledge Product code (409)") kept — it mocks `resolveVersionableResult` rejecting, i.e. the carry-forward path. Extra test: KP target with a payload of another type → 409.
+  - **Falsifier reds (guarded line broken, restored, diffed against backup):**
+    - F1 (KP guard always runs): `● KPC › a KP in status 1 reaches resubmit() once, with the KP port, and the KP guard is skipped`, `● KPC › a KP in status 7 …` → `Tests: 2 failed, 1017 passed, 1019 total`.
+    - F2 (status rule Rejected-only): `● KPC › a KP in status 1 reaches resubmit() once …` → `Tests: 1 failed`.
+    - F3 (ownership skipped): `● RSB › another platform -> 403 (RSB-R-6); resubmit never called`, `● KPC › a KP of another platform -> 403; resubmit never called`, `● … rejects an open-phase code that is not in an editable status (409) and writes nothing` → `Tests: 3 failed`.
+    - F5 (KP rule applied to all types): `● KPC › a policy change in Editing stays refused with the shipped message (KPC-R-13)`, `● RSB › status 1 (editing) -> 409 naming the code and the status; resubmit never called` → `Tests: 2 failed`.
+    - F6 (log call removed): the six `● KPC › a KP in status {2,3,4,5,6,8} … one log line with operation=updated and no payload` tests fail.
+    - F4: cannot go red from this service — the carry-forward KP refusal lives in `BilateralVersioningRulesService` (`bilateral-versioning-rules.service.ts:129-136`), pinned by its own unchanged spec (`bilateral-versioning-rules.service.spec.ts:124`); the new test pins pass-through.
+    - Predicted red "Result 28565 is a Knowledge Product." cannot appear (guard mocked as `jest.fn()`); F1 pins the guard is not called instead.
+  - **Evidence re-run (Leader, non-author):** `npx jest --testPathPattern="bilateral" --silent --reporters=summary --forceExit --maxWorkers=2` → `Test Suites: 49 passed, 49 total` / `Tests: 1742 passed, 1742 total`; `npx tsc --noEmit` exit 0; `npx eslint` on both files `--quiet` exit 0 → **VERIFIED**.
+  - **Reviewer (full):** **PASS**, no blocking issue; all five deviations accepted (red run, F4 location, no new logging — accepted corrections already logged by `logAccepted` with `operation=updated … outcome=accepted`, non-KP keeps the KP guard, `:2942` kept).
+  - **Advisories (non-gating):** READABILITY — stale comments at `bilateral.service.ts:4610` (RSB-DD-1 order) and `:4694-4697` ("overwritten only from Rejected"); RELIABILITY — `KPC-R-15` (SHOULD) "refusal status": the log carries the HTTP code (`rejected(409)`), not the result status name (inherited RSB-R-21 format).
+- **Requirements covered:** `KPC-R-1`, `KPC-R-3`, `KPC-R-12` (via the versioning-rules spec + pass-through test), `KPC-R-13`, `KPC-R-15`.
+- **Final verification:** green (re-run VERIFIED).
+- **Running totals (Budget, re-baselined ~750 prod / ~1 400 test):** tasks closed 5/7 · prod ≈ +748 / −273 · test ≈ +1 450 · review rounds 5/9.
+
 ## Budget tripwire — `KPC-T-3` gate
 
 - **Fired:** 2026-11-05, after `KPC-T-3`. Measured `git diff --numstat a731286af..HEAD -- onecgiar-pr-server/src`: prod +537 / −197, test +771, vs §14 ~350 prod / ~650 test. Review rounds 3/9; tasks 3/7.
 - **Cause:** ~190 lines of `syncAgain` body moved verbatim (counted as both removal and addition); per-falsifier tests written against post-change code (`KPC-T-3` alone ~520 test lines).
 - **Re-baseline proposed:** ~750 prod net / ~1 400 test for the whole spec.
 - **Decision:** user answered "Continue T-4" (2026-11-05) → re-baseline accepted; execution continues.
-- **Open (unanswered):** missing stored handle → 409 (current, malformed message) vs 502 (Reviewer suggestion, `KPC-R-8`). Not in `KPC-T-4` scope; re-raised at the `KPC-T-4` gate.
+- **Missing stored handle (409 vs 502):** re-raised at the `KPC-T-4` gate. **Answered 2026-11-05 by the user:** "Un KP como no va a tener handle en PRMS? Si no tiene no se crea..." → a KP cannot exist without a stored handle; the branch is unreachable. No change; advisory closed.
 
 ## Forward pointers
 

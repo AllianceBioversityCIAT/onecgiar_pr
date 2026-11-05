@@ -6,7 +6,7 @@
 |---|---|
 | Spec Path | `changes/bilateral-kp-correction` |
 | Depth | Full |
-| Status | **approved**, user 2026-11-05 (Phase 3 gate) · in execution (`KPC-T-1..4` [x]) |
+| Status | **approved**, user 2026-11-05 (Phase 3 gate) · in execution (`KPC-T-1..5` [x]) |
 | Date | 2026-11-05 |
 | Linked spec | `requirements.md` (`KPC-R-1..15`), `design.md` (`KPC-DD-1..6`, Premise Ledger `P-1..18`) — both approved by the user at their gates on 2026-11-05 |
 | Owner / driver | Juan David Delgado |
@@ -183,7 +183,7 @@ Scoped jest only, never the full suite: `npx jest --testPathPattern="<pattern>" 
   - [x] `npx tsc --noEmit` exit 0; eslint clean on touched files.
 - **Skills:** `nestjs-expert`, `tdd`, `error-handling-patterns`
 
-### `KPC-T-5` — Lift the KP guard in the `updated` branch
+### [x] `KPC-T-5` — Lift the KP guard in the `updated` branch
 
 - **Type:** server
 - **Description:** In `resolveResultCodeTarget`, for a KP target, skip `assertNotKnowledgeProduct` and apply the `KPC-T-3` status rule. The guard order stays: bilateral → ownership → status → same type. The `versioned` branch is untouched. Flip the test at `bilateral.service.spec.ts:3172` ("a Knowledge Product target -> 409 (RSB-R-7)") so it expects `resubmit` to be called. Confirm what path the test at `:2942` covers, and keep it if it is the carry-forward path.
@@ -211,8 +211,8 @@ Scoped jest only, never the full suite: `npx jest --testPathPattern="<pattern>" 
   - **Disqualifier:** a non-KP test in `bilateral.service.spec.ts` changes outcome → stop (`KPC-R-13` broken)
   - **Consumers:** `bilateral.service.spec.ts:199`, `:2942`, `:2979`, `:3172`, `:3180` (P-14)
 - **Definition of done:**
-  - [ ] Falsifiers executed; reds quoted.
-  - [ ] Scoped run `--testPathPattern="bilateral"` green; `npx tsc --noEmit` exit 0.
+  - [x] Falsifiers executed; reds quoted.
+  - [x] Scoped run `--testPathPattern="bilateral"` green; `npx tsc --noEmit` exit 0.
 - **Skills:** `nestjs-expert`, `tdd`
 
 ### `KPC-T-6` — Contract doc

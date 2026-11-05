@@ -3169,26 +3169,149 @@ describe('BilateralService (unit)', () => {
         ).not.toHaveBeenCalled();
       });
 
-      it('a Knowledge Product target -> 409 (RSB-R-7); resubmit never called', async () => {
-        const { service } = arrangeCreateHarness();
-        service._bilateralVersioningRulesService.findInPhase.mockResolvedValue({
-          id: 501,
-          result_code: 28565,
-          status_id: ResultStatusData.Rejected.value,
-          result_type_id: ResultTypeEnum.KNOWLEDGE_PRODUCT,
-        });
-        service._bilateralVersioningRulesService.assertNotKnowledgeProduct.mockImplementation(
-          () => {
-            throw new ConflictException('Result 28565 is a Knowledge Product.');
+      // @akili-spec changes/bilateral-kp-correction — KPC-T-5 (flips the RSB-R-7 test): a KP in the open
+      // phase is a correction, so the KP guard is skipped and the KP status rule applies (KPC-DD-2).
+      describe('Knowledge Product correction (KPC-R-1)', () => {
+        const arrangeKp = (statusId: number) => {
+          const { service } = arrangeCreateHarness();
+          const kpRow = {
+            id: 501,
+            result_code: 28565,
+            status_id: statusId,
+            result_type_id: ResultTypeEnum.KNOWLEDGE_PRODUCT,
+          };
+          service._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
+            kpRow,
+          );
+          service._bilateralResubmissionService.resubmit.mockResolvedValue({
+            id: 501,
+            result_code: 28565,
+            status_id: ResultStatusData.PendingReview.value,
+            status: 'pending review',
+          });
+          const dto = buildDtoWithCode('28565');
+          (dto.result.data as any).result_type_id =
+            ResultTypeEnum.KNOWLEDGE_PRODUCT;
+          (dto.result.data as any).description = 'a private description';
+          return { service, dto, kpRow };
+        };
+
+        it.each([
+          [ResultStatusData.Rejected.value],
+          [ResultStatusData.Editing.value],
+        ])(
+          'a KP in status %s reaches resubmit() once, with the KP port, and the KP guard is skipped',
+          async (statusId) => {
+            const { service, dto, kpRow } = arrangeKp(statusId);
+
+            await service.create(dto, STAR as any);
+
+            expect(
+              service._bilateralResubmissionService.resubmit,
+            ).toHaveBeenCalledTimes(1);
+            expect(
+              service._bilateralResubmissionService.resubmit.mock.calls[0][0],
+            ).toMatchObject({
+              target: kpRow,
+              knowledgeProduct: expect.any(Object),
+            });
+            expect(
+              service._bilateralVersioningRulesService
+                .assertNotKnowledgeProduct,
+            ).not.toHaveBeenCalled();
           },
         );
 
-        await expect(
-          service.create(buildDtoWithCode('28565'), STAR as any),
-        ).rejects.toMatchObject({ status: 409 });
-        expect(
-          service._bilateralResubmissionService.resubmit,
-        ).not.toHaveBeenCalled();
+        it.each([
+          [2, 'quality assessed'],
+          [3, 'submitted'],
+          [4, 'discontinued'],
+          [5, 'pending review'],
+          [6, 'approved'],
+          [8, 'draft'],
+        ])(
+          'a KP in status %s (%s) -> 409 naming the code and the status; resubmit never called; one log line with operation=updated and no payload',
+          async (statusId, statusName) => {
+            const { service, dto } = arrangeKp(statusId);
+
+            const attempt = service.create(dto, STAR as any);
+            await expect(attempt).rejects.toMatchObject({ status: 409 });
+            await expect(attempt).rejects.toThrow('28565');
+            await expect(attempt).rejects.toThrow(statusName);
+
+            expect(
+              service._bilateralResubmissionService.resubmit,
+            ).not.toHaveBeenCalled();
+            const logged = (service.logger.log as jest.Mock).mock.calls
+              .map((call) => call.map(String).join(' '))
+              .join('\n');
+            expect(logged).toContain('operation=updated');
+            expect(logged).not.toContain('a private description');
+          },
+        );
+
+        it('a KP of another platform -> 403; resubmit never called', async () => {
+          const { service, dto } = arrangeKp(ResultStatusData.Editing.value);
+          service._bilateralVersioningRulesService.assertCallerMayVersion.mockRejectedValue(
+            new ForbiddenException(
+              'Result 28565 was reported by a different platform.',
+            ),
+          );
+
+          await expect(service.create(dto, STAR as any)).rejects.toBeInstanceOf(
+            ForbiddenException,
+          );
+          expect(
+            service._bilateralResubmissionService.resubmit,
+          ).not.toHaveBeenCalled();
+        });
+
+        it('a KP target with a payload of another type -> 409 (same-type guard); resubmit never called', async () => {
+          const { service } = arrangeKp(ResultStatusData.Rejected.value);
+          const dto = buildDtoWithCode('28565'); // OTHER_OUTPUT payload
+
+          await expect(service.create(dto, STAR as any)).rejects.toMatchObject({
+            status: 409,
+          });
+          expect(
+            service._bilateralResubmissionService.resubmit,
+          ).not.toHaveBeenCalled();
+        });
+
+        it('a policy change in Editing stays refused with the shipped message (KPC-R-13)', async () => {
+          const { service } = arrangeCreateHarness();
+          service._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
+            {
+              id: 501,
+              result_code: 28565,
+              status_id: ResultStatusData.Editing.value,
+              result_type_id: ResultTypeEnum.POLICY_CHANGE,
+            },
+          );
+
+          await expect(
+            service.create(buildDtoWithCode('28565'), STAR as any),
+          ).rejects.toThrow(
+            'Result 28565 cannot be resubmitted: its status is editing. Only rejected results can be resubmitted.',
+          );
+        });
+
+        it('a KP found only in an earlier phase stays a 409 Knowledge Product (versioned branch untouched)', async () => {
+          const { service } = arrangeCreateHarness();
+          service._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
+            undefined,
+          );
+          service._bilateralVersioningRulesService.resolveVersionableResult.mockRejectedValue(
+            new ConflictException('Result 28565 is a Knowledge Product.'),
+          );
+
+          await expect(
+            service.create(buildDtoWithCode('28565'), STAR as any),
+          ).rejects.toThrow('is a Knowledge Product');
+          expect(
+            service._bilateralResubmissionService.resubmit,
+          ).not.toHaveBeenCalled();
+        });
       });
 
       it('a payload of a different type than the stored one -> 409 naming code and both types (RSB-R-22); nothing written', async () => {

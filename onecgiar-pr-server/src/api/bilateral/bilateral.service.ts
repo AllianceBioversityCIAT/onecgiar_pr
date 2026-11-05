@@ -124,7 +124,7 @@ import { ClarisaApiKeyValidationMis } from './interfaces/clarisa-api-key-validat
 import { BilateralVersioningRulesService } from './versioning-rules/bilateral-versioning-rules.service';
 import {
   BilateralResubmissionService,
-  describeResultStatus,
+  resubmissionStatusRefusal,
   ResubmissionKnowledgeProductPort,
   ResubmissionPreflightPort,
   ResubmissionWritersPort,
@@ -4618,10 +4618,17 @@ export class BilateralService {
           resultCode,
           platform,
         );
-        this._bilateralVersioningRulesService.assertNotKnowledgeProduct(
-          openPhaseResult,
-          resultCode,
-        );
+        // KPC-T-5 / KPC-DD-1: a Knowledge Product in the open phase is a correction (`KPC-R-1`), so
+        // it skips the KP guard; every other type keeps it. The `versioned` branch below is untouched.
+        if (
+          Number(openPhaseResult.result_type_id) !==
+          ResultTypeEnum.KNOWLEDGE_PRODUCT
+        ) {
+          this._bilateralVersioningRulesService.assertNotKnowledgeProduct(
+            openPhaseResult,
+            resultCode,
+          );
+        }
         this.assertResultCodeStatusIsEditable(openPhaseResult, resultCode);
         this.assertSameResultType(openPhaseResult, resultCode, bilateralDto);
       } catch (error) {
@@ -4692,11 +4699,13 @@ export class BilateralService {
     target: Result,
     resultCode: string,
   ): void {
-    if (Number(target.status_id) !== ResultStatusData.Rejected.value) {
-      throw new ConflictException(
-        `Result ${resultCode} cannot be resubmitted: its status is ${describeResultStatus(target.status_id)}. Only rejected results can be resubmitted.`,
-      );
-    }
+    // KPC-DD-2: the status rule is a function of the stored type (Rejected; plus Editing for a KP).
+    const refusal = resubmissionStatusRefusal(
+      resultCode,
+      target.status_id,
+      target.result_type_id,
+    );
+    if (refusal) throw new ConflictException(refusal);
   }
 
   /**
