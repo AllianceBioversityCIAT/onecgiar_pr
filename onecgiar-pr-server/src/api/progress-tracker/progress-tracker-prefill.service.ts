@@ -18,6 +18,9 @@ import { ClarisaSubnationalScope } from '../../clarisa/clarisa-subnational-scope
 import { GeographicLocationService } from '../results-framework-reporting/geographic-location/geographic-location.service';
 import { CreateGeographicLocationDto } from '../results-framework-reporting/geographic-location/dto/create-geographic-location.dto';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { ClarisaInnovationReadinessLevel } from '../../clarisa/clarisa-innovation-readiness-levels/entities/clarisa-innovation-readiness-level.entity';
+import { ResultsInnovationsDev } from '../results/summary/entities/results-innovations-dev.entity';
 
 /** Main evidences a result shows in Evidence — mirrors the client cap (`PT_EVIDENCE_LINKS_MAX`). */
 export const PT_PREFILL_MAX_EVIDENCE_LINKS = 6;
@@ -64,6 +67,8 @@ interface SanitizedPrefill {
   partners: { clarisa_id: number; name: string }[];
   geography: SanitizedGeography | null;
   impact_areas: Partial<Record<PtImpactAreaKey, 0 | 1 | 2>>;
+  /** 0–9 level, or `null` when PT did not send one this service can store. */
+  readiness: number | null;
 }
 
 const positiveInt = (value: unknown): number | null => {
@@ -126,6 +131,10 @@ export class ProgressTrackerPrefillService {
     private readonly _clarisaRegionRepository: Repository<ClarisaRegion>,
     @InjectRepository(ClarisaSubnationalScope)
     private readonly _clarisaSubnationalRepository: Repository<ClarisaSubnationalScope>,
+    @InjectRepository(ClarisaInnovationReadinessLevel)
+    private readonly _readinessRepository: Repository<ClarisaInnovationReadinessLevel>,
+    @InjectRepository(ResultsInnovationsDev)
+    private readonly _innovationDevRepository: Repository<ResultsInnovationsDev>,
     // `GeographicLocationService` lives in `GeographicLocationModule`, which pulls in the whole
     // `ResultsModule`; it is resolved lazily (non-strict) instead of importing that graph here.
     private readonly _moduleRef: ModuleRef,
@@ -179,7 +188,19 @@ export class ProgressTrackerPrefillService {
       impact_areas: ProgressTrackerPrefillService.sanitizeImpactAreas(
         rec.impact_areas,
       ),
+      readiness: ProgressTrackerPrefillService.sanitizeReadiness(rec.readiness),
     };
+  }
+
+  /** Integer 0–9 only. A string, a float, or a CLARISA id above 9 is dropped. */
+  private static sanitizeReadiness(raw: unknown): number | null {
+    const level = asRec(raw).level;
+    return typeof level === 'number' &&
+      Number.isInteger(level) &&
+      level >= 0 &&
+      level <= 9
+      ? level
+      : null;
   }
 
   private static sanitizeGeography(raw: unknown): SanitizedGeography | null {
@@ -260,6 +281,8 @@ export class ProgressTrackerPrefillService {
       geography_skipped: [],
       impact_areas_applied: [],
       impact_areas_skipped: [],
+      readiness_applied: null,
+      readiness_skipped_reason: null,
     };
 
     try {
@@ -326,7 +349,79 @@ export class ProgressTrackerPrefillService {
       }
     }
 
+    if (prefill.readiness !== null) {
+      try {
+        const readiness = await this.saveReadiness(
+          resultId,
+          prefill.readiness,
+          userId,
+        );
+        summary.readiness_applied = readiness.applied;
+        summary.readiness_skipped_reason = readiness.reason;
+      } catch (error) {
+        summary.readiness_skipped_reason = 'failed';
+        this.logger.warn(
+          `pt.prefill.readiness_failed result=${resultId}: ${ProgressTrackerPrefillService.reason(error)}`,
+        );
+      }
+    }
+
     return summary;
+  }
+
+  /**
+   * Writes `innovation.readiness_level` (0–9) onto an innovation development result by looking the
+   * level up in `clarisa_innovation_readiness_level`. The number PT sends is the level, not the
+   * CLARISA id. A result of another type, an unknown level, or a level already stored is skipped
+   * and named in the summary. A missing innovation-development row is created with only this level.
+   */
+  private async saveReadiness(
+    resultId: number,
+    level: number,
+    userId: number,
+  ): Promise<{ applied: number | null; reason: string | null }> {
+    const result = await this._resultRepository.findOne({
+      where: { id: resultId },
+      select: ['id', 'result_type_id'],
+    });
+    if (
+      !result ||
+      Number(result.result_type_id) !== ResultTypeEnum.INNOVATION_DEVELOPMENT
+    ) {
+      return { applied: null, reason: 'not_innovation_development' };
+    }
+
+    const catalogue = await this._readinessRepository.findOne({
+      where: { level },
+    });
+    if (!catalogue) return { applied: null, reason: 'unknown_level' };
+
+    const existing = await this._innovationDevRepository.findOne({
+      where: { results_id: resultId, is_active: true },
+    });
+    if (
+      existing?.innovation_readiness_level_id !== null &&
+      existing?.innovation_readiness_level_id !== undefined
+    ) {
+      return { applied: null, reason: 'not_empty' };
+    }
+
+    const relation = { id: catalogue.id } as ClarisaInnovationReadinessLevel;
+    if (existing) {
+      existing.innovation_readiness_level = relation;
+      existing.last_updated_by = userId;
+      await this._innovationDevRepository.save(existing);
+    } else {
+      await this._innovationDevRepository.save(
+        this._innovationDevRepository.create({
+          results_id: resultId,
+          innovation_readiness_level: relation,
+          is_active: true,
+          created_by: userId,
+        }),
+      );
+    }
+    return { applied: level, reason: null };
   }
 
   /**

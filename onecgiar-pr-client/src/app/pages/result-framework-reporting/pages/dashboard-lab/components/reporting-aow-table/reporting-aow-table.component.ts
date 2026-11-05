@@ -16,7 +16,17 @@ import {
   PrTableEmptyDirective
 } from '../../../../../../shared/components/pr-table';
 import { buildRatio, hasTarget, pendingOf } from '../../reporting-burndown';
-import { PT_ACTIVITY_TOOLTIP, PtActivityIndex, centerAcronymsOfRow, ptActivityCountOf, ptActivityLabel, ptActivityShortLabel } from '../../pt-activity';
+import {
+  PT_ACTIVITY_TOOLTIP,
+  PtActivityIndex,
+  PtActivityTone,
+  centerAcronymsOfRow,
+  ptActivityCountOf,
+  ptActivityLabel,
+  ptActivityShortLabel,
+  ptActivityToneOf,
+  ptActivityTooltipFor
+} from '../../pt-activity';
 import { KpiStatusChipComponent } from '../kpi-status-chip/kpi-status-chip.component';
 import type { KpiStatusCounts } from '../../kpi-status-counts.util';
 import { HighlightSearchPipe } from '../../pipes/highlight-search.pipe';
@@ -915,7 +925,16 @@ export class ReportingAowTableComponent {
     return ptActivityCountOf(row, this.ptActivity());
   }
 
+  /** Blue when the drafted type matches or is unknown; yellow when it is a different category; hidden at `none`. */
+  ptToneOf(row: ReportingIndicator): PtActivityTone {
+    return ptActivityToneOf(row, this.ptActivity());
+  }
+
   readonly ptTooltip = PT_ACTIVITY_TOOLTIP;
+
+  ptTooltipOf(tone: PtActivityTone): string {
+    return ptActivityTooltipFor(tone);
+  }
 
   ptLabelOf(count: number): string {
     return ptActivityLabel(count);

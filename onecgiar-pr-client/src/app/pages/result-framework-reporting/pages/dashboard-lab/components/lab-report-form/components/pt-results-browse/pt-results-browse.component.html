@@ -237,8 +237,19 @@
             </span>
           }
           <div class="flex flex-wrap items-center gap-1.5">
+            @let typeTone = typologyTone(proposal);
             <span
-              class="inline-flex items-center rounded-full border border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-25)] px-2 py-0.5 text-[11px] font-semibold text-[var(--pr-color-primary-700)]"
+              class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+              [class.border-sky-200]="typeTone === 'aligned'"
+              [class.bg-sky-50]="typeTone === 'aligned'"
+              [class.text-sky-800]="typeTone === 'aligned'"
+              [class.border-amber-300]="typeTone === 'divergent'"
+              [class.bg-amber-50]="typeTone === 'divergent'"
+              [class.text-amber-900]="typeTone === 'divergent'"
+              [class.border-gray-200]="typeTone === 'none'"
+              [class.bg-gray-100]="typeTone === 'none'"
+              [class.text-gray-700]="typeTone === 'none'"
+              [attr.data-pt-tone]="typeTone === 'none' ? null : typeTone"
               data-test="pt-proposal-type">
               {{ proposal.result_type_label || proposal.result_type }}
             </span>

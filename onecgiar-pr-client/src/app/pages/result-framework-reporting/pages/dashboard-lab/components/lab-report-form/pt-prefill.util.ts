@@ -1,4 +1,5 @@
 import { PtCenterRefDto, PtGeoDto, PtProposalDto, isSafeHttpUrl } from './components/pt-results-browse/pt-results-browse.component';
+import { canonicalResultType } from '../../pt-typology';
 import {
   PT_TEMPORARY_EVIDENCE_NOTICE,
   PT_UNSAVED_EVIDENCE_DETAIL,
@@ -54,6 +55,12 @@ export interface PtPrefillBlock {
   geography?: PtPrefillGeography;
   /** Absent when no tag has a usable score. */
   impact_areas?: Partial<Record<PtImpactAreaKey, PtImpactAreaScore>>;
+  /**
+   * INC-167646 — innovation readiness as the 0–9 level PT sent, not a CLARISA id.
+   * The server resolves the id. Absent when PT did not send a valid level, the policy is `none`,
+   * or the proposal is not an innovation development.
+   */
+  readiness?: { level: number };
 }
 
 export interface PtPendingItem {
@@ -272,6 +279,12 @@ export function ptGeographyPlan(proposal: PtProposalDto | null | undefined): PtG
     if (countries.length) {
       geography = make(3, { countries });
       used.push(countriesPolicy);
+    } else if (level === 'global' || level === 'regional') {
+      // INC-167646: a delivered global / regional scope is still filled for review. `none` used to
+      // drop it with no value in Geographic location. It is stored as a suggestion, never as a
+      // confirmed fact, and the checklist says PT marked it as not to apply.
+      geography = level === 'global' ? make(1) : make(2, { regions });
+      used.push('suggest');
     }
   } else if (level === 'global') {
     geography = make(1);
@@ -310,7 +323,13 @@ export function ptGeographyPlan(proposal: PtProposalDto | null | undefined): PtG
   }
   const suggested = used.includes('suggest') || isKpiDefault(geo);
   if (suggested) {
-    pending.unshift({ label: 'Geographic location', detail: `Review the suggested geography (${isKpiDefault(geo) ? "the KPI's planned scope, not confirmed by evidence" : 'suggested by Progress Tracker'}): ${summary}` });
+    const because =
+      scopePolicy === 'none'
+        ? 'Progress Tracker marked geographic scope as not to apply. The delivered scope is filled for review'
+        : isKpiDefault(geo)
+          ? "the KPI's planned scope, not confirmed by evidence"
+          : 'suggested by Progress Tracker';
+    pending.unshift({ label: 'Geographic location', detail: `Review the suggested geography (${because}): ${summary}` });
   }
   return { geography, suggested, pending };
 }
@@ -375,19 +394,69 @@ export function ptImpactAreaPlan(proposal: PtProposalDto | null | undefined): Pt
   return plan;
 }
 
+const READINESS_POLICY_KEYS = ['readiness_level'];
+
+export interface PtReadinessPlan {
+  /** `null` when nothing is written. The number is PT's 0–9 level, never a CLARISA id. */
+  level: number | null;
+  suggested: boolean;
+  pending: PtPendingItem[];
+}
+
+const isInnovationDevelopment = (proposal: PtProposalDto): boolean =>
+  canonicalResultType(proposal.result_type) === 'innovation_development' || canonicalResultType(proposal.result_type_label) === 'innovation_development';
+
+/**
+ * INC-167646. `innovation.readiness_level` from the staging fixture (an integer 0–9, with an
+ * optional name). Policy `suggest` / absent / `apply` fills it for review. `none` does not write
+ * it and says so. A non-integer, a level outside 0–9, or any other result type is not copied.
+ * The name is never sent as the stored id.
+ */
+export function ptReadinessPlan(proposal: PtProposalDto | null | undefined): PtReadinessPlan {
+  const none: PtReadinessPlan = { level: null, suggested: false, pending: [] };
+  if (!proposal || !isInnovationDevelopment(proposal)) return none;
+  const level = proposal.innovation?.readiness_level;
+  if (typeof level !== 'number' || !Number.isInteger(level) || level < 0 || level > 9) return none;
+  const name = proposal.innovation?.readiness_level_name?.trim();
+  const shown = name ? `${level} (${name})` : String(level);
+  const policy = ptFieldPolicy(proposal, ...READINESS_POLICY_KEYS);
+  if (policy === 'none') {
+    return {
+      level: null,
+      suggested: false,
+      pending: [
+        {
+          label: 'Innovation readiness level',
+          detail: `Progress Tracker found readiness level ${shown} and marked it as not to apply. Set it in Innovation development if it is right.`
+        }
+      ]
+    };
+  }
+  const suggested = policy === 'suggest';
+  return {
+    level,
+    suggested,
+    pending: suggested
+      ? [{ label: 'Innovation readiness level', detail: `Review the suggested readiness level ${shown}. It is filled for you to check in Innovation development.` }]
+      : []
+  };
+}
+
 /** `null` when there is nothing to send, so the key stays ABSENT from the create body. */
 export function buildPtPrefillBlock(proposal: PtProposalDto | null | undefined): PtPrefillBlock | null {
   const evidence_links = ptEvidenceLinksToSave(proposal);
   const partners = ptMatchedPartners(proposal);
   const geography = ptGeographyPlan(proposal).geography;
   const impactAreas = ptImpactAreaPlan(proposal).scores;
+  const readinessLevel = ptReadinessPlan(proposal).level;
   const hasScores = Object.keys(impactAreas).length > 0;
-  if (!evidence_links.length && !partners.length && !geography && !hasScores) return null;
+  if (!evidence_links.length && !partners.length && !geography && !hasScores && readinessLevel === null) return null;
   return {
     evidence_links,
     partners,
     ...(geography ? { geography } : {}),
-    ...(hasScores ? { impact_areas: impactAreas } : {})
+    ...(hasScores ? { impact_areas: impactAreas } : {}),
+    ...(readinessLevel !== null ? { readiness: { level: readinessLevel } } : {})
   };
 }
 
@@ -500,7 +569,24 @@ export function buildPtPendingChecklist(proposal: PtProposalDto | null | undefin
   }
 
   // PTB-R-18b: only what the geography / impact-area plans did not apply, or applied as a suggestion.
-  items.push(...ptGeographyPlan(proposal).pending, ...ptImpactAreaPlan(proposal).pending);
+  items.push(...ptGeographyPlan(proposal).pending, ...ptImpactAreaPlan(proposal).pending, ...ptReadinessPlan(proposal).pending);
+
+  if (isInnovationDevelopment(proposal)) {
+    const typology = proposal.innovation?.typology?.trim();
+    if (typology) {
+      items.push({
+        label: 'Innovation typology',
+        detail: `${typology} — not copied. Progress Tracker did not send a PRMS innovation-nature id.`
+      });
+    }
+    const developers = (proposal.innovation?.developers ?? []).map(name => name.trim()).filter(Boolean);
+    if (developers.length) {
+      items.push({
+        label: 'Innovation developers',
+        detail: `Named by Progress Tracker, not copied (no PRMS person id): ${developers.join(', ')}`
+      });
+    }
+  }
 
   const gender = proposal.gender_split;
   if (gender && (typeof gender.women === 'number' || typeof gender.men === 'number')) {
@@ -509,6 +595,13 @@ export function buildPtPendingChecklist(proposal: PtProposalDto | null | undefin
 
   return items;
 }
+
+const READINESS_NOT_APPLIED: Record<string, string> = {
+  not_innovation_development: 'Not prefilled — this result is not an innovation development',
+  unknown_level: 'Not prefilled — that readiness level is not in the PRMS catalogue',
+  not_empty: 'Not prefilled — the result already had a readiness level',
+  failed: 'Could not be saved — set it in Innovation development'
+};
 
 const GEO_NOT_APPLIED: Record<string, string> = {
   not_empty: 'Not prefilled — the result already had a geography; compare it with the Progress Tracker one',
@@ -539,6 +632,10 @@ export function ptPrefillOutcomeItems(sent: PtPrefillBlock | null | undefined, s
       label: 'Impact area scores',
       detail: `Not prefilled (already scored, or not saved): ${notApplied.map(k => `${IMPACT_AREA_SHORT_LABELS[k]} ${sent.impact_areas?.[k]}`).join('; ')}`
     });
+  }
+  if (typeof sent.readiness?.level === 'number' && summary?.['readiness_applied'] !== sent.readiness.level) {
+    const reason = typeof summary?.['readiness_skipped_reason'] === 'string' ? summary['readiness_skipped_reason'] : 'failed';
+    items.push({ label: 'Innovation readiness level', detail: READINESS_NOT_APPLIED[reason] ?? READINESS_NOT_APPLIED['failed'] });
   }
   return items;
 }
