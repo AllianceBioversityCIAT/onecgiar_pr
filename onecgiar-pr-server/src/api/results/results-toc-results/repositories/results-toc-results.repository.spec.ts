@@ -1294,10 +1294,20 @@ describe('ResultsTocResultRepository.findTocResultsForBilateral — indicator fi
     await repository.findTocResultsForBilateral({ ...base });
     expect(query).toHaveBeenCalledTimes(3);
     expect(query.mock.calls[0][0]).toContain(
-      'ORDER BY tr.id ASC, tri.id ASC, trit.id ASC',
+      'ORDER BY tr.id ASC, tri.id ASC, trit.toc_indicator_target_id ASC',
     );
     expect(query.mock.calls[1][0]).toMatch(/ORDER BY tr\.id ASC\s+LIMIT 1/);
     expect(query.mock.calls[2][0]).toMatch(/ORDER BY tr\.id ASC\s+LIMIT 1/);
+  });
+
+  it('never references trit.id: toc_result_indicator_target keys on toc_indicator_target_id', async () => {
+    // A `trit.id` in the ORDER BY made MySQL reject the query on prtest, so every bilateral
+    // create lost its primary Science Program and ToC mapping (10070–10072).
+    query.mockResolvedValue([]);
+    await repository.findTocResultsForBilateral({ ...base });
+    for (const [sql] of query.mock.calls) {
+      expect(sql).not.toMatch(/\btrit\.id\b/);
+    }
   });
 
   it('warns when several distinct indicators still match, and keeps the first row', async () => {

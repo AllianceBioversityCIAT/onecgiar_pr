@@ -3487,7 +3487,7 @@ select *
         CROSS JOIN ${env.DB_NAME}.year y
         WHERE
           ${conditions.join(' AND ')}
-        ORDER BY tr.id ASC, tri.id ASC, trit.id ASC
+        ORDER BY tr.id ASC, tri.id ASC, trit.toc_indicator_target_id ASC
       `;
       let tocResultData = await this.query(tocResultQuery, params);
 
