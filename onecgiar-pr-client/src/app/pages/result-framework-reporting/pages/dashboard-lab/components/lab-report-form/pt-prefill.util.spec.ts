@@ -223,6 +223,18 @@ describe('pt-prefill.util — geography (PTB-R-18b)', () => {
     expect(plan({ level: 'global' }).geography).toEqual({ geo_scope_id: 1, countries: [], regions: [], subnational: [] });
   });
 
+  it('a matched national country with CLARISA id 231 is emitted as Country focus (INC-167646)', () => {
+    const ethiopia = { name: 'Ethiopia', iso_alpha_2: null, clarisa_id: 231, match_status: 'matched' as const };
+    const out = plan({ level: 'national', countries: [ethiopia], regions: [], provenance: ['evidence'] });
+    expect(out.geography).toEqual({
+      geo_scope_id: 3,
+      countries: [{ clarisa_id: 231, iso_alpha_2: null, name: 'Ethiopia' }],
+      regions: [],
+      subnational: []
+    });
+    expect(out.suggested).toBe(false);
+  });
+
   it('multinational and national → 3 Country with the matched countries only; unmatched ones go to the checklist', () => {
     const multi = plan({ countries: [mali, moz, atlantis] });
     expect(multi.geography).toEqual({

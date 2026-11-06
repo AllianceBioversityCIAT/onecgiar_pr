@@ -107,6 +107,28 @@ describe('PtResultsBrowseComponent — proposal detail blocks', () => {
       expect(all('pt-geo-country').map(c => c.textContent?.trim())).toEqual(['Peru']);
     });
 
+    it('prefers geo_scope countries with a CLARISA id over name-only result countries (INC-167646)', () => {
+      render([
+        {
+          ...base,
+          countries: ['Ethiopia'],
+          geo_scope: { level: 'national', countries: [{ name: 'Ethiopia', clarisa_id: 231, match_status: 'matched' }] }
+        }
+      ]);
+      expect(component.proposals()[0].geo?.countries).toEqual([{ name: 'Ethiopia', iso_alpha_2: null, clarisa_id: 231, match_status: 'matched' }]);
+    });
+
+    it('keeps name-only result countries when geo_scope countries have no resolvable CLARISA id', () => {
+      render([
+        {
+          ...base,
+          countries: ['Ethiopia'],
+          geo_scope: { level: 'national', countries: [{ name: 'Ethiopia', match_status: 'unmatched' }] }
+        }
+      ]);
+      expect(component.proposals()[0].geo?.countries).toEqual([{ name: 'Ethiopia', iso_alpha_2: null, clarisa_id: null, match_status: null }]);
+    });
+
     it('keeps plain-string countries of the 2-oct build (no CLARISA mark)', () => {
       render([{ ...base, countries: ['Kenya', 'Colombia'] }]);
       const countries = all('pt-geo-country');
