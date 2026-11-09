@@ -350,7 +350,7 @@ SELECT COUNT(*) AS groups_differing_across_phase_free_grouping FROM (SELECT rela
   - Reviewer: **PASS**. The inferred value is labelled as such; no regressions; the §1A count is 20 verified / 1 refuted / 1 UNVERIFIED (22 premises); no secrets or person data.
   - **runtime events:** none
 - **continuations:** none (the owed items, the prod run and the baseline, went to the owner. The baseline was dropped by owner decision)
-- **spawns:** implementer 29 calls, 125 606 tokens, ended partial; reviewer 7 calls, 64 323 tokens, ended complete (FAIL); reviewer 3 calls, 53 584 tokens, ended complete (FAIL); reviewer — `not reported by host`, ended complete (PASS)
+- **spawns:** implementer 29 calls, 125 606 tokens, ended partial; reviewer 7 calls, 64 323 tokens, ended complete (FAIL); reviewer 3 calls, 53 584 tokens, ended complete (FAIL); reviewer 3 calls, 51 628 tokens, ended complete (PASS)
 - **ADVISORY:** none open (the attempt-1 and attempt-2 advisories were applied in the reworks)
 - **Requirements covered:** design P-14, P-18, P-20, P-21 (DD-6). The NFR baseline was removed from T-1 by owner decision 2026-11-09.
 - **Decisions made:** P-20 → lowest PK + known gap (owner). Latency → statement-count proxy (owner). Spec edits recorded in "Owner decisions and execute-time spec edits".
@@ -359,3 +359,48 @@ SELECT COUNT(*) AS groups_differing_across_phase_free_grouping FROM (SELECT rela
 - **Open owner question for T-4:** P-20 pick rule: lowest PK, or active row first, then lowest PK (prod: 135 → 20 ambiguous groups).
 - **Budget running totals (design §13):** tasks 2 / 7 · LOC ≈ 275 code + ≈ 330 spec/evidence lines / ~1 400 · review rounds 4 / ~10. Within budget.
 - **Final verification:** green (re-run VERIFIED, Reviewer PASS on attempt 3)
+
+### QVL-T-2 — Label-source registry with its three checks
+
+- **Final status:** PASS
+- **Date:** 2026-11-09
+- **Implementer attempts:** 1
+- **Skills / effort:** `nestjs-expert`, `api-design-principles`, `tdd` (task defaults) · effort **`high`**, one level above the T2 default. Reason: 55 lists, and a wrong key column returns wrong labels silently. Model unchanged (T2)
+- **Dependency note:** T-2 lists T-1 as a dependency only for the use-level shape. It started while T-1's attempt-3 review ran, after P-14 was settled (test + prod) and on the owner's "continue with T-2". T-1 closed PASS before T-2 was finalized.
+- **Attempt 1**
+  - **Files changed:** `onecgiar-pr-server/src/api/qa-catalog/values/label-sources.ts` (new, 489 lines), `label-sources.spec.ts` (new, 445 lines)
+  - **Implementer verification:** `npx jest src/api/qa-catalog/values/label-sources src/api/qa-catalog/values/lookup-sources src/api/qa-catalog/qa-catalog.snapshot --silent --reporters=summary --maxWorkers=2` → 3 suites, 198 tests passed (label-sources: 166). Snapshot guard green, no revision bump. `npx tsc --noEmit` exit 0. `npx eslint src/api/qa-catalog/values/ --quiet` exit 0
+  - **Registry vs walk:** 55 = 55, asserted in both directions
+  - **Falsifier reds** (applied to the final code, run, reverted; the saved copy diffs identical):
+    1. Delete `toc_levels` → `✕ every list has a source (a missing list is named in the failure)` / `- Array []` / `+ Array [` / `+   "toc_levels",` (2 failed: the second is the constants count guard)
+    2. `actor_type` `name` → `nmae` → `✕ column actor_type.nmae exists in its entity` / `Expected: true` / `Received: false`
+    3. "Upload file" → "Upload File" → `✕ evidence_sources[1] Upload File` / `Array [ "Upload File", - true, + false,`
+  - **Evidence re-run (Leader, inline, non-author):** the same jest command → `Test Suites: 3 passed, 3 total` / `Tests: 198 passed, 198 total`; `npx tsc --noEmit` → exit 0. **VERIFIED**
+  - **Reviewer verdict:** `PASS` (lens-checklist mode). All 55 entries match design §5: kind, key column, columns, composition and the type-9 override. The Reviewer spot-checked entity metadata (`clarisa_center.code` `@PrimaryColumn`, `institutionId` `@JoinColumn`; no `namingStrategy`, so the green metadata spec is real evidence for P-17). Disqualifiers do not apply: completeness walks the real `CATALOG_FIELDS` for each year in `CATALOG_VERSIONS`, and the mirror reads the real client files with `readFileSync`. The reds fail on behavioral assertions. R-10 holds. No contradiction with the 2026-11-09 amendments. Sources: 30 table + 3 ToC + 1 chain (matches §8). Adaptation (1) is within the task.
+  - **runtime events:** none
+- **continuations:** none
+- **spawns:** implementer 58 calls, 226 343 tokens, ended partial (assumptions only, no owed item); reviewer — `not reported by host`, ended complete
+- **Adaptations (Implementer), recorded as spec deviations:**
+  1. **`toc_melia_studies`**: `toc_results_melias` is not in `LOOKUP_SOURCES`, and `lookup-sources.ts` had to stay unchanged (Consumers). A `TOC_LABEL_ONLY_SOURCES` fallback map in `label-sources.ts` (PK `id`, P-18) is used by `resolveTocLabelSource`, which delegates to `resolveLookupSource` for the three registered ToC sources. This departs from §5 / T-2's "ToC through `resolveLookupSource`" for one list. The Reviewer judged it the only narrow path. **Deviation accepted by the Leader**; a one-line `LOOKUP_SOURCES` entry would remove it if that file is ever reopened.
+  2. `toc_levels` cites the server file `toc/toc-level/toc-level.service.ts:30-48` (`tree: 'server'`, P-9).
+  3. The partner-roles citation was disambiguated to the full path (`rd-contributors-and-partners/.../multiple-wps/normal-selector.component.html`).
+  4. Table sources carry no separate logical name: `table` + `keyColumn` is the grouping key for T-4.
+- **Not Done / Assumptions (Implementer, verbatim gist):** "The registry carries the 'lowest PK wins' rule only as data … Applying it is T-4's job." "Client, server and ToC-repository text and line citations are checked against the working tree at this commit. A later client edit will turn the mirror spec red, which is the intent (D-1a)." "No ToC column was checked against the ToC database … Only the repository SQL text is checked." No owed item, so no continuation.
+- **ADVISORY (4R, Reviewer; recorded only):**
+  - RISK: `resolveTocLabelSource` returns `undefined` both for an unknown source and for an unset `DB_TOC`. T-4 must turn either case into a throw via `fail(...)`, never a `null` label, or R-9's generic 500 is bypassed. **Forward pointer to T-4.**
+  - RISK: the `TOC` prefix string is duplicated in `lookup-sources.ts` and `label-sources.ts` (the known-source spec catches drift).
+  - RELIABILITY: the mirror check matches substrings, so short labels ("Other", "Link", "Global", "Country") prove little; word-boundary matching would be stricter.
+  - RELIABILITY: `entityColumns()` merges the columns of entities that share a table name.
+  - READABILITY: the spec's `compose` helper has two equivalent branches.
+- **Requirements covered:** QVL-R-3 (canonical text; constants documented with citations), QVL-R-8, QVL-R-10, D-1 (a), D-6, D-6b; design P-17 settled
+- **Decisions made (execute-time spec edit):** `design.md` §1A P-17 → VERIFIED (by the T-2 metadata spec), and the Count line updated. The meaning of no approved requirement changed.
+- **Issues encountered:** none
+- **Budget running totals (design §13):** tasks 3 / 7 · LOC code + tests ≈ 1 209 (collector 223 + fixtures 52 + registry 934) against the ~1 200 estimated for code and tests (~1 400 with docs) · review rounds 5 / ~10. **The total is not exceeded yet, but code + tests are already at the estimate, with T-4 and T-5 to go.** The registry alone is ~930 lines against ~250 estimated for production. Raised to the owner at this gate; the tripwire stops the run when the total is crossed.
+- **Final verification:** green (re-run VERIFIED, Reviewer PASS)
+
+### Forward pointers (added after T-2)
+
+| To task | Pointer | Source |
+|---|---|---|
+| QVL-T-4 | `resolveTocLabelSource` returns `undefined` for an unknown source **and** for an unset `DB_TOC`. The resolver must throw (`fail(...)`), never map it to `null` labels (R-9, P-6) | T-2 Reviewer ADVISORY |
+| QVL-T-4 | ToC indicator pick rule: lowest PK (owner decision 2026-11-09). Whether to prefer active rows first is a pending owner question | Owner decisions |

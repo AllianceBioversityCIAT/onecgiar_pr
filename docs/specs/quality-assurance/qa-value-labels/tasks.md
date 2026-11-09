@@ -47,7 +47,7 @@ Review values follow the template: `skip-eligible`, `checklist`, `full`, `lenses
   - A refuted P-14 or P-18 is routed to the design change it names before T-4 starts. That change goes to the owner when it alters DD-4.
 - **Skills:** `systematic-debugging`
 
-### QVL-T-2 — Label-source registry with its three checks
+### [x] QVL-T-2 — Label-source registry with its three checks
 
 - **Type:** server
 - **Description:** Add `values/label-sources.ts`, which declares one source per control list as §5 of the design states:
