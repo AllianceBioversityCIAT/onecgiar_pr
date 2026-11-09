@@ -6,7 +6,7 @@
 - **Linked spec:** `requirements.md` (QVL-R-1..11, R-3 amended 2026-11-09) and `design.md` (DD-1..6, Premise Ledger P-1..22)
 - **Ticket:** P2-3910 (support)
 - **Owner / driver:** Juan David Delgado
-- **Status:** not-started
+- **Status:** in-progress
 - **Branch:** `JuanGuzman-io/p2-3910-qa-value-labels` (from `performance-refactor`). Push and merge happen only on the owner's order. The QA repository change goes on its own branch of `onecgiar_qa`.
 
 ## 2. Pre-flight checklist
@@ -89,7 +89,7 @@ Review values follow the template: `skip-eligible`, `checklist`, `full`, `lenses
   - `tsc` is clean.
 - **Skills:** `nestjs-expert`, `api-design-principles`, `tdd`
 
-### QVL-T-3 — Collector: (list, id) pairs from the projected values
+### [x] QVL-T-3 — Collector: (list, id) pairs from the projected values
 
 - **Type:** server
 - **Description:**
