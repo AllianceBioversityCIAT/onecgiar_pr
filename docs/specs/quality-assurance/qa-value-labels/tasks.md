@@ -20,7 +20,7 @@
 
 Review values follow the template: `skip-eligible`, `checklist`, `full`, `lenses`.
 
-### QVL-T-1 — Settle the row premises and measure the baseline
+### [~] QVL-T-1 — Settle the row premises
 
 - **Type:** rollout (evidence, no code)
 - **Description:**
@@ -29,23 +29,22 @@ Review values follow the template: `skip-eligible`, `checklist`, `full`, `lenses
     - **P-18:** the primary key of `toc_results_melias`, and whether its titles are equal per `melia_id`.
     - **P-20:** `related_node_id` is unique per phase in `toc_results_indicators`.
     - **P-21:** whether `clarisa_geographic_scope` row 4 exists, and its name.
-  - On prtest, measure `details` with the largest eligible 2026 batch (≤ 50 ids, `field_keys` absent): 6 runs, recording p50, p95 and `statements` from the log line where readable.
+  - ~~On prtest, measure `details` with the largest eligible 2026 batch.~~ Dropped 2026-11-09 (owner decision): prtest has no eligible 2026 batch. The statement count is the NFR gate.
   - Record everything in `execution.md`, quoting each query and count. Row contents may be quoted for reference tables; person data must not be.
-- **Implements:** NFR Performance (baseline); design P-14, P-18, P-20, P-21 (DD-6)
+- **Implements:** design P-14, P-18, P-20, P-21 (DD-6)
 - **Files (expected):** `docs/specs/quality-assurance/qa-value-labels/execution.md` only
 - **Depends on:** —
-- **Blocks:** T-4 (the P-14 / P-18 / P-20 outcomes pick the source shape), T-7 (baseline)
+- **Blocks:** T-4 (the P-14 / P-18 / P-20 outcomes pick the source shape)
 - **Estimate:** S
 - **Review:** `skip-eligible`. The claim it must prove: no file outside `execution.md` changes, and every number in the entry comes from a quoted command run in the session.
 - **Verification:** `git diff --stat` shows only `execution.md`. Every outcome row quotes its query and result.
 - **Falsifier:** a P-14 outcome written without the query that produced it, or written for test only when the owner did not run prod. Either case reads as not settled.
 - **Red run:** n/a (evidence task)
-- **Disqualifier:** if the 6 timing runs vary by more than 30 % of their median, the baseline is not a number. Record the spread and rerun at another hour before T-7 compares against it. A prod row that the owner did not observe stays `UNVERIFIED`.
+- **Disqualifier:** a prod row that the owner did not observe stays `UNVERIFIED`.
 - **Consumers:** none
 - **Definition of done:**
   - P-14, P-18, P-20 and P-21 are each marked verified or refuted in `design.md` §1A, with the citation as run.
   - A refuted P-14 or P-18 is routed to the design change it names before T-4 starts. That change goes to the owner when it alters DD-4.
-  - The baseline (or its spread) is recorded.
 - **Skills:** `systematic-debugging`
 
 ### QVL-T-2 — Label-source registry with its three checks
@@ -204,7 +203,7 @@ Review values follow the template: `skip-eligible`, `checklist`, `full`, `lenses
     - a per-list label table (55 rows: kind, rule, places the form differs, whether `null` can happen), from design §5 as finally verified;
     - "What QA must NOT assume";
     - known gap 6 narrowed;
-    - new known gaps: impact-area filter, AVISA ToC levels, table-sourced text drift;
+    - new known gaps: impact-area filter, AVISA ToC levels, table-sourced text drift, ToC indicator ids carrying several descriptions (P-20, lowest PK wins), latency not measured (no eligible prtest batch);
     - the person-bearing keys table names `users` and `directory_users` labels;
     - change log v1.33, stating `catalog_version` unchanged at 2026.34.
   - In `onecgiar_qa`, on a new branch, update `server/src/ingestion/fixtures/results-details.json` to the contract example verbatim, with `labels` and `catalog_version` 2026.34. Run QA's ingestion specs.
@@ -237,11 +236,11 @@ Review values follow the template: `skip-eligible`, `checklist`, `full`, `lenses
 - **Description:** After the owner orders the push and merge to `performance-refactor` and the deploy lands:
   1. `details` for one eligible result of each catalogued type (`field_keys` absent). Every option id in `values` has an entry in that result's `labels` (QVL-AC-1).
   2. One sampled option per list touched is compared with the canonical form text. The owner reads the form, and the Leader reads `labels` (QVL-AC-2).
-  3. The same 6-run measurement as T-1. Compare p95 against the NFR bound (+30 %).
+  3. ~~Latency measurement~~ (dropped 2026-11-09, owner decision). Instead, read `statements=` from the log line if the owner can share it.
   4. `GET /api/qa/catalog` still answers 2026.34 (QVL-AC-8).
 
   Record everything in `execution.md`. Person labels are recorded as present / absent only, never their text.
-- **Implements:** QVL-AC-1, QVL-AC-2, QVL-AC-8, NFR Performance, D-1b, D-11
+- **Implements:** QVL-AC-1, QVL-AC-2, QVL-AC-8, D-1b
 - **Files (expected):** `execution.md`
 - **Depends on:** T-5, T-6, and the owner's push and merge order
 - **Blocks:** —
@@ -254,7 +253,6 @@ Review values follow the template: `skip-eligible`, `checklist`, `full`, `lenses
 - **Consumers:** none
 - **Definition of done:**
   - AC-1, AC-2 and AC-8 pass, or each failure is routed (fix task, or a known gap with the owner's approval).
-  - The p95 is within the bound, or the overrun is escalated with a revisit of DD-3 (`UNION ALL`).
 - **Skills:** —
 
 ## 4. Dependency graph
@@ -263,7 +261,6 @@ Review values follow the template: `skip-eligible`, `checklist`, `full`, `lenses
 T-1 ──┬──► T-2 ──► T-4 ──┐
       │                  ├──► T-5 ──► T-6 ──► T-7 (after the owner's push/merge order)
 T-3 ──┴──────────────────┘
-(T-1 also blocks T-7: baseline)
 ```
 
 T-3 is independent of T-1 and T-2, so it can run in parallel with them.
@@ -289,7 +286,7 @@ T-3 is independent of T-1 and T-2, so it can run in parallel with them.
 | R-9 · Source unreachable; BUT no partial labels, no source name | T-4 (propagates), T-5 (boundary spec) |
 | R-10 · Snapshot guard | T-2, T-5 |
 | R-11 · Contract sections; QA fixture; QA specs green; push only on order | T-6 |
-| NFR Performance | T-1 (baseline), T-7 (after) |
+| NFR Performance (statement count, amended 2026-11-09) | T-4 (1 vs 50), T-5 (`statements=` in the log line) |
 | NFR Privacy / Observability (log line, `statements=` includes labels) | T-5 |
 | AC-1, AC-2, AC-8 | T-7 · AC-3 T-4 · AC-4 T-5 · AC-5 T-4 · AC-6 T-2 · AC-7 T-5 |
 

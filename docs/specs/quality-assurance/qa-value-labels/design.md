@@ -156,7 +156,7 @@ None in this repository. QA renders `labels` (P2-3910, `onecgiar_qa`).
   - The count never depends on ids or results (R-7).
 - The queries run concurrently (`Promise.all`) through the pool. The existing value reads stay sequential.
 - Each query reads by primary key or by an indexed code (`any_in` on one column, or two for indicators).
-- T-1 measures the baseline. The NFR bound is p95 +30 %.
+- The NFR gate is the statement count (amended 2026-11-09, owner decision): prtest has no eligible 2026 batch, so no latency baseline exists. Latency is a known gap in the contract.
 
 ## 9. Observability
 
@@ -177,7 +177,7 @@ The details log line gains `labels=<number of (list, id) pairs in the response>`
 | D-8 logs | Log-line spec on the exact format |
 | D-9 hash | Existing snapshot guard green, no revision bump |
 | D-10 types | `npx tsc --noEmit` |
-| D-11 latency | T-1 baseline and T-7 after, 6 runs each, on prtest |
+| D-11 latency | Statement-count proxy (T-4 1-vs-50 spec; T-5 `statements=` in the log line). Latency is a known gap (amended 2026-11-09) |
 
 ## 11. Backwards Compatibility & Rollout
 
@@ -223,7 +223,7 @@ A new list, a renamed column or an edited client text fails a test.
 
 ### QVL-DD-6 — Premises about rows are settled by querying, before code builds on them
 
-T-1 runs read-only queries on the test DB, and on prod through the owner. They settle P-14, P-18, P-20 and P-21, and measure the baseline. This applies KZ-quality-assurance--qa-intake-1.
+T-1 runs read-only queries on the test DB, and on prod through the owner. They settle P-14, P-18, P-20 and P-21. (The latency baseline was dropped on 2026-11-09, owner decision: no eligible batch on prtest.) This applies KZ-quality-assurance--qa-intake-1.
 
 **Reversion challenge (Step 2.3):** no DD removes, disables or inverts shipped behavior, so the challenge does not apply.
 
@@ -244,4 +244,6 @@ This sits within Full depth. Exceeding it is a tripwire for `/akili-execute`.
 | Impact-area binding has no area filter (P-12) | A separate bugfix spec and ticket (owner, 2026-11-09). A comment goes on P2-4037. The contract records it as a known gap |
 | AVISA ToC level names | Known gap in the contract |
 | Client text edited later | The client-mirror spec catches constant drift. Table-sourced composition drift is a known gap |
+| ToC indicators: one `related_node_id` carries several `indicator_description`s (P-20 refuted on test, 2026-11-09) | Owner decision 2026-11-09: lowest PK wins; known gap in the contract (T-6) |
+| Latency not measured: prtest has no eligible 2026 batch | Owner decision 2026-11-09: the statement count is the NFR gate; known gap in the contract (T-6) |
 | Linked results `(ACR - year)` prefix, institution `full_name`, Submitter `short_name` | Documented as "places the form shows something else" (R-3) |

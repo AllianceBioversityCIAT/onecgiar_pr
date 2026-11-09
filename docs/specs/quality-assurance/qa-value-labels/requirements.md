@@ -247,7 +247,7 @@ The QA fixture `onecgiar_qa/server/src/ingestion/fixtures/results-details.json` 
 
 | Dimension | Target |
 |---|---|
-| Performance | With `field_keys` absent, statements added per call ≤ the number of distinct lists the batch touches (QVL-R-7). Duration for the largest eligible batch on prtest (up to 50 ids) is measured before and after, 6 runs each. The p95 increase SHALL be ≤ 30 % of the baseline p95, a bound the design may tighten after the baseline. |
+| Performance | With `field_keys` absent, statements added per call ≤ the number of distinct lists the batch touches (QVL-R-7), and equal for a batch of 1 and a batch of 50 over the same lists. *Amended 2026-11-09 at /akili-execute (owner decision): prtest has no eligible 2026 batch, so latency is not measured; the statement count is the gate.* Latency on prtest is a known gap until prtest holds an eligible 2026 batch. |
 | Security | The route, guard and grant are unchanged (`/api/qa/results/details`, CLARISA key plus `endpoint_allowed`). |
 | Privacy | Labels are never logged. The `details` log line keeps counts only and may add `labels=<count>`. Person-bearing lists follow QVL-R-6. No label, id or name appears in docs, fixtures or chat beyond synthetic examples. |
 | Backwards compatibility | Additive only (ADR-004). A consumer that ignores `labels` sees no change (QVL-R-5). |
@@ -267,7 +267,7 @@ The QA fixture `onecgiar_qa/server/src/ingestion/fixtures/results-details.json` 
 | D-8 | Labels or names in logs | Log-line test asserting the exact format |
 | D-9 | `catalog_version` or catalog hash moves | Existing snapshot guard (QVL-R-10) |
 | D-10 | Type errors not seen by Jest | `npx tsc --noEmit` |
-| D-11 | Latency regression | Live measurement on prtest (NFR). If six runs vary by more than the effect, report the spread, not a number |
+| D-11 | Latency regression | Deterministic proxy (amended 2026-11-09, owner): the label statement count per call, bounded by the lists touched and equal for 1 vs 50 (QVL-R-7, T-4). Latency itself is a known gap until prtest has an eligible batch |
 
 ## 8. Acceptance Criteria
 

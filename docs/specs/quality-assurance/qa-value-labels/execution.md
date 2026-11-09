@@ -67,3 +67,181 @@
 | To task | Pointer | Source |
 |---|---|---|
 | QVL-T-5 | Call `collectLabels(results, toRead)` after projection. `toRead` must be the **returned** field definitions (`field_keys` and applicability applied), never `CATALOG_FIELDS`. Otherwise R-2 and R-6 break silently | T-3 Implementer note and Reviewer ADVISORY |
+
+### QVL-T-1 evidence (Implementer, test DB + prtest)
+
+Status: premises verified or refuted on the test DB below. **Prod is owed by the owner** (query set: `t1-prod-queries.sql` in the session scratchpad); every prod row stays `UNVERIFIED` until the owner runs it. **The prtest timing baseline was NOT measured**: prtest has no eligible 2026 result (see Timing).
+
+DB identity: read-only connection from the local `.env` (values not printed). The host name carries neither a `test` nor a `prod` hint; the PRMS schema is `prdb`. It matches prtest on one fact: 1 Submitted 2026 result, which the prtest API reports as `not_w1w2`. `<TOC>` below stands for the ToC schema (`DB_TOC`). All queries are SELECT only.
+
+#### Column discovery (the two `UNVERIFIED` names)
+
+```sql
+SELECT table_name, column_name, column_key, data_type FROM information_schema.columns WHERE table_schema = <TOC> AND table_name IN ('toc_results_melias','toc_results_indicators') ORDER BY table_name, ordinal_position;
+SELECT table_name, column_name, column_key, data_type FROM information_schema.columns WHERE table_schema = <TOC> AND table_name = 'toc_results' AND (column_name LIKE '%phase%' OR column_key<>'');
+```
+- `toc_results_melias`: PK `id` (int, single column `PRI`); also `melia_id` varchar, `title` longtext.
+- `toc_results_indicators`: PK `id` (bigint); `related_node_id` varchar, `indicator_description` text, `toc_results_id` int (`MUL`), `is_active` tinyint. **It has no phase column.** The phase lives on `toc_results.phase` (varchar), reached through `toc_results_indicators.toc_results_id = toc_results.id`. The phase-scoped query below joins that way.
+- `clarisa_innovation_use_levels`, `clarisa_innovation_readiness_level`: `id` PK, `level`, `name`, `definition`. `clarisa_geographic_scope`: `id` PK, `name`, `description`.
+
+#### P-14 use levels
+
+```sql
+SELECT d.id, d.level, d.name AS dup_name, b.id AS base_id, b.name AS base_name, (d.name = b.name) AS same_name FROM clarisa_innovation_use_levels d LEFT JOIN clarisa_innovation_use_levels b ON b.level = d.level AND b.id BETWEEN 1 AND 10 WHERE d.id > 10 ORDER BY d.id;
+```
+Result: `ids 13..20 map to base ids 3..10 (levels 2..9); same_name = 1 on all 8 rows: Partners, Partners, Connected next-user, Connected next-user, Unconnected next-user, Unconnected next-user, End-user / Beneficiaries, End-user / Beneficiaries`
+
+```sql
+SELECT COUNT(*) AS dup_rows, SUM(b.id IS NULL) AS no_base_row, SUM(b.id IS NOT NULL AND d.name <> b.name) AS name_mismatch, SUM(b.id IS NOT NULL AND d.name = b.name) AS name_equal FROM clarisa_innovation_use_levels d LEFT JOIN clarisa_innovation_use_levels b ON b.level = d.level AND b.id BETWEEN 1 AND 10 WHERE d.id > 10;
+```
+Result: `{"dup_rows":8,"no_base_row":"0","name_mismatch":"0","name_equal":"8"}`
+
+```sql
+SELECT level, COUNT(*) AS n FROM clarisa_innovation_use_levels WHERE id BETWEEN 1 AND 10 GROUP BY level HAVING COUNT(*) > 1;
+```
+Result: `[] (base ids 1..10 hold one row per level 0..9)`
+
+```sql
+SELECT level, COUNT(*) AS n_rows, COUNT(DISTINCT name) AS n_names, GROUP_CONCAT(id ORDER BY id) AS ids FROM clarisa_innovation_use_levels GROUP BY level HAVING COUNT(*) > 1 ORDER BY level;
+```
+Result: `levels 2..9 each have 2 rows and 1 distinct name (ids 3,13 / 4,14 / 5,15 / 6,16 / 7,17 / 8,18 / 9,19 / 10,20)`
+
+#### P-14 readiness levels
+
+```sql
+SELECT COUNT(*) AS rows_total, MIN(id) AS min_id, MAX(id) AS max_id, SUM(id BETWEEN 1 AND 10) AS rows_in_1_10 FROM clarisa_innovation_readiness_level;
+```
+Result: `{"rows_total":10,"min_id":11,"max_id":20,"rows_in_1_10":"0"}`
+
+```sql
+SELECT level, COUNT(*) AS n_rows, COUNT(DISTINCT name) AS n_names, GROUP_CONCAT(id ORDER BY id) AS ids FROM clarisa_innovation_readiness_level GROUP BY level HAVING COUNT(*) > 1;
+```
+Result: `[] (no level has more than one row)`
+
+Reference rows (quoted): use levels id/level/name = 1/0/No use, 2/1/Project lead organization, 3/2/Partners, 4/3/Partners, 5/4/Connected next-user, 6/5/Connected next-user, 7/6/Unconnected next-user, 8/7/Unconnected next-user, 9/8/End-user / Beneficiaries, 10/9/End-user / Beneficiaries, then the 13..20 duplicates above. Readiness id/level/name = 11/0/Idea, 12/1/Basic Research, 13/2/Formulation, 14/3/Proof of Concept, 15/4/Controlled Testing, 16/5/Model/Early Prototype, 17/6/Semi-Controlled Testing, 18/7/Prototype, 19/8/Uncontrolled Testing, 20/9/Proven Innovation.
+
+**P-14 outcome on test: VERIFIED for use levels** (8 duplicate rows, 0 name mismatches, 0 without a base row). Two things the premise did not say, for the Leader:
+- Within ids 1..10 the **names repeat across levels** (levels 2 and 3 are both "Partners"). A label from the id is correct, but two different levels read identically.
+- **Readiness has no duplicates on test and no row in ids 1..10** (ids are 11..20). "The row with the same level among ids 1..10" has nothing to point at for readiness; a direct id to name read already equals one row per level. The premise is vacuous for readiness on test, not verified by a comparison.
+
+Prod: UNVERIFIED (owner).
+
+#### P-21
+
+```sql
+SELECT id, name, description FROM clarisa_geographic_scope WHERE id = 4;
+```
+Result: `[{"id":4,"name":"National","description":"The activity scope covers one country"}]`
+
+Full table: 1 Global, 2 Regional, 3 Multi-national, 4 National, 5 Sub-national, 50 This is yet to be determined.
+
+**P-21 outcome on test: VERIFIED** (row 4 exists; its DB name is "National", the client text is "Country"). Prod: UNVERIFIED (owner).
+
+#### P-18 melias
+
+```sql
+SELECT COUNT(*) AS rows_total, COUNT(DISTINCT melia_id) AS distinct_melia_id, SUM(melia_id IS NULL OR melia_id = '') AS blank_melia_id FROM <TOC>.toc_results_melias;
+```
+Result: `{"rows_total":992,"distinct_melia_id":323,"blank_melia_id":"0"}`
+
+```sql
+SELECT melia_id, COUNT(*) AS n_rows, COUNT(DISTINCT title) AS n_titles, MIN(id) AS min_pk FROM <TOC>.toc_results_melias GROUP BY melia_id HAVING COUNT(*) > 1 ORDER BY n_titles DESC, n_rows DESC LIMIT 5;
+```
+Result: `top 5 melia_ids by rows: 32/30/29/26/24 rows, n_titles = 1 each (min_pk 3095, 7237, 7236, 3049, 6979)`
+
+```sql
+SELECT COUNT(*) AS melia_ids_with_more_than_one_row, SUM(n_titles > 1) AS melia_ids_with_differing_titles FROM (SELECT melia_id, COUNT(DISTINCT title) AS n_titles FROM <TOC>.toc_results_melias GROUP BY melia_id HAVING COUNT(*) > 1) x;
+```
+Result: `{"melia_ids_with_more_than_one_row":124,"melia_ids_with_differing_titles":"0"}`
+
+**P-18 outcome on test: VERIFIED** (PK is the single column `id`, per the column discovery above; 124 of 323 melia_ids join several rows, 0 have differing titles). Prod: UNVERIFIED (owner).
+
+#### P-20 indicators
+
+```sql
+SELECT COUNT(*) AS rows_total, SUM(related_node_id IS NULL OR related_node_id = '') AS blank_related_node_id FROM <TOC>.toc_results_indicators;
+```
+Result: `{"rows_total":10229,"blank_related_node_id":"94"}`
+
+```sql
+SELECT COUNT(*) AS node_phase_groups_with_more_than_one_row, COALESCE(SUM(n_desc > 1),0) AS groups_with_differing_descriptions, COALESCE(MAX(n_rows),0) AS max_rows_in_group FROM (SELECT r.phase, i.related_node_id, COUNT(*) AS n_rows, COUNT(DISTINCT i.indicator_description) AS n_desc FROM <TOC>.toc_results_indicators i JOIN <TOC>.toc_results r ON r.id = i.toc_results_id WHERE i.related_node_id IS NOT NULL AND i.related_node_id <> '' GROUP BY r.phase, i.related_node_id HAVING COUNT(*) > 1) x;
+```
+Result: `{"node_phase_groups_with_more_than_one_row":553,"groups_with_differing_descriptions":"316","max_rows_in_group":9}`
+
+```sql
+SELECT COUNT(*) AS rows_without_toc_result FROM <TOC>.toc_results_indicators i LEFT JOIN <TOC>.toc_results r ON r.id = i.toc_results_id WHERE r.id IS NULL;
+```
+Result: `{"rows_without_toc_result":0}`
+
+```sql
+SELECT COUNT(*) AS related_node_id_equal_to_other_rows_id FROM <TOC>.toc_results_indicators a JOIN <TOC>.toc_results_indicators b ON a.related_node_id = CAST(b.id AS CHAR) AND a.id <> b.id;
+```
+Result: `{"related_node_id_equal_to_other_rows_id":0}`
+
+```sql
+SELECT COUNT(*) AS node_phase_groups_with_more_than_one_row, COALESCE(SUM(n_desc > 1),0) AS groups_with_differing_descriptions, COALESCE(SUM(n_desc > 1 AND n_active_desc > 1),0) AS differing_among_active_rows FROM (SELECT r.phase, i.related_node_id, COUNT(*) AS n_rows, COUNT(DISTINCT i.indicator_description) AS n_desc, COUNT(DISTINCT CASE WHEN i.is_active = 1 THEN i.indicator_description END) AS n_active_desc FROM <TOC>.toc_results_indicators i JOIN <TOC>.toc_results r ON r.id = i.toc_results_id WHERE i.related_node_id IS NOT NULL AND i.related_node_id <> '' GROUP BY r.phase, i.related_node_id HAVING COUNT(*) > 1) x;
+```
+Result: `{"node_phase_groups_with_more_than_one_row":553,"groups_with_differing_descriptions":"316","differing_among_active_rows":"198"}`
+
+```sql
+SELECT COUNT(*) AS groups_with_more_than_one_row_in_same_toc_result FROM (SELECT i.toc_results_id, i.related_node_id FROM <TOC>.toc_results_indicators i WHERE i.related_node_id IS NOT NULL AND i.related_node_id <> '' GROUP BY i.toc_results_id, i.related_node_id HAVING COUNT(*) > 1) x;
+```
+Result: `{"groups_with_more_than_one_row_in_same_toc_result":113}`
+
+```sql
+SELECT COUNT(*) AS groups_differing_across_phase_free_grouping FROM (SELECT related_node_id FROM <TOC>.toc_results_indicators WHERE related_node_id IS NOT NULL AND related_node_id <> '' GROUP BY related_node_id HAVING COUNT(DISTINCT indicator_description) > 1) x;
+```
+Result: `{"groups_differing_across_phase_free_grouping":923}`
+
+**P-20 outcome on test: REFUTED.** `related_node_id` is **not** unique per phase: 553 (phase, related_node_id) groups hold more than one row (up to 9), **316 of them with differing `indicator_description`** (198 still differ when only `is_active = 1` rows are counted); 113 repeat even inside one `toc_results` row. The design's fallback applies (lowest PK, record the gap), but "one title per id" does not hold, so the picked title can be another toc result's wording. The other half of the premise held: no `related_node_id` equals another row's numeric `id` (0), so the `related_node_id OR id` read has no cross-match. Prod: UNVERIFIED (owner).
+
+#### Timing baseline (prtest) - NOT MEASURED, blocker
+
+Base URL: `https://prtest-back.ciat.cgiar.org` (appears in repo docs, e.g. `onecgiar-pr-server/docs/p2-3218-parent-acceptance-audit.md`). The QA key was read from the scratchpad file inside the script and never printed.
+
+| Call | Result |
+|---|---|
+| `GET /api/qa/results?phase_year=2026&page=1&page_size=100` | 200, `total: 0`, `breakdown: {by_program: [], by_result_type: []}`, `items: []` |
+| `GET /api/qa/results?phase_year=2025` and `2024` | 404 (no catalog) |
+| `POST /api/qa/results/details` `{phase_year: 2026, result_ids: [11813]}` (the only Submitted 2026 result on the connected DB) | 200, `results: 0`, `not_eligible: [{result_id: 11813, reason: "not_w1w2"}]` |
+
+DB cross-check (`SELECT r.status_id, COUNT(*) AS n FROM result r JOIN version v ON v.id = r.version_id WHERE r.is_active = 1 AND v.phase_year = 2026 GROUP BY r.status_id`): `1: 930, 2: 39, 3: 1, 4: 3, 5: 147, 6: 41, 7: 18, 8: 242`. Status 3 (Submitted) has one row, and the API classifies it `not_w1w2`.
+
+There is no eligible 2026 batch on prtest today. Timing a batch of ineligible ids would not run the value or label reads, so it is not a baseline and none is recorded. The 6-run table, p50, p95 and spread are **not available**. It needs at least one batch (ideally up to 50) of Submitted, W1/W2, catalogued, lead-programmed 2026 results on prtest. That is a data step, not something a SELECT-only task can create. `statements=` lives in the server log, which was not readable from here in any case; client-side wall clock was the planned measure.
+
+Rerun: list `GET /api/qa/results`, take up to 50 `result_id`, then 6 sequential `POST /api/qa/results/details` calls timed by wall clock (no `field_keys`).
+
+#### Summary
+
+| Premise | Test | Prod |
+|---|---|---|
+| P-14 | VERIFIED for use levels; vacuous for readiness (no duplicates, no ids 1..10) | UNVERIFIED (owner) |
+| P-18 | VERIFIED | UNVERIFIED (owner) |
+| P-20 | REFUTED (316 of 553 duplicate groups differ in text) | UNVERIFIED (owner) |
+| P-21 | VERIFIED (row 4 = "National") | UNVERIFIED (owner) |
+| Baseline | NOT MEASURED: no eligible 2026 result on prtest | n/a |
+
+### Leader note: QVL-T-1 parked `[~]` (2026-11-09)
+
+- **Status:** `[~]`. The Implementer report carries `Not Done / Assumptions` with owed items, and both need the owner, so no continuation can close them:
+  1. **Prod run of the premise queries** (owed by the owner). The file is `scratchpad/t1-prod-queries.sql`: 22 SELECTs, with ToC schema placeholder `<TOC_SCHEMA>`. Until then P-14, P-18, P-20 and P-21 stay `UNVERIFIED` for prod.
+  2. **prtest timing baseline**: not measurable. `GET /api/qa/results?phase_year=2026` → 200 `total: 0`; the only Submitted 2026 result (11813) is `not_w1w2`. There is no eligible batch, so no runs were made and the 30 % rule has nothing to apply to.
+- **Evidence re-run:** deferred until the owner's prod results arrive. It will re-run the test-side SELECTs non-author against the Implementer's quoted counts.
+- **spawns:** implementer 29 calls, 125 606 tokens, ended partial
+- **Leader adjudication of the test outcomes (pending prod):**
+  - **P-20 refuted on test.** This routes to the fallback design §1A already names ("Pick by lowest PK, and record the gap"), which §5 already encodes ("lowest PK first"). DD-4 does not change. The contract (T-6) gets a known gap: one `related_node_id` can carry different `indicator_description`s.
+  - **P-14 vacuous for readiness on test** (ids 11..20, one row per level, no duplicates). A direct id → `name` read equals the form for all three lists. If prod agrees, DD-4 keeps kind T with no level-normalized read.
+  - **Spec tension (presented to the owner):** the T-1 Verification says "`git diff --stat` shows only `execution.md`", but its Definition of done asks to mark the premises in `design.md` §1A. Proposed amendment: allow the §1A rows P-14, P-18, P-20 and P-21 in T-1's diff.
+
+### Owner decisions and execute-time spec edits (2026-11-09)
+
+Asked through AskUserQuestion; answers recorded as given.
+
+| Decision | Answer | Spec edits (file · section) |
+|---|---|---|
+| T-1 latency baseline cannot be measured (prtest has no eligible 2026 batch) | **Deterministic proxy.** The statement count (1 vs 50, QVL-R-7) is the NFR gate. Latency is a known gap | `requirements.md` §6 Performance and §7 D-11 (amended; it changes the NFR's meaning, so it was approved by the owner, not edit-carried); `design.md` §8, §10 D-11, DD-6, §14 (new gap row); `tasks.md` T-1 (title, timing bullet, Implements, Blocks, Disqualifier, DoD), T-6 (new known gaps), T-7 (step 3, Implements, DoD), §4 graph note, §5 NFR row |
+| P-20 refuted on test | **Fallback + known gap.** `toc_results_indicators` labels by lowest PK; the contract documents it. DD-4 unchanged | `design.md` §14 (new gap row); `tasks.md` T-6 (new known gap). The §1A P-20 row is updated after the prod run |
+
+- **Two-direction sweep:** `grep -nE "p95|p50|baseline|6 runs|6-run|30 ?%|D-11|latency"` over `requirements.md`, `design.md` and `tasks.md`. What remains is only the amended text. `proposal.md` was left as history.
+- **Diff read:** every removed line in the three documents is an intended removal (12 lines, all latency/baseline).
+- **Carry to the next Reviewer briefs (T-2, then T-4):** conformance to `requirements.md` §6 Performance and §7 D-11 as amended 2026-11-09, and `design.md` §8 / §10 D-11 / §14 as amended.
