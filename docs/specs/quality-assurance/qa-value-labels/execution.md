@@ -221,6 +221,8 @@ Rerun: list `GET /api/qa/results`, take up to 50 `result_id`, then 6 sequential 
 | P-21 | VERIFIED (row 4 = "National") | UNVERIFIED (owner) |
 | Baseline | NOT MEASURED: no eligible 2026 result on prtest | n/a |
 
+*Prod column superseded by "QVL-T-1 prod evidence (owner)" below. The baseline was dropped by owner decision (see "Owner decisions").*
+
 ### Leader note: QVL-T-1 parked `[~]` (2026-11-09)
 
 - **Status:** `[~]`. The Implementer report carries `Not Done / Assumptions` with owed items, and both need the owner, so no continuation can close them:
@@ -245,3 +247,115 @@ Asked through AskUserQuestion; answers recorded as given.
 - **Two-direction sweep:** `grep -nE "p95|p50|baseline|6 runs|6-run|30 ?%|D-11|latency"` over `requirements.md`, `design.md` and `tasks.md`. What remains is only the amended text. `proposal.md` was left as history.
 - **Diff read:** every removed line in the three documents is an intended removal (12 lines, all latency/baseline).
 - **Carry to the next Reviewer briefs (T-2, then T-4):** conformance to `requirements.md` §6 Performance and §7 D-11 as amended 2026-11-09, and `design.md` §8 / §10 D-11 / §14 as amended.
+
+### QVL-T-1 prod evidence (owner, 2026-11-09)
+
+The owner ran `scratchpad/t1-prod-queries.ready.sql` (verbatim in the appendix below) on prod. The ToC schema is `Integration_information`. Results below are transcribed from the owner's message in this session; the statements match the file. The owner did not paste the statements that returned no rows or NULL; they said so ("las que no pegué es porque retorna null vacíos").
+
+| Query | Prod result |
+|---|---|
+| ToC column discovery | `toc_results_melias.id` PRI int; `toc_results_indicators.id` PRI bigint; phase is `toc_results.phase` (varchar), not on `toc_results_indicators` |
+| PRMS column discovery | `clarisa_innovation_use_levels(id PRI, name, level, definition)`, `clarisa_innovation_readiness_level(id PRI, name, definition, level)`, `clarisa_geographic_scope(name, description, id PRI)` |
+| P-14 (a) per id, (b), (c), (e) | no rows (not pasted, per the owner). These are row-returning queries, so "empty" is a possible result. Read: no use-level row with id > 10, and no level with more than one row in either table |
+| P-14 (a) summary | not pasted; result not recorded. *Inferred, not observed:* if the owner's "null vacíos" remark covers it, the result is `dup_rows 0` with NULL sums, which is consistent with P-14 (a) per id being empty |
+| P-14 (d) readiness id range | `{rows_total:10, min_id:11, max_id:20, rows_in_1_10:0}` |
+| P-21 row 4 | `{id:4, name:"National", description:"The activity scope covers one country"}` |
+| P-18 (a) totals | `{rows_total:840, distinct_melia_id:303, blank_melia_id:0}` |
+| P-18 (b) top 5 | each `n_titles: 1` (32, 30, 29, 26 and 24 rows) |
+| P-18 (c) summary | `{melia_ids_with_more_than_one_row:121, melia_ids_with_differing_titles:0}` |
+| P-20 (b) | `{node_phase_groups_with_more_than_one_row:530, groups_with_differing_descriptions:135, max_rows_in_group:12}` |
+| P-20 (e) | `{…:530, groups_with_differing_descriptions:135, differing_among_active_rows:20}` |
+| P-20 (f) | `{groups_with_more_than_one_row_in_same_toc_result:190}` |
+| P-20 (g) | `{groups_differing_across_phase_free_grouping:796}` |
+| P-20 (a) | not pasted; result not recorded. It is a bare totals `COUNT(*)` and cannot be empty; by (b) its `rows_total` is ≥ 1 060 |
+| P-20 (c), (d) | not pasted; result not recorded (single-row `COUNT(*)` queries; per the owner's remark, presumably 0) |
+
+**Residual:** an empty P-14 result would also fit an empty `clarisa_innovation_use_levels` table on prod; the row listing was not pasted. Either way the claim holds: there are no duplicates with different names, so a direct id → `name` read equals the form. DD-4 (kind T) does not depend on which case it is.
+
+**Evidence re-run (Leader, inline, non-author) on test:** re-executed P-14 (a) summary, P-14 (c), P-14 (e), P-21, P-18 (c), P-20 (b), (d), (e) and (f) from `t1-prod-queries.sql` (verbatim in the appendix below), with the ToC schema taken from the environment. All nine results equal the Implementer's quoted values (`dup_rows 8 / name_equal 8`; levels 2..9 paired 3/13 … 10/20; readiness `[]`; `National`; `124 / 0`; `553 / 316 / 9`; `0`; `553 / 316 / 198`; `113`). **VERIFIED**
+
+**Outcomes (now in `design.md` §1A):** P-14 VERIFIED · P-18 VERIFIED · P-20 REFUTED (fallback: lowest PK + known gap, owner decision) · P-21 VERIFIED. P-20 is refuted on prod too, so the gap is not test-only.
+
+
+### Appendix — QVL-T-1 query set, verbatim (labels used above)
+
+This is the Implementer's `t1-prod-queries.sql`, with `<TOC_SCHEMA>` replaced by `Integration_information`, the ToC schema name visible in the owner's pasted statements. The test run used the same statements with the test `DB_TOC`. Each `-- <label>` line is the label the tables above refer to ("P-14 (a) summary", "P-20 (e)", …), and the statement below it is that query.
+
+```sql
+-- QVL-T-1 prod query set. SELECT only. Run each statement as-is.
+-- Statements that contain Integration_information run against the ToC schema: replace the placeholder with its name (the DB_TOC value). All other statements run on the PRMS schema (the one holding clarisa_*).
+-- Do not paste person data back. All results are counts or reference-table rows.
+
+-- ToC column discovery (quote this result; PK of toc_results_melias, phase column location)
+SELECT table_name, column_name, column_key, data_type FROM information_schema.columns WHERE table_schema = 'Integration_information' AND table_name IN ('toc_results_melias','toc_results_indicators','toc_results') AND (column_key <> '' OR column_name IN ('melia_id','title','related_node_id','indicator_description','toc_results_id','phase','is_active')) ORDER BY table_name, ordinal_position;
+-- PRMS column discovery
+SELECT table_name, column_name, column_key FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name IN ('clarisa_innovation_use_levels','clarisa_innovation_readiness_level','clarisa_geographic_scope') ORDER BY table_name, ordinal_position;
+-- Row listings (reference tables, safe to quote)
+SELECT id, level, name FROM clarisa_innovation_use_levels ORDER BY id;
+SELECT id, level, name FROM clarisa_innovation_readiness_level ORDER BY id;
+SELECT id, name, description FROM clarisa_geographic_scope ORDER BY id;
+
+-- P-14 (a) use-level duplicates vs base row, per id
+SELECT d.id, d.level, d.name AS dup_name, b.id AS base_id, b.name AS base_name, (d.name = b.name) AS same_name FROM clarisa_innovation_use_levels d LEFT JOIN clarisa_innovation_use_levels b ON b.level = d.level AND b.id BETWEEN 1 AND 10 WHERE d.id > 10 ORDER BY d.id;
+-- P-14 (a) summary
+SELECT COUNT(*) AS dup_rows, SUM(b.id IS NULL) AS no_base_row, SUM(b.id IS NOT NULL AND d.name <> b.name) AS name_mismatch, SUM(b.id IS NOT NULL AND d.name = b.name) AS name_equal FROM clarisa_innovation_use_levels d LEFT JOIN clarisa_innovation_use_levels b ON b.level = d.level AND b.id BETWEEN 1 AND 10 WHERE d.id > 10;
+-- P-14 (b) base ids 1..10 unique per level (expect empty)
+SELECT level, COUNT(*) AS n FROM clarisa_innovation_use_levels WHERE id BETWEEN 1 AND 10 GROUP BY level HAVING COUNT(*) > 1;
+-- P-14 (c) any level with more than one row
+SELECT level, COUNT(*) AS n_rows, COUNT(DISTINCT name) AS n_names, GROUP_CONCAT(id ORDER BY id) AS ids FROM clarisa_innovation_use_levels GROUP BY level HAVING COUNT(*) > 1 ORDER BY level;
+-- P-14 (d) readiness: id range
+SELECT COUNT(*) AS rows_total, MIN(id) AS min_id, MAX(id) AS max_id, SUM(id BETWEEN 1 AND 10) AS rows_in_1_10 FROM clarisa_innovation_readiness_level;
+-- P-14 (e) readiness: levels with more than one row
+SELECT level, COUNT(*) AS n_rows, COUNT(DISTINCT name) AS n_names, GROUP_CONCAT(id ORDER BY id) AS ids FROM clarisa_innovation_readiness_level GROUP BY level HAVING COUNT(*) > 1;
+-- P-21 row 4
+SELECT id, name, description FROM clarisa_geographic_scope WHERE id = 4;
+-- P-18 (a) totals
+SELECT COUNT(*) AS rows_total, COUNT(DISTINCT melia_id) AS distinct_melia_id, SUM(melia_id IS NULL OR melia_id = '') AS blank_melia_id FROM `Integration_information`.toc_results_melias;
+-- P-18 (b) top 5 melia_ids by rows
+SELECT melia_id, COUNT(*) AS n_rows, COUNT(DISTINCT title) AS n_titles, MIN(id) AS min_pk FROM `Integration_information`.toc_results_melias GROUP BY melia_id HAVING COUNT(*) > 1 ORDER BY n_titles DESC, n_rows DESC LIMIT 5;
+-- P-18 (c) summary (expect differing_titles = 0)
+SELECT COUNT(*) AS melia_ids_with_more_than_one_row, SUM(n_titles > 1) AS melia_ids_with_differing_titles FROM (SELECT melia_id, COUNT(DISTINCT title) AS n_titles FROM `Integration_information`.toc_results_melias GROUP BY melia_id HAVING COUNT(*) > 1) x;
+-- P-20 (a) totals
+SELECT COUNT(*) AS rows_total, SUM(related_node_id IS NULL OR related_node_id = '') AS blank_related_node_id FROM `Integration_information`.toc_results_indicators;
+-- P-20 (b) node+phase groups, differing descriptions
+SELECT COUNT(*) AS node_phase_groups_with_more_than_one_row, COALESCE(SUM(n_desc > 1),0) AS groups_with_differing_descriptions, COALESCE(MAX(n_rows),0) AS max_rows_in_group FROM (SELECT r.phase, i.related_node_id, COUNT(*) AS n_rows, COUNT(DISTINCT i.indicator_description) AS n_desc FROM `Integration_information`.toc_results_indicators i JOIN `Integration_information`.toc_results r ON r.id = i.toc_results_id WHERE i.related_node_id IS NOT NULL AND i.related_node_id <> '' GROUP BY r.phase, i.related_node_id HAVING COUNT(*) > 1) x;
+-- P-20 (c) indicator rows without a toc_results parent
+SELECT COUNT(*) AS rows_without_toc_result FROM `Integration_information`.toc_results_indicators i LEFT JOIN `Integration_information`.toc_results r ON r.id = i.toc_results_id WHERE r.id IS NULL;
+-- P-20 (d) related_node_id equal to another row's id
+SELECT COUNT(*) AS related_node_id_equal_to_other_rows_id FROM `Integration_information`.toc_results_indicators a JOIN `Integration_information`.toc_results_indicators b ON a.related_node_id = CAST(b.id AS CHAR) AND a.id <> b.id;
+-- P-20 (e) differing descriptions, and among active rows
+SELECT COUNT(*) AS node_phase_groups_with_more_than_one_row, COALESCE(SUM(n_desc > 1),0) AS groups_with_differing_descriptions, COALESCE(SUM(n_desc > 1 AND n_active_desc > 1),0) AS differing_among_active_rows FROM (SELECT r.phase, i.related_node_id, COUNT(*) AS n_rows, COUNT(DISTINCT i.indicator_description) AS n_desc, COUNT(DISTINCT CASE WHEN i.is_active = 1 THEN i.indicator_description END) AS n_active_desc FROM `Integration_information`.toc_results_indicators i JOIN `Integration_information`.toc_results r ON r.id = i.toc_results_id WHERE i.related_node_id IS NOT NULL AND i.related_node_id <> '' GROUP BY r.phase, i.related_node_id HAVING COUNT(*) > 1) x;
+-- P-20 (f) groups inside one toc_result
+SELECT COUNT(*) AS groups_with_more_than_one_row_in_same_toc_result FROM (SELECT i.toc_results_id, i.related_node_id FROM `Integration_information`.toc_results_indicators i WHERE i.related_node_id IS NOT NULL AND i.related_node_id <> '' GROUP BY i.toc_results_id, i.related_node_id HAVING COUNT(*) > 1) x;
+-- P-20 (g) differing descriptions ignoring phase
+SELECT COUNT(*) AS groups_differing_across_phase_free_grouping FROM (SELECT related_node_id FROM `Integration_information`.toc_results_indicators WHERE related_node_id IS NOT NULL AND related_node_id <> '' GROUP BY related_node_id HAVING COUNT(DISTINCT indicator_description) > 1) x;
+```
+
+### QVL-T-1 — Settle the row premises (task record)
+
+- **Final status:** PASS (attempt 3)
+- **Date:** 2026-11-09
+- **Implementer attempts:** 1 Implementer spawn (test DB + query set), then the Leader-authored HITL prod record and two reworks of that record. The HITL record is the Leader's by rule (`leader.md`: a HITL evidence record is derived from the session transcript).
+- **Skills / effort:** `systematic-debugging` (task default) · effort `medium`
+- **Review intensity:** the task claimed `skip-eligible`. The claim was **not earned**: condition 1 failed (no falsifier executed red; red run n/a), and override (c) applies (derived evidence that T-4 consumes). A conformance Reviewer ran. Reported at the continue gate.
+- **Attempt 1**
+  - Files: `execution.md` (Implementer evidence section; Leader prod section), `design.md` §1A (P-14, P-18, P-20, P-21 rows, Count line)
+  - Verification: every outcome quotes its query; Leader non-author re-run of 9 test queries → **VERIFIED** (all equal)
+  - Reviewer: **FAIL**. (1) The prod rows were labelled "P-14 (a) summary", "P-20 (e)" and so on, but the labels were defined only in a scratchpad file; the P-18, P-20 and P-21 rows in §1A had no query pointer. (2) "not pasted (no rows / NULL)" was written for `COUNT(*)` queries, which cannot return no rows (P-20 (a), and the same for the P-14 summary, P-20 (c) and (d)). Full report in the conversation transcript; the issues are quoted in the attempt-2 brief.
+- **Attempt 2** (effort bump: n/a, Leader-authored doc rework)
+  - Changes: verbatim appendix of the 22 labelled queries; COUNT rows reworded; appendix pointers in §1A; P-14 residual copied to §1A; superseded note on the first prod column.
+  - Reviewer: **FAIL**. The "P-14 (a) summary" row said "returned `dup_rows 0` with NULL sums", a value inferred from the owner's remark, not observed. The §1A P-14 row repeated it ("returned no rows / NULL sums").
+- **Attempt 3**
+  - Changes: the row now reads "not pasted; result not recorded. *Inferred, not observed* …"; §1A P-14 now reads "reported empty/NULL by the owner (not pasted)"; "(verbatim in the appendix below)" next to both scratchpad file names.
+  - Reviewer: **PASS**. The inferred value is labelled as such; no regressions; the §1A count is 20 verified / 1 refuted / 1 UNVERIFIED (22 premises); no secrets or person data.
+  - **runtime events:** none
+- **continuations:** none (the owed items, the prod run and the baseline, went to the owner. The baseline was dropped by owner decision)
+- **spawns:** implementer 29 calls, 125 606 tokens, ended partial; reviewer 7 calls, 64 323 tokens, ended complete (FAIL); reviewer 3 calls, 53 584 tokens, ended complete (FAIL); reviewer — `not reported by host`, ended complete (PASS)
+- **ADVISORY:** none open (the attempt-1 and attempt-2 advisories were applied in the reworks)
+- **Requirements covered:** design P-14, P-18, P-20, P-21 (DD-6). The NFR baseline was removed from T-1 by owner decision 2026-11-09.
+- **Decisions made:** P-20 → lowest PK + known gap (owner). Latency → statement-count proxy (owner). Spec edits recorded in "Owner decisions and execute-time spec edits".
+- **Issues encountered:** the test DB was unreachable at first (VPN; probe recorded). prtest has no eligible 2026 batch. The owner's partial paste left P-20 (a), (c) and (d) unrecorded; no outcome depends on them.
+- **Open spec tension (owner not yet answered):** T-1 Verification "`git diff --stat` shows only `execution.md`" vs its DoD "marked … in `design.md` §1A". The Leader followed the DoD.
+- **Open owner question for T-4:** P-20 pick rule: lowest PK, or active row first, then lowest PK (prod: 135 → 20 ambiguous groups).
+- **Budget running totals (design §13):** tasks 2 / 7 · LOC ≈ 275 code + ≈ 330 spec/evidence lines / ~1 400 · review rounds 4 / ~10. Within budget.
+- **Final verification:** green (re-run VERIFIED, Reviewer PASS on attempt 3)

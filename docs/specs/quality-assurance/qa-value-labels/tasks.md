@@ -20,7 +20,7 @@
 
 Review values follow the template: `skip-eligible`, `checklist`, `full`, `lenses`.
 
-### [~] QVL-T-1 — Settle the row premises
+### [x] QVL-T-1 — Settle the row premises
 
 - **Type:** rollout (evidence, no code)
 - **Description:**
