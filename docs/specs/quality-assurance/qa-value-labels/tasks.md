@@ -37,7 +37,7 @@ Review values follow the template: `skip-eligible`, `checklist`, `full`, `lenses
 - **Blocks:** T-4 (the P-14 / P-18 / P-20 outcomes pick the source shape)
 - **Estimate:** S
 - **Review:** `skip-eligible`. The claim it must prove: no file outside `execution.md` changes, and every number in the entry comes from a quoted command run in the session.
-- **Verification:** `git diff --stat` shows only `execution.md`. Every outcome row quotes its query and result.
+- **Verification:** `git diff --stat` shows only `execution.md` and the `design.md` §1A rows P-14, P-18, P-20, P-21 (amended 2026-11-09, owner). Every outcome row quotes its query and result.
 - **Falsifier:** a P-14 outcome written without the query that produced it, or written for test only when the owner did not run prod. Either case reads as not settled.
 - **Red run:** n/a (evidence task)
 - **Disqualifier:** a prod row that the owner did not observe stays `UNVERIFIED`.
@@ -131,7 +131,7 @@ Review values follow the template: `skip-eligible`, `checklist`, `full`, `lenses
   - Queries run concurrently.
   - A throw propagates to the caller's `guarded` boundary, which applies to an unconfigured ToC as well (P-6).
 - **Implements:** QVL-R-3 (BUT no markup), QVL-R-4 (both scenarios, including the BUT clause), QVL-R-7 (BUT no per-id statement), QVL-R-9 (no partial labels), D-5
-- **Files (expected):** `onecgiar-pr-server/src/api/qa-catalog/values/label.resolver.ts`, `label.resolver.spec.ts`
+- **Files (expected):** `onecgiar-pr-server/src/api/qa-catalog/values/label.resolver.ts`, `label.resolver.spec.ts`; `values/label-sources.ts` limited to the `toc_results_indicators` entry (add `is_active` to its columns and fix its pick-rule comments; amended 2026-11-09 after the owner's P-20 pick-rule decision)
 - **Depends on:** T-1, T-2
 - **Blocks:** T-5
 - **Estimate:** M
@@ -203,7 +203,7 @@ Review values follow the template: `skip-eligible`, `checklist`, `full`, `lenses
     - a per-list label table (55 rows: kind, rule, places the form differs, whether `null` can happen), from design §5 as finally verified;
     - "What QA must NOT assume";
     - known gap 6 narrowed;
-    - new known gaps: impact-area filter, AVISA ToC levels, table-sourced text drift, ToC indicator ids carrying several descriptions (P-20, lowest PK wins), latency not measured (no eligible prtest batch);
+    - new known gaps: impact-area filter, AVISA ToC levels, table-sourced text drift, ToC indicator ids carrying several descriptions (P-20, active row first, then lowest PK), latency not measured (no eligible prtest batch);
     - the person-bearing keys table names `users` and `directory_users` labels;
     - change log v1.33, stating `catalog_version` unchanged at 2026.34.
   - In `onecgiar_qa`, on a new branch, update `server/src/ingestion/fixtures/results-details.json` to the contract example verbatim, with `labels` and `catalog_version` 2026.34. Run QA's ingestion specs.

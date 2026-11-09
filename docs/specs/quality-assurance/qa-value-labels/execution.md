@@ -379,7 +379,7 @@ SELECT COUNT(*) AS groups_differing_across_phase_free_grouping FROM (SELECT rela
   - **Reviewer verdict:** `PASS` (lens-checklist mode). All 55 entries match design §5: kind, key column, columns, composition and the type-9 override. The Reviewer spot-checked entity metadata (`clarisa_center.code` `@PrimaryColumn`, `institutionId` `@JoinColumn`; no `namingStrategy`, so the green metadata spec is real evidence for P-17). Disqualifiers do not apply: completeness walks the real `CATALOG_FIELDS` for each year in `CATALOG_VERSIONS`, and the mirror reads the real client files with `readFileSync`. The reds fail on behavioral assertions. R-10 holds. No contradiction with the 2026-11-09 amendments. Sources: 30 table + 3 ToC + 1 chain (matches §8). Adaptation (1) is within the task.
   - **runtime events:** none
 - **continuations:** none
-- **spawns:** implementer 58 calls, 226 343 tokens, ended partial (assumptions only, no owed item); reviewer — `not reported by host`, ended complete
+- **spawns:** implementer 58 calls, 226 343 tokens, ended partial (assumptions only, no owed item); reviewer 13 calls, 83 408 tokens, ended complete
 - **Adaptations (Implementer), recorded as spec deviations:**
   1. **`toc_melia_studies`**: `toc_results_melias` is not in `LOOKUP_SOURCES`, and `lookup-sources.ts` had to stay unchanged (Consumers). A `TOC_LABEL_ONLY_SOURCES` fallback map in `label-sources.ts` (PK `id`, P-18) is used by `resolveTocLabelSource`, which delegates to `resolveLookupSource` for the three registered ToC sources. This departs from §5 / T-2's "ToC through `resolveLookupSource`" for one list. The Reviewer judged it the only narrow path. **Deviation accepted by the Leader**; a one-line `LOOKUP_SOURCES` entry would remove it if that file is ever reopened.
   2. `toc_levels` cites the server file `toc/toc-level/toc-level.service.ts:30-48` (`tree: 'server'`, P-9).
@@ -404,3 +404,17 @@ SELECT COUNT(*) AS groups_differing_across_phase_free_grouping FROM (SELECT rela
 |---|---|---|
 | QVL-T-4 | `resolveTocLabelSource` returns `undefined` for an unknown source **and** for an unset `DB_TOC`. The resolver must throw (`fail(...)`), never map it to `null` labels (R-9, P-6) | T-2 Reviewer ADVISORY |
 | QVL-T-4 | ToC indicator pick rule: lowest PK (owner decision 2026-11-09). Whether to prefer active rows first is a pending owner question | Owner decisions |
+
+### Owner decisions at the T-2 gate (2026-11-09)
+
+The owner answered "Si, adelante" to three pending questions. The Leader recorded the reading of that answer and stated it to the owner, with an offer to change item 1.
+
+| Decision | Reading recorded | Spec edits |
+|---|---|---|
+| P-20 pick rule | **Active row first, then lowest PK.** No row is filtered out, so OQ-1 holds. Prod ambiguity: 135 groups → 20 | `design.md` §5 `toc_results_indicators` row, §1A P-20, §14; `tasks.md` T-6 (gap wording), T-4 Files (the `toc_results_indicators` entry of `label-sources.ts` may change: `is_active` column and comments) |
+| Budget | **Overrun accepted.** New escalation point: total LOC > ~2 800 (2× the §13 estimate). Recorded as an owner decision, not `auto-approved` | none (design §13 stays as the original estimate) |
+| T-1 spec tension | **Approved.** T-1 may touch the §1A rows | `tasks.md` T-1 Verification amended |
+
+- **Sweep:** `grep "lowest PK wins"` over `requirements.md`, `design.md` and `tasks.md` → no matches. The registry comments at `label-sources.ts:84-85,429` still say "lowest primary key wins" for indicators; T-4 updates them, per its amended Files line. `toc_melia_studies` keeps "lowest PK" (P-18: equal titles).
+- **Superseded:** the forward pointer "ToC indicator pick rule: lowest PK" (T-2 table) → active row first, then lowest PK.
+- **Carry to the T-4 Reviewer brief:** conformance to `design.md` §5 (indicators row), §1A P-20 and §14, as amended at this gate.
