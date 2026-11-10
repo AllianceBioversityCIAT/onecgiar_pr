@@ -443,7 +443,7 @@ The owner answered "Si, adelante" to three pending questions. The Leader recorde
 - **Reviewer verdict:** `PASS` (lens-checklist). Conforms to the task, R-1/2/3/4/7/9, NFR §6, D-5, design §2.2/§5/§7/§8/DD-3 and P-5/P-6/P-20. All four forward pointers hold, and so do all the execute-time edits. Statement grouping matches §8 (`toc_results` + `eoi_outcomes` share one statement). An undefined ToC source throws before any query (`calls: []`). Messages carry only the public control-list name. Output keys are the exact `union` ids. All 7 reds fail on behavioral assertions. The `TocSource.columns` doc-comment edit is accepted as within "fix its pick-rule comments".
   - **runtime events:** none
 - **continuations:** 1 (remove the `<` assertion after the owner decision)
-- **spawns:** implementer 39 calls, 189 707 tokens, ended partial (owner decision owed); implementer (continuation, resumed) 10 calls, 200 225 tokens cumulative, ended complete; reviewer — `not reported by host`, ended complete
+- **spawns:** implementer 39 calls, 189 707 tokens, ended partial (owner decision owed); implementer (continuation, resumed) 10 calls, 200 225 tokens cumulative, ended complete; reviewer 13 calls, 82 606 tokens, ended complete
 - **ADVISORY (4R, Reviewer; recorded only):**
   - RISK/READABILITY: active-first is switched on implicitly by `columns.includes('is_active')`. Adding `is_active` to another ToC source later would silently change its pick rule. An explicit `pick` field, or a registry spec that only indicators list `is_active`, would close this.
   - RELIABILITY: lower-casing keys merges ids that differ only in case on a case-sensitive collation, and MySQL PAD SPACE (`'X '` = `'X'`) misses in the TypeScript lookup, giving `null`. **Forward pointer to T-6 (contract gap).**
@@ -463,3 +463,69 @@ The owner answered "Si, adelante" to three pending questions. The Leader recorde
 |---|---|---|
 | QVL-T-5 | Call `resolveLabels(union, { run, env })` inside `guarded` with the counted `run`. Driver errors and the unavailable-ToC throw propagate raw; `guarded` must turn them into the generic 500 (R-9). Collect with `collectLabels(results, toRead)`, where `toRead` is the returned fields only (T-3 pointer) | T-4 report |
 | QVL-T-6 | Contract gaps: (a) the chain's second statement is skipped when no hop-1 row has a foreign key, so "+1 per chain" is an upper bound; (b) keys match case-insensitively, per column collation; a trailing-space id gives `null` | T-4 Reviewer ADVISORY |
+
+### QVL-T-5 — Wire `labels` into `details`
+
+- **Final status:** PASS
+- **Date:** 2026-11-10
+- **Implementer attempts:** 1
+- **Skills / effort:** `nestjs-expert`, `api-design-principles`, `tdd` (task defaults) · effort **`high`**, one level above the T2 default. Reason: a payload contract change in a shared service
+- **Attempt 1**
+  - **Files changed:**
+    - `onecgiar-pr-server/src/api/qa-catalog/qa-results.service.ts` (+40). After projection, `collectLabels(projected, toRead)` and `resolveLabels(union, { run, env })` run inside one `guarded`, through the counted `run`. `sliceLabels` builds a new per-result object, and items become `{ ...item, labels }`.
+    - `dto/qa-results-response.dto.ts` (+10): `QaResultsDetailsItem.labels`, typed and documented.
+    - `qa-results.details.spec.ts` (+336): the `:218` pin, the log assertion, and a new `labels` block.
+  - **Implementer verification:**
+    - `npx jest src/api/qa-catalog --silent --reporters=summary --forceExit --maxWorkers=2` → 51 suites, 1227 passed. The snapshot guard is included, and `catalog_version` stays 2026.34.
+    - `npx eslint "src/api/qa-catalog/**/*.ts" --quiet` → clean.
+    - `npx tsc --noEmit` → clean.
+  - **Reds (verbatim):**
+    - Pin, before the spec update: `> 218 | expect(Object.keys(res.results[0]).sort()).toEqual(` / `+   "labels",`
+    - Old log assertion: received `"route=/api/qa/results/details year=2026 eligible=1 not_eligible=1 statements=2 labels=0 duration_ms=0"`
+    - F1, collect from raw `values` before `project`/`normalize`: `"capdev_training_lengths": Object { - "4": "Long-term", + "1": "PhD",` (2 specs)
+    - F2, `resolveLabels` outside `guarded`: `Expected constructor: InternalServerErrorException` / `Received constructor: Error` (2 specs)
+    - F3, mutate `values` in place: the golden `expect(realSerialized).toBe(stubbed)` fails. The stubbed run had `"countries":{"840":null}` and the real run `"countries":{"840":"United States"}`, plus keys added inside `values`. The normalized-value spec also fails.
+  - **Evidence re-run (Leader, inline, non-author):**
+    - The same jest command → `Tests: 1227 passed, 1227 total`.
+    - eslint → exit 0.
+    - `tsc` → exit 0.
+    - **VERIFIED**
+  - **Reviewer verdict: `PASS`** (lens checklist). Points the Reviewer checked:
+    - Labels are collected from the projected, normalized `values` with `toRead`.
+    - Collection and resolution run inside `guarded` through the counted `run`, and `values` is never written.
+    - The log line carries counts only.
+    - The R-3 clarification holds, because `sliceLabels` adds no markup.
+    - D-9 holds.
+    - The golden meets its Disqualifier: two separate instances, each serialized at production time, and `toHaveBeenCalledTimes(1)` shows the stub was really used.
+    - Mixed-type batches are sound for every catalog shape. Subfields carry no `result_types`, and the collector walks only the keys a result holds.
+    - R-9: the body is `READ_FAILED_MESSAGE`, and the log holds only the error class. The driver case fails on a table only the label step reads.
+    - `labels=` (sum per result) matches §9's "pairs in the response".
+    - Swagger needs no decorator. §4 names the interface file as "the Swagger DTO", and the route has no response schema.
+  - **runtime events:** none
+- **continuations:** none
+- **spawns:**
+  - implementer: 35 calls, 179 569 tokens, ended partial (assumptions only, no owed item)
+  - reviewer: `not reported by host`, ended complete
+- **Not Done / Assumptions (Implementer, verbatim gist):**
+  - "Position and meaning of `labels=` (after `statements=`, per-result sum) are my reading of design §9. The task did not fix either." The Reviewer judged this acceptable.
+  - The new specs build their own labelled fixtures inside the spec file. Existing `SOURCE` fields carry no `control_list`, so older specs see `labels: {}`.
+  - The reds for the pin and the log line came from running the new service against the old spec. The behaviour specs were written after the code, and the falsifiers show them red.
+- **ADVISORY (4R, Reviewer; recorded only, never gates):**
+  - RELIABILITY: the golden body `[2,1,3]` has no ineligible id, so `not_eligible` is covered only as "both empty".
+  - READABILITY: `labels=` counts a shared id once per result. **Forward pointer to T-6** (contract and log docs).
+  - RISK: the golden's `jest.spyOn` relies on CommonJS output from ts-jest. Under ESM, the `toHaveBeenCalledTimes(1)` check would fail loudly.
+- **Requirements covered:** QVL-R-1, R-2 (end to end), R-5, R-6, R-9, R-10; NFR Observability and Privacy; D-4, D-8, D-9; AC-4, AC-7
+- **Decisions made:** none beyond the Implementer's reading of `labels=`, which the Reviewer accepted.
+- **Issues encountered:** none
+- **Budget running totals:**
+  - tasks: 5 / 7
+  - LOC code + tests: ≈ 2 380 (+378 this task)
+  - review rounds: 7 / ~10
+  - The owner's re-escalation point is ~2 800 LOC, and T-6 adds only docs and the QA fixture.
+- **Final verification:** green (re-run VERIFIED, Reviewer PASS)
+
+### Forward pointers (added after T-5)
+
+| To task | Pointer | Source |
+|---|---|---|
+| QVL-T-6 | Document the log field: `labels=<n>` follows `statements=`, and is the sum over results of the (list, id) pairs each result holds, so a shared id counts once per result | T-5 report and Reviewer ADVISORY |

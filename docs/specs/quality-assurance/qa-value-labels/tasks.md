@@ -153,7 +153,7 @@ Review values follow the template: `skip-eligible`, `checklist`, `full`, `lenses
   - `tsc` clean.
 - **Skills:** `nestjs-expert`, `tdd`, `error-handling-patterns`
 
-### QVL-T-5 — Wire `labels` into `details`
+### [x] QVL-T-5 — Wire `labels` into `details`
 
 - **Type:** server
 - **Description:**

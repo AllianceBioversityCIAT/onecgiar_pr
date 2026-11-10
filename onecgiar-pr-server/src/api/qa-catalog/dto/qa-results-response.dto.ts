@@ -23,14 +23,20 @@ export interface QaResultsListResponse {
 }
 
 /**
- * QRF-R-7 / R-8: body of `POST /api/qa/results/details`. `values` is keyed by catalog field key, nested by subfield key; the
- * `reason` set is the closed `IneligibleReason` list. Additive-only (ADR-004).
+ * QRF-R-7 / R-8: body of `POST /api/qa/results/details`. `values` is keyed by catalog field key, nested by subfield key; `labels` is the per-result
+ * label dictionary of the option ids in `values` (QVL-R-1); the `reason` set is the closed `IneligibleReason` list. Additive-only (ADR-004).
  */
 export interface QaResultsDetailsItem {
   result_id: number;
   result_code: number;
   result_type_key: string;
   values: Record<string, unknown>;
+  /**
+   * QVL-R-1 / R-2: `{ control list: { option id (a string): label | null } }` for every option id held in THIS result's returned
+   * `values`, at any depth; `{}` (never absent) when it holds none. `null` is an id with no row. Person-bearing lists (`users`,
+   * `directory_users`) appear only when a returned person-bearing field holds the id (QVL-R-6). Additive-only (ADR-004).
+   */
+  labels: Record<string, Record<string, string | null>>;
 }
 
 export interface QaResultsNotEligible {

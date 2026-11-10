@@ -10,6 +10,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { stableStringify } from './definitions/content-hash';
 import { CatalogField } from './definitions/types';
 import { QaCatalogService, QaCatalogSource } from './qa-catalog.service';
 import {
@@ -28,7 +29,8 @@ import {
   failingOn,
   fixtureRunner,
 } from './values/fixtures';
-import { PlanQuery } from './values/read-plan';
+import * as labelResolver from './values/label.resolver';
+import { PlanQuery, PlanQueryRunner } from './values/read-plan';
 
 const CAPDEV = {
   ...col(
@@ -216,7 +218,13 @@ describe('QaResultsService.details', () => {
     const res = await details({ result_ids: [1, 1, 99] });
     expect(res.results).toHaveLength(1);
     expect(Object.keys(res.results[0]).sort()).toEqual(
-      ['result_code', 'result_id', 'result_type_key', 'values'].sort(),
+      [
+        'labels',
+        'result_code',
+        'result_id',
+        'result_type_key',
+        'values',
+      ].sort(),
     );
     expect(res.results[0]).toMatchObject({ result_id: 1, result_code: 9001 });
     expect(res.not_eligible).toEqual([{ result_id: 99, reason: 'not_found' }]);
@@ -447,8 +455,330 @@ describe('QaResultsService.details', () => {
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain('/api/qa/results/details');
     expect(lines[0]).toMatch(
-      /year=2026 eligible=1 not_eligible=1 statements=2 duration_ms=\d+/,
+      /year=2026 eligible=1 not_eligible=1 statements=2 labels=0 duration_ms=\d+/,
     );
     expect(lines[0]).not.toMatch(/fx\.title|One|9001|\b4\b/);
+  });
+
+  describe('labels (qa-value-labels QVL-T-5)', () => {
+    const STORED_PHD = 1;
+    const countryField = {
+      ...col('fx.country', 'single_select', 'fx_result', 'country_id'),
+      control_list: 'countries',
+    };
+    const createdByField = {
+      ...col('general.created_by', 'single_select', 'fx_result', 'created_by'),
+      control_list: 'users',
+    };
+    // free text that names a list (skipped) plus its person-bearing subfield, as `general.lead_contact_person` is catalogued
+    const leadField = {
+      ...col('general.lead_contact_person', 'text', 'fx_result', 'lead_name'),
+      subfields: [
+        {
+          key: 'directory_user',
+          label: 'directory user',
+          type: 'single_select' as const,
+          control_list: 'directory_users',
+          storage: {
+            kind: 'column' as const,
+            table: 'fx_result',
+            column: 'lead_dir_id',
+          },
+        },
+      ],
+    };
+    // the capacity-sharing normalizer field: stored term 1 or 2 is length 4 (Long-term) plus that degree (P-2)
+    const lengthField = {
+      ...CAPDEV,
+      control_list: 'capdev_training_lengths',
+      subfields: [
+        {
+          ...CAPDEV.subfields[0],
+          control_list: 'capdev_degrees',
+        },
+      ],
+    };
+    const tocField = {
+      ...col('fx.toc', 'single_select', 'fx_result', 'toc_id'),
+      control_list: 'toc_results',
+    };
+    const LSOURCE: QaCatalogSource = {
+      ...SOURCE,
+      fields: [
+        FX_TITLE,
+        countryField,
+        createdByField,
+        leadField,
+        lengthField,
+      ] as CatalogField[],
+    };
+    const LDB: FixtureDb = {
+      ...FIXTURE_DB,
+      fx_result: [
+        {
+          id: 1,
+          title: 'One',
+          country_id: 170,
+          created_by: 501,
+          lead_name: 'Free Text Name',
+          lead_dir_id: 77,
+          toc_id: 4001,
+        },
+        {
+          id: 2,
+          title: 'Two',
+          country_id: 840,
+          created_by: 502,
+          lead_name: null,
+          lead_dir_id: null,
+          toc_id: null,
+        },
+        {
+          id: 3,
+          title: 'Three',
+          country_id: 170,
+          created_by: 501,
+          lead_name: null,
+          lead_dir_id: null,
+          toc_id: null,
+        },
+      ],
+      // result 1 stores 1 (-> length 4 + degree 1), result 2 stores 3 (-> length 3, no degree, and no row for 3)
+      fx_type: [
+        { fx_type_id: 1, result_id: 1, term: STORED_PHD },
+        { fx_type_id: 2, result_id: 2, term: 3 },
+      ],
+      clarisa_countries: [
+        { id: 170, name: 'Colombia' },
+        { id: 840, name: 'United States' },
+      ],
+      users: [
+        { id: 501, first_name: 'Ana', last_name: 'Tester' },
+        { id: 502, first_name: 'Ben', last_name: 'Checker' },
+      ],
+      ad_users: [{ id: 77, display_name: 'Lead Person' }],
+      capdevs_term: [
+        { capdev_term_id: 1, name: 'PhD' },
+        { capdev_term_id: 4, name: 'Long-term' },
+      ],
+    };
+
+    const buildLabelled = (
+      opts: {
+        source?: QaCatalogSource;
+        run?: PlanQueryRunner;
+        env?: Record<string, string | undefined>;
+      } = {},
+    ) => {
+      const repo = fakeRepository();
+      const run = fixtureRunner(LDB);
+      const service = new QaResultsService(
+        new QaCatalogService(),
+        repo,
+        {} as DataSource,
+      );
+      const details = (body: Record<string, unknown>) =>
+        service.details(
+          { phase_year: 2026, result_ids: [1], ...body } as never,
+          {
+            source: opts.source ?? LSOURCE,
+            run: opts.run ?? run,
+            keys: FIXTURE_KEYS,
+            env: opts.env,
+          },
+        );
+      return { run, details };
+    };
+    const withoutLabels = (res: { results: Array<object> }) => ({
+      ...res,
+      results: res.results.map(({ ...item }) => {
+        delete (item as { labels?: unknown }).labels;
+        return item;
+      }),
+    });
+
+    it('QVL-R-1: labels is keyed by list and by the id as a string, and a missing row is null', async () => {
+      const { details } = buildLabelled();
+      const res = await details({ result_ids: [1, 2] });
+      expect(res.results[0].labels).toEqual({
+        countries: { '170': 'Colombia' },
+        users: { '501': 'Ana Tester' },
+        directory_users: { '77': 'Lead Person' },
+        capdev_training_lengths: { '4': 'Long-term' },
+        capdev_degrees: { '1': 'PhD' },
+      });
+      // result 2 stored 3: length 3 has no row (null, still an entry) and there is no degree to label
+      expect(res.results[1].labels).toEqual({
+        countries: { '840': 'United States' },
+        users: { '502': 'Ben Checker' },
+        capdev_training_lengths: { '3': null },
+      });
+    });
+
+    it('QVL-R-2 / DD-2: each result holds only its own ids, and a mixed-type batch walks each result with the fields that apply to it', async () => {
+      const { details } = buildLabelled();
+      const res = await details({ result_ids: [1, 3] });
+      const [policy, knowledge] = res.results;
+      expect(policy.result_type_key).toBe('policy_change');
+      expect(knowledge.result_type_key).toBe('knowledge_product');
+      // the knowledge product has no capacity-sharing field in its values, so no list of it, though the batch reads it for result 1
+      expect(Object.keys(policy.labels).sort()).toEqual([
+        'capdev_degrees',
+        'capdev_training_lengths',
+        'countries',
+        'directory_users',
+        'users',
+      ]);
+      expect(knowledge.labels).toEqual({
+        countries: { '170': 'Colombia' },
+        users: { '501': 'Ana Tester' },
+      });
+    });
+
+    it('QVL-DD-2 (falsifier target): labels follow the NORMALIZED value - stored 1 is length 4 (Long-term) and degree 1 (PhD), never length 1', async () => {
+      const { details } = buildLabelled();
+      const res = await details({
+        field_keys: ['capacity_sharing.length_of_training'],
+      });
+      expect(res.results[0].values).toEqual({
+        'capacity_sharing.length_of_training': { value: 4, degree: 1 },
+      });
+      expect(res.results[0].labels).toEqual({
+        capdev_training_lengths: { '4': 'Long-term' },
+        capdev_degrees: { '1': 'PhD' },
+      });
+    });
+
+    it('QVL-R-1: a result whose returned values hold no option id gets {} - present, an object, never null', async () => {
+      const { details, run } = buildLabelled();
+      const res = await details({
+        result_ids: [1, 2],
+        field_keys: ['fx.title'],
+      });
+      for (const r of res.results) {
+        expect(r).toHaveProperty('labels');
+        expect(r.labels).toEqual({});
+        expect(Object.getPrototypeOf(r.labels)).toBe(Object.prototype);
+      }
+      expect(run.calls.map((c) => c.table)).toEqual(['fx_result']); // no label statement
+    });
+
+    it('QVL-R-6: field_keys without a person-bearing field gives no users and no directory_users entry, and their tables are not read', async () => {
+      const { details, run } = buildLabelled();
+      const res = await details({
+        result_ids: [1, 2],
+        field_keys: ['fx.title', 'fx.country'],
+      });
+      for (const r of res.results) {
+        expect(Object.keys(r.labels)).toEqual(['countries']);
+      }
+      expect(run.calls.map((c) => c.table).sort()).toEqual([
+        'clarisa_countries',
+        'fx_result',
+      ]);
+    });
+
+    it('QVL-R-6: the person-bearing labels appear with their field, and the free text of lead_contact_person is not labelled', async () => {
+      const { details, run } = buildLabelled();
+      const res = await details({
+        field_keys: ['general.lead_contact_person'],
+      });
+      expect(res.results[0].labels).toEqual({
+        directory_users: { '77': 'Lead Person' },
+      });
+      expect(JSON.stringify(res.results[0].labels)).not.toContain(
+        'Free Text Name',
+      );
+      expect(run.calls.map((c) => c.table).sort()).toEqual([
+        'ad_users',
+        'fx_result',
+      ]);
+    });
+
+    it('QVL-R-5 golden: the response with the label step stubbed equals the real one once labels are removed (serialized copies, order included)', async () => {
+      const bodyAll = { result_ids: [2, 1, 3] };
+      const stub = jest
+        .spyOn(labelResolver, 'resolveLabels')
+        .mockResolvedValue(new Map());
+      const stubbed = stableStringify(
+        withoutLabels(await buildLabelled().details(bodyAll)),
+      );
+      expect(stub).toHaveBeenCalledTimes(1);
+      stub.mockRestore();
+
+      const real = await buildLabelled().details(bodyAll);
+      const realSerialized = stableStringify(withoutLabels(real));
+
+      // the two runs are separate objects serialized when produced: a mutation of `values` by the label step cannot hide in a shared object
+      expect(realSerialized).toBe(stubbed);
+      // non-vacuous: the real run did label, and the order and the not-eligible list are the ones asked for
+      expect(real.results.map((r) => r.result_id)).toEqual([2, 1, 3]);
+      expect(real.results[1].labels.countries).toEqual({ '170': 'Colombia' });
+      // an independent literal for `values`: option ids stay ids, no label text is written into them
+      expect(real.results[1].values).toEqual({
+        'fx.title': 'One',
+        'fx.country': 170,
+        'general.created_by': 501,
+        'general.lead_contact_person': {
+          value: 'Free Text Name',
+          directory_user: 77,
+        },
+        'capacity_sharing.length_of_training': { value: 4, degree: 1 },
+      });
+    });
+
+    describe('QVL-R-9: a failing label read is the generic 500, with no partial labels and no source name', () => {
+      const GENERIC = 'The QA results could not be read';
+      const SOURCE_NAMES =
+        /clarisa_countries|countries|users|prdb_secret|toc_secret_db|doesn't exist|Table|database|DB_TOC|toc_results/i;
+
+      it.each([
+        ['a driver error on a label table', 'driver'],
+        ['an unavailable ToC schema', 'toc'],
+      ])('%s', async (_name, kind) => {
+        const logError = jest
+          .spyOn(Logger.prototype, 'error')
+          .mockImplementation();
+        const run =
+          kind === 'driver'
+            ? failingOn('clarisa_countries', LDB)
+            : fixtureRunner(LDB);
+        const source =
+          kind === 'toc'
+            ? ({ ...LSOURCE, fields: [FX_TITLE, tocField] } as QaCatalogSource)
+            : LSOURCE;
+        const { details } = buildLabelled({ run, source, env: {} });
+        const call = details({ result_ids: [1, 2] });
+        await expect(call).rejects.toBeInstanceOf(InternalServerErrorException);
+        const error = (await call.catch((e) => e)) as HttpException;
+        expect(error.message).toBe(GENERIC);
+        expect(
+          JSON.stringify([error.message, error.getResponse()]),
+        ).not.toMatch(SOURCE_NAMES);
+        const logged = logError.mock.calls.map((c) => String(c[0])).join('\n');
+        expect(logged).toContain('route=/api/qa/results/details year=2026 ');
+        expect(logged).not.toMatch(SOURCE_NAMES);
+        expect(logged).not.toMatch(/\b(170|840|501|Colombia)\b/);
+      });
+    });
+
+    it('D-8: the log line is exactly route, year, eligible, not_eligible, statements (labels included), labels, duration - no id and no label', async () => {
+      const { details } = buildLabelled();
+      await details({
+        result_ids: [1, 2, 3, 99],
+        field_keys: ['fx.country'],
+      });
+      const lines = (Logger.prototype.log as jest.Mock).mock.calls.map((c) =>
+        String(c[0]),
+      );
+      expect(lines).toHaveLength(1);
+      // classify 1 + base read of fx_result 1 + one label statement (clarisa_countries) = 3; pairs held by the 3 results: 3
+      expect(lines[0]).toMatch(
+        /^route=\/api\/qa\/results\/details year=2026 eligible=3 not_eligible=1 statements=3 labels=3 duration_ms=\d+$/,
+      );
+      expect(lines[0]).not.toMatch(
+        /Colombia|United States|170|840|countries|fx\./,
+      );
+    });
   });
 });
