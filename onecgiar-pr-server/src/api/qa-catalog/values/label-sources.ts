@@ -81,8 +81,9 @@ export interface TocSource {
   /** Columns the ids are matched on, any-of (an indicator id may be a `related_node_id` or a row `id`). */
   matchColumns: readonly string[];
   /**
-   * Columns the composer reads, the match columns that are not the primary key included. Several rows can match one id: the resolver
-   * keeps the one with the LOWEST primary key (P-18 for melias, owner decision for indicators, P-20).
+   * Columns the composer reads, the match columns that are not the primary key included. Several rows can match one id and the
+   * resolver picks one in TypeScript, never by SQL row order: the LOWEST primary key (P-18 for melias), or, for a source whose
+   * `columns` include `is_active`, the ACTIVE row first and then the lowest primary key (indicators, P-20, owner decision).
    */
   columns: readonly string[];
   compose: Composer;
@@ -426,15 +427,17 @@ export const LABEL_SOURCES: Readonly<Record<string, LabelSource>> = {
     kind: 'toc',
     source: `${TOC}toc_results_indicators`,
     // the stored id is the node's `related_node_id` for some rows and its numeric `id` for others (P2-2932); `related_node_id` is not
-    // unique (P-20 refuted): the lowest primary key wins and the rest is a known gap
+    // unique (P-20 refuted). The resolver picks ACTIVE row first (`is_active = 1`), then the lowest primary key, and filters nothing
+    // out (OQ-1): an id whose only rows are inactive still gets the inactive row's text. `is_active` is in `columns` because the
+    // pick reads it; the rest of the rows are a known gap in the contract (design section 14)
     matchColumns: ['related_node_id', 'id'],
-    columns: ['related_node_id', 'indicator_description'],
+    columns: ['related_node_id', 'indicator_description', 'is_active'],
     compose: col('indicator_description'),
-    // `tri.id AS indicator_id`, `tri.related_node_id`, `tri.indicator_description`
+    // `tri.id AS indicator_id`, `tri.related_node_id`, `tri.indicator_description` (1023-1030); `tri.is_active` (938)
     sql: {
       tree: 'server',
       file: 'toc/toc-results/toc-results.repository.ts',
-      lines: '1023-1030',
+      lines: '938,1023-1030',
     },
   },
   toc_melia_studies: {

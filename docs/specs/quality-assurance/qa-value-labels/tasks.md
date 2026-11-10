@@ -117,7 +117,7 @@ Review values follow the template: `skip-eligible`, `checklist`, `full`, `lenses
   - `tsc` clean.
 - **Skills:** `nestjs-expert`, `tdd`
 
-### QVL-T-4 — Resolver: batched label reads
+### [x] QVL-T-4 — Resolver: batched label reads
 
 - **Type:** server
 - **Description:**
@@ -126,7 +126,7 @@ Review values follow the template: `skip-eligible`, `checklist`, `full`, `lenses
     - each (table, key column) gets one `PlanQuery` with `any_in` through the counted runner;
     - a chained source gets one follow-up query;
     - ToC schemas come through `resolveLookupSource` (DD-3).
-  - It composes texts in TypeScript, strips no HTML because sources hold none, and asserts that no label contains `<`.
+  - It composes texts in TypeScript and strips no HTML. ~~It asserts that no label contains `<`.~~ Dropped 2026-11-10 (owner decision): a stored text containing `<` is returned as-is and never fails the batch (QVL-R-3 clarified, R-4). Constants and composers add no markup; T-2's specs pin this.
   - A missing row gives `null`; inactive rows are read (OQ-1).
   - Queries run concurrently.
   - A throw propagates to the caller's `guarded` boundary, which applies to an unconfigured ToC as well (P-6).
@@ -276,7 +276,7 @@ T-3 is independent of T-1 and T-2, so it can run in parallel with them.
 | R-2 · Only this result's ids; BUT not the other result's | T-3 |
 | R-2 · Non-select entries are not labelled | T-3 |
 | R-3 · Client-only constant; AND IT MUST be documented as mirroring the client | T-2 (constant + mirror spec), T-6 (contract note) |
-| R-3 · Shown differently in two places; BUT no `<strong>` markup | T-2 (canonical composer), T-4 (no `<` assertion), T-6 (both places named) |
+| R-3 · Shown differently in two places; BUT no `<strong>` markup | T-2 (canonical composer, no markup in constants), T-4 (a stored `<` is returned as-is, never a throw), T-6 (both places named) |
 | R-4 · Missing row; AND the rest answered; BUT not omitted, no 4xx/5xx | T-4 |
 | R-4 · Inactive row | T-4 |
 | R-5 · Golden; BUT no key added, renamed or reshaped in `values` | T-5 |

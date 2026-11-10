@@ -130,7 +130,7 @@ For each result, `labels` SHALL hold one entry per distinct (control list, optio
 - **without decorations** the form adds in some places only: ids, ISO codes, HTML, definitions or descriptions, position numbers, environment- or program-specific prefixes and renames;
 - **with the composition** the form uses consistently for a list (for example a result is `code - title`, a program is `official code - name`).
 
-The contract SHALL state, for each list, the label rule and every place where the form shows a different text. A label never contains HTML.
+The contract SHALL state, for each list, the label rule and every place where the form shows a different text. A label never contains HTML **that the server adds**: no composer or constant introduces markup. A table-sourced label is the stored text as-is, even when it contains `<` (user-entered titles such as "yield < 5 t/ha"), and such a text never fails the batch (QVL-R-4). *Clarified 2026-11-10 at /akili-execute, owner decision.*
 
 #### Scenario: Client-only constant
 

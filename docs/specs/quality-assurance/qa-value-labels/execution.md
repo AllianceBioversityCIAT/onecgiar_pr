@@ -418,3 +418,48 @@ The owner answered "Si, adelante" to three pending questions. The Leader recorde
 - **Sweep:** `grep "lowest PK wins"` over `requirements.md`, `design.md` and `tasks.md` → no matches. The registry comments at `label-sources.ts:84-85,429` still say "lowest primary key wins" for indicators; T-4 updates them, per its amended Files line. `toc_melia_studies` keeps "lowest PK" (P-18: equal titles).
 - **Superseded:** the forward pointer "ToC indicator pick rule: lowest PK" (T-2 table) → active row first, then lowest PK.
 - **Carry to the T-4 Reviewer brief:** conformance to `design.md` §5 (indicators row), §1A P-20 and §14, as amended at this gate.
+
+### QVL-T-4 — Resolver: batched label reads
+
+- **Final status:** PASS
+- **Date:** 2026-11-10
+- **Implementer attempts:** 1 (+1 continuation)
+- **Skills / effort:** `nestjs-expert`, `tdd`, `error-handling-patterns` (task defaults) · effort **`high`**, one level above the T2 default. Reason: SQL over 30+ tables, where a wrong key column or pick rule fails silently
+- **Attempt 1**
+  - **Files changed:** `onecgiar-pr-server/src/api/qa-catalog/values/label.resolver.ts` (new, 302 lines), `label.resolver.spec.ts` (new, 479 lines, 25 tests); `label-sources.ts` (the `toc_results_indicators` entry adds `is_active` to its columns and changes its `sql` cite to `938,1023-1030`; the pick-rule comments and the `TocSource.columns` doc comment are corrected)
+  - **Implementer verification:** `npx jest src/api/qa-catalog/values/label.resolver src/api/qa-catalog/values/label-sources src/api/qa-catalog/values/read-plan src/api/qa-catalog/values/lookup-sources --silent --reporters=summary --maxWorkers=2` → 4 suites, 210 passed; `npx tsc --noEmit` clean; eslint clean
+  - **1 vs 50:** 6 statements each (`clarisa_countries`, `clarisa_institutions`, `clarisa_center` hop 1, `clarisa_institutions` hop 2, `result`, `toc_results`); every statement in the 50-id batch carries 50 ids
+  - **Falsifier reds** (applied to the final code, run, reverted; byte-identical restore):
+    1. One query per id → `✕ a union of 1 id and a union of 50 ids over the same lists issue the same statements` (`- Expected - 0 / + Received + 147`); `✕ the 50-id batch really carries 50 ids per statement ...` (`Expected: 50 / Received: 1`); `✕ lists that share a table share ONE statement, and each list keeps only its own ids` (`+ Received + 3`)
+    2. `eq is_active 1` filter → `✕ an INACTIVE row still labels (OQ-1)` (`- "301": "Retired Partner", / + "301": null,`), plus 9 other tests
+    3. Drop ids with no row → `✕ an id with no row is null and stays in the map; the other ids are answered (QVL-R-4)` (`- "999": null,`)
+    4. Read `clarisa_center` without the chain → `✕ reads the center, then its institution, and labels acronym - name` (`- "CENTER-02": "CIAT - International Center for Tropical Agriculture", / + "CENTER-02": null,`)
+    5. Indicators by lowest PK only → `✕ indicators: the ACTIVE row with the lowest pk wins, whatever the order the rows arrive in` (`- "node-1": "Active low", / + "node-1": "Inactive low",`)
+    6. Pick by returned row order (reversing runner) → 3 reds, incl. `✕ melias: the lowest pk wins, whatever the order the rows arrive in` (`- "m-1": "Lowest pk", / + "m-1": "Higher pk",`)
+  - **Not Done / Assumptions (Implementer):** the `<` assertion would 500 a batch on user-entered text, so it **needed an owner decision**. Plus assumptions with no owed item: no red-before-green (greenfield; mutation reds stand in); the first row by key order wins on a non-unique table key (none today); driver errors propagate raw to T-5's `guarded`; an unknown list throws; keys match case-insensitively (column collation).
+- **Spec tension → owner decision (2026-11-10):** T-4 "asserts that no label contains `<`" vs QVL-R-4 "Resolution of one id SHALL never fail the batch". The owner chose **"Keep text, no check"**. Execute-time spec edits: `requirements.md` QVL-R-3 clarified ("never contains HTML **that the server adds** … a stored text with `<` is returned as-is and never fails the batch"); `tasks.md` T-4 Description (assertion struck) and §5 coverage row R-3. Two-direction sweep: `grep -nE "contains \`<\`|no \`<\`|never contains HTML|no markup|strips no HTML"` over the three spec documents → only the amended text remains.
+- **Continuation 1** (owed item from the owner decision; no attempt consumed): removed the markup check (`put` helper; 4 call sites became `out.set`); fixed the header comments; replaced the exact-markup-failure spec with `a stored text that holds < comes back as-is and the batch answers (QVL-R-3 amended, R-4)`. The red for the old assertion re-applied: `label resolver: list results built a label with markup` / `Tests: 1 failed, 24 passed, 25 total`. **Slip disclosed:** the spec file was truncated mid-edit (the "statements depend on the lists" block was lost) and then restored; the Reviewer confirmed the block is intact (3 tests).
+- **Evidence re-run (Leader, inline, non-author), after the continuation:** the same 4-suite jest command → `Tests: 210 passed, 210 total`; `npx tsc --noEmit` → exit 0; the resolver spec has 25 tests in 6 describe blocks. **VERIFIED**
+- **Reviewer verdict:** `PASS` (lens-checklist). Conforms to the task, R-1/2/3/4/7/9, NFR §6, D-5, design §2.2/§5/§7/§8/DD-3 and P-5/P-6/P-20. All four forward pointers hold, and so do all the execute-time edits. Statement grouping matches §8 (`toc_results` + `eoi_outcomes` share one statement). An undefined ToC source throws before any query (`calls: []`). Messages carry only the public control-list name. Output keys are the exact `union` ids. All 7 reds fail on behavioral assertions. The `TocSource.columns` doc-comment edit is accepted as within "fix its pick-rule comments".
+  - **runtime events:** none
+- **continuations:** 1 (remove the `<` assertion after the owner decision)
+- **spawns:** implementer 39 calls, 189 707 tokens, ended partial (owner decision owed); implementer (continuation, resumed) 10 calls, 200 225 tokens cumulative, ended complete; reviewer — `not reported by host`, ended complete
+- **ADVISORY (4R, Reviewer; recorded only):**
+  - RISK/READABILITY: active-first is switched on implicitly by `columns.includes('is_active')`. Adding `is_active` to another ToC source later would silently change its pick rule. An explicit `pick` field, or a registry spec that only indicators list `is_active`, would close this.
+  - RELIABILITY: lower-casing keys merges ids that differ only in case on a case-sensitive collation, and MySQL PAD SPACE (`'X '` = `'X'`) misses in the TypeScript lookup, giving `null`. **Forward pointer to T-6 (contract gap).**
+  - RELIABILITY: table and chain sources take the first row by key order. That is deterministic only while the key is unique; no spec pins uniqueness for code keys (`clarisa_subnational_scopes.code`, `clarisa_regions.um49Code`).
+  - RESILIENCE: the chain skips hop 2 when no hop-1 row has a foreign key, so §8's "+1 per chain" is an upper bound. **Forward pointer to T-6 (one contract line).**
+  - READABILITY: the Implementer's note describes an "exact post-check" that does not exist as such; the map lookup does that job.
+  - READABILITY: the fixture runner sorts text `orderBy` keys with `Number(...)` (NaN; order undefined). It is harmless while no spec relies on fixture order.
+- **Requirements covered:** QVL-R-3 (server adds no markup; stored `<` as-is), QVL-R-4 (both scenarios), QVL-R-7, QVL-R-9 (throws propagate; no partial map), D-5; AC-3, AC-5 (unit level)
+- **Decisions made:** the owner decision on `<` (above), with execute-time edits to `requirements.md` QVL-R-3 and `tasks.md` T-4 and §5
+- **Issues encountered:** the VPN dropped (test DB `ETIMEDOUT`) before the Leader could count stored `<` titles. That count was informational and not needed after the owner decision.
+- **Budget running totals:** tasks 4 / 7 · LOC code + tests ≈ 2 000 (+ ~790 this task) · review rounds 6 / ~10. Above the §13 estimate of ~1 400; overrun accepted by the owner on 2026-11-09, with the re-escalation point at ~2 800.
+- **Final verification:** green (re-run VERIFIED, Reviewer PASS)
+
+### Forward pointers (added after T-4)
+
+| To task | Pointer | Source |
+|---|---|---|
+| QVL-T-5 | Call `resolveLabels(union, { run, env })` inside `guarded` with the counted `run`. Driver errors and the unavailable-ToC throw propagate raw; `guarded` must turn them into the generic 500 (R-9). Collect with `collectLabels(results, toRead)`, where `toRead` is the returned fields only (T-3 pointer) | T-4 report |
+| QVL-T-6 | Contract gaps: (a) the chain's second statement is skipped when no hop-1 row has a foreign key, so "+1 per chain" is an upper bound; (b) keys match case-insensitively, per column collation; a trailing-space id gives `null` | T-4 Reviewer ADVISORY |
