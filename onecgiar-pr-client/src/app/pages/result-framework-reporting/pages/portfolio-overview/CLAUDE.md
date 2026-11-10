@@ -1,6 +1,6 @@
 # portfolio-overview
 
-**Verified:** 2026-11-05 · spec bugfix/centers-block-status-tiles (2026-11-05) + changes/portfolio-overview-feedback-round/contribution-requests-by-pa (2026-11-04) + funding-filter (Funding bar dimension) + cleanup-and-approved · prior: 2026-10-27
+**Verified:** 2026-11-10 · spec changes/portfolio-typology-bar-chart (2026-11-10) + bugfix/centers-block-status-tiles (2026-11-05) + changes/portfolio-overview-feedback-round/contribution-requests-by-pa (2026-11-04) + funding-filter (Funding bar dimension) + cleanup-and-approved · prior: 2026-10-27
 
 **What this owns:** the **admin-only** `/portfolio-overview` screen — figures for the WHOLE portfolio in the open
 phase: KPI deck, status, results by typology, progress against ToC KPIs, CGIAR Centers, W3/Bilateral projects, filtered results detail + Excel export. Ticket **P2-3304**;
@@ -31,7 +31,7 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 - 🛑 **DD-7, do not re-add a local status highlight:** the status tiles and donut call `toggleValue('status', key)` (`aria-pressed` from `selection().status`); the old local status-filter signal and its toggle are gone. The strip shows when ANY dimension is active; **View in Results Center** only when `resultsCenterLinkable` (only Program / Status / Funding active, each <= 1 value); the link carries `funding` (`extra.funding` in `navigateToResultsCenter`).
 - **Strip jump link** `portfolio-active-filter-jump` ("Show N results ↓", `copy.filters.showResults`): shown when `filteredTotal() > 0`, scrolls to `app-portfolio-results-detail` (`scrollToResultsDetail`). Why: the filtered list is the LAST block of a ~4,600 px page; a tile click alone left users scrolling to the ToC KPI bars and giving up (admin report, 26-oct-2026).
 - 🛑 **Every `navigateToResultsCenter` link carries `phase=<versionId()>`.** This page counts the open phase only; Results Center defaults to every phase of the portfolio (P25 = 2025 + 2026), so without it the same click showed 5 here and 11 there. Results Center reads it into `ResultsListFilterService.requestedPhaseId` and applies it once its phase options load (`results-list-filters.component.ts`, `handleVersioningResponse`).
-- 🛑 **Funding = ONE rule, `fundingOf(row)`** (`portfolio-filters.ts`; exact trimmed `source_name === 'W3/Bilaterals'` = `bilateral`, else `w1w2`). New code calls it; `typology-block/typology.aggregate.ts` and `results-detail/results-detail.rows.ts` still carry their own W3 string test (T-1 advisory, do not copy).
+- 🛑 **Funding = ONE rule, `fundingOf(row)`** (`portfolio-filters.ts`; exact trimmed `source_name === 'W3/Bilaterals'` = `bilateral`, else `w1w2`). New code calls it (typology Center tab does); `results-detail/results-detail.rows.ts` still carries its own W3 string test (T-1 advisory, do not copy).
 - 🛑 **Single-source blocks (`SECTION_SOURCE`): Centers + Projects = `bilateral`, ToC KPI = `w1w2`.** They do not row-filter by Funding: `notAffectedBy` lists Funding as not affected only when the selection excludes the block's source. Centers `applyGlobal` blanks Center and Funding; Projects honours Program + Center; ToC honours Program. KPI, status, typology and results detail honour all six.
 - **Typology Center view is lead-only by design** (it counts the lead Center); the global Center filter matches lead + contributing Centers, so their numbers can differ. Not a bug.
 
@@ -98,11 +98,10 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
   matrix with search, filters, paging, column picker and Excel export (TKP-R-9). Level counts per Program live in
   Typology; the export returns with family #9 `filtered-detail-export`.
 
-## Results by typology (2026-10-15, spec `changes/portfolio-overview-revamp/typology-view`)
+## Results by typology (2026-11-10, spec `changes/portfolio-typology-bar-chart`; supersedes TYV-R-3..6, R-8)
 
-- `components/typology-block/` after the status section, inside `hasFigures()` (skeleton testid
-  `portfolio-overview-skeleton-typology`); type -> level map in `typology.aggregate.ts` (pure).
-- Center dimension is lead-only + W3-only; rows A->Z, catch-all last, no ranking. Its `rows` input is `data.filteredRows()`.
+- `components/typology-block/` after the status section, inside `hasFigures()` (skeleton `portfolio-overview-skeleton-typology`); level cards + `app-pr-viz-chart`: two bars per row (Submitted = every non-`editing` slot, Editing = `resolveStatusSlot === 'editing'`), stacked by type, one token colour per type (`TYPE_TOKEN`), Editing decal, row tooltip (`trigger: 'axis'`). Pure seams: `typology.aggregate.ts` (matrix), `typology.charts.ts` (option + table), `typology.click.ts` (resolver).
+- 🛑 **P/A tab WRITES the global selection** (TYV-R-8 "read-only" is gone): segment -> program + type + bucket slots in ONE `setSelection` (keeps Project/Center/Funding; same click toggles off); P/A label toggles program; catch-all is never a target. **Center tab is view-only** (W3 via `fundingOf`, lead Center, A->Z) — no click writes. Input `rows` = `data.filteredRows()`.
 
 ## Progress against ToC KPIs (2026-10-15, spec `changes/portfolio-overview-revamp/toc-kpi-progress`)
 
