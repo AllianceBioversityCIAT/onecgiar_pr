@@ -505,7 +505,7 @@ The owner answered "Si, adelante" to three pending questions. The Leader recorde
 - **continuations:** none
 - **spawns:**
   - implementer: 35 calls, 179 569 tokens, ended partial (assumptions only, no owed item)
-  - reviewer: `not reported by host`, ended complete
+  - reviewer: 20 calls, 83 923 tokens, ended complete
 - **Not Done / Assumptions (Implementer, verbatim gist):**
   - "Position and meaning of `labels=` (after `statements=`, per-result sum) are my reading of design §9. The task did not fix either." The Reviewer judged this acceptable.
   - The new specs build their own labelled fixtures inside the spec file. Existing `SOURCE` fields carry no `control_list`, so older specs see `labels: {}`.
@@ -529,3 +529,10 @@ The owner answered "Si, adelante" to three pending questions. The Leader recorde
 | To task | Pointer | Source |
 |---|---|---|
 | QVL-T-6 | Document the log field: `labels=<n>` follows `statements=`, and is the sum over results of the (list, id) pairs each result holds, so a shared id counts once per result | T-5 report and Reviewer ADVISORY |
+
+### Owner decisions before T-6 (2026-11-10)
+
+| Decision | Reading recorded | Spec edits |
+|---|---|---|
+| T-6 scope | **`onecgiar_pr` only.** Update `qa-catalog.en.md` (details example with `labels`, synthetic data, the `labels=` log note). `onecgiar_qa` is not touched: QA copies its fixture from the contract example inside its own spec (`assessment/step-1-assessment`). A standalone example, if needed, lives under `onecgiar-pr-server/docs/` | `tasks.md` T-6 Description, Files, Verification, Falsifier, Consumers, DoD |
+| Push | **Ordered** ("Haz push"). Branch `JuanGuzman-io/p2-3910-qa-value-labels` only. The merge to `performance-refactor` is not part of this order | `tasks.md` T-6 DoD |

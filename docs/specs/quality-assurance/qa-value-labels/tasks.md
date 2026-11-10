@@ -206,28 +206,28 @@ Review values follow the template: `skip-eligible`, `checklist`, `full`, `lenses
     - new known gaps: impact-area filter, AVISA ToC levels, table-sourced text drift, ToC indicator ids carrying several descriptions (P-20, active row first, then lowest PK), latency not measured (no eligible prtest batch);
     - the person-bearing keys table names `users` and `directory_users` labels;
     - change log v1.33, stating `catalog_version` unchanged at 2026.34.
-  - In `onecgiar_qa`, on a new branch, update `server/src/ingestion/fixtures/results-details.json` to the contract example verbatim, with `labels` and `catalog_version` 2026.34. Run QA's ingestion specs.
-  - No push without the owner's order.
+  - The details example uses synthetic data (no real person names, no real result titles) and carries `labels`. It documents that `labels=` in the log counts a shared id once per result that holds it.
+  - ~~In `onecgiar_qa`, update `server/src/ingestion/fixtures/results-details.json`~~ (dropped 2026-11-10, owner decision): `onecgiar_qa` is not touched. QA copies its fixture from this contract example inside its own spec (`assessment/step-1-assessment`). If a standalone example file is needed, it lives under `onecgiar-pr-server/docs/`.
+  - Push: ordered by the owner on 2026-11-10 (branch only; the merge to `performance-refactor` still waits for T-7's order).
 - **Implements:** QVL-R-11, QVL-R-3 (contract notes, AND documented)
-- **Files (expected):** `onecgiar-pr-server/docs/qa-catalog.en.md`; `onecgiar_qa/server/src/ingestion/fixtures/results-details.json`
+- **Files (expected):** `onecgiar-pr-server/docs/qa-catalog.en.md` (optionally one example file under `onecgiar-pr-server/docs/`)
 - **Depends on:** T-5
 - **Blocks:** T-7
 - **Estimate:** S
 - **Review:** `checklist`
 - **Verification:**
-  - In `onecgiar_qa/server`: `npx jest src/ingestion --silent`.
-  - A spot check that the contract example and the QA fixture are byte-equal: `diff` of the extracted example against the fixture, after `jq -S`.
+  - The details example, extracted from the doc, parses as JSON (`jq`), and every option id in each result's `values` has an entry in that result's `labels` (a script walks the example).
   - The 55-row table's list names equal the registry keys: a script compares the two sets.
 - **Falsifier:**
   - Remove one row from the contract table → the set comparison names the list.
-  - Change one label in the fixture → the `diff` is non-empty.
+  - Remove one `labels` entry from the example → the walk script names the missing (list, id).
 - **Red run:** `predicted — greenfield artifact (observed in QVL-T-6)`
 - **Disqualifier:** a set comparison that reads list names from the same table it checks is circular. One side must come from the registry, read through `ts-node`.
-- **Consumers:** the QA readers listed in T-5 (their specs run in this task)
+- **Consumers:** QA's `assessment/step-1-assessment` spec, which copies the example (outside this repo)
 - **Definition of done:**
   - The contract is updated and the set comparison matches 55 = 55.
-  - The QA fixture is updated on its branch, and QA's ingestion specs are green.
-  - Neither repository is pushed.
+  - The example passes the walk script; `onecgiar_qa` is untouched.
+  - The branch is pushed (owner order 2026-11-10); nothing is merged.
 - **Skills:** `cognitive-doc-design`, `api-design-principles`
 
 ### QVL-T-7 — Live verification on prtest (HITL)
