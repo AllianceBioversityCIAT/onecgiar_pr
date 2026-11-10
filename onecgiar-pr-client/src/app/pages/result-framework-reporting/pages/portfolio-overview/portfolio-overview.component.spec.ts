@@ -436,10 +436,10 @@ describe('PortfolioOverviewComponent', () => {
       build(OPEN_PHASE);
 
       const charts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
-      expect(charts.length).toBe(2);
+      expect(charts.length).toBe(3);
 
       const titles = charts.map(c => c.componentInstance.chartTitle());
-      expect(titles).toEqual([COPY.statusTitle, 'Status Pipeline']);
+      expect(titles).toEqual([COPY.statusTitle, 'Status Pipeline', COPY.typologyChart.tableCaption]);
 
       for (const chart of charts) {
         expect(chart.componentInstance.options()).toBeTruthy();

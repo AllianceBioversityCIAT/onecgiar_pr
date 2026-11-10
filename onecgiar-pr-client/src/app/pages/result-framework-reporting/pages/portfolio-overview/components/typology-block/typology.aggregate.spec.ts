@@ -1,4 +1,5 @@
-import { breakdownByCenter, breakdownByProgram, levelCards, levelOf } from './typology.aggregate';
+import { centerTypeMatrix, levelCards, levelOf, programTypeMatrix, statusBucket } from './typology.aggregate';
+import type { RawResult } from '../../services/portfolio-overview.service';
 
 const times = <T>(n: number, row: T): T[] => Array.from({ length: n }, () => ({ ...row }));
 const card = (cards: ReturnType<typeof levelCards>, level: string) => cards.find(c => c.level === level)!;
@@ -88,76 +89,118 @@ describe('typology.aggregate (TYV-T-1)', () => {
       expect(levelCards([]).map(c => c.percent)).toEqual([0, 0, 0, 0]);
     });
   });
+});
 
-  describe('breakdownByProgram', () => {
-    it('S-4.1 row and column totals reconcile', () => {
-      const rows = [
-        ...times(2, { submitter: 'SP01', result_type: 'Knowledge product' }),
-        { submitter: 'SP01', result_type: 'Policy change' },
-        { submitter: 'SP02', result_type: 'Impact contribution' },
-        { submitter: 'SP02', result_type: 'Innovation use' },
-        { submitter: 'SP02', result_type: 'Other output' }
-      ];
-      const b = breakdownByProgram(rows);
-      const sp01 = b.rows.find(r => r.key === 'SP01')!;
-      const sp02 = b.rows.find(r => r.key === 'SP02')!;
-      expect(sp01.total).toBe(3);
-      expect(sp01.byLevel).toEqual({ output: 2, outcome: 1, impact: 0, unclassified: 0 });
-      expect(sp02.total).toBe(3);
-      expect(sp02.byLevel).toEqual({ output: 1, outcome: 1, impact: 1, unclassified: 0 });
-      expect(b.rows.reduce((s, r) => s + r.total, 0)).toBe(6);
-      expect(b.showUnclassified).toBe(false);
-    });
+describe('programTypeMatrix (TBC-T-1)', () => {
+  const row = (submitter: string, result_type: string | undefined, status_id: number, extra: Partial<RawResult> = {}): RawResult =>
+    ({ submitter, result_type, status_id, ...extra }) as RawResult;
+  const rep = <T>(n: number, make: () => T): T[] => Array.from({ length: n }, make);
 
-    it('S-4.2 order is by code, not volume', () => {
-      const rows = [...times(300, { submitter: 'SP02', result_type: 'Knowledge product' }), ...times(10, { submitter: 'SP01', result_type: 'Knowledge product' })];
-      expect(breakdownByProgram(rows).rows.map(r => r.key)).toEqual(['SP01', 'SP02']);
-    });
+  // SP01: 6 KP Submitted + 4 KP Editing + 3 Policy Editing, plus one row per status slot and a Draft row.
+  const sp01: RawResult[] = [
+    ...rep(6, () => row('SP01', 'Knowledge product', 3)),
+    ...rep(4, () => row('SP01', 'Knowledge product', 1)),
+    ...rep(3, () => row('SP01', 'Policy change', 1)),
+    row('SP01', 'Impact contribution', 1, { status_name: 'Editing' }),
+    row('SP01', 'Impact contribution', 2, { status_name: 'Quality Assessed' }),
+    row('SP01', 'Impact contribution', 3, { status_name: 'Submitted' }),
+    row('SP01', 'Impact contribution', 6, { status_name: 'Approved' }),
+    row('SP01', 'Impact contribution', 7, { status_name: 'Rejected' }),
+    row('SP01', 'Impact contribution', 4, { status_name: 'Discontinued' }),
+    row('SP01', 'Impact contribution', 8, { status_name: 'Draft' })
+  ];
 
-    it('S-4.3 a row without a P/A code lands in a final No Program row', () => {
-      const rows = [{ submitter: 'SP01', result_type: 'Knowledge product' }, { result_type: 'Policy change' }, { submitter: '  ', result_type: 'Policy change' }];
-      const b = breakdownByProgram(rows);
-      expect(b.rows.map(r => r.key)).toEqual(['SP01', '']);
-      expect(b.rows[1].key).toBe('');
-      expect(b.rows[1].total).toBe(2);
-      expect(b.rows.reduce((s, r) => s + r.total, 0)).toBe(3);
-    });
-
-    it('takes the name from the first non-empty short name or name, and flags unclassified page-wide', () => {
-      const rows = [
-        { submitter: 'SP06', result_type: 'Knowledge product' },
-        { submitter: 'SP06', submitter_short_name: 'Climate Action', result_type: 'Knowledge product' },
-        { submitter: 'SP07', submitter_name: 'Full name', result_type: 'Mystery' }
-      ];
-      const b = breakdownByProgram(rows);
-      expect(b.rows[0].name).toBe('Climate Action');
-      expect(b.rows[1].name).toBe('Full name');
-      expect(b.showUnclassified).toBe(true);
+  describe('statusBucket (TBC-DD-2)', () => {
+    it.each([
+      [1, 'Editing', 'editing'],
+      [2, 'Quality Assessed', 'submitted'],
+      [3, 'Submitted', 'submitted'],
+      [6, 'Approved', 'submitted'],
+      [7, 'Rejected', 'submitted'],
+      [4, 'Discontinued', 'submitted'],
+      [8, 'Draft', 'editing']
+    ])('status %p (%s) -> %s', (status_id, status_name, bucket) => {
+      expect(statusBucket({ status_id, status_name } as RawResult)).toBe(bucket);
     });
   });
 
-  describe('breakdownByCenter', () => {
-    it('S-5.1 reconciles to the W3/Bilateral card; W1/W2 rows never appear', () => {
-      const w3 = 'W3/Bilaterals';
-      const rows = [
-        ...times(3, { source_name: w3, lead_center: 'IITA', result_type: 'Knowledge product' }),
-        ...times(2, { source_name: w3, lead_center: 'CIMMYT', result_type: 'Policy change' }),
-        { source_name: w3, lead_center: '', result_type: 'Knowledge product' },
-        // falsifier: a W1/W2 row with a lead Center must not count
-        { source_name: 'W1/W2', lead_center: 'IITA', result_type: 'Knowledge product' }
-      ];
-      const b = breakdownByCenter(rows);
-      expect(b.rows.map(r => [r.key, r.total])).toEqual([
-        ['CIMMYT', 2],
-        ['IITA', 3],
-        ['', 1]
+  it('counts per segment: KP 6 submitted / 4 editing, Policy 3 editing', () => {
+    const sp = programTypeMatrix(sp01).programs.find(p => p.key === 'SP01')!;
+    expect(sp.submitted.get('Knowledge product')).toBe(6);
+    expect(sp.editing.get('Knowledge product')).toBe(4);
+    expect(sp.editing.get('Policy change')).toBe(3);
+    expect(sp.submitted.get('Policy change') ?? 0).toBe(0);
+    // 7 impact rows: editing, Draft -> editing (2); qa, submitted, approved, rejected, discontinued -> submitted (5)
+    expect(sp.submitted.get('Impact contribution')).toBe(5);
+    expect(sp.editing.get('Impact contribution')).toBe(2);
+  });
+
+  it('submitted + editing = the row count of every P/A', () => {
+    const rows = [...sp01, row('SP02', 'Policy change', 3), row('SP02', 'Other output', 1), row('', 'Knowledge product', 1)];
+    const sum = (m: Map<string, number>) => [...m.values()].reduce((a, b) => a + b, 0);
+    for (const p of programTypeMatrix(rows).programs) {
+      expect(sum(p.submitted) + sum(p.editing)).toBe(p.total);
+      expect(p.total).toBe(rows.filter(r => (r.submitter ?? '') === p.key).length);
+    }
+  });
+
+  it('zero buckets: a P/A with no Editing rows stays with an empty editing map', () => {
+    const p = programTypeMatrix([row('SP11', 'Knowledge product', 3), ...sp01]).programs.find(x => x.key === 'SP11')!;
+    expect(p.editing.size).toBe(0);
+    expect(p.submitted.get('Knowledge product')).toBe(1);
+  });
+
+  it('unclassified type: unmapped and missing types share the "" key', () => {
+    const m = programTypeMatrix([row('SP01', 'Weird', 3), row('SP01', undefined, 1), row('SP01', '  ', 1)]);
+    const sp = m.programs[0];
+    expect(sp.submitted.get('')).toBe(1);
+    expect(sp.editing.get('')).toBe(2);
+    expect(m.types).toEqual([{ key: '', name: '', level: 'unclassified' }]);
+  });
+
+  it('orders P/As naturally (SP2 before SP10), catch-all last', () => {
+    const keys = programTypeMatrix([row('', 'Other output', 3), row('SP10', 'Other output', 3), row('SP2', 'Other output', 3)]).programs.map(p => p.key);
+    expect(keys).toEqual(['SP2', 'SP10', '']);
+  });
+
+  it('types: present-only, level order then declaration order', () => {
+    const m = programTypeMatrix([
+      row('SP01', 'Impact contribution', 3),
+      row('SP01', 'Policy change', 3),
+      row('SP01', 'Other output', 3),
+      row('SP01', 'Knowledge product', 3),
+      row('SP01', 'nope', 3)
+    ]);
+    expect(m.types.map(t => t.key)).toEqual(['Knowledge product', 'Other output', 'Policy change', 'Impact contribution', '']);
+    expect(m.types.map(t => t.level)).toEqual(['output', 'output', 'outcome', 'impact', 'unclassified']);
+  });
+
+  it('canonicalises type spelling and names the P/A from short name then name', () => {
+    const m = programTypeMatrix([row('SP01', ' knowledge  PRODUCT ', 3, { submitter_name: 'Long', submitter_short_name: 'Short' })]);
+    expect(m.programs[0].submitted.get('Knowledge product')).toBe(1);
+    expect(m.programs[0].name).toBe('Short');
+  });
+
+  describe('centerTypeMatrix (TBC-R-10, DD-9)', () => {
+    const w3 = (lead: string | null | undefined, type: string, status_id = 3): RawResult =>
+      ({ lead_center: lead, result_type: type, status_id, source_name: 'W3/Bilaterals' }) as RawResult;
+
+    it('counts W3/Bilateral rows only, by trimmed lead Center, A to Z, catch-all last', () => {
+      const m = centerTypeMatrix([
+        { lead_center: 'CIAT', result_type: 'Knowledge product', status_id: 3, source_name: 'W1/W2' } as RawResult,
+        w3('IRRI', 'Knowledge product'),
+        w3(' CIAT ', 'Policy change', 1),
+        w3(null, 'Other output'),
+        w3('ILRI', 'Other output')
       ]);
-      expect(b.rows[2].key).toBe('');
-      expect(b.rows.reduce((s, r) => s + r.total, 0)).toBe(6);
+      expect(m.programs.map(p => p.key)).toEqual(['CIAT', 'ILRI', 'IRRI', '']);
+      expect(m.programs.reduce((sum, p) => sum + p.total, 0)).toBe(4);
+      expect(m.programs[0].editing.get('Policy change')).toBe(1);
+      expect(m.programs[0].name).toBeUndefined();
     });
 
-    it('returns no rows when the page has no W3/Bilateral rows', () => {
-      expect(breakdownByCenter([{ source_name: 'W1/W2', lead_center: 'IITA' }]).rows).toEqual([]);
+    it('is empty when no row is W3/Bilateral', () => {
+      expect(centerTypeMatrix([{ lead_center: 'CIAT', result_type: 'Other output', source_name: 'W1/W2' } as RawResult]).programs).toEqual([]);
     });
   });
 });

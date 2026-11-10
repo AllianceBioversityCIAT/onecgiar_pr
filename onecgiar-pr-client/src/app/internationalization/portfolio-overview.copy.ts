@@ -22,23 +22,40 @@ export const PORTFOLIO_OVERVIEW_COPY = {
   // Typology view (spec changes/portfolio-overview-revamp/typology-view)
   typologyTitle: 'Results by typology',
   typologySubtitle: 'All results reported in this phase, grouped by level: Output, Outcome and Impact',
-  typologyTableCaption: 'Results by level, broken down by Program / Accelerator or by lead Center',
   levelOutput: 'Output',
   levelOutcome: 'Outcome',
   levelImpact: 'Impact',
   levelUnclassified: 'Unclassified',
   levelEmpty: 'No results at this level',
+  noType: 'No type',
+  // Typology bar chart (spec changes/portfolio-typology-bar-chart, TBC-R-2, R-3, R-7)
+  typologyChart: {
+    bucketLabels: { submitted: 'Submitted', editing: 'Editing' },
+    unclassifiedLabel: 'Unclassified',
+    noProgramLabel: 'No Program / Accelerator',
+    tableCaption: 'Results by Program / Accelerator, status and result type',
+    tableProgramHeader: 'Program / Accelerator',
+    tableStatusHeader: 'Status',
+    tableTotalHeader: 'Total',
+    segmentActionLabel: 'Filter the page to {program}, {bucket}, {type} ({count} results)',
+    programActionLabel: 'Filter the page to {program}'
+  },
+  // "By Center" tab, view-only (TBC-R-10, TBC-DD-9): same shape as typologyChart, no action labels are used
   dimensionProgram: 'By Program / Accelerator',
   dimensionCenter: 'By Center (W3/Bilateral)',
-  dimensionAriaLabel: 'Group the table by',
-  colProgram: 'Program / Accelerator',
-  colCenter: 'Lead Center',
-  colTotal: 'Total',
-  noProgram: 'No Program',
-  noLeadCenter: 'No lead Center',
-  noType: 'No type',
-  centerNote: 'Each W3/Bilateral result counts once, under its lead Center.',
-  centerEmpty: 'No W3/Bilateral results in this phase',
+  dimensionAriaLabel: 'Group the chart by',
+  centerNote: 'Counts the lead Center; the Center filter also matches contributing Centers.',
+  typologyCenterChart: {
+    bucketLabels: { submitted: 'Submitted', editing: 'Editing' },
+    unclassifiedLabel: 'Unclassified',
+    noProgramLabel: 'No lead Center',
+    tableCaption: 'W3/Bilateral results by lead Center, status and result type',
+    tableProgramHeader: 'Lead Center',
+    tableStatusHeader: 'Status',
+    tableTotalHeader: 'Total',
+    segmentActionLabel: '',
+    programActionLabel: ''
+  },
   // Global filters group (design 6.7); GLF-T-4 adds its keys here (spec changes/portfolio-overview-revamp/global-filters, GLF-R-7, GLF-R-9)
   filters: {
     dimensions: { program: 'Program', project: 'Project', center: 'Center', typology: 'Typology', status: 'Status', funding: 'Funding source' },

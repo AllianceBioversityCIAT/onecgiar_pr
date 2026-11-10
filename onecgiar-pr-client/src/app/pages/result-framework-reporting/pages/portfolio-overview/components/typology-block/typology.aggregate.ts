@@ -1,8 +1,11 @@
 import type { RawResult } from '../../services/portfolio-overview.service';
+import { fundingOf } from '../../services/portfolio-filters';
+import { resolveStatusSlot } from '../../services/portfolio-status-slot';
+import { naturalCodeCompare } from '../toc-kpi-block/toc-kpi.format';
 
 /**
  * Typology view (spec typology-view, TYV-R-1..R-5) — pure aggregation of the page rows by level
- * (Output / Outcome / Impact) and by Program / Accelerator or lead Center. One pass per function.
+ * (Output / Outcome / Impact) and the Program x status x type matrix. One pass per function.
  */
 export type TypologyLevel = 'output' | 'outcome' | 'impact' | 'unclassified';
 
@@ -15,20 +18,6 @@ export interface LevelCard {
   percent: number;
   /** `name` is '' when the row has no type; the view turns it into copy. */
   types: { name: string; count: number }[];
-}
-
-export interface BreakdownRow {
-  /** Code / acronym, or '' for the catch-all row (the view turns it into copy). */
-  key: string;
-  name?: string;
-  total: number;
-  byLevel: Record<TypologyLevel, number>;
-}
-
-export interface Breakdown {
-  rows: BreakdownRow[];
-  /** True when any row of THIS breakdown is unclassified (per dimension; the view derives the page-wide column rule from the cards). */
-  showUnclassified: boolean;
 }
 
 /** TYV-R-1 — canonical type name → level (spelling as in `CATEGORY_SHORT_NAMES`). */
@@ -49,8 +38,6 @@ const normalize = (value: string): string => value.trim().replace(/\s+/g, ' ').t
 const CANONICAL_BY_KEY = new Map<string, string>(Object.keys(TYPE_LEVELS).map(name => [normalize(name), name]));
 
 const text = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
-
-const W3_SOURCE = 'W3/Bilaterals';
 
 const emptyByLevel = (): Record<TypologyLevel, number> => ({ output: 0, outcome: 0, impact: 0, unclassified: 0 });
 
@@ -90,58 +77,80 @@ export function levelCards(rows: readonly RawResult[]): LevelCard[] {
   }));
 }
 
-interface Grouped {
+export type StatusBucket = 'submitted' | 'editing';
+
+export interface ProgramTypeRow {
   key: string;
   name?: string;
+  submitted: Map<string, number>;
+  editing: Map<string, number>;
   total: number;
-  byLevel: Record<TypologyLevel, number>;
 }
 
-function group(rows: readonly RawResult[], keyOf: (row: RawResult) => string, nameOf: (row: RawResult) => string): Breakdown {
-  const groups = new Map<string, Grouped>();
-  let showUnclassified = false;
+export interface ProgramTypeMatrix {
+  programs: ProgramTypeRow[];
+  types: { key: string; name: string; level: TypologyLevel }[];
+}
+
+/** TBC-DD-2 — same rule as the Status filter: only the `editing` slot is Editing; every other slot is Submitted. */
+export function statusBucket(row: RawResult): StatusBucket {
+  return resolveStatusSlot(row) === 'editing' ? 'editing' : 'submitted';
+}
+
+const bump = (map: Map<string, number>, key: string): void => {
+  map.set(key, (map.get(key) ?? 0) + 1);
+};
+
+const LEVEL_RANK: Record<TypologyLevel, number> = { output: 0, outcome: 1, impact: 2, unclassified: 3 };
+const TYPE_ORDER = new Map<string, number>(Object.keys(TYPE_LEVELS).map((name, index) => [name, index]));
+
+/** Grouping rule of a matrix: row key, optional display name, and the order of the row keys ('' = catch-all, always last). */
+interface MatrixGrouping {
+  keyOf: (row: RawResult) => string;
+  nameOf?: (row: RawResult) => string | undefined;
+  compare: (a: string, b: string) => number;
+}
+
+/** Status bucket x result type counts per group, one pass (TBC-R-2; TBC-DD-9 generalises the key). Type key is the canonical name, '' = Unclassified. */
+function typeMatrix(rows: readonly RawResult[], grouping: MatrixGrouping): ProgramTypeMatrix {
+  const programs = new Map<string, ProgramTypeRow>();
+  const typeKeys = new Set<string>();
   for (const row of rows) {
-    const key = keyOf(row);
-    let entry = groups.get(key);
+    const key = grouping.keyOf(row);
+    let entry = programs.get(key);
     if (!entry) {
-      entry = { key, total: 0, byLevel: emptyByLevel() };
-      groups.set(key, entry);
+      entry = { key, submitted: new Map(), editing: new Map(), total: 0 };
+      programs.set(key, entry);
     }
-    if (!entry.name) entry.name = nameOf(row) || undefined;
-    const level = levelOf(row.result_type);
+    if (!entry.name && key !== '') entry.name = grouping.nameOf?.(row) || undefined;
+    const typeKey = canonicalType(row.result_type) ?? '';
+    typeKeys.add(typeKey);
+    bump(statusBucket(row) === 'editing' ? entry.editing : entry.submitted, typeKey);
     entry.total++;
-    entry.byLevel[level]++;
-    if (level === 'unclassified') showUnclassified = true;
   }
-  const ordered = [...groups.values()].sort((a, b) => {
+  const ordered = [...programs.values()].sort((a, b) => {
     if (a.key === '' || b.key === '') return a.key === '' ? 1 : -1;
-    return a.key.localeCompare(b.key);
+    return grouping.compare(a.key, b.key);
   });
-  return {
-    rows: ordered.map(entry => ({
-      key: entry.key,
-      ...(entry.name && entry.key !== '' ? { name: entry.name } : {}),
-      total: entry.total,
-      byLevel: entry.byLevel
-    })),
-    showUnclassified
-  };
+  const types = [...typeKeys]
+    .map(key => ({ key, name: key, level: levelOf(key) }))
+    .sort((a, b) => LEVEL_RANK[a.level] - LEVEL_RANK[b.level] || (TYPE_ORDER.get(a.key) ?? 0) - (TYPE_ORDER.get(b.key) ?? 0));
+  return { programs: ordered, types };
 }
 
-/** TYV-R-4 — all sources, keyed by `submitter`; rows without a code go to the '' catch-all. */
-export function breakdownByProgram(rows: readonly RawResult[]): Breakdown {
-  return group(
-    rows,
-    row => text(row.submitter),
-    row => text(row.submitter_short_name) || text(row.submitter_name)
-  );
+/** TBC-R-2 — P/A x status bucket x result type counts. Natural code order (SP2 before SP10), catch-all last. */
+export function programTypeMatrix(rows: readonly RawResult[]): ProgramTypeMatrix {
+  return typeMatrix(rows, {
+    keyOf: row => text(row.submitter),
+    nameOf: row => text(row.submitter_short_name) || text(row.submitter_name),
+    compare: naturalCodeCompare
+  });
 }
 
-/** TYV-R-5 — W3/Bilateral rows only, keyed by the trimmed lead Center; empty goes to the '' catch-all. */
-export function breakdownByCenter(rows: readonly RawResult[]): Breakdown {
-  return group(
-    rows.filter(row => text(row.source_name) === W3_SOURCE),
-    row => text(row.lead_center),
-    () => ''
+/** TBC-R-10 / DD-9 — same matrix for W3/Bilateral rows only, keyed by trimmed lead Center, A to Z, rows without one last. */
+export function centerTypeMatrix(rows: readonly RawResult[]): ProgramTypeMatrix {
+  return typeMatrix(
+    rows.filter(row => fundingOf(row) === 'bilateral'),
+    { keyOf: row => text(row.lead_center), compare: (a, b) => a.localeCompare(b) }
   );
 }
