@@ -9,7 +9,7 @@
 | Type | Change |
 | Deliverable | software |
 | Approval Mode | gated |
-| Requirement source | Service-desk ticket from Nicoleta (screenshot attached to `/akili-propose`, 2026-11-10). Ticket ID **not yet recorded** — OQ-5 |
+| Requirement source | Service-desk ticket from Nicoleta (screenshot attached to `/akili-propose`, 2026-11-10). Ticket **INC-168045** (OQ-5, recorded 2026-11-10) |
 | Visual source | None (screenshot of the current block only) |
 | Depends on | none |
 | Parallel-safe | yes (touches only `typology-block/` + copy) |

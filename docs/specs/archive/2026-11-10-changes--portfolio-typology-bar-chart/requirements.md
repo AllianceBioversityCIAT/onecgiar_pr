@@ -175,7 +175,7 @@ The chart SHALL expose an accessible table (P/A × bucket × type with counts) t
 | OQ-2 | Keep level cards? | Yes |
 | OQ-3 | Remove the Center tab? | **No — user 2026-11-10: keep it as a tab, view-only (TBC-R-10)** |
 | OQ-4 | Chart narrows itself after a click | Accepted |
-| OQ-5 | Ticket ID | Pending |
+| OQ-5 | Ticket ID | **INC-168045** (user, 2026-11-10 — after the commits; not in their subjects) |
 
 ## 11. Pivot P-1 amendments (2026-11-10, user HITL feedback at T-5)
 
