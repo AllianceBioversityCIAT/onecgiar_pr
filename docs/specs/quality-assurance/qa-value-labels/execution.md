@@ -575,7 +575,7 @@ The owner answered "Si, adelante" to three pending questions. The Leader recorde
   - LOC code + tests: ≈ 2 380 (docs only this task)
   - review rounds: 9 / ~10
 
-### QVL-T-7 — Live verification on prtest (in progress, 2026-11-10)
+### QVL-T-7 — Live verification on prtest (2026-11-10)
 
 `performance-refactor` was fast-forwarded to `c2053151b` (10 commits of P2-3910). Calls ran from the session scratchpad (`t7-cat.js`, `t7-det.js`, `t7-walk.py`); the QA key was read from the mode-600 file and never printed.
 
@@ -600,5 +600,13 @@ The owner answered "Si, adelante" to three pending questions. The Leader recorde
 | tag_levels | 1 | Not Targeted |
 | users | 606 | present |
 
-- **Step 2, AC-2:** owed by the owner. The owner reads the rendered prtest form of result 8793; the Leader compares it with the table above. A comparison against the design table is not evidence (T-7 Disqualifier).
+- **Step 2, AC-2:** the owner read the rendered prtest Reporting form of result 8793 on 2026-11-10 and compared it with the table above.
+  - **Evidence:** the form shows the evidence type link with `hdl.handle.net/10568/184965`. The label `Link` matches the type. The URL is not a label: it comes in `values` (`evidence.items[0].link`), as designed.
+  - **Impact-area tags:** the five tags (`general.gender_tag`, `climate_tag`, `nutrition_tag`, `environment_tag`, `poverty_tag`, all id `1`) show "0 Not Targeted" in the segmented control (owner screenshot). The label `Not Targeted` matches the text. The digit prefix (id minus 1) is already documented at `qa-catalog.en.md:568`.
+  - **Rest:** "De resto veo todo ok" (owner): result level, geographic scope, region, country, centers, program, status and type all match.
+  - **AC-2: PASS for `knowledge_product`**
 - **Step 3:** `statements=` is in the server log; read it only if the owner shares the line.
+- **Step 3:** `statements=` not shared; not recorded.
+- **Known gap (owner closed T-7 with it, 2026-11-10):** AC-1 and AC-2 were checked live for `knowledge_product` only. prtest has a single eligible 2026 result. The other 8 catalogued types are covered by the unit specs (T-3 to T-5) and the registry checks (T-2), but not by a live read. Re-check them on prtest or prod once eligible results of those types exist.
+- **Final status:** PASS (AC-1 and AC-2 for `knowledge_product`; AC-8), plus the known gap above.
+- **Budget final:** tasks 7 / 7 · LOC code + tests ≈ 2 380 (owner ceiling ~2 800) · review rounds 9 / ~10.

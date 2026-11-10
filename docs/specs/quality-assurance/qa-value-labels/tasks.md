@@ -230,7 +230,7 @@ Review values follow the template: `skip-eligible`, `checklist`, `full`, `lenses
   - The branch is pushed (owner order 2026-11-10); nothing is merged.
 - **Skills:** `cognitive-doc-design`, `api-design-principles`
 
-### [~] QVL-T-7 — Live verification on prtest (HITL)
+### [x] QVL-T-7 — Live verification on prtest (HITL)
 
 - **Type:** rollout
 - **Description:** After the owner orders the push and merge to `performance-refactor` and the deploy lands:
