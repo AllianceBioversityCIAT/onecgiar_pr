@@ -51,7 +51,5 @@ export const FARMER_FOLLOW_UP_COPY = {
       description:
         'Grew a variety, applied a practice, actively used a digital tool or service, took up a product. Application is supported by the attached evidence (survey, plot observation, purchase records, platform logs).'
     }
-  ],
-  helper:
-    'If your numbers include both groups, add the actor type a second time and report each group separately. Receiving and applying are not the same as benefiting; benefit is reported as impact evidence.'
+  ]
 } as const;

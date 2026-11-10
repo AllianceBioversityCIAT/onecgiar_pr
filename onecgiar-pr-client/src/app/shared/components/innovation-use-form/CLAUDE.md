@@ -1,6 +1,6 @@
 # innovation-use-form
 
-**Verified:** 2026-11-03 · qa-development-2026-ss · T-7 findings (re-click Households restores the grid; unsaved Households "How many" required); IFC-T-7 fixes (Individuals keeps a hand-set single total; Q-b gap); IFC-T-4 (changes/innovation-use-farmer-count-nature): Farmers follow-up block, gate and Households coupling (uncommitted); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update rules moved to `shared/utils/current-use-update.util.ts` (shared with the bilateral form); prior: 2026-09-11 · branch performance-refactor · 5791b85b9
+**Verified:** 2026-11-10 · qa-development-2026-ss · quick/remove-farmer-helper-note (Nicoleta: italic helper note under Q-b removed, `helper` key dropped); prior: 2026-11-03 · T-7 findings (re-click Households restores the grid; unsaved Households "How many" required); IFC-T-7 fixes (Individuals keeps a hand-set single total; Q-b gap); IFC-T-4 (changes/innovation-use-farmer-count-nature): Farmers follow-up block, gate and Households coupling (uncommitted); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update rules moved to `shared/utils/current-use-update.util.ts` (shared with the bilateral form); prior: 2026-09-11 · branch performance-refactor · 5791b85b9
 
 ## What it is
 The shared Innovation Use questionnaire: use level (0-9), narrative/actors blocks, the
@@ -67,7 +67,8 @@ Under the "Actor type" select of every **Farmers** row, in BOTH blocks (current 
 #farmerFollowUp>` (end of the `.html`, rendered through `ngTemplateOutlet`) asks Q-a (households / individual
 actors) and Q-b (information received / innovation applied). Copy, codes and the Farmers id live in
 `farmer-follow-up.ts` — **verbatim from `docs/specs/changes/.../mockup/farmer-follow-up-questions.png`, pinned
-string by string in the spec; never paraphrase** (QA reads it back). The mock-up's developer note ("Single choice.
+string by string in the spec; never paraphrase** (QA reads it back). The mock-up's italic helper note ("If your
+numbers include both groups…") was removed on Nicoleta's request (2026-11-10) — do not restore it. The mock-up's developer note ("Single choice.
 Stored as ...") is NOT copy and is never rendered.
 
 - 🛑 **Gate = `isFarmerFollowUpRow(actor)`**: `!isIpsr` + `isPhaseYearAtLeast(2026)` + `source_name !== 'W3/Bilaterals'`

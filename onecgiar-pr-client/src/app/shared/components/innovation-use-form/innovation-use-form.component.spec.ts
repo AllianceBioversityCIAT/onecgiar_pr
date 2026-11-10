@@ -1540,9 +1540,7 @@ describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
       expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[1].description).toBe(
         'Grew a variety, applied a practice, actively used a digital tool or service, took up a product. Application is supported by the attached evidence (survey, plot observation, purchase records, platform logs).'
       );
-      expect(FARMER_FOLLOW_UP_COPY.helper).toBe(
-        'If your numbers include both groups, add the actor type a second time and report each group separately. Receiving and applying are not the same as benefiting; benefit is reported as impact evidence.'
-      );
+      expect('helper' in FARMER_FOLLOW_UP_COPY).toBe(false);
       expect(FARMERS_ACTOR_TYPE_ID).toBe(1);
     });
   });
@@ -1561,7 +1559,7 @@ describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
       expect(text).toContain(FARMER_FOLLOW_UP_COPY.useNatureOptions[0].description);
       expect(text).toContain(FARMER_FOLLOW_UP_COPY.useNatureOptions[1].label);
       expect(text).toContain(FARMER_FOLLOW_UP_COPY.useNatureOptions[1].description);
-      expect(text).toContain(FARMER_FOLLOW_UP_COPY.helper);
+      expect(text).not.toContain('If your numbers include both groups');
       // Q-a and Q-b are the required radio groups, with the verbatim questions.
       const radios = els[0].queryAll(By.css('app-pr-radio-button'));
       expect(radios.map(r => r.properties['label'])).toEqual([FARMER_FOLLOW_UP_COPY.countUnitQuestion, FARMER_FOLLOW_UP_COPY.useNatureQuestion]);
