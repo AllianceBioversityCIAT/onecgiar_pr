@@ -574,3 +574,31 @@ The owner answered "Si, adelante" to three pending questions. The Leader recorde
   - tasks: 6 / 7
   - LOC code + tests: ≈ 2 380 (docs only this task)
   - review rounds: 9 / ~10
+
+### QVL-T-7 — Live verification on prtest (in progress, 2026-11-10)
+
+`performance-refactor` was fast-forwarded to `c2053151b` (10 commits of P2-3910). Calls ran from the session scratchpad (`t7-cat.js`, `t7-det.js`, `t7-walk.py`); the QA key was read from the mode-600 file and never printed.
+
+- **Deploy landed:** `details` now returns `labels` (absent before the merge).
+- **Step 4, AC-8:** `GET /api/qa/catalog?phase_year=2026` → 200, `catalog_version` `2026.34` (2026-11-10 15:14 GMT). **PASS**
+- **Step 1, AC-1:** `GET /api/qa/results?phase_year=2026` → `total: 1` (knowledge_product, SP01). It is the only eligible result on prtest, so only one type can be checked. `POST /api/qa/results/details` `{phase_year: 2026, result_ids: [11261]}` (result_code 8793), with no `field_keys` → 200, 1 result, `not_eligible: []`. The walk over `values` (catalog definitions) gives 13 distinct ids, 13 label entries, no MISSING, no EXTRA → exit 0. **PASS for `knowledge_product`; the other 8 types are not checkable (no eligible result on prtest).**
+- **Labels returned (person labels recorded as present/absent only):**
+
+| List | Id | Label |
+|---|---|---|
+| centers | CENTER-10 | IFPRI - International Food Policy Research Institute |
+| centers | CENTER-05 | CIMMYT - International Maize and Wheat Improvement Center / Centro Int… (truncated here) |
+| countries | 800 | Uganda |
+| directory_users | 240 | present |
+| evidence_sources | 0 | Link |
+| geographic_scopes | 2 | Regional |
+| initiatives | 50 | SP01 - Breeding for Tomorrow |
+| regions | 14 | Eastern Africa |
+| result_levels | 4 | Output |
+| result_statuses | 3 | Submitted |
+| result_types | 6 | Knowledge product |
+| tag_levels | 1 | Not Targeted |
+| users | 606 | present |
+
+- **Step 2, AC-2:** owed by the owner. The owner reads the rendered prtest form of result 8793; the Leader compares it with the table above. A comparison against the design table is not evidence (T-7 Disqualifier).
+- **Step 3:** `statements=` is in the server log; read it only if the owner shares the line.
