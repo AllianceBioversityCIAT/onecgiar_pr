@@ -285,7 +285,13 @@ Notes:
 - **No table or column names.** PRMS stores the catalog and the result data internally; the storage layout is not part of the contract and is never returned. Do not infer it from keys.
 - **Keys are not database ids and not column names.** A dotted key such as `section.name` is only an identifier.
 - **`result_type_id` is not exposed.** Use `result_types[].key`.
-- **Control-list contents are not provided here**, only their names.
+- **Control-list contents are not provided here**, only their names. The [`labels`](#what-labels-holds) of `POST /api/qa/results/details` give the text of the option ids a result holds, and nothing else of the list.
+- **A label is display text, not a key.** Do not store it as an identifier, join on it, compare it across years or parse it (for example by splitting on ` - `). Texts can change when PRMS data or the form changes; the option id in `values` is the stable reference.
+- **`null` in `labels` means "no label for this id"**, not "empty" and not an error: the id has no row, or its text is blank, or (for a constant list) it is not a listed value. The id stays in `values`.
+- **A label is the stored text as-is.** A text that holds `<` (for example a result title such as "yield < 5 t/ha") is returned unchanged, and the server adds no markup. Escape it when you render it.
+- **Ids are matched the way the database matches them.** Matching is case-insensitive, and an id stored with trailing spaces gets `null`. Do not rely on two ids that differ only in case having different labels.
+- **An inactive option still has its label.** `labels` does not say whether an option is currently offered by the form.
+- **`labels` holds only what the result holds.** An id in no returned `values` has no entry, and a list that the result does not use is absent, not empty.
 - **The catalog is not exhaustive of PRMS columns.** Fields that are internal, audit-only or derived are intentionally absent; fields that are for QA but not yet described are also absent (see [known gaps](#known-gaps)). Absence from the catalog does not mean absence from PRMS.
 - **No result values** flow through this endpoint; they flow through the [results feed](#results-feed).
 - **Order is meaningful only as sorted by the API** (section `order`, then field `order`); do not depend on key spelling for ordering.
@@ -422,6 +428,8 @@ A page past the end is a **200** with `items: []` and the real `total`. A filter
 
 An unknown property of the body is ignored.
 
+Example for `phase_year` 2026, `result_ids` `[900001, 900002, 900003]` and `field_keys` `["general.status", "geo.scope", "geo.regions", "capacity_sharing.length_of_training", "policy_change.policy_type", "policy_change.amount_status"]`. All data is synthetic, and the label texts are illustrative: read the real ones from your own call.
+
 ```json
 {
   "phase": 2026,
@@ -432,13 +440,43 @@ An unknown property of the body is ignored.
       "result_code": 5120,
       "result_type_key": "capacity_sharing",
       "values": {
+        "general.status": 3,
+        "geo.scope": 2,
+        "geo.regions": [202, 999],
         "capacity_sharing.length_of_training": { "value": 4, "degree": 2 }
+      },
+      "labels": {
+        "result_statuses": { "3": "Submitted" },
+        "geographic_scopes": { "2": "Regional" },
+        "regions": { "202": "Sub-Saharan Africa", "999": null },
+        "capdev_training_lengths": { "4": "Long-term" },
+        "capdev_degrees": { "2": "Master" }
+      }
+    },
+    {
+      "result_id": 900002,
+      "result_code": 5121,
+      "result_type_key": "policy_change",
+      "values": {
+        "general.status": 3,
+        "geo.scope": 1,
+        "geo.regions": [],
+        "policy_change.policy_type": 1,
+        "policy_change.amount_status": "2"
+      },
+      "labels": {
+        "result_statuses": { "3": "Submitted" },
+        "geographic_scopes": { "1": "Global" },
+        "policy_types": { "1": "Program, budget or investment" },
+        "policy_amount_statuses": { "2": "Estimated" }
       }
     }
   ],
   "not_eligible": [ { "result_id": 900003, "reason": "not_submitted" } ]
 }
 ```
+
+In this example the details log line would read `labels=10`: six pairs in the first result and four in the second (the shared status counts once per result). `catalog_version` is the value the endpoint returns at revision 34.
 
 | Property | Type | Meaning |
 |---|---|---|
@@ -447,6 +485,7 @@ An unknown property of the body is ignored.
 | `results` | array | Eligible ids, in request order, each id once. |
 | `results[].result_id`, `result_code`, `result_type_key` | integer, integer, string | As in the list item. |
 | `results[].values` | object | Keyed by catalog field key (top level). |
+| `results[].labels` | object | The display text of the option ids in this result's `values`, grouped by control list: `{ "<list>": { "<id>": "<label>" or null } }`. Always present; `{}` when `values` holds no option id. See [What `labels` holds](#what-labels-holds). |
 | `not_eligible` | array of `{ result_id, reason }` | Every requested id that is not eligible, in request order, each id once. |
 
 `not_eligible[].reason` is a **closed** list, evaluated in the order of the [eligibility table](#which-results-are-eligible) (the first failing condition wins): `not_found`, `not_submitted`, `other_phase`, `not_w1w2`, `type_not_catalogued`, `no_lead_program`. A new reason is an additive change recorded in the change log. An ineligible id never fails the batch.
@@ -465,13 +504,96 @@ A database read that fails is **not** a per-id reason: it fails the **whole batc
 | `date` | string or `null`: `YYYY-MM-DD` for a date, ISO-8601 UTC for a date-time |
 | `number` | number or `null` |
 | `boolean` | boolean or `null` |
-| `single_select` | the option id as stored (number, or string for a control list with text ids) or `null`. The contents of the control list are not served. |
+| `single_select` | the option id as stored (number, or string for a control list with text ids) or `null`. The contents of the control list are not served; the text of the id is in [`labels`](#what-labels-holds). |
 | `multi_select` | array of option ids, each as stored (number, or string for a control list with text ids); `[]` when none |
 | `list` | array of objects, one per element, keyed by subfield key; `[]` when none |
 | `object` | object keyed by subfield key (no `value` key), or `null` when nothing is stored. At revision 31 two fields use it: `knowledge_product.accessibility_cg` and `knowledge_product.altmetric` |
 | A **scalar** type with subfields | `{ "value": <scalar>, "<subfield key>": … }`; no stored value is `{ "value": null, "<subfield key>": null or [] }`, never bare `null` |
 
 A scalar field that declares subfields (`text`, `date`, `number`, `boolean`, `single_select`) never returns the bare scalar. Its scalar is under `value`, and each subfield is keyed by its own key and shaped by its own type. Capacity sharing is the example: `capacity_sharing.length_of_training` returns `{ "value": 4, "degree": 2 }`.
+
+#### What `labels` holds
+
+`labels` makes `values` readable without a second call. Each option id found in a result's `values` is looked up in the label table of its control list, and the result carries `{ "<list>": { "<id>": "<label>" or null } }`.
+
+- **Per result, and only what the result holds.** A result's `labels` has only the lists and ids present in that result's own `values` (as returned: `field_keys` and the result type already applied), at every depth, including subfields and list elements. A result whose `values` holds no option id has `labels: {}`; the property is never absent.
+- **Keys are strings.** A numeric id `4` is the key `"4"`; a text id (`CENTER-02`, `households`, `"2"`) is the key as sent in `values`.
+- **`null` means the id has no label.** The id is kept, never dropped. The reasons are in the last column of the [label table](#label-rules-per-list).
+- **`values` is unchanged.** Ids stay in `values`; `labels` is additive, and `catalog_version` does not move.
+- **One text per (list, id).** It is the option's canonical 2026 form text: the name the form shows, without decorations the form adds in some places only (ids, ISO codes, definitions, position numbers, program-specific prefixes), and with the composition the form uses consistently (a result is `code - title`). The label table names, per list, the places where the form shows something else.
+- **One batch, no per-id reads.** The labels of a batch are read in one statement per source and are counted in the `statements=` of the log line. The count depends on the lists the batch touches, never on the number of ids or results.
+- **A failed read fails the batch.** A label read that fails is the same generic **500** as any other read failure; no partial `labels` is returned.
+
+The details log line is `route=<route> year=<year> eligible=<n> not_eligible=<n> statements=<n> labels=<n> duration_ms=<n>`. `labels=` is the sum over results of the (list, id) pairs each result holds, so an id that two results share counts once per result. It never logs an id, a field key or a label.
+
+#### Label rules per list
+
+One row per control list (55 for 2026). Kinds:
+
+- `constant`: text that exists only in the form (or in a constant the form reads), mirrored by the server;
+- `table`: one PRMS or CLARISA table, read by id;
+- `chained`: a second table is read through a link of the first;
+- `toc`: a table of the Theory of Change database.
+
+No source filters on an active or deleted flag: an inactive option still has its label. Labels are the stored text as-is, trimmed and composed; the server adds no markup. Storage names are not part of the contract, so the rules name the content, not the columns.
+
+| List | Kind | Label | The form shows something else | `null` when |
+|---|---|---|---|---|
+| `countries` | table | CLARISA country name | The dropdown prefixes the ISO2 code | no row, or blank text |
+| `regions` | table | CLARISA region name, keyed by the UN M49 code | — | no row, or blank text |
+| `subnational_areas` | table | First non-blank of name, local name, romanization name; keyed by the CLARISA code (text) | The form appends the other names | no row, or blank text |
+| `geographic_scopes` | constant | 1 Global · 2 Regional · 3 Country · 4 Country · 5 Sub-national · 50 This is yet to be determined | The server folds 4 into 3 on read; the CLARISA name of 4 is not used | id not in the constant |
+| `extra_geographic_scopes` | constant | Same constant as `geographic_scopes` (the field only holds 1 to 5) | As `geographic_scopes` | id not in the constant |
+| `ipsr_geographic_scopes` | constant | Same constant as `geographic_scopes` | As `geographic_scopes` | id not in the constant |
+| `institutions` | table | CLARISA institution name | The selects show `(Id:n) ACR - name - HQ country` (capacity development, policy change, lead partner, knowledge product partner) | no row, or blank text |
+| `institution_types` | table | CLARISA institution type name, keyed by its code | A sub-type id appears in the form's Sub-type select | no row, or blank text |
+| `partner_delivery_types` | constant | 1 Scaling · 2 Demand · 3 Innovation · 4 Other | — | id not in the constant |
+| `centers` | chained | `acronym - name` of the center's institution; the id is the CLARISA center code (text), read in two steps | 2026 chips show the acronym; IPSR chips show the name | center code unknown, center without an institution, or blank text |
+| `initiatives` | table | `official code - name` | The Submitter select adds the short name | no row, or blank text |
+| `projects` | table | Full name, falling back to the short name when blank | The investment tables show the short name; contributors appends ` (Center: …)`; the dropdown text comes from the ToC | no row, or blank text |
+| `innovation_types` | table | CLARISA innovation type name, keyed by its code | The select adds the definition | no row, or blank text |
+| `innovation_characteristics` | table | CLARISA innovation characteristic name | The select adds the definition | no row, or blank text |
+| `innovation_use_levels` | table | Use level name by id. Repeated level rows carry the same name as the base row (checked on test and prod) | The IPSR workshop table shows the list position, not the name | no row, or blank text |
+| `use_levels` | table | Same source and rule as `innovation_use_levels` | As `innovation_use_levels` | no row, or blank text |
+| `readiness_levels` | table | Readiness level name by id | The IPSR workshop table shows the list position, not the name | no row, or blank text |
+| `results` | table | `result code - title`; the title is the stored text as-is | Linked results prefix `(ACR - year)` and the type; IPSR cards show the title only | no row, or blank text |
+| `qa_innovation_dev_results` | table | Same rule as `results` | As `results` | no row, or blank text |
+| `ipsr_bundle_candidates` | table | Same rule as `results` | As `results` | no row, or blank text |
+| `users` | table | Trimmed `first name last name` (person-bearing) | — | no row, or both names blank |
+| `directory_users` | table | Directory display name; never the email (person-bearing) | The form adds `mail - title` on a second line, and falls back to the free text when the directory user is inactive | no row, or blank text |
+| `result_types` | table | Result type name, except id 9, which is "Impact result" (the form's own text) | The IPSR card shows "Created in IPSR" or "PRMS result" | no row, or blank text; never for id 9 |
+| `result_statuses` | table | Result status name | — | no row, or blank text |
+| `result_levels` | table | Result level name | The type-9 header shows `Impact · Impact Area …` | no row, or blank text |
+| `discontinued_reasons` | table | Reason text | The form hides a reason that is inactive or from another generation; the id still gets its label | no row, or blank text |
+| `tag_levels` | table | Tag level title | The segmented control prefixes a digit 0 to 2 (id minus 1) | no row, or blank text |
+| `impact_area_components_gender` | table | Impact-area component name, no area filter (see [known gap 19](#known-gaps)) | — | no row, or blank text |
+| `impact_area_components_climate` | table | As `impact_area_components_gender` | — | no row, or blank text |
+| `impact_area_components_nutrition` | table | As `impact_area_components_gender` | — | no row, or blank text |
+| `impact_area_components_environmental` | table | As `impact_area_components_gender` | — | no row, or blank text |
+| `impact_area_components_poverty` | table | As `impact_area_components_gender` | — | no row, or blank text |
+| `question_options_gesi_stage` | table | Question text of the answer option | The `related_to` ids differ per environment (known gaps 15 and 18) | no row, or blank text |
+| `question_options_risk_stage` | table | Same rule as `question_options_gesi_stage` | As `question_options_gesi_stage` | no row, or blank text |
+| `question_options_ipr` | table | Same rule as `question_options_gesi_stage` | As `question_options_gesi_stage` | no row, or blank text |
+| `policy_related_questions` | table | Same rule as `question_options_gesi_stage` | As `question_options_gesi_stage` | no row, or blank text |
+| `policy_types` | table | CLARISA policy type name | — | no row, or blank text |
+| `policy_stages` | table | CLARISA policy stage name | The select adds ` - definition` | no row, or blank text |
+| `policy_amount_statuses` | constant | 1 Confirmed · 2 Estimated · 3 Unknown; the id is the stored text "1" to "3" | — | any other stored text |
+| `assessed_workshop_options` | table | Option name | — | no row, or blank text |
+| `complementary_functions` | table | Function name | — | no row, or blank text |
+| `complementary_innovation_enabler_types` | table | Enabler group name | The level-0 parent's group is shown as a header | no row, or blank text |
+| `actor_types` | table | Actor type name | — | no row, or blank text |
+| `actor_count_unit` | constant | households "Households" · individuals "Individual actors" | — | id not in the constant |
+| `actor_use_nature` | constant | information_received "Actors who received information, advice or inputs" · innovation_applied "Actors who applied the innovation" | — | id not in the constant |
+| `capdev_training_lengths` | table | Capacity-development term name, read from the normalized value (length 4 is "Long-term") | — | no row, or blank text |
+| `capdev_degrees` | table | Same source as `capdev_training_lengths` (1 PhD, 2 Master) | — | no row, or blank text |
+| `capdev_delivery_methods` | table | Delivery method name | — | no row, or blank text |
+| `evidence_sources` | constant | 0 Link · 1 Upload file | — | id not in the constant |
+| `melia_types` | table | CLARISA MELIA study type name | — | no row, or blank text |
+| `toc_melia_studies` | toc | MELIA study title, matched on the ToC text id; rows sharing an id carry equal titles (checked on test and prod), the lowest primary key is read | — | no row, or blank text |
+| `toc_levels` | constant | 1 High Level Output · 2 Intermediate Outcome · 3 2030 Outcome | AVISA uses other names on the result's own mappings ([known gap 20](#known-gaps)) | id not in the constant |
+| `eoi_outcomes` | toc | ToC result title | — | no row, or blank text |
+| `toc_results` | toc | ToC result title | Levels 1 and 2 prefix the work-package acronym | no row, or blank text |
+| `toc_results_indicators` | toc | Indicator description, matched on the node's related id or on the row id; when several rows match, the active row first, then the lowest primary key ([known gap 22](#known-gaps)) | A legacy numeric id shows nothing in the form | no row, or blank text |
 
 #### Capacity sharing: normalization applied
 
@@ -510,14 +632,16 @@ Notes:
 
 The feed returns a field only when you request it, but without `field_keys` it returns every applicable field. These top-level keys hold or point to a person; request them knowingly. Derived by searching `CATALOG_FIELDS` (key and label, every subfield level) for person, contact, author, email, name, facilitator, developer, collaborator, user and submitter terms, then keeping the ones that hold a person.
 
-| Key | Holds | Value |
-|---|---|---|
-| `general.lead_contact_person` | The lead contact's name or email as entered, plus `directory_user` (id of the directory user) | `{ "value": text, "directory_user": id }` |
-| `general.created_by` | The user who created the result | user id |
-| `innovation_dev.developers` | Free text: names or emails | text |
-| `innovation_dev.collaborators` | Free text: names, emails and affiliations | text |
-| `ipsr_step_1.workshop_facilitators` | Facilitators: `first_name`, `last_name`, `email` | list |
-| `knowledge_product.authors` | Author names (public CGSpace data) | list (`name`) |
+| Key | Holds | Value | Label in `labels` |
+|---|---|---|---|
+| `general.lead_contact_person` | The lead contact's name or email as entered, plus `directory_user` (id of the directory user) | `{ "value": text, "directory_user": id }` | `directory_users` (the id of `directory_user`; the free text `value` has no label) |
+| `general.created_by` | The user who created the result | user id | `users` |
+| `innovation_dev.developers` | Free text: names or emails | text | — |
+| `innovation_dev.collaborators` | Free text: names, emails and affiliations | text | — |
+| `ipsr_step_1.workshop_facilitators` | Facilitators: `first_name`, `last_name`, `email` | list | — |
+| `knowledge_product.authors` | Author names (public CGSpace data) | list (`name`) | — |
+
+The `users` and `directory_users` lists in [`labels`](#what-labels-holds) identify people (the person's name; never an email). They appear only when the field that holds the id is returned: `users` with `general.created_by`, `directory_users` with `general.lead_contact_person`. With `field_keys` that names neither, `labels` holds neither list; without `field_keys`, both fields are returned and so are both lists.
 
 `contributors.submitter` is a program, not a person, and the author affiliations of `partners.kp_author_affiliations` are institutions. Neither is listed.
 
@@ -677,7 +801,7 @@ These are deliberate and tracked; each one is **additive** when resolved.
 4. **Year coverage.** 2026 only.
    - **Question fields (innovation development).** `innovation_dev.gesi_stage`, `innovation_dev.risk_stage` and `innovation_dev.ipr_consideration` bind to the answered rows of the result's answers (one row per option marked, active). A row belongs to a question through the field's control list, by id: since QRF-T-9 (QRF-DD-13), the GESI stage (152..156), risk stage (157..161) and IPR (163..165) lists, whose ids the owner verified identical in test and prod on 2026-10-28. The feed applies the closed list as a row filter (see [Question answers and stored NULL](#question-answers-and-stored-null)).
 5. **Live verification (2026-10-06, local instance, CLARISA test key with permission `/api/qa/catalog`):** `phase_year=2026` → 200 with the 2026.5 content (body identical to the committed catalog, apart from `generated_at`); `phase_year=2023` → 404; `phase_year=abc` → 400; no key, unknown key or user `auth` header → 401. Not yet verified on a deployed environment.
-6. **Control-list contents are not served** by this endpoint.
+6. **Control-list contents are not served** by this endpoint. Narrowed by `labels` (v1.33): `POST /api/qa/results/details` returns the text of the option ids each result holds, not the full list of options, their order, definitions or the options a result did not choose.
 7. **`visible_when` is not persisted in `qa_catalog_field`** (migration pending; the owner runs it). The endpoint serves it from the code catalog, so the response is correct; the stored catalog tables do not yet carry the rule.
 8. **`partners.not_applicable` NULL versus `eq false`.** A never-answered `no_applicable_partner` (NULL) is neither `true` nor `false`: the live function treats NULL as failing (it requires an answer), while the catalog's `visible_when` / `required_when` on `partners.not_applicable = false` do not match NULL. A consumer must treat NULL as "answer missing" (invalid for a required field), not as "not applicable = false".
 9. **Indicator rows of a ToC mapping (recorded, not filtered).** The typology and unit lookups of a mapping do not prefer the active indicator row: the client still shows inactive linked indicators, so the catalog does the same.
@@ -693,6 +817,13 @@ These are deliberate and tracked; each one is **additive** when resolved.
 17. **`capacity_sharing.length_of_training` and its subfield `degree` both bind the raw `capdev_term_id`.** The form stores the degree when there is one and the length otherwise, so the raw value is read in both directions: a stored **1 or 2** means "Long-term (4) plus that degree" (read `length_of_training` as **4** and `degree` as the stored 1 or 2); a stored **3 or 4** is the length only and carries **no degree** (read `degree` as empty). The `visible_when` of `degree` (`length_of_training` eq 4) applies to this normalized reading, not to the raw column, and the results feed returns the normalized values (**applied** by `POST /api/qa/results/details`, v1.26; see [capacity sharing: normalization applied](#capacity-sharing-normalization-applied)). A consumer that reads the raw column and applies the catalog conditions to it gets a wrong answer for a stored 1 or 2.
 
 18. **`policy_change.related_to` is not narrowed to its own question.** It binds to the answered rows of the result's answers, like the innovation development question fields, but its question ids differ by environment (the form's root question is 49 in test and 48 in prod), so no closed list can be declared for it. Until the ids are the same in every environment the feed returns the first active, ticked answer of the result for this field, which can belong to another question when the result stores several answers. Known gap, not fixed in QRF-T-9.
+19. **Impact-area components have no area filter.** `impact_area_components_gender`, `_climate`, `_nutrition`, `_environmental` and `_poverty` label an id from the whole component table, and the five `general.*_impact_areas` fields read every impact-area score row of the result, whatever its area. A field can therefore hold an id of another area, and it is labelled with that component's own name. A separate fix is planned; until then do not read the list name as proof of the area.
+20. **AVISA ToC level names.** `toc_levels` uses the generic names (1 High Level Output, 2 Intermediate Outcome, 3 2030 Outcome). The AVISA program (SGP-02, initiative 41) uses other level names on the result's own ToC mappings; its levels are labelled with the generic names.
+21. **Table-sourced text can drift.** Constants mirror the form and are checked against it. A table-sourced label is the stored text composed by a fixed rule, so an edit of the form's own composition, or of the stored text, changes what `labels` returns without any catalog change and without a `catalog_version` change. The places where the form shows something else are in the [label table](#label-rules-per-list).
+22. **ToC indicator ids can carry several descriptions.** `toc_results_indicators` stores an id that can be a node's related id or a row id, and one related id can match several rows with different descriptions (on prod, 530 related-id groups have more than one row, 135 with differing descriptions, 20 of them among active rows). The label is the description of the active row first, then of the lowest primary key; no row is filtered out, so an id whose only rows are inactive still gets the inactive text. The pick is stable, not a statement that it is the description the form shows.
+23. **Latency of `labels` is not measured.** prtest holds no eligible 2026 batch, so no before/after timing exists. The gate used instead is the statement count: the label reads add at most one statement per distinct source the batch touches (plus one for a chained list), equal for a batch of 1 and a batch of 50 over the same lists. Measure latency when an eligible batch exists.
+24. **The statement count of a chained list is an upper bound.** `centers` is read in two steps; the second statement is skipped when no center code of the batch has an institution link, so "plus one per chained list" is the most a batch can add, not the exact count.
+25. **Case-insensitive and trailing-space id matching.** Ids match the way the database matches them: `CENTER-02` and `center-02` find the same row, and an id stored with a trailing space gets `null` although the database comparison ignores it.
 
 ---
 
@@ -733,3 +864,4 @@ These are deliberate and tracked; each one is **additive** when resolved.
 | 2026-11-03 | **v1.30 — 2026-11-03: per-endpoint CLARISA grant enforced on all five `/api/qa/*` routes (spec `quality-assurance/qa-intake`, QIN-T-4b); `catalog_version` unchanged (2026.32).** CLARISA validates a key as `valid: true` for any route, so Reporting now also requires the route grant that CLARISA reports in the `validate-api-key` response (`allowed_endpoints`, `endpoint_allowed`). A call is a **401** (generic body) unless CLARISA answers `endpoint_allowed: true`; a missing field is refused. A key must have the route in its CLARISA `allowed_endpoints`. No request or response shape changes; bilateral routes are unchanged. Until CLARISA returns `endpoint_allowed`, every `/api/qa/*` call is a 401. |
 | 2026-11-03 | **v1.31 — 2026-11-03: Farmers follow-up subfields in Innovation Use; catalog_version 2026.33.** The actor list of both Innovation Use blocks (`innovation_use.current_use.actors` and `innovation_use.projection_2030.actors`) gains two optional-by-shape subfields, `count_unit` (single_select over the closed list `households` / `individuals`) and `use_nature` (single_select over `information_received` / `innovation_applied`), both stored as codes in `result_actors` (varchar), valid from 2026, shown and required (`visible_when` / `required_when`) only when the row's `actor_type` equals 1 (Farmers). The values are codes (strings), not option ids; a row of another actor type may still hold a stored code. Additive only: no key is renamed or removed. Consumers holding `2026.32` re-read the catalog. Spec `changes/innovation-use-farmer-count-nature`, IFC-T-6. |
 | 2026-11-05 | **v1.32 — 2026-11-05: team diversity removed from Innovation development; catalog_version 2026.34.** The field `innovation_dev.team_diversity` and its subfields `actions` and `other_text` are no longer in the catalog, and the closed lists `question_options_team_diversity` (113 to 115) and `question_options_team_diversity_actions` (116 to 121) are gone with them: the 2026 Innovation development form no longer asks the question (phase-gated 2026 removal, like Megatrends). Answers already stored for 2025 results stay in the database but are not exposed through the catalog or the results feed; the bilateral key is unchanged. Consumers holding `2026.33` re-read the catalog and stop expecting the field. Spec `changes/remove-innovation-team-diversity`, ITD-T-2. |
+| 2026-11-10 | **v1.33 — 2026-11-10: `labels` added to `POST /api/qa/results/details` (spec `quality-assurance/qa-value-labels`, QVL-T-6); `catalog_version` unchanged (2026.34).** Each element of `results` gains `labels`, an additive object `{ "<control list>": { "<option id>": "<label>" or null } }` with the canonical 2026 form text of every option id found in that result's `values` (only the lists and ids that result holds; `{}` when none; the person-bearing lists `users` and `directory_users` only with their field). `values`, the catalog, its hash and every other property are unchanged, so no revision bump. The labels of a batch are read in one statement per source, and the details log line gains `labels=<n>` after `statements=` (the sum over results of the (list, id) pairs each holds). Documented: the `labels` shape and a synthetic example, the 55-row label table, new "What QA must NOT assume" items, known gap 6 narrowed, new known gaps 19 to 25, and the person-bearing keys table. No existing consumer breaks while it ignores unknown properties. |

@@ -194,7 +194,7 @@ Review values follow the template: `skip-eligible`, `checklist`, `full`, `lenses
   - Each falsifier was observed red.
 - **Skills:** `nestjs-expert`, `api-design-principles`, `tdd`
 
-### QVL-T-6 — Contract and QA fixture
+### [x] QVL-T-6 — Contract and QA fixture
 
 - **Type:** docs
 - **Description:**

@@ -536,3 +536,41 @@ The owner answered "Si, adelante" to three pending questions. The Leader recorde
 |---|---|---|
 | T-6 scope | **`onecgiar_pr` only.** Update `qa-catalog.en.md` (details example with `labels`, synthetic data, the `labels=` log note). `onecgiar_qa` is not touched: QA copies its fixture from the contract example inside its own spec (`assessment/step-1-assessment`). A standalone example, if needed, lives under `onecgiar-pr-server/docs/` | `tasks.md` T-6 Description, Files, Verification, Falsifier, Consumers, DoD |
 | Push | **Ordered** ("Haz push"). Branch `JuanGuzman-io/p2-3910-qa-value-labels` only. The merge to `performance-refactor` is not part of this order | `tasks.md` T-6 DoD |
+| Merge | **Ordered** ("Y haces merge en performance-refactor"). After T-6 PASS and the branch push, merge into `performance-refactor` and push it; the deploy to prtest follows automatically, and T-7 runs on it | `tasks.md` T-7 Depends on: satisfied by this order |
+
+### QVL-T-6 — Contract and QA fixture
+
+- **Final status:** PASS
+- **Date:** 2026-11-10
+- **Implementer attempts:** 2 (attempt 2 was a rework at effort one level up)
+- **Skills:** `cognitive-doc-design`, `api-design-principles`
+- **Attempt 1**
+  - **File:** `onecgiar-pr-server/docs/qa-catalog.en.md`. Added:
+    - a synthetic details example (results 900001 and 900002) with `labels`, and the `labels=10` log note;
+    - the `results[].labels` property row, plus "What `labels` holds" and "Label rules per list" (55 rows: kind, label, where the form differs, when `null`). Logical names only; no physical table or column names (design §7);
+    - 7 "What QA must NOT assume" bullets;
+    - gap 6 narrowed, and gaps 19 to 25 added;
+    - a "Label in `labels`" column in the person-bearing keys table, for `users` and `directory_users` (no email);
+    - the change log row v1.33, with `catalog_version` unchanged at 2026.34.
+  - **Reviewer:** FAIL, 1 BLOCKING. The splice matched the GET property table first, so the details section was duplicated (:421 and :497), with the old example (no `labels`) left in the second copy. That contradicted "Always present". The walk script had checked only the first JSON block.
+- **Attempt 2:** the stray copy was removed, leaving one details heading, one example and one property table. The GET section equals HEAD. `walk.py` now checks every JSON block under the details heading. Diff: +143/-11.
+- **Verification (Leader re-run, non-author, after attempt 2):**
+  - `grep -c '^### `POST /api/qa/results/details`'` → 1
+  - set comparison: table rows 55, registry keys 55 (`LABEL_SOURCES` read via `ts-node`); missing [], extra [], kind mismatch [] → exit 0
+  - walk: 1 JSON block; 900001 ids 6 labels 6; 900002 ids 4 labels 4 → exit 0
+- **Falsifiers (Implementer, observed red):**
+  - row `evidence_sources` removed → `missing from table: ['evidence_sources']`, exit 1
+  - `regions` `"999"` removed → `MISSING label 900001 regions 999`, exit 1
+  - `policy_amount_statuses` id changed → MISSING + EXTRA, exit 1
+- **Reviewer round 2:** PASS. No findings.
+- **Not Done / Assumptions:**
+  - The label texts in the example are illustrative, not read from the DB, and the doc says so.
+  - The extra person-bearing column is the Implementer's judgment call.
+- **`onecgiar_qa`:** untouched (owner decision 2026-11-10).
+- **spawns:**
+  - implementer: 26 + 7 calls, ≈169 k tokens (host-reported), ended complete
+  - reviewer: 14 + 2 calls, ≈126 k tokens (host-reported), ended complete
+- **Budget running totals:**
+  - tasks: 6 / 7
+  - LOC code + tests: ≈ 2 380 (docs only this task)
+  - review rounds: 9 / ~10
