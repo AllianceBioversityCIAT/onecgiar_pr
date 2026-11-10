@@ -241,7 +241,7 @@ A label read that fails, a database error included, SHALL fail the whole batch w
 - the person-bearing lists;
 - a change-log row stating that `catalog_version` is unchanged.
 
-The QA fixture `onecgiar_qa/server/src/ingestion/fixtures/results-details.json` SHALL be updated to the new example. It SHALL carry the contract example verbatim, including `labels`, and the current `catalog_version`. The change goes on a branch of the QA repository; it is pushed only on the owner's order. QA's existing specs SHALL stay green.
+~~The QA fixture `onecgiar_qa/server/src/ingestion/fixtures/results-details.json` SHALL be updated to the new example.~~ Amended 2026-11-10 (owner decision, `execution.md` "Owner decisions before T-6"): this spec does not touch `onecgiar_qa`. QA copies the contract example into its fixture inside its own spec (`assessment/step-1-assessment`).
 
 ## 6. Non-Functional Requirements
 
