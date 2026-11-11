@@ -1,3 +1,4 @@
+import { FindOperator } from 'typeorm';
 import { InnovationUseService } from './innovation-use.service';
 import {
   FARMERS_ACTOR_TYPE_ID,
@@ -97,6 +98,130 @@ describe('InnovationUseService — Farmers count unit / use nature (IFC-R-7)', (
       expect(toUseNature('innovation_applied')).toBe('innovation_applied');
       expect(toUseNature('households')).toBeNull();
       expect(toUseNature(null)).toBeNull();
+    });
+  });
+
+  /**
+   * @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-4, BIF-R-5, BIF-R-11, P-6).
+   * Read-only proof of the shared writer: documents the existing match (result, section, type,
+   * count_unit ?? IsNull, use_nature ?? IsNull) over an in-memory actor table, so a change to the
+   * writer would turn it red. No writer code is touched by this spec.
+   */
+  describe('saveAnticipatedInnoUser — Farmers rows reaching the writer (BIF-R-5, BIF-R-11)', () => {
+    const matches = (row: any, where: any) =>
+      Object.entries(where).every(([key, expected]) => {
+        if (expected instanceof FindOperator) {
+          // IsNull() is the only operator the writer uses here.
+          return row[key] === null || row[key] === undefined;
+        }
+        return row[key] === expected;
+      });
+
+    const arrange = () => {
+      const rows: any[] = [];
+      const repo = {
+        findOne: jest.fn(
+          async ({ where }: any) => rows.find((r) => matches(r, where)) ?? null,
+        ),
+        save: jest.fn(async (payload: any) => {
+          const saved = { ...payload, result_actors_id: rows.length + 1 };
+          rows.push(saved);
+          return saved;
+        }),
+        update: jest.fn(async (id: number, payload: any) => {
+          const row = rows.find((r) => r.result_actors_id === id);
+          Object.assign(row, payload);
+        }),
+      };
+      const writer: any = Object.create(InnovationUseService.prototype);
+      writer._resultActorRepository = repo;
+      return { writer, repo, rows };
+    };
+    const farmers = (extra: any) => ({
+      actor_type_id: FARMERS_ACTOR_TYPE_ID,
+      sex_and_age_disaggregation: true,
+      how_many: 10,
+      ...extra,
+    });
+    const save = (writer: any, actors: any[]) =>
+      writer.saveAnticipatedInnoUser(100, 7, { actors }, 1, false);
+
+    it('two Farmers rows with different pairs become two inserts (actor)', async () => {
+      const { writer, repo, rows } = arrange();
+
+      await save(writer, [
+        farmers({ count_unit: 'households', use_nature: 'innovation_applied' }),
+        farmers({
+          count_unit: 'individuals',
+          use_nature: 'information_received',
+        }),
+      ]);
+
+      expect(repo.save).toHaveBeenCalledTimes(2);
+      expect(repo.update).not.toHaveBeenCalled();
+      expect(rows.map((r) => [r.count_unit, r.use_nature])).toEqual([
+        ['households', 'innovation_applied'],
+        ['individuals', 'information_received'],
+      ]);
+    });
+
+    it('the same pair twice is one insert plus one update, last wins (actor)', async () => {
+      const { writer, repo, rows } = arrange();
+
+      await save(writer, [
+        farmers({
+          count_unit: 'individuals',
+          use_nature: 'innovation_applied',
+          how_many: 10,
+        }),
+        farmers({
+          count_unit: 'individuals',
+          use_nature: 'innovation_applied',
+          how_many: 25,
+        }),
+      ]);
+
+      expect(repo.save).toHaveBeenCalledTimes(1);
+      expect(repo.update).toHaveBeenCalledTimes(1);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].how_many).toBe(25);
+    });
+
+    it('a households row as the handler forwards it is stored as a single total (actor)', async () => {
+      const { writer, repo } = arrange();
+
+      await save(writer, [
+        farmers({
+          count_unit: 'households',
+          use_nature: 'innovation_applied',
+          how_many: 40,
+          men: null,
+          men_youth: null,
+          women: null,
+          women_youth: null,
+          has_men: null,
+          has_men_youth: null,
+          has_women: null,
+          has_women_youth: null,
+        }),
+      ]);
+
+      expect(repo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sex_and_age_disaggregation: true,
+          how_many: 40,
+          count_unit: 'households',
+          use_nature: 'innovation_applied',
+          men: null,
+          men_youth: null,
+          women: null,
+          women_youth: null,
+          has_men: null,
+          has_men_youth: null,
+          has_women: null,
+          has_women_youth: null,
+        }),
+      );
     });
   });
 });

@@ -110,7 +110,7 @@ Skills for every server task: `nestjs-expert`; `tdd` for T-1, T-3 and T-4; `api-
   - [ ] All handler cases listed above are covered by tests.
   - [ ] Lint and `tsc` clean.
 
-### [ ] BIF-T-4 — Service: call the hook before any write, merge warnings, read mapper
+### [x] BIF-T-4 — Service: call the hook before any write, merge warnings, read mapper
 
 - **Type:** server
 - **Description:**

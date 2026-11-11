@@ -158,3 +158,69 @@
   - **Cause:** the rules function is 158 lines (estimate ~60) because it is fully typed and carries a doc-comment per step. The handler adds +56.
   - Total LOC (781) is within the raised ~1000 tripwire, but T-4 (service + tests) will likely cross it.
   - **Stop for the user** at the continue gate.
+
+#### Budget decision (2026-11-11, after BIF-T-3)
+
+- Juan David answered "Continue" at the gate. That takes option 1, the one offered first:
+  - The tripwire is raised to ~1300 LOC total and ~320 production LOC.
+  - Review rounds stay at 11.
+
+### BIF-T-4 — Service: call the hook before any write, merge warnings, read mapper — PASS
+
+- **Date:** 2026-11-11
+- **Attempts:** 1
+- **Attempt 1:**
+  - **Files changed:**
+    - `onecgiar-pr-server/src/api/bilateral/bilateral.service.ts` (+61/−16)
+    - `onecgiar-pr-server/src/api/bilateral/bilateral.service.spec.ts` (+275)
+    - `onecgiar-pr-server/src/api/results-framework-reporting/innovation-use/innovation-use.service.farmer-count-nature.spec.ts` (+125)
+  - **Implementer verification — red** (`-t "actor"`): 8 failed on assertions.
+    - The hook was never called before the transaction.
+    - The promise resolved instead of rejecting.
+    - Expected length 3, received 1.
+    - The `updated` call order was `undefined`.
+    - The log was missing.
+    - The mapper keys were missing.
+    - Expected exceptions: 2 guard tests passed vacuously, and the writer proof was green from the start because it documents existing behaviour.
+  - **Implementer verification — green:**
+    - `src/api/bilateral`: 47 suites, 1618 tests.
+    - Innovation-use writer: 7 suites, 60 tests.
+    - `src/api/results/result.spec.ts`: 159 tests.
+    - eslint and `tsc` clean.
+  - **Evidence re-run (Leader inline): VERIFIED.** `bilateral.service.spec.ts` plus the innovation-use writer specs: 8 suites, 336 tests. `tsc` and eslint clean.
+  - **Reviewers (`lenses` mode, 2 in parallel, opus): both PASS.**
+    - **Lens 1 (conformance + reliability/resilience):**
+      - The hook runs at `:415-418`. That is before the `updated` branch (`:424`), `runResultTypePreflight` (`:482`) and `dataSource.transaction` (`:514`).
+      - Both outcome builders use the merged array.
+      - The ordering test cannot pass vacuously, because it compares `invocationCallOrder` and that is `undefined` when the call is missing.
+    - **Lens 2 (conformance + risk/readability):**
+      - The shapes and order match §4.2/§4.3 and BIF-DD-5.
+      - The log carries counts only, and there is a test for it.
+      - The writer proof uses the real `where` built by `saveAnticipatedInnoUser`. It turns red if the codes are dropped from the Farmers key.
+  - **Runtime events:** none
+- **Spawns:**
+  - Implementer: 30 calls, 182,125 tokens, ended complete.
+  - Reviewer lens 1: 11 calls, 100,767 tokens, ended complete.
+  - Reviewer lens 2: 10 calls, 106,184 tokens, ended complete.
+- **Decisions and deviations (adjudicated by the Reviewers):**
+  - **Removed one `it.each` row in `bilateral.service.spec.ts`:** "innovation use: invalid payload -> same message, raised after the header…". It was replaced by a dedicated test that asserts the same message with no transaction, no header and no writer call. This is sanctioned by design §11 / BIF-DD-1 ("a fix, not a reversion"). The policy, capacity-sharing and innovation-development rows are untouched.
+  - **Log text deviation from design §9:** the shipped line is `create: result_type <id> has <n> actor warning(s) (<code>=<count>, …).` A result code does not exist before the header write on a fresh create. The line keeps counts by code only (AC-9). Both lenses accepted it. T-5 documents the actual form.
+  - The writer proof lives in `innovation-use.service.farmer-count-nature.spec.ts` as `tasks.md` names it. Design §10 says `innovation-use.service.spec.ts`; align it at archive.
+- **Forward pointers resolved:**
+  - The handler comment is now true on both branches.
+  - BIF-R-5 is proven: different pairs give two inserts.
+  - The households row is stored with `how_many` as the single total. This is `[advisory-grade]` and was included.
+- **ADVISORY (not gating):**
+  - `collectHandlerOutcomeWarnings` has no `?? []` guard. A hook that resolves `undefined` would 500 before any write.
+  - In a multi-result batch, a hook 400 on result N leaves results 1..N-1 committed. This predates the change; note it in the T-5 contract.
+  - The log fires before the MDS preflight.
+  - The mapper comment at `:2965` says "only Farmers stored (writer's whitelist)". Per P-7 the handler, not the writer, drops the codes.
+  - The in-memory matcher treats every `FindOperator` as `IsNull`.
+  - The households writer test builds the row by hand.
+- **Forward pointers → BIF-T-5:**
+  - The actual log form.
+  - The multi-result batch partial-commit note.
+  - The earlier T-2/T-3 pointers (400 ordering, inactive-row matching, generic "must be a string" 400).
+- **Requirements covered:** BIF-R-5, R-6, R-8 (GET), R-11 · BIF-AC-5, AC-6, AC-8 (GET), AC-10 · BIF-DD-1, DD-5 · P-3, P-6, P-10, P-11.
+- **Skills and effort:** `nestjs-expert`, `tdd`, `api-design-principles`. Effort: high.
+- **Running totals:** 4/6 tasks (T-6 deferred, so 4/5 code tasks) · ~1,226 LOC (≈306 prod, ≈920 test) · 6 review rounds (T-4 counted 2 verdicts). Within the raised tripwire of ~1300 LOC / ~320 prod / 11 rounds.
