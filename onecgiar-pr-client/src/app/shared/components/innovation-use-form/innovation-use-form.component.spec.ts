@@ -778,6 +778,25 @@ describe('InnovationUseFormComponent', () => {
       const result = component.narrativeActors();
       expect(result).toContain('Individuals, organizations or networks');
     });
+
+    it('P25 Innovation Use asks for actual users in the reporting year (INC-168060)', () => {
+      // `narrativeActors` is a computed cached by the first render; build a fresh instance.
+      fieldsManagerServiceMock.isP25.mockReturnValue(true);
+      component = TestBed.createComponent(InnovationUseFormComponent).componentInstance;
+      component.isIpsr = false;
+      const result = component.narrativeActors();
+      expect(result).toContain('actually using the innovation in the reporting year');
+      expect(result).not.toContain('by end of 2030');
+    });
+
+    it('P25 IPSR step 1 keeps the 2030 scaling-ambition wording (INC-168060)', () => {
+      fieldsManagerServiceMock.isP25.mockReturnValue(true);
+      component = TestBed.createComponent(InnovationUseFormComponent).componentInstance;
+      component.isIpsr = true;
+      const result = component.narrativeActors();
+      expect(result).toContain('The numbers should reflect the expected innovation use by end of 2030.');
+      expect(result).not.toContain('reporting year');
+    });
   });
 
   describe('getUseLevelIndex', () => {

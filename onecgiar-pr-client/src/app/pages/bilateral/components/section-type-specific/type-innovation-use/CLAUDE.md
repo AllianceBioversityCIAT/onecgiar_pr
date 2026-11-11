@@ -1,6 +1,6 @@
 # type-innovation-use (bilateral)
 
-**Verified:** 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: Current Use Update block + 4th MDS item `use-current-update` (blocks Submit); prior: 2026-10-14 · fix/innovation-use-phase-copy · current use hides only on an explicit "Yes" (NULL shows it); bilateral results DO roll over; prior: 2026-10-07 · The use-level ladder (not MDS since P2-3785 AC1) moved under full metadata, before the questions it gates.
+**Verified:** 2026-11-11 · qa-development-2026-ss · quick/innovation-use-actors-sentence-ipsr (INC-168060: current-use Actors description adds the reporting-year sentence — current use is MDS; Nicoleta); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: Current Use Update block + 4th MDS item `use-current-update` (blocks Submit); prior: 2026-10-14 · fix/innovation-use-phase-copy · current use hides only on an explicit "Yes" (NULL shows it); bilateral results DO roll over; prior: 2026-10-07 · The use-level ladder (not MDS since P2-3785 AC1) moved under full metadata, before the questions it gates.
 
 ## What it is
 BIL-RAU-T-8 pointer: Section 1 (`section-general-info`) now renders the Annual updating block
