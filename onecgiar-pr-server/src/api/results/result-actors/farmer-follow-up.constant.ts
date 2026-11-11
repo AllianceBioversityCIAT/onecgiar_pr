@@ -34,3 +34,23 @@ export const toUseNature = (value: unknown): UseNatureCode | null =>
   (USE_NATURE_CODES as readonly unknown[]).includes(value)
     ? (value as UseNatureCode)
     : null;
+
+/**
+ * Applicability switches of the bilateral Innovation Use actor follow-up questions.
+ *
+ * @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-1, BIF-DD-4, BIF-R-9)
+ *
+ * The bilateral rules read ONLY these two predicates. Both are Farmers-only today; if SO
+ * extends `use_nature` to every actor type (BIF-OQ-1), only `asksUseNature` changes.
+ */
+const isFarmers = (typeId: unknown): boolean =>
+  typeId !== null &&
+  typeId !== undefined &&
+  typeId !== '' &&
+  Number(typeId) === FARMERS_ACTOR_TYPE_ID;
+
+/** Whether the actor type is asked for the unit of its number (`count_unit`). */
+export const asksCountUnit = (typeId: unknown): boolean => isFarmers(typeId);
+
+/** Whether the actor type is asked for the nature of its use (`use_nature`). */
+export const asksUseNature = (typeId: unknown): boolean => isFarmers(typeId);

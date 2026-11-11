@@ -3,12 +3,18 @@ import {
   BilateralResultTypeHandler,
   HandlerAfterCreateContext,
   HandlerBeforeCreateContext,
+  HandlerCollectWarningsContext,
   HandlerResolveContext,
 } from './bilateral-result-type-handler.interface';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { ClarisaInnovationUseLevelRepository } from '../../../clarisa/clarisa-innovation-use-levels/clarisa-innovation-use-levels.repository';
 import { InnovationUseService } from '../../results-framework-reporting/innovation-use/innovation-use.service';
 import { ActorTypeRepository } from '../../results/result-actors/repositories/actors-type.repository';
+import { BilateralActorWarning } from './bilateral-result-type-handler.interface';
+import {
+  ActorFollowUpInput,
+  applyInnovationUseActorFollowUpRules,
+} from './innovation-use-actor-follow-up.rules';
 import { InnovationUseMdsValidator } from '../services/innovation-use-mds-validator.service';
 
 /** What `resolveAndValidate` hands `afterCreate` (RSB-T-3). */
@@ -109,6 +115,27 @@ export class InnovationUseBilateralHandler
     return { innovationUseDto };
   }
 
+  /**
+   * @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-3, BIF-DD-1). Preflight hook:
+   * resolves each actor's type (same 400s as `prepareActors`) and runs the follow-up rules, which
+   * throw on a bad payload and return the warnings. No write. `[]` for another result type or
+   * when no actors were sent.
+   */
+  async collectOutcomeWarnings({
+    bilateralDto,
+  }: HandlerCollectWarningsContext): Promise<BilateralActorWarning[]> {
+    if (bilateralDto.result_type_id !== ResultTypeEnum.INNOVATION_USE) {
+      return [];
+    }
+    const actors =
+      bilateralDto.innovation_use?.current_innovation_use_numbers?.actors;
+    if (!Array.isArray(actors) || !actors.length) {
+      return [];
+    }
+    const { warnings } = await this.applyFollowUpRules(actors);
+    return warnings;
+  }
+
   async afterCreate({
     bilateralDto,
     resultId,
@@ -134,39 +161,56 @@ export class InnovationUseBilateralHandler
   }
 
   /**
-   * Resolves every actor's type and checks its youth figures before the rows reach
-   * `InnovationUseService.saveInnovationUse`.
+   * Resolves every actor's type, normalises the follow-up answers and checks the youth figures
+   * before the rows reach `InnovationUseService.saveInnovationUse`.
    *
    * Both checks exist because the service persists what it is handed: `buildActorData`
    * reads `actor_type_id` only, so an actor identified by name alone used to be dropped
    * without a trace — the caller got a 200 with no mention of the missing row.
+   *
+   * @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-3, BIF-DD-1, BIF-DD-3). `count_unit`
+   * and `use_nature` are no longer forced to null: the rules keep them on Farmers rows and drop
+   * them elsewhere. The youth check runs on the normalised row, after the households step, so a
+   * households row never trips it. The warnings were already returned by `collectOutcomeWarnings`.
    */
   private async prepareActors(actors?: any[]): Promise<any[]> {
     if (!Array.isArray(actors) || !actors.length) {
       return [];
     }
 
+    const { actors: normalised, typeIds } =
+      await this.applyFollowUpRules(actors);
+
     const prepared: any[] = [];
+    normalised.forEach((actor, position) => {
+      const index = typeIds[position].index;
+      this.validateYouthWithinGender(actor, index);
+      prepared.push({ ...actor, actor_type_id: typeIds[position].actorTypeId });
+    });
+
+    return prepared;
+  }
+
+  /** Type resolution plus the pure rules; shared by the preflight hook and `prepareActors`. */
+  private async applyFollowUpRules(actors: any[]): Promise<{
+    actors: any[];
+    warnings: BilateralActorWarning[];
+    typeIds: Array<{ index: number; actorTypeId: number }>;
+  }> {
+    const inputs: ActorFollowUpInput[] = [];
+    const typeIds: Array<{ index: number; actorTypeId: number }> = [];
     for (let index = 0; index < actors.length; index++) {
       const actor = actors[index];
       if (!actor) {
         continue;
       }
-
       const actorTypeId = await this.resolveActorTypeId(actor, index);
-      this.validateYouthWithinGender(actor, index);
-
-      // IFC-R-1 out-of-scope / IFC-R-10: the Farmers unit and nature are centre-form only.
-      // Forced to null so bilateral keeps merging same-type actors and storing exactly as before.
-      prepared.push({
-        ...actor,
-        actor_type_id: actorTypeId,
-        count_unit: null,
-        use_nature: null,
-      });
+      inputs.push({ actor, index, actorTypeId });
+      typeIds.push({ index, actorTypeId });
     }
-
-    return prepared;
+    const { actors: normalised, warnings } =
+      applyInnovationUseActorFollowUpRules(inputs);
+    return { actors: normalised, warnings, typeIds };
   }
 
   /**

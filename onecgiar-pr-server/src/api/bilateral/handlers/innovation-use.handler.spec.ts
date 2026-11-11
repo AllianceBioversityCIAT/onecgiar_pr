@@ -302,7 +302,9 @@ describe('InnovationUseBilateralHandler', () => {
       ]);
     });
 
-    it('forces count_unit and use_nature to null and leaves other fields as sent (IFC-R-10)', async () => {
+    // @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-3): replaces the IFC-R-10 case
+    // "forces count_unit and use_nature to null and leaves other fields as sent".
+    it('keeps count_unit and use_nature on a Farmers row and applies the households rule (BIF-R-1, BIF-R-3)', async () => {
       await handler.afterCreate(
         withActors([
           {
@@ -318,12 +320,154 @@ describe('InnovationUseBilateralHandler', () => {
       expect(actorsSentToService()).toEqual([
         {
           actor_type_id: 1,
-          count_unit: null,
-          use_nature: null,
+          count_unit: 'households',
+          use_nature: 'innovation_applied',
           sex_and_age_disaggregation: true,
           how_many: 5,
+          women: null,
+          men: null,
+          women_youth: null,
+          men_youth: null,
+          has_women: null,
+          has_men: null,
+          has_women_youth: null,
+          has_men_youth: null,
         },
       ]);
+    });
+
+    it('households row with a breakdown: no youth 400, breakdown and has_* null, flag true (BIF-R-3, BIF-AC-3)', async () => {
+      await handler.afterCreate(
+        withActors([
+          {
+            actor_type_id: 1,
+            count_unit: 'households',
+            how_many: 50,
+            women: 30,
+            women_youth: 40,
+          },
+        ]),
+      );
+
+      expect(actorsSentToService()).toEqual([
+        expect.objectContaining({
+          count_unit: 'households',
+          how_many: 50,
+          women: null,
+          women_youth: null,
+          men: null,
+          men_youth: null,
+          has_women: null,
+          has_women_youth: null,
+          sex_and_age_disaggregation: true,
+        }),
+      ]);
+    });
+
+    it('households row with how_many 500 and women 200 / men 300 / women_youth 250 is stored as a single total (BIF-R-3)', async () => {
+      await handler.afterCreate(
+        withActors([
+          {
+            actor_type_id: 1,
+            count_unit: 'households',
+            how_many: 500,
+            women: 200,
+            men: 300,
+            women_youth: 250,
+          },
+        ]),
+      );
+
+      expect(actorsSentToService()).toEqual([
+        expect.objectContaining({
+          how_many: 500,
+          women: null,
+          men: null,
+          women_youth: null,
+          sex_and_age_disaggregation: true,
+        }),
+      ]);
+    });
+
+    it('a type-3 row with both codes reaches the writer with both null (BIF-R-7)', async () => {
+      await handler.afterCreate(
+        withActors([
+          {
+            actor_type_id: 3,
+            count_unit: 'households',
+            use_nature: 'innovation_applied',
+            sex_and_age_disaggregation: true,
+            how_many: 5,
+          },
+        ]),
+      );
+
+      expect(actorsSentToService()).toEqual([
+        expect.objectContaining({
+          actor_type_id: 3,
+          count_unit: null,
+          use_nature: null,
+        }),
+      ]);
+    });
+
+    it('a Farmers individuals row with both codes reaches the writer with both codes (BIF-R-1)', async () => {
+      await handler.afterCreate(
+        withActors([
+          {
+            actor_type_id: 1,
+            count_unit: 'individuals',
+            use_nature: 'information_received',
+            sex_and_age_disaggregation: true,
+            how_many: 5,
+          },
+        ]),
+      );
+
+      expect(actorsSentToService()).toEqual([
+        expect.objectContaining({
+          count_unit: 'individuals',
+          use_nature: 'information_received',
+        }),
+      ]);
+    });
+
+    it('collectOutcomeWarnings on an unknown actor_type_name throws the existing message', async () => {
+      await expect(
+        handler.collectOutcomeWarnings({
+          bilateralDto: withActors([{ actor_type_name: 'nope', how_many: 1 }])
+            .bilateralDto,
+        }),
+      ).rejects.toThrow(/^Invalid actors\[0\]\.actor_type_name: "nope"\./);
+    });
+
+    it('collectOutcomeWarnings returns the rules warnings and writes nothing', async () => {
+      const warnings = await handler.collectOutcomeWarnings({
+        bilateralDto: withActors([
+          { actor_type_id: 1, how_many: 5 },
+          { actor_type_id: 3, use_nature: 'innovation_applied', how_many: 5 },
+        ]).bilateralDto,
+      });
+
+      expect(warnings.map((w) => [w.index, w.code])).toEqual([
+        [0, 'actor_count_unit_missing'],
+        [0, 'actor_use_nature_missing'],
+        [1, 'actor_use_nature_not_applicable'],
+      ]);
+      expect(innovationUseServiceStub.saveInnovationUse).not.toHaveBeenCalled();
+    });
+
+    it('collectOutcomeWarnings returns [] for another result type or no actors', async () => {
+      await expect(
+        handler.collectOutcomeWarnings({
+          bilateralDto: { ...baseDto, result_type_id: 1 },
+        }),
+      ).resolves.toEqual([]);
+      await expect(
+        handler.collectOutcomeWarnings({
+          bilateralDto: withActors([]).bilateralDto,
+        }),
+      ).resolves.toEqual([]);
     });
 
     it('matches the catalogue name regardless of case and spacing around slashes', async () => {

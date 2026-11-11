@@ -449,6 +449,72 @@ describe('BilateralService (unit)', () => {
     return { service: svc };
   };
 
+  // @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-4, BIF-R-8 GET part, P-10):
+  // every Innovation Use actor object read by GET /:id carries `count_unit` and `use_nature`.
+  describe('mapInnovationUseBilateralActor — count_unit / use_nature (actor)', () => {
+    const map = (row: any) =>
+      (makeService().service as any).mapInnovationUseBilateralActor(row);
+
+    it('a Farmers households row returns the pair and how_many (actor)', () => {
+      const out = map({
+        actor_type_id: 1,
+        obj_actor_type: { name: 'Farmers' },
+        sex_and_age_disaggregation: true,
+        how_many: '40',
+        count_unit: 'households',
+        use_nature: 'innovation_applied',
+        addressing_demands: null,
+      });
+      expect(out).toEqual({
+        actor_type_name: 'Farmers',
+        sex_and_age_disaggregation: true,
+        addressing_demands: null,
+        how_many: 40,
+        count_unit: 'households',
+        use_nature: 'innovation_applied',
+      });
+    });
+
+    it('a non-Farmers row returns both keys as null (actor)', () => {
+      const out = map({
+        actor_type_id: 2,
+        obj_actor_type: { name: 'Researchers' },
+        sex_and_age_disaggregation: false,
+        women: 1,
+        women_youth: 2,
+        men: 3,
+        men_youth: 4,
+      });
+      expect(out).toHaveProperty('count_unit', null);
+      expect(out).toHaveProperty('use_nature', null);
+      expect(out).toMatchObject({
+        actor_type_name: 'Researchers',
+        women: 1,
+        women_youth: 2,
+        men: 3,
+        men_youth: 4,
+      });
+    });
+
+    it('a breakdown Farmers row keeps its existing keys and adds the pair (actor)', () => {
+      const out = map({
+        actor_type_id: 1,
+        obj_actor_type: { name: 'Farmers' },
+        sex_and_age_disaggregation: false,
+        women: 1,
+        count_unit: 'individuals',
+        use_nature: 'information_received',
+      });
+      expect(out).toMatchObject({
+        count_unit: 'individuals',
+        use_nature: 'information_received',
+        women: 1,
+        sex_and_age_disaggregation: false,
+      });
+      expect(out).not.toHaveProperty('how_many');
+    });
+  });
+
   it('unwrapIncomingResults should support results[], result and data', () => {
     const { service } = makeService();
     expect(service.unwrapIncomingResults(undefined)).toEqual([]);
@@ -2573,6 +2639,155 @@ describe('BilateralService (unit)', () => {
       expect(result.response.outcomes[0].warnings).toEqual([warning]);
     });
 
+    // @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-4, BIF-DD-1/DD-5): the handler's
+    // `collectOutcomeWarnings` hook runs right after the partner warnings, before the
+    // `updated` branch and before the (non-rolling-back) transaction.
+    describe('actor follow-up warnings hook (collectOutcomeWarnings)', () => {
+      const partnerWarning = {
+        field: 'contributing_partners',
+        index: 0,
+        code: 'partner_unresolved',
+        message: 'not linked',
+        institution_id: null,
+        name: 'Nobody Inc.',
+        acronym: null,
+      };
+      const actorWarnings = [
+        {
+          field: 'innovation_use.actors',
+          index: 0,
+          code: 'actor_count_unit_missing',
+          message: 'count_unit missing',
+        },
+        {
+          field: 'innovation_use.actors',
+          index: 2,
+          code: 'actor_duplicate_merged',
+          message: 'merged',
+        },
+      ];
+      const arrange = (hook: jest.Mock | undefined) => {
+        const { service } = arrangeCreateHarness();
+        service.resultTypeHandlerMap.set(ResultTypeEnum.OTHER_OUTPUT, {
+          resultType: ResultTypeEnum.OTHER_OUTPUT,
+          ...(hook ? { collectOutcomeWarnings: hook } : {}),
+        });
+        jest
+          .spyOn(service as any, 'resolvePartnerInstitutions')
+          .mockResolvedValue({
+            resolvedInstitutionIds: [],
+            investmentByInstitutionId: new Map(),
+            warnings: [partnerWarning],
+          });
+        const dto = buildDto();
+        (dto.result.data as any).contributing_partners = [
+          { name: 'Nobody Inc.' },
+        ];
+        return { service, dto };
+      };
+
+      it('actor hook runs before dataSource.transaction and receives the payload', async () => {
+        const hook = jest.fn().mockResolvedValue([]);
+        const { service, dto } = arrange(hook);
+
+        await service.create(dto);
+
+        expect(hook).toHaveBeenCalledWith({ bilateralDto: dto.result.data });
+        expect(hook.mock.invocationCallOrder[0]).toBeLessThan(
+          service.dataSource.transaction.mock.invocationCallOrder[0],
+        );
+      });
+
+      it('a hook that throws a 400 means no transaction and no header write (actor)', async () => {
+        const hook = jest
+          .fn()
+          .mockRejectedValue(new BadRequestException('actor bad'));
+        const { service, dto } = arrange(hook);
+
+        await expect(service.create(dto)).rejects.toThrow('actor bad');
+
+        expect(service.dataSource.transaction).not.toHaveBeenCalled();
+        expect(service.initializeResultHeader).not.toHaveBeenCalled();
+      });
+
+      it('outcomes[].warnings is partner warnings first, then actor warnings (actor)', async () => {
+        const hook = jest.fn().mockResolvedValue(actorWarnings);
+        const { service, dto } = arrange(hook);
+
+        const result = await service.create(dto);
+
+        const warnings = result.response.outcomes[0].warnings;
+        expect(warnings).toHaveLength(3);
+        expect(warnings[0]).toEqual(partnerWarning);
+        expect(warnings.slice(1)).toEqual(actorWarnings);
+        expect(warnings[1].field).toBe('innovation_use.actors');
+        expect(warnings[2].field).toBe('innovation_use.actors');
+      });
+
+      it('the updated (resubmission) outcome also carries the actor warnings (actor)', async () => {
+        const hook = jest.fn().mockResolvedValue(actorWarnings);
+        const { service, dto } = arrange(hook);
+        jest.spyOn(service, 'resolveResultCodeTarget').mockResolvedValue({
+          operation: 'updated',
+          target: { id: 501, result_type_id: ResultTypeEnum.OTHER_OUTPUT },
+        });
+        service._bilateralResubmissionService.resubmit.mockResolvedValue({
+          id: 501,
+          result_code: 28565,
+          status_id: ResultStatusData.PendingReview.value,
+          status: ResultStatusData.PendingReview.name,
+        });
+
+        const result = await service.create(dto);
+
+        expect(hook.mock.invocationCallOrder[0]).toBeLessThan(
+          service._bilateralResubmissionService.resubmit.mock
+            .invocationCallOrder[0],
+        );
+        expect(result.response.outcomes[0].operation).toBe('updated');
+        expect(result.response.outcomes[0].warnings).toEqual([
+          partnerWarning,
+          ...actorWarnings,
+        ]);
+      });
+
+      it('a type without the hook calls nothing and keeps the partner warnings untouched (actor)', async () => {
+        const { service, dto } = arrange(undefined);
+
+        const result = await service.create(dto);
+
+        expect(result.response.outcomes[0].warnings).toEqual([partnerWarning]);
+      });
+
+      it('logs counts by code only, never the messages (actor)', async () => {
+        const hook = jest.fn().mockResolvedValue(actorWarnings);
+        const { service, dto } = arrange(hook);
+
+        await service.create(dto);
+
+        const logged = (service.logger.log as jest.Mock).mock.calls
+          .map((c: any[]) => String(c[0]))
+          .filter((m: string) => m.includes('actor warning'));
+        expect(logged).toHaveLength(1);
+        expect(logged[0]).toContain('2 actor warning(s)');
+        expect(logged[0]).toContain('actor_count_unit_missing=1');
+        expect(logged[0]).toContain('actor_duplicate_merged=1');
+        expect(logged[0]).not.toContain('count_unit missing');
+      });
+
+      it('no log line when there are no actor warnings (actor)', async () => {
+        const hook = jest.fn().mockResolvedValue([]);
+        const { service, dto } = arrange(hook);
+
+        await service.create(dto);
+
+        const logged = (service.logger.log as jest.Mock).mock.calls.filter(
+          (c: any[]) => String(c[0]).includes('actor warning'),
+        );
+        expect(logged).toHaveLength(0);
+      });
+    });
+
     it('stamps response.outcomes with operation "created" for a codeless create', async () => {
       const { service } = arrangeCreateHarness();
       (service.initializeResultHeader as jest.Mock).mockResolvedValue({
@@ -4631,19 +4846,9 @@ describe('BilateralService (unit)', () => {
         { innovation_development: undefined },
         'innovation_development object is required for INNOVATION_DEVELOPMENT results.',
       ],
-      [
-        'innovation use',
-        ResultTypeEnum.INNOVATION_USE,
-        {
-          innovation_use: {
-            current_innovation_use_numbers: {
-              innov_use_to_be_determined: false,
-              actors: [{ actor_type_id: 999 }],
-            },
-          },
-        },
-        'Invalid actors[0].actor_type_id: 999.',
-      ],
+      // @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-4, BIF-DD-1, design §11): the
+      // Innovation Use case moved out of this table. Its actor 400s now fire in the preflight
+      // hook (before the header), so it has its own test below.
     ];
 
     it.each(cases)(
@@ -4729,6 +4934,50 @@ describe('BilateralService (unit)', () => {
         expect(writes.saveUse).not.toHaveBeenCalled();
       },
     );
+
+    // @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-4, BIF-DD-1, design §11): the
+    // message and status are unchanged, but an invalid Innovation Use actor now fails in the
+    // `collectOutcomeWarnings` preflight, so nothing is written (no orphan header).
+    it('innovation use: invalid actor payload -> same message, raised BEFORE the header and the transaction (actor)', async () => {
+      const { service } = arrangeCreateHarness();
+      const svc: any = service;
+      (svc.runResultTypeHandlers as jest.Mock).mockRestore();
+      const saveUse = jest.fn();
+      svc.resultTypeHandlerMap.set(
+        ResultTypeEnum.INNOVATION_USE,
+        new InnovationUseBilateralHandler(
+          { saveInnovationUse: saveUse } as any,
+          {} as any,
+          {
+            findOne: jest.fn().mockResolvedValue(null),
+            find: jest.fn().mockResolvedValue([]),
+          } as any,
+          {} as any,
+        ),
+      );
+      const dto: any = {
+        result: {
+          data: {
+            ...(buildDto().result.data as any),
+            result_type_id: ResultTypeEnum.INNOVATION_USE,
+            innovation_use: {
+              current_innovation_use_numbers: {
+                innov_use_to_be_determined: false,
+                actors: [{ actor_type_id: 999 }],
+              },
+            },
+          },
+        },
+      };
+
+      await expect(svc.create(dto, STAR as any)).rejects.toThrow(
+        'Invalid actors[0].actor_type_id: 999.',
+      );
+
+      expect(svc.dataSource.transaction).not.toHaveBeenCalled();
+      expect(svc.initializeResultHeader).not.toHaveBeenCalled();
+      expect(saveUse).not.toHaveBeenCalled();
+    });
   });
 
   // @akili-spec bilateral/resubmit-rejected-result — RSB-T-4 (RSB-R-4, R-23; design §7
