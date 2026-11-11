@@ -256,3 +256,13 @@
 - **Requirements covered:** BIF-R-10 · proposal §9.5.
 - **Skills and effort:** `cognitive-doc-design` and `api-design-principles`; effort medium.
 - **Running totals:** 5/5 code tasks done (T-6 deferred) · ~1,296 LOC (≈306 prod, ≈920 test, ≈70 doc) · 7 review rounds. This is within the raised tripwire (~1300 / ~320 / 11).
+
+#### BIF-T-5 follow-up — wording precision (2026-11-11)
+
+- **Decision:** Juan David answered "Continue" at the gate, which picks option 1: apply the three wording advisories from the T-5 Reviewer to the external contract doc.
+- **Who made the edit:** the Leader, inline. It is a single file and three sentences, under the inline threshold. The sentences are taken word for word from the Reviewer's suggestions, so no new claim is added.
+- **Edits in `onecgiar-pr-server/docs/bilateral-result-summaries.en.md`:**
+  - Read bullet: changed to "Bilateral ingestion stores them only on Farmers rows…"
+  - Inactive rows: changed to "skips the follow-up rules…", adding that the type and youth checks still apply.
+  - Order of 400s: changed to "Within each of these checks, the first failing actor…", with an example.
+- **Not re-reviewed:** these are advisory wording changes, so no rework attempt and no review round.

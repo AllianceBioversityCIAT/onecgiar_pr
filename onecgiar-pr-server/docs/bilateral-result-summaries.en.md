@@ -331,7 +331,7 @@ Two optional answers on each Innovation Use actor, in the `POST /create` input (
 | `use_nature` | string \| `null` | `information_received`, `innovation_applied` | Farmers (`actor_type_id` 1) | Nature of the use reported. |
 
 - **Input:** both are optional. Absent, `null` and `''` all count as empty. What happens to a missing, misplaced or invalid answer is in "Ingestion — actor follow-up" below.
-- **Read:** every actor object carries both fields, as a string or `null`, in every section where actors are returned (webhook/list `innovation_use_summary` and the detail read). Only a Farmers row has them stored; every other actor reads `null`. The key set is otherwise unchanged. `count_unit: "households"` means the actor carries one `how_many` total and no sex/age breakdown.
+- **Read:** every actor object carries both fields, as a string or `null`, in every section where actors are returned (webhook/list `innovation_use_summary` and the detail read). Bilateral ingestion stores them only on Farmers rows, so every other actor sent through `POST /create` reads `null` (a result edited in the PRMS centre form may hold codes on other actor types). The key set is otherwise unchanged. `count_unit: "households"` means the actor carries one `how_many` total and no sex/age breakdown.
 - **Not in the AI QA payload:** showing the answers to the AI quality assessment is deferred (BIF-R-8, design BIF-DD-6). It needs an additive label agreed with the AI QA owner, and the payload feeds a content hash. Until then the answers are available through the read above only.
 
 ### Budgets (same structure as Inno Dev)
@@ -525,7 +525,7 @@ Applies to Innovation Use results sent to `POST /create` (also the `updated` res
 | 8 | Farmers, `count_unit = households` | `women`, `men`, `women_youth`, `men_youth` and the matching `has_*` flags are discarded; `sex_and_age_disaggregation` is stored as `true` (single `how_many` total). |
 | 9 | Two Farmers rows without `result_actors_id` with the same (`count_unit`, `use_nature`) pair (empty = empty) | Stored as one row, the later one wins; warning `actor_duplicate_merged` on the later index. Different pairs are separate rows. |
 
-A row with `is_active: false` is passed through untouched (no check, no warning, not counted in step 9). To send a mixed group (for example some Farmers who received information and some who applied it), send one Farmers row per `use_nature`; the numbers are not summed.
+A row with `is_active: false` skips the follow-up rules (no follow-up check, no warning, not counted in step 9); its actor type is still resolved and its youth figures are still checked, so an unknown type on an inactive row is still a `400`. To send a mixed group (for example some Farmers who received information and some who applied it), send one Farmers row per `use_nature`; the numbers are not summed.
 
 **400 messages** (nothing is written for the result):
 
@@ -548,7 +548,7 @@ A row with `is_active: false` is passed through untouched (no check, no warning,
 **Behaviours worth knowing**
 
 - **Wrong type vs unknown code.** A value of the wrong JSON *type* (for example `count_unit: 1`) gets the generic validation `400` ("must be a string"), not the `actors[<i>]…` message above. A string that is not an allowed code gets the message above.
-- **Order of 400s.** Across one payload, actor-type and follow-up `400`s are reported before the youth-within-gender `400`s: all actor types are resolved first, then the follow-up rules, then the youth check per actor. The messages themselves are unchanged. The first failing actor, in index order, is the one reported.
+- **Order of 400s.** Across one payload, actor-type and follow-up `400`s are reported before the youth-within-gender `400`s: all actor types are resolved first, then the follow-up rules, then the youth check per actor. The messages themselves are unchanged. Within each of these checks, the first failing actor in index order is reported — so an unknown `actor_type_name` on actor 1 is reported before an invalid `count_unit` on actor 0.
 - **Nothing is written first.** Actor-type and follow-up `400`s fire before anything is written for that result (no orphan header), on both the no-code create and the `updated` resubmission path.
 - **Inactive Farmers rows.** An inactive (`is_active: false`) Farmers row sent with codes and no `result_actors_id` is matched against the stored rows by its (`count_unit`, `use_nature`) pair.
 - **Batches.** In a request with several results, a `400` on result N leaves results 1..N-1 already committed. This is pre-existing behaviour (see the per-result write guarantee above), not new.
