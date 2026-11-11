@@ -144,7 +144,7 @@ Skills for every server task: `nestjs-expert`; `tdd` for T-1, T-3 and T-4; `api-
   - [ ] Partner-warning tests pass untouched.
   - [ ] Lint and `tsc` clean. Run scoped jest only (never the full suite).
 
-### [ ] BIF-T-5 — Contract doc and field-alignment note
+### [x] BIF-T-5 — Contract doc and field-alignment note
 
 - **Type:** docs
 - **Description:** In `onecgiar-pr-server/docs/bilateral-result-summaries.en.md`:

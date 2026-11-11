@@ -317,9 +317,22 @@ Portfolio **P25** uses the **V2** question set; otherwise legacy P22. On load fa
 
 ### `current_section` / `innovation_use_2030_section` (when present)
 
-- **`actors[]`**: when `sex_and_age_disaggregation` is `true` (the disaggregation does NOT apply) → `how_many`; when it is `false` → `women`, `women_youth`, `men`, `men_youth`. Plus type and `addressing_demands`.
+- **`actors[]`**: when `sex_and_age_disaggregation` is `true` (the disaggregation does NOT apply) → `how_many`; when it is `false` → `women`, `women_youth`, `men`, `men_youth`. Plus type, `addressing_demands`, and the follow-up answers `count_unit` and `use_nature` (see below).
 - **`organizations[]`**: type name, `how_many`, `graduate_students`, `addressing_demands`, optional `other_institution`.
 - **`other_quantitative[]`**: `unit_of_measure`, `quantity`, `addressing_demands`.
+
+### Actor follow-up answers: `count_unit` and `use_nature` (P2-4106)
+
+Two optional answers on each Innovation Use actor, in the `POST /create` input (`innovation_use.current_innovation_use_numbers.actors[]`) and in the read output (`actors[]` of `current_section` and `innovation_use_2030_section`).
+
+| Field | Type | Allowed values (exact case) | Asked of | Meaning |
+|---|---|---|---|---|
+| `count_unit` | string \| `null` | `households`, `individuals` | Farmers (`actor_type_id` 1) | Unit of the number reported. |
+| `use_nature` | string \| `null` | `information_received`, `innovation_applied` | Farmers (`actor_type_id` 1) | Nature of the use reported. |
+
+- **Input:** both are optional. Absent, `null` and `''` all count as empty. What happens to a missing, misplaced or invalid answer is in "Ingestion — actor follow-up" below.
+- **Read:** every actor object carries both fields, as a string or `null`, in every section where actors are returned (webhook/list `innovation_use_summary` and the detail read). Only a Farmers row has them stored; every other actor reads `null`. The key set is otherwise unchanged. `count_unit: "households"` means the actor carries one `how_many` total and no sex/age breakdown.
+- **Not in the AI QA payload:** showing the answers to the AI quality assessment is deferred (BIF-R-8, design BIF-DD-6). It needs an additive label agreed with the AI QA owner, and the payload feeds a content hash. Until then the answers are available through the read above only.
 
 ### Budgets (same structure as Inno Dev)
 
@@ -478,7 +491,7 @@ A `result_code` is checked against two different candidate rows depending on whe
 | `operation` | `created`, `versioned`, or `updated` (a resubmission of a Rejected result, see below). |
 | `status_id` / `status` | The resulting workflow status. |
 | `external_reference` | Echoed from the request when the producer sent one. |
-| `warnings` | Always an array; empty when nothing needs attention. Each entry describes one `contributing_partners[]` entry that was **not linked** to the result — see "Contributing partners on `POST /create`" below. The result itself was still written. |
+| `warnings` | Always an array; empty when nothing needs attention. Each entry is either a `contributing_partners[]` entry that was **not linked** ("Contributing partners on `POST /create`" below; `field: "contributing_partners"`) or an Innovation Use actor follow-up notice ("Ingestion — actor follow-up" below; `field: "innovation_use.actors"`). Partner warnings come first. The result itself was still written. |
 
 **Why `outcomes`, not `results`:** the Fetcher's ingestion client (`external-api.mjs:139-157`) special-cases a `response` that is itself an array, or that carries `response.results[]`, when counting what it sent. Naming this array `outcomes` keeps that counting logic from misreading it. Nothing already on `response` was removed or renamed.
 
@@ -495,6 +508,60 @@ Send each partner with its **CLARISA institution id** (`institution_id`). `name`
 | An institution that is a **CGIAR center** | **Not linked as a partner** — centers are reported only through `lead_center` / `contributing_center`. `warnings[]` gets `partner_is_cgiar_center` with `resolved_institution_id`. |
 
 A warning never fails the request. Each entry carries `field: "contributing_partners"`, `index` (position in your `contributing_partners[]`), `code`, `message`, and the `institution_id` / `name` / `acronym` you sent. Fix the entry and resend (for a Rejected result, through the resubmission below).
+
+### Ingestion — actor follow-up
+
+Applies to Innovation Use results sent to `POST /create` (also the `updated` resubmission path). Each actor in `innovation_use.current_innovation_use_numbers.actors[]` is checked, in this order, using its resolved actor type (`actor_type_id`, or the name resolved against the catalogue). `i` is the position in `actors[]`.
+
+| Step | Condition | Effect |
+|---|---|---|
+| 1 | Field absent, `null` or `''` | Counts as empty. |
+| 2 | Field non-empty and not an allowed code (exact case), **on any actor type** | `400`. |
+| 3 | `count_unit` non-empty and the type is not Farmers | Dropped; warning `actor_count_unit_not_applicable`. |
+| 4 | `use_nature` non-empty and the type is not Farmers | Dropped; warning `actor_use_nature_not_applicable`. |
+| 5 | Farmers and `count_unit` empty | Stored empty; warning `actor_count_unit_missing`. |
+| 6 | Farmers and `use_nature` empty | Stored empty; warning `actor_use_nature_missing`. |
+| 7 | Farmers, `count_unit = households`, `how_many` empty | `400`. |
+| 8 | Farmers, `count_unit = households` | `women`, `men`, `women_youth`, `men_youth` and the matching `has_*` flags are discarded; `sex_and_age_disaggregation` is stored as `true` (single `how_many` total). |
+| 9 | Two Farmers rows without `result_actors_id` with the same (`count_unit`, `use_nature`) pair (empty = empty) | Stored as one row, the later one wins; warning `actor_duplicate_merged` on the later index. Different pairs are separate rows. |
+
+A row with `is_active: false` is passed through untouched (no check, no warning, not counted in step 9). To send a mixed group (for example some Farmers who received information and some who applied it), send one Farmers row per `use_nature`; the numbers are not summed.
+
+**400 messages** (nothing is written for the result):
+
+| Case | Message |
+|---|---|
+| Invalid `count_unit` | `actors[<i>].count_unit must be one of: households, individuals; received "<v>".` |
+| Invalid `use_nature` | `actors[<i>].use_nature must be one of: information_received, innovation_applied; received "<v>".` |
+| Households without a total | `actors[<i>].how_many is required when count_unit is households.` |
+
+**Warnings** go on `response.outcomes[].warnings`, in the same array as the partner warnings, which come first. Entry shape: `{ field: "innovation_use.actors", index, code, message }`, where `index` is the position in `current_innovation_use_numbers.actors[]`. A warning never fails the request.
+
+| Code | Message |
+|---|---|
+| `actor_count_unit_missing` | `count_unit was not provided for this actor; it was stored empty.` |
+| `actor_use_nature_missing` | `use_nature was not provided for this actor; it was stored empty.` |
+| `actor_count_unit_not_applicable` | `count_unit does not apply to this actor type and was ignored.` |
+| `actor_use_nature_not_applicable` | `use_nature does not apply to this actor type and was ignored.` |
+| `actor_duplicate_merged` | `Another Farmers actor with the same count_unit and use_nature was sent; the rows are stored as one and the later one wins.` |
+
+**Behaviours worth knowing**
+
+- **Wrong type vs unknown code.** A value of the wrong JSON *type* (for example `count_unit: 1`) gets the generic validation `400` ("must be a string"), not the `actors[<i>]…` message above. A string that is not an allowed code gets the message above.
+- **Order of 400s.** Across one payload, actor-type and follow-up `400`s are reported before the youth-within-gender `400`s: all actor types are resolved first, then the follow-up rules, then the youth check per actor. The messages themselves are unchanged. The first failing actor, in index order, is the one reported.
+- **Nothing is written first.** Actor-type and follow-up `400`s fire before anything is written for that result (no orphan header), on both the no-code create and the `updated` resubmission path.
+- **Inactive Farmers rows.** An inactive (`is_active: false`) Farmers row sent with codes and no `result_actors_id` is matched against the stored rows by its (`count_unit`, `use_nature`) pair.
+- **Batches.** In a request with several results, a `400` on result N leaves results 1..N-1 already committed. This is pre-existing behaviour (see the per-result write guarantee above), not new.
+
+**Field alignment (Fetcher schema and PRMS Normalizer Technical Field Documentation).** Use these exact names, case and codes on both sides:
+
+| Path | Type | Allowed (exact case) | Applies to | Missing | Not applicable | Invalid |
+|---|---|---|---|---|---|---|
+| `innovation_use.current_innovation_use_numbers.actors[].count_unit` | string \| null | `households`, `individuals` | Farmers (`actor_type_id` 1) | warning `actor_count_unit_missing` | ignored + warning `actor_count_unit_not_applicable` | 400 |
+| `innovation_use.current_innovation_use_numbers.actors[].use_nature` | string \| null | `information_received`, `innovation_applied` | Farmers (`actor_type_id` 1); pending confirmation by the SO team for other types | warning `actor_use_nature_missing` | ignored + warning `actor_use_nature_not_applicable` | 400 |
+| Rule | n/a | `households` means send `how_many`; any breakdown is discarded; no `how_many` is a 400 | Farmers | n/a | n/a | n/a |
+| Rule | n/a | Mixed groups: one Farmers actor per `use_nature`; numbers are not summed | Farmers | n/a | n/a | n/a |
+| Warning entry | `{ field: "innovation_use.actors", index, code, message }` on `response.outcomes[].warnings` | n/a | n/a | n/a | n/a | n/a |
 
 ### What a `versioned` result does not carry
 
@@ -671,6 +738,7 @@ Every refusal above is raised **before the first write**. The other checks of "E
 
 | Date (approx.) | Change |
 |----------------|--------|
+| 2026-11-11 | **Innovation Use actors gain `count_unit` and `use_nature` on `POST /create` and on read (P2-4106, spec `bilateral/innovation-use-actor-follow-up`, BIF-T-5, `BIF-R-10`).** **Input (additive, optional):** `innovation_use.current_innovation_use_numbers.actors[].count_unit` (`households` \| `individuals`) and `.use_nature` (`information_received` \| `innovation_applied`), exact case, asked of Farmers (`actor_type_id` 1). **Behaviour:** a code outside the list is a `400` on any actor type (`actors[<i>].count_unit must be one of: households, individuals; received "<v>".`, same form for `use_nature`); `households` without `how_many` is a `400` and discards any breakdown (single total, `sex_and_age_disaggregation` stored as `true`); a missing answer on a Farmers row, an answer on another type (ignored), and two Farmers rows with the same answer pair (merged, later wins) are **warnings**, never a failure. **Response (additive):** `response.outcomes[].warnings[]` may now hold `{ field: "innovation_use.actors", index, code, message }` with codes `actor_count_unit_missing`, `actor_use_nature_missing`, `actor_count_unit_not_applicable`, `actor_use_nature_not_applicable`, `actor_duplicate_merged`; partner warnings stay first. **Read (additive):** every Innovation Use actor object carries `count_unit` and `use_nature` (string or `null`). **Ordering:** actor-type and follow-up `400`s now fire before anything is written for the result (no orphan header), and before the youth-within-gender `400`s of the same payload. **Deferred:** the answers are not yet in the AI QA payload. Same rules on the resubmission path. See "Actor follow-up answers" and "Ingestion — actor follow-up". Nothing removed or renamed. |
 | 2026-11-05 | **`POST /create`: `contributing_partners[]` are no longer dropped silently or matched loosely (P2-4067).** A partner is linked only on its CLARISA `institution_id` or an **exact**, unique name/acronym match; the previous `LIKE %x%` + first-row match (which linked e.g. `CIAT` to any "Association…") is gone. A CGIAR center sent as a partner is not linked as a partner (centers belong in `lead_center` / `contributing_center`). Every entry that is not linked is reported on the new **`response.outcomes[].warnings`** array (`partner_unresolved`, `partner_ambiguous` + `candidate_institution_ids`, `partner_is_cgiar_center` + `resolved_institution_id`); the result is still written. **Additive:** `warnings` is always present (empty when every partner was linked); nothing removed or renamed. A partner that used to resolve only through partial matching now comes back as `partner_unresolved` — send its `institution_id`. Same rules on the resubmission path. See "Contributing partners on `POST /create`". |
 | 2026-11 | **`POST /create` corrects a Knowledge Product when `data.result_code` matches an open-phase Knowledge Product in Rejected or Editing (P2-4065, spec `changes/bilateral-kp-correction`, KPC-T-6, `KPC-R-14`; narrows the Knowledge Product `409` of 2026-08-26 and 2026-10-06).** The record is updated in place and returns `operation: "updated"` with the resulting `status_id` and `status`; no duplicate is created. **Status:** from Rejected the result ends in Pending Review; from Editing it stays in Editing when `keep_editing` is `true` and goes to Pending Review otherwise; any other status is `409 "Result {code} cannot be corrected: its status is {status name}. Only rejected or editing knowledge products can be corrected."`. A `RESUBMIT` history entry is written in every case. **Ownership of fields:** lead centre, Theory of Change, partners (those CGSpace contributed are kept), projects, contributing centres and users come from the payload; title, description, geography, the handle link and the Knowledge Product metadata are re-read from CGSpace and the payload values are ignored. `geo_focus` is not required. **New refusals, all before the first write:** `400` no `knowledge_product.handle`; `409` handle differs from the stored one (the forms `hdl.handle.net`, `cgspace.cgiar.org/handle/` and bare `10568/x` compare as equal); `422` CGSpace reporting-cycle rule, passed through unchanged; `502 "The DSpace record of result {code} (handle {handle}) could not be read. Nothing was changed; retry later."` for any other CGSpace read failure; `409` status changed during processing. **Unchanged:** a Knowledge Product found only in an earlier phase still gets `409 "Result {code} is a Knowledge Product. ..."` (carry-forward stays closed, on `POST /create` and `POST /version`); every non-Knowledge Product message is byte for byte the same. Additive: no field removed or renamed. See "Correcting a Knowledge Product" above. |
 | 2026-10-26 | **`justification` on `PATCH /api/bilateral/center/change-type/:resultId` is now optional (spec `bilateral/change-type-optional-justification`, BIL-CTJ-T-2, `BIL-CTJ-R-2`, `BIL-CTJ-R-3`).** The body may omit `justification` or send it empty/blank; the change is processed exactly as with a reason. Without a reason the review-history comment is `Result type changed from level X, type Y to level A, type B.` (no reason text, no trailing space); with one, the trimmed reason follows after a single space. Input-side only: no read-payload change, no other validation change. |

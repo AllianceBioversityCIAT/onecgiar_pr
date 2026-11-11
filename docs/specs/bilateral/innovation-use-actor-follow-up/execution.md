@@ -224,3 +224,35 @@
 - **Requirements covered:** BIF-R-5, R-6, R-8 (GET), R-11 · BIF-AC-5, AC-6, AC-8 (GET), AC-10 · BIF-DD-1, DD-5 · P-3, P-6, P-10, P-11.
 - **Skills and effort:** `nestjs-expert`, `tdd`, `api-design-principles`. Effort: high.
 - **Running totals:** 4/6 tasks (T-6 deferred, so 4/5 code tasks) · ~1,226 LOC (≈306 prod, ≈920 test) · 6 review rounds (T-4 counted 2 verdicts). Within the raised tripwire of ~1300 LOC / ~320 prod / 11 rounds.
+
+### BIF-T-5 — Contract doc and field-alignment note — PASS
+
+- **Date:** 2026-11-11
+- **Attempts:** 1
+- **Attempt 1:**
+  - **Files changed:** `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` (+70/−2). Changes:
+    - §3 `actors[]` bullet and a new subsection, "Actor follow-up answers".
+    - `outcomes[].warnings` row.
+    - A new subsection, "Ingestion — actor follow-up", after "Contributing partners on `POST /create`". It holds the 9-step table, the three 400s, the five warnings with their shape, the §10 alignment table and forward pointers 1–6 and 8.
+    - A change-log row dated 2026-11-11.
+  - **Implementer verification:**
+    - A falsifier grep found the 5 codes and `innovation_use.actors` in the doc.
+    - The 5 warning messages and the `how_many` 400 each match as fixed strings (code=1, doc=1).
+    - The two templated "must be one of" messages (`rules.ts:57`) equal the rendered output.
+  - **Evidence re-run (Leader inline): VERIFIED.** The same counts came back, both rendered messages are present, and the change log is at line 741.
+  - **Reviewer (opus): PASS.**
+    - All 7 checked pointers are true to the code, and every code and message matches verbatim.
+    - BIF-R-10 is covered in full, and the BIF-R-8 deferral is stated.
+    - Pointer 7 (log form) is accepted as skipped, because the doc documents no server logs.
+  - **Runtime events:** none
+- **Spawns:**
+  - Implementer: 21 calls, 122,882 tokens, ended complete.
+  - Reviewer: 13 calls, 110,866 tokens, ended complete.
+- **ADVISORY (not gating).** Three wording precision points in the external doc:
+  - "The first failing actor, in index order, is the one reported" holds only within each check (type → follow-up → youth).
+  - "`is_active: false` passed through untouched (no check…)" should say "no follow-up check". Type resolution and the youth check still apply.
+  - "Only a Farmers row has them stored" holds only for bilateral ingestion. The v2 writer stores codes on any type.
+  - These are raised at the continue gate as a user decision; they are not folded in silently.
+- **Requirements covered:** BIF-R-10 · proposal §9.5.
+- **Skills and effort:** `cognitive-doc-design` and `api-design-principles`; effort medium.
+- **Running totals:** 5/5 code tasks done (T-6 deferred) · ~1,296 LOC (≈306 prod, ≈920 test, ≈70 doc) · 7 review rounds. This is within the raised tripwire (~1300 / ~320 / 11).
