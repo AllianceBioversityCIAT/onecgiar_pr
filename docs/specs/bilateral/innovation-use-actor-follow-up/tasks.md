@@ -79,7 +79,7 @@ Skills for every server task: `nestjs-expert`; `tdd` for T-1, T-3 and T-4; `api-
   - [ ] Swagger shows both fields with their enums.
   - [ ] Lint and `tsc` clean.
 
-### [ ] BIF-T-3 — Handler: preflight hook and `prepareActors` normalisation
+### [x] BIF-T-3 — Handler: preflight hook and `prepareActors` normalisation
 
 - **Type:** server
 - **Description:**

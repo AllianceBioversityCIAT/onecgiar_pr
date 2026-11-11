@@ -102,3 +102,59 @@
   - Skills: `nestjs-expert` and `api-design-principles`. The task lists no `tdd`, but red was still written first.
   - Effort: low-medium.
 - **Running totals:** 2/6 tasks · ~572 LOC (≈204 prod, ≈368 test) · 2 review rounds. This is within the raised tripwire. Production code stands at ~204 against the ~250 alert, and T-3/T-4 still add production code. That alert will likely fire during T-4; see the note at the gate.
+
+### BIF-T-3 — Handler: preflight hook and `prepareActors` normalisation — PASS
+
+- **Date:** 2026-11-11
+- **Attempts:** 1
+- **Attempt 1:**
+  - **Files changed:**
+    - `onecgiar-pr-server/src/api/bilateral/handlers/bilateral-result-type-handler.interface.ts` (+21)
+    - `onecgiar-pr-server/src/api/bilateral/handlers/innovation-use.handler.ts` (+74/−18 net ≈ +56)
+    - `onecgiar-pr-server/src/api/bilateral/handlers/innovation-use.handler.spec.ts` (+150)
+  - **Implementer verification:**
+    - Red: a stub hook returning `[]` failed 6 assertions: households/individuals rows received `count_unit: null`, the invalid-name case resolved instead of rejecting, and the warnings array was empty.
+    - Green: handlers 7 suites / 129 tests; `bilateral.service.spec.ts` + `services/` 15 suites / 1023 tests.
+    - eslint and `tsc` clean.
+  - **Evidence re-run (Leader inline): VERIFIED.** Handlers 7/7 suites, 129/129 tests; `tsc` and eslint clean.
+  - **Reviewer (opus, full): PASS.**
+    - Every falsifier is covered.
+    - The positional mapping between type ids and normalised actors is safe.
+    - The disqualifier did not fire: the return shape of `resolveAndValidate` is unchanged and the writer is untouched.
+  - **Runtime events:** none
+- **Spawns:**
+  - Implementer: 15 calls, 112,048 tokens, ended complete.
+  - Reviewer: 7 calls, 97,256 tokens, ended complete.
+- **For the PR, the old forced-null assertion:**
+  - Test: `forces count_unit and use_nature to null and leaves other fields as sent (IFC-R-10)`.
+  - It expected `[{ actor_type_id: 1, count_unit: null, use_nature: null, sex_and_age_disaggregation: true, how_many: 5 }]`.
+  - Now: `keeps count_unit and use_nature on a Farmers row and applies the households rule`.
+- **Forward pointer from T-2, resolved:**
+  - `bilateral.controller.ts:81` (`version`, `VersionResultDto`) and `:225` (`listAll`, query) do not reach the IU handler.
+  - Only `create` (`runResultTypeHandlers`) and resubmission reach it.
+- **Implementer assumptions and Reviewer rulings:**
+  - **400 order:** all types are resolved first, then the rules run, then the youth check runs per actor. A type or follow-up 400 now wins over a youth 400 on an earlier actor. Accepted: design BIF-DD-1/§11 already places type and rules in the preflight, before youth, and the messages are unchanged.
+  - **`is_active === false` rows** pass through the rules and still go through type resolution and the youth check. Accepted.
+- **ADVISORY (not gating):**
+  - **Risk:** an inactive Farmers row sent with codes and without `result_actors_id` now matches the writer by its code pair (P-6), not by (NULL, NULL). Old payloads cannot trigger this, because the DTO stripped the codes before T-2.
+  - The `BilateralActorWarning` import source is inconsistent.
+  - The handler comment "warnings already returned by collectOutcomeWarnings" is true only once T-4 is wired. Confirm it at T-4.
+  - The type-3-to-null test only discriminates together with the Farmers test.
+  - The extra `actor_type` lookup per name is accepted by §8.
+- **Forward pointers:**
+  - **→ BIF-T-4:**
+    - Confirm the hook output reaches the warnings on both the create and the resubmission branches.
+    - Cover two Farmers rows with different pairs reaching the writer as two rows (BIF-R-5) in the writer spec.
+  - **→ BIF-T-5:**
+    - Document that type and follow-up 400s are reported before youth 400s across the payload.
+    - Document that an inactive Farmers row with codes is matched by its pair.
+    - Document that a wrong type gets the generic "must be a string" 400 (from T-2).
+- **Requirements covered:** BIF-R-1, R-3, R-5 (handler part), R-6, R-7 · BIF-AC-1, AC-3, AC-5 (handler), AC-7 · BIF-DD-1 (handler half), DD-3.
+- **Decisions:**
+  - Skills: `nestjs-expert` + `tdd`.
+  - Effort: medium-high.
+- **Running totals:** 3/6 tasks · ~781 LOC (≈261 prod, ≈520 test) · 3 review rounds.
+  - **Production-code alert (~250) fired.** Production code is at ~261 against the ~130 design estimate.
+  - **Cause:** the rules function is 158 lines (estimate ~60) because it is fully typed and carries a doc-comment per step. The handler adds +56.
+  - Total LOC (781) is within the raised ~1000 tripwire, but T-4 (service + tests) will likely cross it.
+  - **Stop for the user** at the continue gate.
