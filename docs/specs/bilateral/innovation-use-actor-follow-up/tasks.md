@@ -29,7 +29,7 @@
 
 Skills for every server task: `nestjs-expert`; `tdd` for T-1, T-3 and T-4; `api-design-principles` for T-2, T-4 and T-5.
 
-### BIF-T-1 — Pure rules function and applicability predicates
+### [x] BIF-T-1 — Pure rules function and applicability predicates
 
 - **Type:** server
 - **Description:** Add `asksCountUnit(typeId)` and `asksUseNature(typeId)` to `farmer-follow-up.constant.ts`; both are `=== FARMERS_ACTOR_TYPE_ID` today. Create `innovation-use-actor-follow-up.rules.ts`, a pure function that takes `[{ actor, index, actorTypeId }]` and returns `{ actors, warnings }` or throws `BadRequestException`. It implements design §5 steps 1–9 in that order, with the exact messages in §4.4 and the warning shape in §4.2. It does no I/O and no logging.
@@ -58,7 +58,7 @@ Skills for every server task: `nestjs-expert`; `tdd` for T-1, T-3 and T-4; `api-
   - [ ] `npx eslint` clean on the touched files; `npx tsc --noEmit -p tsconfig.json` clean.
   - [ ] No secrets or payload bodies in messages (only the rejected code and the index).
 
-### BIF-T-2 — DTO keeps both fields through the whitelist
+### [ ] BIF-T-2 — DTO keeps both fields through the whitelist
 
 - **Type:** server
 - **Description:** On `InnovationUseActorDto`, add `count_unit` and `use_nature` with `@IsOptional() @IsString()` and `@ApiPropertyOptional({ enum: [...], nullable: true, description })`. Do not use `@IsIn` (BIF-DD-2). Add a test that runs the real `ValidationPipe({ whitelist: true, transform: true })` over a `RootResultsDto` payload with a nested actor and asserts that both fields survive. Follow the pattern of `dto/create-bilateral-result-code.dto.spec.ts`.
@@ -79,7 +79,7 @@ Skills for every server task: `nestjs-expert`; `tdd` for T-1, T-3 and T-4; `api-
   - [ ] Swagger shows both fields with their enums.
   - [ ] Lint and `tsc` clean.
 
-### BIF-T-3 — Handler: preflight hook and `prepareActors` normalisation
+### [ ] BIF-T-3 — Handler: preflight hook and `prepareActors` normalisation
 
 - **Type:** server
 - **Description:**
@@ -110,7 +110,7 @@ Skills for every server task: `nestjs-expert`; `tdd` for T-1, T-3 and T-4; `api-
   - [ ] All handler cases listed above are covered by tests.
   - [ ] Lint and `tsc` clean.
 
-### BIF-T-4 — Service: call the hook before any write, merge warnings, read mapper
+### [ ] BIF-T-4 — Service: call the hook before any write, merge warnings, read mapper
 
 - **Type:** server
 - **Description:**
@@ -144,7 +144,7 @@ Skills for every server task: `nestjs-expert`; `tdd` for T-1, T-3 and T-4; `api-
   - [ ] Partner-warning tests pass untouched.
   - [ ] Lint and `tsc` clean. Run scoped jest only (never the full suite).
 
-### BIF-T-5 — Contract doc and field-alignment note
+### [ ] BIF-T-5 — Contract doc and field-alignment note
 
 - **Type:** docs
 - **Description:** In `onecgiar-pr-server/docs/bilateral-result-summaries.en.md`:
@@ -167,14 +167,14 @@ Skills for every server task: `nestjs-expert`; `tdd` for T-1, T-3 and T-4; `api-
   - [ ] Change-log entry is present and dated.
   - [ ] Every code and message matches the code verbatim.
 
-### BIF-T-6 — QA AI payload label (DEFERRED — no owner)
+### [ ] BIF-T-6 — QA AI payload label (DEFERRED — no owner)
 
 - **Status:** deferred, 2026-11-11 (Juan David). The AI QA owner (Daniela) left and nobody owns that project. The labels are frozen and strictly validated (P-12), and P-13 cannot be confirmed by anyone, so shipping the label blind risks rejected payloads and a forced re-assessment of every Innovation Use result.
 - **Effect:** BIF-R-8 / BIF-AC-8 are met through GET `/:id` only. The QA AI payload is not touched by this spec.
 - **To re-open:** a separate ticket, once someone owns the AI QA contract. The proposed label stays in design BIF-DD-6.
 - **Execute:** skip.
 
-### BIF-T-7 — Manual E2E on PRMS TEST (HITL)
+### [ ] BIF-T-7 — Manual E2E on PRMS TEST (HITL)
 
 - **Type:** rollout
 - **Description:** After the merge to `performance-refactor` (which deploys automatically to prtest):
