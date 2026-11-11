@@ -174,7 +174,7 @@ Skills for every server task: `nestjs-expert`; `tdd` for T-1, T-3 and T-4; `api-
 - **To re-open:** a separate ticket, once someone owns the AI QA contract. The proposed label stays in design BIF-DD-6.
 - **Execute:** skip.
 
-### [ ] BIF-T-7 — Manual E2E on PRMS TEST (HITL)
+### [~] BIF-T-7 — Manual E2E on PRMS TEST (HITL)
 
 - **Type:** rollout
 - **Description:** After the merge to `performance-refactor` (which deploys automatically to prtest):

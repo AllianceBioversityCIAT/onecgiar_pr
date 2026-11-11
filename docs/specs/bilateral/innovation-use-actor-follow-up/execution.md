@@ -266,3 +266,14 @@
   - Inactive rows: changed to "skips the follow-up rules…", adding that the type and youth checks still apply.
   - Order of 400s: changed to "Within each of these checks, the first failing actor…", with an example.
 - **Not re-reviewed:** these are advisory wording changes, so no rework attempt and no review round.
+
+### BIF-T-7 — Manual E2E on PRMS TEST — in progress
+
+- **Merge (2026-11-11, on Juan David's explicit order "SI merge"):**
+  - The branch was pushed.
+  - A merge commit `5cff36d13` (`🔀 merge(performance-refactor): …`, `--no-ff`, team convention) was built on top of `origin/performance-refactor` `72b8a2f8a`, then pushed with `72b8a2f8a..5cff36d13`.
+  - The local `performance-refactor` checkout in the main repo (`c2053151b`, diverged) was not touched.
+- **Deploy:** automatic on merge to prtest. Before diagnosing any result, confirm prtest is on `5cff36d13`.
+- **Pending:**
+  - Direct POSTs for AC-1, 3, 5, 6 and 10, plus an AC-2 no-orphan check. Then GET `/:id` on each.
+  - `SHOW CREATE FUNCTION validation_innovation_use_P25` (P-14) — Juan David.
