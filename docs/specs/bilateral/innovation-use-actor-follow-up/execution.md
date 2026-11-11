@@ -62,3 +62,43 @@
 - **Issues:**
   - The worktree had no `onecgiar-pr-server/node_modules`. The Implementer symlinked it to the `ladyfish` worktree's copy (same `package.json`, gitignored).
 - **Running totals:** 1/6 tasks · ~459 LOC (≈178 prod, ≈281 test) · 1 review round. The test file is above the per-task estimate, but the total stays inside the ~500 tripwire, which counts all tasks; watch T-3/T-4.
+
+#### Budget decision (2026-11-11, after BIF-T-1)
+
+- **Tripwire raised.** Juan David answered "Adelante" at the continue gate, which offered raising the tripwire as option 1 and recommended it.
+- **New tripwire:** ~1000 LOC total, tests included, and 11 review rounds.
+- **Separate production-code alert:** the Leader stops if production code passes ~250 LOC.
+- **Cause:** test volume. The rules spec alone is 281 lines. Production code is on estimate.
+
+### BIF-T-2 — DTO keeps both fields through the whitelist — PASS
+
+- **Date:** 2026-11-11
+- **Attempts:** 1
+- **Attempt 1:**
+  - **Files changed:**
+    - `onecgiar-pr-server/src/api/bilateral/dto/create-bilateral.dto.ts` (+26)
+    - `onecgiar-pr-server/src/api/bilateral/dto/create-bilateral-actor-follow-up.dto.spec.ts` (new, 87)
+  - **Implementer verification:**
+    - **Disqualifier checked:** `bilateral.controller.ts:52-58` uses `whitelist: true, forbidNonWhitelisted: false, transform: true`, and there is no global pipe.
+    - **Red** (spec written first, DTO unchanged): both tests failed with `Received: undefined`.
+    - **Green:** `npx jest src/api/bilateral/dto` passed 4 suites and 32 tests. eslint and `tsc` are clean.
+  - **Evidence re-run (Leader inline): VERIFIED.** Same counts, and `tsc` and eslint are clean.
+  - **Reviewer (opus): PASS.** The change matches BIF-DD-2, P-1 is fixed, both falsifiers are covered, and the disqualifier was checked at the source.
+  - **Runtime events:** none
+- **Spawns:**
+  - Implementer: 14 calls, 104,491 tokens, ended complete. Its Not Done section holds assumptions only.
+  - Reviewer: 8 calls, 44,904 tokens, ended complete.
+- **Implementer assumptions:**
+  - The fixture uses the minimum header fields.
+  - The constants are imported from the results module.
+  - The Swagger text describes warning and 400 behaviour that arrives in T-3/T-4.
+- **ADVISORY (not gating):**
+  - A non-string value such as `count_unit: 1` gets class-validator's generic "must be a string" 400. **Forward pointer → BIF-T-5:** document that a wrong type and an unknown code give different 400 messages.
+  - The Swagger text describes behaviour that is not yet live until T-3/T-4. They ship in the same release.
+  - Routes `bilateral.controller.ts:81` and `:225` use the same pipe options. **Forward pointer → BIF-T-3/T-4:** confirm only `/create` acts on the fields.
+  - The fixture is duplicated with the result-code spec.
+- **Requirements covered:** BIF-R-1 (input), BIF-AC-1 (input), P-1.
+- **Decisions:**
+  - Skills: `nestjs-expert` and `api-design-principles`. The task lists no `tdd`, but red was still written first.
+  - Effort: low-medium.
+- **Running totals:** 2/6 tasks · ~572 LOC (≈204 prod, ≈368 test) · 2 review rounds. This is within the raised tripwire. Production code stands at ~204 against the ~250 alert, and T-3/T-4 still add production code. That alert will likely fire during T-4; see the note at the gate.

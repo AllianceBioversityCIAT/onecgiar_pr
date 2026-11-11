@@ -58,7 +58,7 @@ Skills for every server task: `nestjs-expert`; `tdd` for T-1, T-3 and T-4; `api-
   - [ ] `npx eslint` clean on the touched files; `npx tsc --noEmit -p tsconfig.json` clean.
   - [ ] No secrets or payload bodies in messages (only the rejected code and the index).
 
-### [ ] BIF-T-2 — DTO keeps both fields through the whitelist
+### [x] BIF-T-2 — DTO keeps both fields through the whitelist
 
 - **Type:** server
 - **Description:** On `InnovationUseActorDto`, add `count_unit` and `use_nature` with `@IsOptional() @IsString()` and `@ApiPropertyOptional({ enum: [...], nullable: true, description })`. Do not use `@IsIn` (BIF-DD-2). Add a test that runs the real `ValidationPipe({ whitelist: true, transform: true })` over a `RootResultsDto` payload with a nested actor and asserts that both fields survive. Follow the pattern of `dto/create-bilateral-result-code.dto.spec.ts`.
