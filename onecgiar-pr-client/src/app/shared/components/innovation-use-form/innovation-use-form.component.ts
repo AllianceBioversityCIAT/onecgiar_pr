@@ -1,6 +1,7 @@
 import { Component, Input, OnInit, OnChanges, computed, ChangeDetectorRef } from '@angular/core';
 import { INNOVATION_USE_2030_PROJECTION_COPY } from '../../../internationalization/innovation-use-2030-projection.copy';
 import { CURRENT_USE_UPDATE_COPY } from '../../../internationalization/current-use-update.copy';
+import { INNOVATION_USE_YOUTH_REQUIRED_COPY } from '../../../internationalization/innovation-use-youth-required.copy';
 import {
   currentUseDifference,
   currentUseMismatchMessage,
@@ -519,6 +520,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
 
   /** Copy + codes of the block, exposed to the template. Verbatim from the mock-up (see `farmer-follow-up.ts`). */
   readonly farmerFollowUpCopy = FARMER_FOLLOW_UP_COPY;
+  readonly youthRequiredCopy = INNOVATION_USE_YOUTH_REQUIRED_COPY;
   readonly farmerCountUnit = FARMER_COUNT_UNIT;
 
   /**
@@ -690,7 +692,13 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
       this.body.innovatonUse.actors[i].previousWomen_youth = this.body.innovatonUse.actors[i][genderYouth];
     }
     setTimeout(() => {
-      this.body.innovatonUse.actors[i][genderNonYouth] = this.body.innovatonUse.actors[i][gender] - this.body.innovatonUse.actors[i][genderYouth];
+      // IUY-R-1: derive on the row actually edited (`actorItem`). The 2030 grid passes its own row,
+      // and the old `body.innovatonUse.actors[i]` wrote the current-use row of the same index instead.
+      // For in-scope results an empty Youth leaves Non-youth empty instead of copying the total.
+      actorItem[genderNonYouth] =
+        this.isFarmerFollowUpResult() && this.isYouthEmpty(actorItem[genderYouth])
+          ? null
+          : actorItem[gender] - actorItem[genderYouth];
       this.calculateTotalField(actorItem);
       this.cdr.markForCheck();
     }, 1100);
@@ -706,6 +714,22 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
   narrativeActors = computed(() => {
     if (this.fieldsManagerSE.isP25()) {
       return `<ul>
+  /**
+   * IUY-R-1 (bugfix/innovation-use-youth-required): hint under Non-youth asking for Youth (0 if none).
+   * Same result gate as the Farmers questions (not IPSR, phase year >= 2026, not W3/Bilaterals), only on
+   * a grid row (not "does not apply", not the age fallback, which fills Youth itself) whose total is > 0.
+   * Mirrors the server rule in `validation_innovation_use_P25`, which keeps the section red meanwhile.
+   */
+  showYouthRequiredHint(actorItem, gender: 'women' | 'men'): boolean {
+    if (!this.isFarmerFollowUpResult()) return false;
+    if (!actorItem || actorItem.sex_and_age_disaggregation || actorItem.age_disaggregation_not_available) return false;
+    return Number(actorItem[gender]) > 0 && this.isYouthEmpty(actorItem[`${gender}_youth`]);
+  }
+
+  private isYouthEmpty(value: unknown): boolean {
+    return value === null || value === undefined || value === '';
+  }
+
       <li>
       If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use. ${
         // INC-168060 (Nicoleta): IPSR step 1 is about scaling ambition, so it keeps the 2030 wording.
