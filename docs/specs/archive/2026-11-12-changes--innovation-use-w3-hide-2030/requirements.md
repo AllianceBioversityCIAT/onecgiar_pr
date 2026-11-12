@@ -47,7 +47,7 @@ Nicoleta (2026-11-11): *"future use (2030 users) is not part of the MDS for bila
 - the current-use Actors sentence (already done in `quick/innovation-use-actors-sentence-ipsr`)
 - deleting or rewriting stored `innovation_use_2030` rows or `innov_use_2030_to_be_determined`
 - the QA catalog `iu_projection_2030` section (it has no condition kind keyed to the source; recorded as a follow-up)
-- bilateral `/api/bilateral/*` payloads and the `validation_innovation_use_P25` function, unless the IWH-T-0 data check shows W3 rows that would block the green check (then → Pivot)
+- bilateral `/api/bilateral/*` payloads and the `validation_innovation_use_P25` function, unless the data check shows W3 rows that would block the green check (done at specify as design P-8: rows found, handled by the IWH-T-3 data fix instead of a Pivot)
 
 ## 4. Personas
 
@@ -104,7 +104,7 @@ Nicoleta (2026-11-11): *"future use (2030 users) is not part of the MDS for bila
 | Bilateral save nulls the stored 2030 answer | Jest `buildPayload` test with a loaded `true` and a loaded list |
 | A consumer spec pins the removed bilateral markup | `--findRelatedTests` on the changed files + the consumer list in `tasks.md` |
 | Template compile error (ngc stricter than Jest) | `npx ng build` is too heavy; `npx tsc -p tsconfig.app.json --noEmit` + Jest DOM render of the template |
-| Green check turns red for a W3 result whose 2030 answer is NULL and can no longer be edited | No automated gate: IWH-T-0 data query (user runs it on prod/test DB) → Pivot if rows > 0 |
+| Green check turns red for a W3 result whose 2030 answer is NULL and can no longer be edited | No automated gate: data query at specify (design P-8, user-run on prod/test DB) → rows found → IWH-T-3 data fix |
 | Visual: an empty gap or orphan divider where the block was | No automated gate: PRTest check on result 5093 and one bilateral result (HITL) |
 
 ## 8. Requirement ID Index
