@@ -88,7 +88,7 @@ Covers IUY-R-1..3 and IUY-NFR-1..3. Gate logged as `auto-approved (user instruct
   - [ ] Folder `CLAUDE.md` updated and re-stamped
   - [ ] Cannot prove: hint placement and look → T-4
 
-### [ ] IUY-T-3 — DB: youth-required checks in `validation_innovation_use_P25` (both sections)
+### [~] IUY-T-3 — DB: youth-required checks in `validation_innovation_use_P25` (both sections)
 
 - **Type:** db
 - **Description:** DD-2.
@@ -118,7 +118,7 @@ Covers IUY-R-1..3 and IUY-NFR-1..3. Gate logged as `auto-approved (user instruct
   - [ ] PROD applied at deploy with checks recorded
   - [ ] Owners of the 2 PROD Editing results notified, or the decision not to notify recorded (R-2)
 
-### [ ] IUY-T-4 — Rollout: PRTest visual check
+### [x] IUY-T-4 — Rollout: PRTest visual check
 
 - **Type:** rollout (HITL, Santiago)
 - **Description:** On PRTest, open a 2026 W1/W2 Innovation Use result and check:
