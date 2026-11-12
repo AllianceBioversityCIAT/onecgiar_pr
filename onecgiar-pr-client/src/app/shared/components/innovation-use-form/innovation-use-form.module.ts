@@ -7,6 +7,7 @@ import { CustomFieldsModule } from '../../../custom-fields/custom-fields.module'
 import { YmzListStructureItemModule } from '../../directives/ymz-list-structure-item/ymz-list-structure-item.module';
 import { FeedbackValidationDirectiveModule } from '../../directives/feedback-validation-directive.module';
 import { EstimatesCgiarComponent } from './components/estimates/estimates.component';
+import { NgIcon } from '@ng-icons/core';
 
 @NgModule({
   declarations: [InnovationUseFormComponent, StudiesLinkComponent],
@@ -19,7 +20,9 @@ import { EstimatesCgiarComponent } from './components/estimates/estimates.compon
     CustomFieldsModule,
     YmzListStructureItemModule,
     FeedbackValidationDirectiveModule,
-    EstimatesCgiarComponent
+    EstimatesCgiarComponent,
+    // IUY: lucideInfo in the Youth "Action needed" alert.
+    NgIcon
   ]
 })
 export class InnovationUseFormModule {}

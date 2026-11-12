@@ -1,4 +1,6 @@
 import { Component, Input, OnInit, OnChanges, computed, ChangeDetectorRef } from '@angular/core';
+import { provideIcons } from '@ng-icons/core';
+import { lucideInfo } from '@ng-icons/lucide';
 import { INNOVATION_USE_2030_PROJECTION_COPY } from '../../../internationalization/innovation-use-2030-projection.copy';
 import { CURRENT_USE_UPDATE_COPY } from '../../../internationalization/current-use-update.copy';
 import { INNOVATION_USE_YOUTH_REQUIRED_COPY } from '../../../internationalization/innovation-use-youth-required.copy';
@@ -34,6 +36,7 @@ import { IpsrStep1Body } from '../../../pages/ipsr/pages/innovation-package-deta
   selector: 'app-innovation-use-form',
   templateUrl: './innovation-use-form.component.html',
   styleUrls: ['./innovation-use-form.component.scss'],
+  providers: [provideIcons({ lucideInfo })],
   standalone: false
 })
 export class InnovationUseFormComponent implements OnInit, OnChanges {

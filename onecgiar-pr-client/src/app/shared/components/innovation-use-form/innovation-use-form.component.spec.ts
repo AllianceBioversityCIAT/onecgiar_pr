@@ -790,8 +790,16 @@ describe('InnovationUseFormComponent', () => {
       const hints = () =>
         fixture.debugElement
           .queryAll(By.css('.youth-required-hint'))
-          .filter(de => de.nativeElement.textContent.includes(INNOVATION_USE_YOUTH_REQUIRED_COPY.hint));
+          .filter(de => de.nativeElement.textContent.includes(INNOVATION_USE_YOUTH_REQUIRED_COPY.text));
       expect(hints().length).toBe(1);
+      const alert: HTMLElement = hints()[0].nativeElement;
+      // A sibling of the Women row, never inside it: `.right_content` hosts the absolute
+      // `.explanation_message` overlay, which is what covered the Youth input on PRTest.
+      expect(alert.closest('.right_content')).toBeNull();
+      expect(alert.classList.contains('explanation_message')).toBe(false);
+      expect(alert.getAttribute('role')).toBe('status');
+      expect(alert.querySelectorAll('b')[0].textContent.trim()).toBe(INNOVATION_USE_YOUTH_REQUIRED_COPY.label);
+      expect(alert.querySelectorAll('b')[1].textContent.trim()).toBe(INNOVATION_USE_YOUTH_REQUIRED_COPY.emphasis);
 
       component.isIpsr = true;
       fixture.changeDetectorRef.detectChanges();
