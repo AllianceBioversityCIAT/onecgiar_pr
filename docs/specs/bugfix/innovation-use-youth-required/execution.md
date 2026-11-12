@@ -181,3 +181,21 @@
   - Nobody is notified; owners see the alert once the code is in PROD (R-2 closed).
   - Jira child confirmed as **P2-4049**.
   - Archive the spec as soon as the code reaches PROD.
+
+## PROD check after release PR #800 — Pivot: second Non-youth reader (2026-11-12)
+
+- **Released:** all IUY commits are on `master` via PR #800 (merged 16:03 UTC), and prod CI passed.
+- **PROD result 18805 (id 32503, phase 8), read-only:**
+  - `summary/innovation-use/get/result/32503` returns `women_non_youth: null` and `men_non_youth: null` (T-1 OK).
+  - Both "Action needed" alerts render (T-2 OK).
+  - **But Non-youth still shows 14 and 26.**
+- **Cause (refuted premise P-5):** the P25 form loads `GET v2/api/innovation-use/get/result/:id` (`GET_innovationUseP25` → `results-framework-reporting/innovation-use.service.ts` `getActorsData`), not summary.
+  - That reader computes `total - (Number(youth) || 0)`.
+  - The proposal had excluded this file "unless it feeds a 2026 W1/W2 screen", and it does.
+  - PRTest did not show it because result 8558 loaded with Youth filled.
+- **Fix:** `getActorsData` returns null Non-youth when Youth is null and keeps the 0 clamp otherwise.
+  - New spec `innovation-use.service.youth-required.spec.ts` (4 cases). Red before the fix: `Received: 14` (2 failed).
+  - Green after: 8 suites / 64 tests in the folder; eslint and tsc are clean.
+  - The folder `CLAUDE.md` was updated.
+- **Process note:** the validation stash `iwh-temp-during-iuy-ci-check-3` also took another session's uncommitted INC-168252 files mid-task; they were restored with `stash pop`. No more stashing in the shared checkout; checks go to a temporary worktree.
+- **Archive:** held until this fix reaches PROD and 18805 shows an empty Non-youth.

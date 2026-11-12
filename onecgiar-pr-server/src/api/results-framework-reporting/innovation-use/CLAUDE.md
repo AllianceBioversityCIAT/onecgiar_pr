@@ -1,6 +1,6 @@
 # innovation-use (results-framework-reporting)
 
-**Verified:** 2026-11-03 · qa-development-2026-ss · changes/innovation-use-farmer-count-nature (P2-4048) · prior: 2026-10-13 · fix/ai-qa-innovation-use-disaggregation · nivel de uso ausente = NULL; prior: 2026-09-03 · branch performance-refactor
+**Verified:** 2026-11-12 · qa-development-2026-ss · bugfix/innovation-use-youth-required (P2-4049: Non-youth null con Youth vacío en `getActorsData`) · prior: 2026-11-03 · changes/innovation-use-farmer-count-nature (P2-4048) · prior: 2026-10-13 · fix/ai-qa-innovation-use-disaggregation · nivel de uso ausente = NULL; prior: 2026-09-03 · branch performance-refactor
 
 ## Qué es
 El servicio P25 de la sección **Innovation Use** de W1/W2: lee y escribe uso actual, proyección 2030,
@@ -66,6 +66,7 @@ Patrón completo: `innov_use_2030_justification` (P2-3515).
 - Green check: la función viva `validation_innovation_use_P25` exige ambas respuestas en filas Farmers activas de bloques no "TBD", solo si `phase_year >= 2026` y `source <> 'API'`. El cuerpo vigente está en `docs/specs/archive/*innovation-use-farmer-count-nature/sql/`; la copia del repo sigue desactualizada.
 
 ## Trampas (⚠️ = ya rompió algo)
+- ⚠️ **Non-youth con Youth vacío = `null`, nunca el total** (P2-4049, 12-nov-2026). `getActorsData` es la lectura que carga el formulario P25 (`GET_innovationUseP25`), NO `summary.service`. Calculaba `total - (youth || 0)` y PROD mostró Women 14 / Non-youth 14 con Youth vacío aunque `summary` ya devolvía `null`. Si Youth es `null`/`undefined`, Non-youth es `null`; con Youth lleno (0 incluido) se mantiene la resta con tope en 0. Spec: `innovation-use.service.youth-required.spec.ts`.
 - ⚠️ **Nivel de uso ausente → NULL, nunca `findOne({ where: { level: null } })`** (13-oct-2026). TypeORM descarta la condición `null` del WHERE y devolvía la PRIMERA fila del catálogo (nivel 0, "Innovation is not used"): todo resultado del API sin nivel quedaba en "No use". `saveInnovationUse` solo consulta el catálogo cuando viene un nivel; 0 sí es respuesta y se busca. Spec: `innovation-use.service.use-level.spec.ts`.
 - ⚠️ **El green check `validation_innovation_use_P25` del repo NO es el que corre.** La copia de
   `1762528725798-createValidtionP25.ts` lee `riu.innovation_readiness_level_id`, columna renombrada a

@@ -34,7 +34,7 @@ Read side (aow-bilateral.repository.ts sumContributionsForCenters) ← unchanged
 | Path | Change |
 |---|---|
 | `onecgiar-pr-server/src/api/results/results-toc-results/repositories/results-toc-results.repository.ts` | `resolveTargetIdentity` only |
-| `onecgiar-pr-server/src/api/results/results-toc-results/repositories/results-toc-results.repository.spec.ts` | New `describe` block CTA-TEST-1…4 |
+| `onecgiar-pr-server/src/api/results/results-toc-results/repositories/results-toc-results.repository.spec.ts` | New `describe` block CTA-TEST-1…5 (corrected at validate 2026-11-12; tasks.md defines 5) |
 | `docs/specs/bugfix/contribution-target-anchor/backfill-prod.md` | Hand-off SQL (S-4); not executed by agents |
 
 ## Data Model
