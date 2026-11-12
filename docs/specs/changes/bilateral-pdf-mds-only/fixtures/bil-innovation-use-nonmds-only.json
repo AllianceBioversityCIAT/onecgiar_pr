@@ -1,0 +1,182 @@
+{
+  "portfolio_acronym": "P25",
+  "rt_id": 2,
+  "result_code": 5892,
+  "result_type": "Innovation use",
+  "result_name": "Innovation use fixture without MDS data",
+  "phase_name": "Reporting 2025",
+  "title": "Planting Date Advisories disseminated in Africa",
+  "short_title": "FIXTURE-SHORT-TITLE",
+  "result_description": "The content of the Planting Date Advisories was developed into messages and disseminated to farmers across Bihar through the dissemination platforms of BAU, JEEViKA and IFFCO kisan. The advisories were approved and accepted by the Convergence Platform in the form of text and audio to be disseminated to farmers across the state.",
+  "primary_submitter_name": "SP01 - Breeding for Tomorrow",
+  "primary_submitter_acronym": "SP01",
+  "lead_contact_person": "Obilo Chinyere",
+  "lead_contact_email": "o.chinyere@cgiar.org",
+  "result_lead": "Bioversity International",
+  "nutrition_tag": {
+    "name": "Nutrition",
+    "score": "(2) Principal",
+    "components": [
+      "Nutrition",
+      "Health"
+    ]
+  },
+  "climate_tag": {
+    "name": "Climate",
+    "score": "(1) Significant",
+    "components": [
+      "Climate"
+    ]
+  },
+  "poverty_tag": {
+    "name": "Poverty",
+    "score": "(0) Not targeted",
+    "components": []
+  },
+  "gender_tag": {
+    "name": "Gender",
+    "score": "(1) Significant",
+    "components": [
+      "Gender"
+    ]
+  },
+  "environmental_tag": {
+    "name": "Environment",
+    "score": "(1) Significant",
+    "components": [
+      "Environment"
+    ]
+  },
+  "primary_submitter_data": {
+    "toc_url": "https://toc.mel.cgiar.org/toc/dc81f773-4dbd-408e-ad02-9b8fa9e072bf",
+    "toc_internal_id": "dc81f773-4dbd-408e-ad02-9b8fa9e072bf",
+    "contributor_name": "SP01 - Breeding for Tomorrow",
+    "contributor_can_match_result": 1
+  },
+  "toc_primary": [
+    {
+      "toc_level_name": "High Level Output",
+      "toc_work_package_acronym": "Area of work 01 - Climate Adaptation and Mitigation",
+      "toc_result_title": "HLO1.AOW1.IO1 Steer to impact",
+      "toc_indicator": "Number of quantified climate change-related hazards that affect agronomic systems",
+      "toc_result_description": "Market intelligence is packaged into decision-support tools to guide investment decisions in breeding and other science programs"
+    }
+  ],
+  "contributing_initiatives": [
+    {
+      "initiative_short_name": "SP01 - Breeding for Tomorrow"
+    },
+    {
+      "initiative_short_name": "SP02 - Sustainable Farming"
+    },
+    {
+      "initiative_short_name": "SP03 - Climate-Smart Agriculture"
+    }
+  ],
+  "contributing_centers": [
+    {
+      "center_name": "IFPRI - International Food Policy Research Institute",
+      "is_primary_center": true
+    },
+    {
+      "center_name": "IITA - International Institute of Tropical Agriculture",
+      "is_primary_center": false
+    }
+  ],
+  "bilateral_projects": [
+    {
+      "project_title": "Project 01 - Climate-Smart Agriculture",
+      "is_lead_project": true
+    }
+  ],
+  "non_kp_partner_data": [
+    {
+      "partner_name": "NONKP-PARTNER-ALPHA",
+      "partner_country_hq": "India (IN)",
+      "partner_type": "NGO Local (General)",
+      "partner_delivery_type": "Funder"
+    },
+    {
+      "partner_name": "NONKP-PARTNER-BETA",
+      "partner_country_hq": "Kenya (KE)",
+      "partner_type": "Research organizations",
+      "partner_delivery_type": "Scaling partner"
+    }
+  ],
+  "bundled_innovations": [
+    {
+      "portfolio": "P25",
+      "phase": "2025",
+      "code": "5892",
+      "indicator": "Policy Change",
+      "title": "BUNDLED-INNOVATION-TITLE"
+    }
+  ],
+  "geo_focus": "Sub-national",
+  "regions": [],
+  "countries": [
+    {
+      "name": "Ethiopia",
+      "code": "ET"
+    },
+    {
+      "name": "South Africa",
+      "code": "ZA"
+    }
+  ],
+  "subnational": [
+    {
+      "country": "Afghanistan",
+      "subnationals": [
+        "Badakhshān",
+        "Bādghīs"
+      ]
+    },
+    {
+      "country": "Aland Islands",
+      "subnationals": [
+        "No sub-national levels available"
+      ]
+    }
+  ],
+  "project_name": "W3 - Bilateral Project FIXTURE",
+  "lead_center_name": "International Food Policy Research Institute",
+  "lead_center_acronym": "IFPRI",
+  "kp_partner_data": null,
+  "linked_evidences": [
+    {
+      "details": "EVIDENCE-DETAILS-PUBLIC",
+      "link": "https://example.org/evidence-1",
+      "is_public_file": true,
+      "name": "evidence-public.pdf",
+      "gender_related": true,
+      "climate_related": false,
+      "poverty_related": false,
+      "nutrition_related": true,
+      "environmental_biodiversity_related": false
+    },
+    {
+      "details": "EVIDENCE-DETAILS-LINK",
+      "link": "https://example.org/evidence-2",
+      "is_public_file": true,
+      "name": "evidence-link-2",
+      "gender_related": false,
+      "climate_related": true,
+      "poverty_related": false,
+      "nutrition_related": false,
+      "environmental_biodiversity_related": false
+    }
+  ],
+  "readiness_level": "Level 0 - No use",
+  "innovation_use_actors": [],
+  "innovation_use_organizations": [
+    {
+      "type": "Research organizations and universities",
+      "other_institution": null,
+      "subtype": "ORG-SUBTYPE-UNIVERSITIES",
+      "has_subtypes": true,
+      "how_many": "3"
+    }
+  ],
+  "innovation_use_measures": []
+}
