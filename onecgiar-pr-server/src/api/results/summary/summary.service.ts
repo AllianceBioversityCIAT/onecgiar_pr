@@ -390,9 +390,13 @@ export class SummaryService {
         where: { result_id: resultId, is_active: true },
         relations: { obj_actor_type: true },
       });
+      // IUY-R-3: an empty Youth (or total) is unknown, never "0 youth" — so Non-youth is null,
+      // not the whole total (`5000 - null` is 5000 in JS). Non-youth itself is never stored.
+      const nonYouth = (total: number | null, youth: number | null) =>
+        total == null || youth == null ? null : total - youth;
       allActors.map((el) => {
-        el['men_non_youth'] = el.men - el.men_youth;
-        el['women_non_youth'] = el.women - el.women_youth;
+        el['men_non_youth'] = nonYouth(el.men, el.men_youth);
+        el['women_non_youth'] = nonYouth(el.women, el.women_youth);
       });
       // P2-3428 — the 2030 projection rows live in the same tables under `section_id = 2`. They are
       // split out so they never show up (or get re-saved) as current use.

@@ -683,6 +683,26 @@ describe('SummaryService', () => {
       expect(response.organization[0].parent_institution_type_id).toBe(99);
     });
 
+    it('returns a null non-youth when youth or the total is empty, never the total (IUY-R-3)', async () => {
+      mockResultActorRepository.find.mockResolvedValueOnce([
+        { men: 5000, men_youth: null, women: 8, women_youth: 2 },
+        { men: null, men_youth: null, women: 10, women_youth: undefined },
+        { men: 10, men_youth: 4, women: 0, women_youth: 0 },
+      ]);
+      mockResultIpMeasureRepository.find.mockResolvedValueOnce([]);
+      mockResultByIntitutionsTypeRepository.find.mockResolvedValueOnce([]);
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
+
+      const response: any = (await service.getInnovationUse(15)).response;
+
+      expect(response.actors[0].men_non_youth).toBeNull();
+      expect(response.actors[0].women_non_youth).toBe(6);
+      expect(response.actors[1].men_non_youth).toBeNull();
+      expect(response.actors[1].women_non_youth).toBeNull();
+      expect(response.actors[2].men_non_youth).toBe(6);
+      expect(response.actors[2].women_non_youth).toBe(0);
+    });
+
     it('includes the persisted to-be-determined flag and use level when a row exists', async () => {
       mockResultActorRepository.find.mockResolvedValueOnce([]);
       mockResultIpMeasureRepository.find.mockResolvedValueOnce([]);
