@@ -705,15 +705,6 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     this.calculateTotalField(actorItem);
   }
 
-  currentUseHeaderLabel() {
-    return this.fieldsManagerSE.isP25()
-      ? 'Current core innovation use in number of users that can be supported by evidence (within the reporting year).'
-      : 'Specify the current use of the innovation in number of users (actors/ organizations/ other) that can be supported by evidence';
-  }
-
-  narrativeActors = computed(() => {
-    if (this.fieldsManagerSE.isP25()) {
-      return `<ul>
   /**
    * IUY-R-1 (bugfix/innovation-use-youth-required): hint under Non-youth asking for Youth (0 if none).
    * Same result gate as the Farmers questions (not IPSR, phase year >= 2026, not W3/Bilaterals), only on
@@ -730,6 +721,15 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     return value === null || value === undefined || value === '';
   }
 
+  currentUseHeaderLabel() {
+    return this.fieldsManagerSE.isP25()
+      ? 'Current core innovation use in number of users that can be supported by evidence (within the reporting year).'
+      : 'Specify the current use of the innovation in number of users (actors/ organizations/ other) that can be supported by evidence';
+  }
+
+  narrativeActors = computed(() => {
+    if (this.fieldsManagerSE.isP25()) {
+      return `<ul>
       <li>
       If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use. ${
         // INC-168060 (Nicoleta): IPSR step 1 is about scaling ambition, so it keeps the 2030 wording.

@@ -590,10 +590,10 @@
                   [disabled]="saving"
                   [(ngModel)]="actorItem.women_non_youth">
                 </app-pr-input>
-              </div>
                 @if (showYouthRequiredHint(actorItem, 'women')) {
                   <div class="explanation_message">{{ youthRequiredCopy.hint }}</div>
                 }
+              </div>
               <div class="right_content" *ngIf="!actorItem.sex_and_age_disaggregation">
                 <div class="explanation_message" *ngIf="actorItem['showWomenExplanationmen']">
                   Remember that the value of Youth cannot be greater than total of Men
@@ -626,10 +626,10 @@
                   [disabled]="saving"
                   [(ngModel)]="actorItem.men_non_youth">
                 </app-pr-input>
-              </div>
                 @if (showYouthRequiredHint(actorItem, 'men')) {
                   <div class="explanation_message">{{ youthRequiredCopy.hint }}</div>
                 }
+              </div>
               <div class="right_content one_field" *ngIf="!actorItem.sex_and_age_disaggregation">
                 <app-pr-input
                   placeholder="Write some..."
