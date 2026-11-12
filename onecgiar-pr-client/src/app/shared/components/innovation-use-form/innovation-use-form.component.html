@@ -188,7 +188,7 @@
               [(ngModel)]="actorItem.women_non_youth">
             </app-pr-input>
             @if (showYouthRequiredHint(actorItem, 'women')) {
-              <div class="explanation_message">{{ youthRequiredCopy.hint }}</div>
+              <p class="youth-required-hint mt-1 text-[11px] leading-[1.4] text-[var(--pr-color-secondary-400)]">{{ youthRequiredCopy.hint }}</p>
             }
           </div>
           <div class="right_content" *ngIf="!actorItem.sex_and_age_disaggregation">
@@ -225,7 +225,7 @@
               [(ngModel)]="actorItem.men_non_youth">
             </app-pr-input>
             @if (showYouthRequiredHint(actorItem, 'men')) {
-              <div class="explanation_message">{{ youthRequiredCopy.hint }}</div>
+              <p class="youth-required-hint mt-1 text-[11px] leading-[1.4] text-[var(--pr-color-secondary-400)]">{{ youthRequiredCopy.hint }}</p>
             }
           </div>
           <div class="right_content one_field" *ngIf="!actorItem.sex_and_age_disaggregation">
@@ -591,7 +591,7 @@
                   [(ngModel)]="actorItem.women_non_youth">
                 </app-pr-input>
                 @if (showYouthRequiredHint(actorItem, 'women')) {
-                  <div class="explanation_message">{{ youthRequiredCopy.hint }}</div>
+                  <p class="youth-required-hint mt-1 text-[11px] leading-[1.4] text-[var(--pr-color-secondary-400)]">{{ youthRequiredCopy.hint }}</p>
                 }
               </div>
               <div class="right_content" *ngIf="!actorItem.sex_and_age_disaggregation">
@@ -627,7 +627,7 @@
                   [(ngModel)]="actorItem.men_non_youth">
                 </app-pr-input>
                 @if (showYouthRequiredHint(actorItem, 'men')) {
-                  <div class="explanation_message">{{ youthRequiredCopy.hint }}</div>
+                  <p class="youth-required-hint mt-1 text-[11px] leading-[1.4] text-[var(--pr-color-secondary-400)]">{{ youthRequiredCopy.hint }}</p>
                 }
               </div>
               <div class="right_content one_field" *ngIf="!actorItem.sex_and_age_disaggregation">

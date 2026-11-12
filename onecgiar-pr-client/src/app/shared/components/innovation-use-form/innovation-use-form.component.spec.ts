@@ -789,7 +789,7 @@ describe('InnovationUseFormComponent', () => {
       fixture.changeDetectorRef.detectChanges();
       const hints = () =>
         fixture.debugElement
-          .queryAll(By.css('.explanation_message'))
+          .queryAll(By.css('.youth-required-hint'))
           .filter(de => de.nativeElement.textContent.includes(INNOVATION_USE_YOUTH_REQUIRED_COPY.hint));
       expect(hints().length).toBe(1);
 
