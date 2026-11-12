@@ -93,7 +93,10 @@ import { CapacityChangeBilateralHandler } from './handlers/capacity-change.handl
 import { InnovationDevelopmentBilateralHandler } from './handlers/innovation-development.handler';
 import { InnovationUseBilateralHandler } from './handlers/innovation-use.handler';
 import { PolicyChangeBilateralHandler } from './handlers/policy-change.handler';
-import { BilateralResultTypeHandler } from './handlers/bilateral-result-type-handler.interface';
+import {
+  BilateralActorWarning,
+  BilateralResultTypeHandler,
+} from './handlers/bilateral-result-type-handler.interface';
 import { NoopBilateralHandler } from './handlers/noop.handler';
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
 import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
@@ -254,6 +257,15 @@ export interface BilateralPartnerWarning {
   resolved_institution_id?: number;
 }
 
+/**
+ * @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-4, BIF-DD-5): `outcomes[].warnings`
+ * carries partner warnings first (P2-4067, unchanged) and then the actor warnings of the result's
+ * type handler. `field` tells the two kinds apart.
+ */
+export type BilateralOutcomeWarning =
+  | BilateralPartnerWarning
+  | BilateralActorWarning;
+
 @Injectable()
 export class BilateralService {
   constructor(
@@ -395,6 +407,16 @@ export class BilateralService {
             ).warnings
           : [];
 
+        // @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-4, BIF-DD-1): the type
+        // handler's warnings hook runs HERE, before the `updated` branch and before
+        // `dataSource.transaction`. It writes nothing and throws the 400s of its type, so a bad
+        // payload fails before the first write (the transaction below does not roll back, see the
+        // orphan incident noted at the preflight). Partner warnings stay first, unchanged.
+        const outcomeWarnings: BilateralOutcomeWarning[] = [...partnerWarnings];
+        const actorWarnings =
+          await this.collectHandlerOutcomeWarnings(bilateralDto);
+        outcomeWarnings.push(...actorWarnings);
+
         // @akili-spec bilateral/resubmit-rejected-result — RSB-T-2/DD-1: only an `updated`
         // target (open-phase, Rejected, owned, same type) leaves the normal create sequence. A
         // no-code create and a `versioned` target never enter this branch: their order and
@@ -427,7 +449,7 @@ export class BilateralService {
             result_code: resubmitted.result_code,
             external_reference: bilateralDto.external_reference?.trim() || null,
             is_duplicate_kp: false,
-            warnings: partnerWarnings,
+            warnings: outcomeWarnings,
             operation: 'updated',
             status_id: resubmitted.status_id,
             status: resubmitted.status,
@@ -702,7 +724,7 @@ export class BilateralService {
               // response without holding on to request order.
               external_reference: externalIdentity.external_reference,
               is_duplicate_kp: false,
-              warnings: partnerWarnings,
+              warnings: outcomeWarnings,
               // @akili-spec changes/bilateral-create-upsert-by-code — UBC-DD-5/R-10: this is
               // always a fresh insert (DD-2 restores the code afterwards for a version target),
               // so `operation` is 'created' unless the resolve step matched an eligible
@@ -2939,6 +2961,10 @@ export class BilateralService {
         : {}),
       sex_and_age_disaggregation: sexAndAgeDisaggregation,
       addressing_demands: a.addressing_demands ?? null,
+      // @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-4, BIF-R-8, P-10): additive.
+      // Only a Farmers row has them stored (the writer's whitelist), the rest read `null`.
+      count_unit: a.count_unit ?? null,
+      use_nature: a.use_nature ?? null,
     };
     if (disagg) {
       return {
@@ -4775,6 +4801,35 @@ export class BilateralService {
     const handler = this.resultTypeHandlerMap.get(bilateralDto.result_type_id);
     if (!handler?.validateBeforeCreate) return;
     await handler.validateBeforeCreate({ bilateralDto });
+  }
+
+  /**
+   * @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-4, BIF-DD-1, BIF-DD-5, design §9).
+   *
+   * Calls the optional `collectOutcomeWarnings` hook of the payload's result type handler (the
+   * same `resultTypeHandlerMap` lookup as `runResultTypePreflight`). A type without the hook
+   * returns `[]` and nothing else happens. The hook may throw a 400, which is left to propagate.
+   * Logs the counts by code only: never the messages, the payload or the actors.
+   */
+  private async collectHandlerOutcomeWarnings(
+    bilateralDto: CreateBilateralDto,
+  ): Promise<BilateralActorWarning[]> {
+    const handler = this.resultTypeHandlerMap.get(bilateralDto.result_type_id);
+    if (!handler?.collectOutcomeWarnings) return [];
+    const warnings = await handler.collectOutcomeWarnings({ bilateralDto });
+    if (warnings.length) {
+      const byCode = new Map<string, number>();
+      for (const w of warnings)
+        byCode.set(w.code, (byCode.get(w.code) ?? 0) + 1);
+      this.logger.log(
+        `create: result_type ${bilateralDto.result_type_id} has ${warnings.length} actor warning(s) (${[
+          ...byCode,
+        ]
+          .map(([code, n]) => `${code}=${n}`)
+          .join(', ')}).`,
+      );
+    }
+    return warnings;
   }
 
   /**

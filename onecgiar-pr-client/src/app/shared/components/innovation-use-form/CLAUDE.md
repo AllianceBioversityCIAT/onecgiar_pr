@@ -1,6 +1,6 @@
 # innovation-use-form
 
-**Verified:** 2026-11-03 · qa-development-2026-ss · T-7 findings (re-click Households restores the grid; unsaved Households "How many" required); IFC-T-7 fixes (Individuals keeps a hand-set single total; Q-b gap); IFC-T-4 (changes/innovation-use-farmer-count-nature): Farmers follow-up block, gate and Households coupling (uncommitted); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update rules moved to `shared/utils/current-use-update.util.ts` (shared with the bilateral form); prior: 2026-09-11 · branch performance-refactor · 5791b85b9
+**Verified:** 2026-11-12 · qa-development-2026-ss · bugfix/innovation-use-youth-required IUY-T-2 (INC-167167: empty Youth keeps Non-youth empty + hint, both grids; `validateYouth` now derives on the edited row); 2026-11-11 · quick/innovation-use-actors-sentence-ipsr (INC-168060 feedback: `narrativeActors` P25 sentence now depends on `isIpsr` — IPSR step 1 keeps "by end of 2030" (scaling ambition), Innovation Use keeps the reporting-year sentence; `isIpsr` is a static host input, so the `computed` reading it is safe); 2026-11-10 · quick/innovation-use-actors-sentence (INC-168060: P25 actors narrative now asks for actual users in the reporting year, not the 2030 projection); quick/remove-farmer-helper-note (Nicoleta: italic helper note under Q-b removed, `helper` key dropped); prior: 2026-11-03 · T-7 findings (re-click Households restores the grid; unsaved Households "How many" required); IFC-T-7 fixes (Individuals keeps a hand-set single total; Q-b gap); IFC-T-4 (changes/innovation-use-farmer-count-nature): Farmers follow-up block, gate and Households coupling (uncommitted); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update rules moved to `shared/utils/current-use-update.util.ts` (shared with the bilateral form); prior: 2026-09-11 · branch performance-refactor · 5791b85b9
 
 ## What it is
 The shared Innovation Use questionnaire: use level (0-9), narrative/actors blocks, the
@@ -44,6 +44,7 @@ The shared Innovation Use questionnaire: use level (0-9), narrative/actors block
   and hid the question on legacy results — 1516 results sit in the 2025 phase against 353 in 2026
   (measured 2 Sep 2026). Fixed in P2-3558; reference shape is
   `FieldsManagerService.isPhaseYearAtLeast` (commit `8afb574f3`, eight sibling gates).
+- **Youth required (IUY, INC-167167):** on `isFarmerFollowUpResult()` rows an empty Youth (`null`/`undefined`/`''`) leaves Non-youth `null` (never `total - null` = the total) and `showYouthRequiredHint(actor, gender)` paints `youthRequiredCopy.hint` under that Non-youth, both grids; IPSR, 2025 and W3 keep the old derivation. The server mirrors it: `summary.service.getInnovationUse` returns `null` Non-youth and `validation_innovation_use_P25` keeps the section red until Youth is filled (0 is valid). ⚠️ `validateYouth`'s clamp/"cannot be greater" branch still writes `body.innovatonUse.actors[i]` even from the 2030 grid; only the Non-youth derivation moved to `actorItem`. ⚠️ The hint is an amber "Action needed" alert BELOW the Women/Men row (`.youth-required-hint`, `role="status"`, `lucideInfo` via `NgIcon` in the module + `provideIcons` on the component; copy `label`/`text`/`emphasis` in `innovation-use-youth-required.copy.ts`; Santiago mock-up 2026-11-12), NOT `.explanation_message`: that class is an absolute violet overlay over the whole Women/Men row (`z-index: 2`, pointer-events on), meant for the 3 s "cannot be greater" flash. Made persistent, it covered the Youth input and swallowed its clicks (PRTest, 2026-11-12).
 - **"Remove" never means delete the data** (epic P2-3243). Retiring a question is UI-only:
   `has_scaling_studies` and `result_scaling_study_urls` stay in the model, the DTO and the DB, and
   2025-phase results keep rendering the stored answer.
@@ -67,7 +68,8 @@ Under the "Actor type" select of every **Farmers** row, in BOTH blocks (current 
 #farmerFollowUp>` (end of the `.html`, rendered through `ngTemplateOutlet`) asks Q-a (households / individual
 actors) and Q-b (information received / innovation applied). Copy, codes and the Farmers id live in
 `farmer-follow-up.ts` — **verbatim from `docs/specs/changes/.../mockup/farmer-follow-up-questions.png`, pinned
-string by string in the spec; never paraphrase** (QA reads it back). The mock-up's developer note ("Single choice.
+string by string in the spec; never paraphrase** (QA reads it back). The mock-up's italic helper note ("If your
+numbers include both groups…") was removed on Nicoleta's request (2026-11-10) — do not restore it. The mock-up's developer note ("Single choice.
 Stored as ...") is NOT copy and is never rendered.
 
 - 🛑 **Gate = `isFarmerFollowUpRow(actor)`**: `!isIpsr` + `isPhaseYearAtLeast(2026)` + `source_name !== 'W3/Bilaterals'`

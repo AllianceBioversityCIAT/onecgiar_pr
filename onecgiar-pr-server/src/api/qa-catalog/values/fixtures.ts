@@ -312,3 +312,55 @@ export function failingOn(
   return (query) =>
     query.table === table ? Promise.reject(new Error(DRIVER_LEAK)) : ok(query);
 }
+
+/**
+ * QVL-T-3 (qa-value-labels): the projected `values` of two results, shaped as `project` returns them for the REAL catalog entries
+ * (`CATALOG_FIELDS`). Numeric ids, a text id (`CENTER-02`, `households`), a text-numeric id (`"2"`), depth-2 ids and a free-text
+ * `lead_contact_person`. The two results share no country, program or ToC result, so a cross-result or a depth-1 walk shows.
+ * Synthetic ids only.
+ */
+export const QVL_VALUES_A: Record<string, unknown> = {
+  'policy_change.policy_type': 1,
+  'policy_change.amount_status': '2',
+  'general.created_by': 501,
+  'general.lead_contact_person': {
+    value: 'Free Text Name',
+    directory_user: 77,
+  },
+  'contributors.science_programs': [
+    {
+      program: 11,
+      from_toc: true,
+      planned_result: null,
+      toc_entries: [
+        { level: 1, toc_result: 'TR-A1' },
+        { level: 2, toc_result: 4001 },
+      ],
+    },
+    { program: 12, from_toc: false, planned_result: null, toc_entries: [] },
+  ],
+  'contributors.bilateral_projects': ['households', 'CENTER-02'],
+  'geo.countries': [
+    { country: 170, subnational: ['AAA-1', 'AAA-2'] },
+    { country: 4, subnational: [] },
+  ],
+};
+
+export const QVL_VALUES_B: Record<string, unknown> = {
+  'policy_change.policy_type': 3,
+  'general.created_by': 502,
+  'general.lead_contact_person': {
+    value: 'Other Free Text',
+    directory_user: null,
+  },
+  'contributors.science_programs': [
+    {
+      program: 21,
+      from_toc: true,
+      planned_result: null,
+      toc_entries: [{ level: 3, toc_result: 9009 }],
+    },
+  ],
+  'contributors.bilateral_projects': ['households'],
+  'geo.countries': [{ country: 840, subnational: ['BBB-1'] }],
+};

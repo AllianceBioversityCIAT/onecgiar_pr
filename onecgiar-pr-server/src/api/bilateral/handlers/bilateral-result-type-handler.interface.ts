@@ -1,5 +1,8 @@
 import { CreateBilateralDto } from '../dto/create-bilateral.dto';
 import { Result } from '../../results/entities/result.entity';
+import type { BilateralActorWarning } from './innovation-use-actor-follow-up.rules';
+
+export type { BilateralActorWarning };
 
 export interface HandlerInitializeContext {
   bilateralDto: CreateBilateralDto;
@@ -38,6 +41,14 @@ export interface HandlerResolveContext {
   bilateralDto: CreateBilateralDto;
 }
 
+/**
+ * @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-3, BIF-DD-1). Same payload as
+ * `HandlerResolveContext`: the warnings hook needs no saved row either.
+ */
+export interface HandlerCollectWarningsContext {
+  bilateralDto: CreateBilateralDto;
+}
+
 export interface BilateralResultTypeHandler {
   readonly resultType: number;
 
@@ -55,6 +66,16 @@ export interface BilateralResultTypeHandler {
    * before the first write (`RSB-R-8`, `UBC-T-3` attempt-1 FAIL R-B #1).
    */
   resolveAndValidate?(context: HandlerResolveContext): Promise<unknown | null>;
+
+  /**
+   * @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-3, BIF-DD-1). Optional preflight
+   * that runs before the ingest transaction: performs NO write, throws the same 400s the type's
+   * rules raise, and returns the warnings for `response.outcomes[].warnings[]`. `[]` when the
+   * payload is of another result type or has nothing to warn about.
+   */
+  collectOutcomeWarnings?(
+    context: HandlerCollectWarningsContext,
+  ): Promise<BilateralActorWarning[]>;
 
   afterCreate?(context: HandlerAfterCreateContext): Promise<void>;
 }

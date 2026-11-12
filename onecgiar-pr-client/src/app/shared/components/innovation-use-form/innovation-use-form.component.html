@@ -188,6 +188,16 @@
               [(ngModel)]="actorItem.women_non_youth">
             </app-pr-input>
           </div>
+          @if (showYouthRequiredHint(actorItem, 'women')) {
+            <div
+              role="status"
+              class="youth-required-hint mt-[12px] mb-[4px] flex items-center gap-[10px] rounded-[8px] border border-[color-mix(in_srgb,var(--pr-color-yellow-100)_55%,white)] bg-[var(--pr-color-yellow-50)] px-[14px] py-[10px]">
+              <ng-icon name="lucideInfo" aria-hidden="true" class="shrink-0 text-[16px] text-[var(--pr-status-in-progress-fg)]" />
+              <p class="m-0 text-[12px] leading-[1.45] text-[var(--pr-color-secondary-400)]">
+                <b class="font-semibold">{{ youthRequiredCopy.label }}</b> {{ youthRequiredCopy.text }} <b class="font-semibold">{{ youthRequiredCopy.emphasis }}</b>.
+              </p>
+            </div>
+          }
           <div class="right_content" *ngIf="!actorItem.sex_and_age_disaggregation">
             <div class="explanation_message" *ngIf="actorItem['showWomenExplanationmen']">
               Remember that the value of Youth cannot be greater than total of Men
@@ -222,6 +232,16 @@
               [(ngModel)]="actorItem.men_non_youth">
             </app-pr-input>
           </div>
+          @if (showYouthRequiredHint(actorItem, 'men')) {
+            <div
+              role="status"
+              class="youth-required-hint mt-[12px] mb-[4px] flex items-center gap-[10px] rounded-[8px] border border-[color-mix(in_srgb,var(--pr-color-yellow-100)_55%,white)] bg-[var(--pr-color-yellow-50)] px-[14px] py-[10px]">
+              <ng-icon name="lucideInfo" aria-hidden="true" class="shrink-0 text-[16px] text-[var(--pr-status-in-progress-fg)]" />
+              <p class="m-0 text-[12px] leading-[1.45] text-[var(--pr-color-secondary-400)]">
+                <b class="font-semibold">{{ youthRequiredCopy.label }}</b> {{ youthRequiredCopy.text }} <b class="font-semibold">{{ youthRequiredCopy.emphasis }}</b>.
+              </p>
+            </div>
+          }
           <div class="right_content one_field" *ngIf="!actorItem.sex_and_age_disaggregation">
             <app-pr-input
               placeholder="Write some..."
@@ -585,6 +605,16 @@
                   [(ngModel)]="actorItem.women_non_youth">
                 </app-pr-input>
               </div>
+              @if (showYouthRequiredHint(actorItem, 'women')) {
+                <div
+                  role="status"
+                  class="youth-required-hint mt-[12px] mb-[4px] flex items-center gap-[10px] rounded-[8px] border border-[color-mix(in_srgb,var(--pr-color-yellow-100)_55%,white)] bg-[var(--pr-color-yellow-50)] px-[14px] py-[10px]">
+                  <ng-icon name="lucideInfo" aria-hidden="true" class="shrink-0 text-[16px] text-[var(--pr-status-in-progress-fg)]" />
+                  <p class="m-0 text-[12px] leading-[1.45] text-[var(--pr-color-secondary-400)]">
+                    <b class="font-semibold">{{ youthRequiredCopy.label }}</b> {{ youthRequiredCopy.text }} <b class="font-semibold">{{ youthRequiredCopy.emphasis }}</b>.
+                  </p>
+                </div>
+              }
               <div class="right_content" *ngIf="!actorItem.sex_and_age_disaggregation">
                 <div class="explanation_message" *ngIf="actorItem['showWomenExplanationmen']">
                   Remember that the value of Youth cannot be greater than total of Men
@@ -618,6 +648,16 @@
                   [(ngModel)]="actorItem.men_non_youth">
                 </app-pr-input>
               </div>
+              @if (showYouthRequiredHint(actorItem, 'men')) {
+                <div
+                  role="status"
+                  class="youth-required-hint mt-[12px] mb-[4px] flex items-center gap-[10px] rounded-[8px] border border-[color-mix(in_srgb,var(--pr-color-yellow-100)_55%,white)] bg-[var(--pr-color-yellow-50)] px-[14px] py-[10px]">
+                  <ng-icon name="lucideInfo" aria-hidden="true" class="shrink-0 text-[16px] text-[var(--pr-status-in-progress-fg)]" />
+                  <p class="m-0 text-[12px] leading-[1.45] text-[var(--pr-color-secondary-400)]">
+                    <b class="font-semibold">{{ youthRequiredCopy.label }}</b> {{ youthRequiredCopy.text }} <b class="font-semibold">{{ youthRequiredCopy.emphasis }}</b>.
+                  </p>
+                </div>
+              }
               <div class="right_content one_field" *ngIf="!actorItem.sex_and_age_disaggregation">
                 <app-pr-input
                   placeholder="Write some..."
@@ -854,8 +894,6 @@
           </label>
         }
       </div>
-
-      <p class="m-0 px-[8px] text-[12px] italic leading-[1.5] text-[var(--pr-text-secondary)]">{{ farmerFollowUpCopy.helper }}</p>
     </div>
   }
 </ng-template>

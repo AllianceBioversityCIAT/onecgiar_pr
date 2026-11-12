@@ -22,6 +22,10 @@ import {
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
+import {
+  COUNT_UNIT_CODES,
+  USE_NATURE_CODES,
+} from '../../results/result-actors/farmer-follow-up.constant';
 import { IsNotCloudStorageLink } from '../../../shared/validators/is-not-cloud-storage-link.validator';
 
 /* -------------------------------------------------------------------------- */
@@ -472,6 +476,28 @@ export class InnovationUseActorDto {
   })
   @ValidateIf((o) => o.sex_and_age_disaggregation === true)
   how_many?: string | number | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Unit of the number reported. Applies to Farmers (actor_type_id 1) only. A missing answer is accepted with a warning; an invalid code is a 400.',
+    enum: [...COUNT_UNIT_CODES],
+    nullable: true,
+    example: 'individuals',
+  })
+  @IsOptional()
+  @IsString()
+  count_unit?: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Nature of the use reported. Applies to Farmers (actor_type_id 1) only. A missing answer is accepted with a warning; an invalid code is a 400.',
+    enum: [...USE_NATURE_CODES],
+    nullable: true,
+    example: 'innovation_applied',
+  })
+  @IsOptional()
+  @IsString()
+  use_nature?: string | null;
 
   @ApiPropertyOptional({
     description: 'Number of women',

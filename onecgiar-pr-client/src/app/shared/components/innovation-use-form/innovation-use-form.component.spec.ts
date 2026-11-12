@@ -17,6 +17,7 @@ import { FieldsManagerService } from '../../services/fields-manager.service';
 import { InnovationControlListService } from '../../services/global/innovation-control-list.service';
 import { InnovationUseResultsService } from '../../services/global/innovation-use-results.service';
 import { FARMERS_ACTOR_TYPE_ID, FARMER_FOLLOW_UP_COPY } from './farmer-follow-up';
+import { INNOVATION_USE_YOUTH_REQUIRED_COPY } from '../../../internationalization/innovation-use-youth-required.copy';
 
 /** P2-3295 — verbatim tooltip from the SIDS revision; must match `FieldsManagerService` character for character. */
 const TOOLTIP_2030 =
@@ -692,6 +693,120 @@ describe('InnovationUseFormComponent', () => {
     });
   });
 
+  // bugfix/innovation-use-youth-required — the regression: with Youth empty the 1.1 s timer wrote
+  // `total - null` = the whole total into Non-youth, so nobody was asked for Youth (IUY-R-1).
+  describe('Youth required (IUY-R-1)', () => {
+    const row = (overrides: Partial<Actor> = {}) =>
+      ({
+        actor_type_id: 2,
+        women: 100,
+        women_youth: null,
+        women_non_youth: null,
+        men: 0,
+        men_youth: 0,
+        men_non_youth: 0,
+        sex_and_age_disaggregation: false,
+        age_disaggregation_not_available: false,
+        is_active: true,
+        ...overrides
+      }) as Actor;
+    const inScope = () =>
+      apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026, source_name: 'W1/W2' });
+
+    it('keeps Non-youth empty and shows the hint while Youth is empty, then derives it once Youth = 0', fakeAsync(() => {
+      inScope();
+      component.isIpsr = false;
+      component.body.innovatonUse.actors = [row()];
+      const actor = component.body.innovatonUse.actors[0];
+
+      component.validateYouth(0, true, actor);
+      tick(1200);
+      expect(actor.women_non_youth).toBeNull();
+      expect(component.showYouthRequiredHint(actor, 'women')).toBe(true);
+      expect(component.showYouthRequiredHint(actor, 'men')).toBe(false);
+
+      actor.women_youth = 0;
+      component.validateYouth(0, true, actor);
+      tick(1200);
+      expect(actor.women_non_youth).toBe(100);
+      expect(component.showYouthRequiredHint(actor, 'women')).toBe(false);
+    }));
+
+    it('derives Non-youth on the edited 2030 row, not on the current-use row of the same index', fakeAsync(() => {
+      inScope();
+      component.isIpsr = false;
+      component.body.innovatonUse.actors = [row({ women: 10, women_youth: 4, women_non_youth: 6 })];
+      component.body.innovation_use_2030 = { actors: [row()] } as any;
+      const actor2030 = component.body.innovation_use_2030.actors[0];
+
+      component.validateYouth(0, true, actor2030);
+      tick(1200);
+      expect(actor2030.women_non_youth).toBeNull();
+      expect(component.showYouthRequiredHint(actor2030, 'women')).toBe(true);
+
+      actor2030.women_youth = 30;
+      component.validateYouth(0, true, actor2030);
+      tick(1200);
+      expect(actor2030.women_non_youth).toBe(70);
+      expect(component.body.innovatonUse.actors[0].women_non_youth).toBe(6);
+    }));
+
+    it.each([
+      ['an IPSR host', () => ({ phase_year: 2026, source_name: 'W1/W2' }), true],
+      ['a 2025 result', () => ({ phase_year: 2025, source_name: 'W1/W2' }), false],
+      ['a W3/Bilaterals result', () => ({ phase_year: 2026, source_name: 'W3/Bilaterals' }), false]
+    ])('keeps the previous derivation and no hint for %s', (_label, result, isIpsr) => {
+      jest.useFakeTimers();
+      apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue(result());
+      component.isIpsr = isIpsr;
+      component.body.innovatonUse.actors = [row()];
+      const actor = component.body.innovatonUse.actors[0];
+
+      component.validateYouth(0, true, actor);
+      jest.advanceTimersByTime(1200);
+      expect(actor.women_non_youth).toBe(100);
+      expect(component.showYouthRequiredHint(actor, 'women')).toBe(false);
+      jest.useRealTimers();
+    });
+
+    it('shows no hint on a zero total, a "does not apply" row or an age-fallback row', () => {
+      inScope();
+      component.isIpsr = false;
+      expect(component.showYouthRequiredHint(row({ women: 0 }), 'women')).toBe(false);
+      expect(component.showYouthRequiredHint(row({ sex_and_age_disaggregation: true }), 'women')).toBe(false);
+      expect(component.showYouthRequiredHint(row({ age_disaggregation_not_available: true }), 'women')).toBe(false);
+    });
+
+    it('paints the hint under Non-youth in the real template only for the in-scope row', () => {
+      inScope();
+      fieldsManagerServiceMock.isP25.mockReturnValue(true);
+      fixture = TestBed.createComponent(InnovationUseFormComponent);
+      component = fixture.componentInstance;
+      component.body = new IpsrStep1Body();
+      component.body.innovatonUse.actors = [row()];
+      component.saving = false;
+      component.isIpsr = false;
+      fixture.changeDetectorRef.detectChanges();
+      const hints = () =>
+        fixture.debugElement
+          .queryAll(By.css('.youth-required-hint'))
+          .filter(de => de.nativeElement.textContent.includes(INNOVATION_USE_YOUTH_REQUIRED_COPY.text));
+      expect(hints().length).toBe(1);
+      const alert: HTMLElement = hints()[0].nativeElement;
+      // A sibling of the Women row, never inside it: `.right_content` hosts the absolute
+      // `.explanation_message` overlay, which is what covered the Youth input on PRTest.
+      expect(alert.closest('.right_content')).toBeNull();
+      expect(alert.classList.contains('explanation_message')).toBe(false);
+      expect(alert.getAttribute('role')).toBe('status');
+      expect(alert.querySelectorAll('b')[0].textContent.trim()).toBe(INNOVATION_USE_YOUTH_REQUIRED_COPY.label);
+      expect(alert.querySelectorAll('b')[1].textContent.trim()).toBe(INNOVATION_USE_YOUTH_REQUIRED_COPY.emphasis);
+
+      component.isIpsr = true;
+      fixture.changeDetectorRef.detectChanges();
+      expect(hints().length).toBe(0);
+    });
+  });
+
   describe('validateYouth with men (isWomen=false)', () => {
     it('should validate youth for men branch', fakeAsync(() => {
       component.body.innovatonUse.actors = [
@@ -777,6 +892,25 @@ describe('InnovationUseFormComponent', () => {
     it('should return non-P25 variant when isP25 is false (default)', () => {
       const result = component.narrativeActors();
       expect(result).toContain('Individuals, organizations or networks');
+    });
+
+    it('P25 Innovation Use asks for actual users in the reporting year (INC-168060)', () => {
+      // `narrativeActors` is a computed cached by the first render; build a fresh instance.
+      fieldsManagerServiceMock.isP25.mockReturnValue(true);
+      component = TestBed.createComponent(InnovationUseFormComponent).componentInstance;
+      component.isIpsr = false;
+      const result = component.narrativeActors();
+      expect(result).toContain('actually using the innovation in the reporting year');
+      expect(result).not.toContain('by end of 2030');
+    });
+
+    it('P25 IPSR step 1 keeps the 2030 scaling-ambition wording (INC-168060)', () => {
+      fieldsManagerServiceMock.isP25.mockReturnValue(true);
+      component = TestBed.createComponent(InnovationUseFormComponent).componentInstance;
+      component.isIpsr = true;
+      const result = component.narrativeActors();
+      expect(result).toContain('The numbers should reflect the expected innovation use by end of 2030.');
+      expect(result).not.toContain('reporting year');
     });
   });
 
@@ -1540,9 +1674,7 @@ describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
       expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[1].description).toBe(
         'Grew a variety, applied a practice, actively used a digital tool or service, took up a product. Application is supported by the attached evidence (survey, plot observation, purchase records, platform logs).'
       );
-      expect(FARMER_FOLLOW_UP_COPY.helper).toBe(
-        'If your numbers include both groups, add the actor type a second time and report each group separately. Receiving and applying are not the same as benefiting; benefit is reported as impact evidence.'
-      );
+      expect('helper' in FARMER_FOLLOW_UP_COPY).toBe(false);
       expect(FARMERS_ACTOR_TYPE_ID).toBe(1);
     });
   });
@@ -1561,7 +1693,7 @@ describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
       expect(text).toContain(FARMER_FOLLOW_UP_COPY.useNatureOptions[0].description);
       expect(text).toContain(FARMER_FOLLOW_UP_COPY.useNatureOptions[1].label);
       expect(text).toContain(FARMER_FOLLOW_UP_COPY.useNatureOptions[1].description);
-      expect(text).toContain(FARMER_FOLLOW_UP_COPY.helper);
+      expect(text).not.toContain('If your numbers include both groups');
       // Q-a and Q-b are the required radio groups, with the verbatim questions.
       const radios = els[0].queryAll(By.css('app-pr-radio-button'));
       expect(radios.map(r => r.properties['label'])).toEqual([FARMER_FOLLOW_UP_COPY.countUnitQuestion, FARMER_FOLLOW_UP_COPY.useNatureQuestion]);
