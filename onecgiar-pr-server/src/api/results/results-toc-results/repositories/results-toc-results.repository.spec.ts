@@ -1343,3 +1343,215 @@ describe('ResultsTocResultRepository.findTocResultsForBilateral — indicator fi
     expect(warn).not.toHaveBeenCalled();
   });
 });
+
+// -----------------------------------------------------------------------------
+// @akili-spec bugfix/contribution-target-anchor — CTA-T-1 (INC-168252).
+//
+// `resolveTargetIdentity` used to return `null` for a target that carried no
+// identity (the Result-detail Contributors & partners save sends
+// `{ contributing_indicator: N }` only), so the row was stored with a NULL
+// `toc_indicator_target_id` and the "Achieved" derivation read 0. These cases
+// pin CTA-R-1/R-2/R-4 (requirements.md CTA-S-1…S-4) against the TTD stateful
+// harness above. The catalog read is replaced by `ctaCatalogQuery` so each case
+// controls EXACTLY the metas the real SQL would return (the TTD stub always
+// prepends a canonical row, which would blur the "exactly one meta" cases) and
+// can prove the catalog was consulted (a green on an unread catalog is void).
+// -----------------------------------------------------------------------------
+type CtaMeta = {
+  toc_indicator_target_id: number;
+  number_target: number;
+  target_date: string;
+};
+
+const CTA_NODE = 'toc-node-cta';
+const CTA_INDICATOR_ROW_ID = 601;
+
+const buildCtaRepository = (
+  phaseYearMetas: CtaMeta[],
+  allYearsFallbackMetas: CtaMeta[] = [],
+) => {
+  const harness = buildTtdStatefulRepository();
+  const catalogReads: string[] = [];
+  (harness.repo as any).query = jest.fn(async (sql: string) => {
+    if (typeof sql === 'string' && sql.includes('phase_year')) {
+      return [{ phase_year: TTD_PHASE_YEAR }];
+    }
+    if (
+      typeof sql === 'string' &&
+      sql.includes('toc_result_indicator_target')
+    ) {
+      // The phase-year read carries the REGEXP year filter; the all-years
+      // fallback (getIndicatorTargetCatalog) does not.
+      const isPhaseYearRead = sql.includes('REGEXP');
+      catalogReads.push(isPhaseYearRead ? 'phase-year' : 'all-years');
+      return isPhaseYearRead ? phaseYearMetas : allYearsFallbackMetas;
+    }
+    return [];
+  });
+  const warn = jest
+    .spyOn((harness.repo as any)._logger, 'warn')
+    .mockImplementation(() => undefined);
+  return { ...harness, catalogReads, warn };
+};
+
+const seedCtaIndicator = (indicatorRows: any[]) =>
+  indicatorRows.push({
+    result_toc_result_indicator_id: CTA_INDICATOR_ROW_ID,
+    results_toc_results_id: TTD_PARENT_ID,
+    toc_results_indicator_id: CTA_NODE,
+    is_active: true,
+  });
+
+const ctaSave = (repo: any, targets: any[]) =>
+  repo.saveInditicatorsContributing(
+    [{ toc_results_indicator_id: CTA_NODE, targets }],
+    TTD_PARENT_ID,
+    TTD_RESULT_ID,
+    TTD_USER_ID,
+  );
+
+const SINGLE_2026_META: CtaMeta = {
+  toc_indicator_target_id: 333606,
+  number_target: 6,
+  target_date: '2026-01-01',
+};
+
+describe('ResultsTocResultRepository.saveInditicatorsContributing — CTA (bugfix/contribution-target-anchor)', () => {
+  it('CTA-TEST-1 — an identity-less contribution anchors to the phase year single meta (CTA-S-1, CTA-DD-1)', async () => {
+    const { repo, targetRepo, targetRows, catalogReads } = buildCtaRepository([
+      SINGLE_2026_META,
+    ]);
+
+    // Second identity-less target in the SAME save: the anchor fill must not
+    // change which metas TTD skips (CTA-DD-1, `identityResolved: false`) — it
+    // would be inserted as a second anchored row if step 4 reported resolved.
+    await ctaSave(repo, [
+      { contributing_indicator: 1 },
+      { contributing_indicator: null },
+    ]);
+
+    expect(catalogReads.length).toBeGreaterThan(0);
+    // CTA-NFR-1: one catalog read per indicator per save (not per target).
+    expect(catalogReads).toEqual(['phase-year']);
+    expect(targetRepo.save).toHaveBeenCalledTimes(1);
+    expect(targetRows).toHaveLength(1);
+    expect(targetRows[0]).toEqual(
+      expect.objectContaining({
+        toc_indicator_target_id: 333606,
+        contributing_indicator: 1,
+        number_target: 6,
+        target_date: 2026,
+        is_active: true,
+      }),
+    );
+  });
+
+  it('CTA-TEST-2 — two metas for the phase year are never guessed: NULL anchor and one warn with the candidate count (CTA-S-2, CTA-DD-6)', async () => {
+    const { repo, targetRows, catalogReads, warn } = buildCtaRepository([
+      SINGLE_2026_META,
+      {
+        toc_indicator_target_id: 333699,
+        number_target: 6,
+        target_date: '2026-01-01',
+      },
+    ]);
+
+    await ctaSave(repo, [{ contributing_indicator: 1 }]);
+
+    expect(catalogReads.length).toBeGreaterThan(0);
+    expect(targetRows).toHaveLength(1);
+    expect(targetRows[0].toc_indicator_target_id).toBeNull();
+    expect(targetRows[0].contributing_indicator).toBe(1);
+    expect(warn).toHaveBeenCalledTimes(1);
+    const message = String(warn.mock.calls[0][0]);
+    expect(message).toContain(`result_id=${TTD_RESULT_ID}`);
+    expect(message).toContain(`indicator_id=${CTA_NODE}`);
+    expect(message).toContain('candidates=2');
+  });
+
+  it('CTA-TEST-3 — an existing anchor is never overwritten by the newly resolved one (CTA-S-3, CTA-DD-5)', async () => {
+    const { repo, indicatorRows, targetRows, targetRepo, catalogReads } =
+      buildCtaRepository([SINGLE_2026_META]);
+    seedCtaIndicator(indicatorRows);
+    targetRows.push({
+      indicators_targets: 2235,
+      result_toc_result_indicator_id: CTA_INDICATOR_ROW_ID,
+      toc_indicator_target_id: 333000,
+      number_target: 6,
+      contributing_indicator: 1,
+      is_active: true,
+      target_date: TTD_PHASE_YEAR,
+    });
+
+    await ctaSave(repo, [{ contributing_indicator: 2 }]);
+
+    expect(catalogReads.length).toBeGreaterThan(0);
+    expect(targetRepo.save).not.toHaveBeenCalled();
+    expect(targetRows).toHaveLength(1);
+    expect(targetRows[0].toc_indicator_target_id).toBe(333000);
+    expect(targetRows[0].contributing_indicator).toBe(2);
+  });
+
+  it('CTA-TEST-4a — an own id outside the indicator catalog is not trusted: it falls to the phase year meta (CTA-S-4, CTA-DD-2)', async () => {
+    const { repo, targetRows, catalogReads } = buildCtaRepository([
+      SINGLE_2026_META,
+    ]);
+
+    await ctaSave(repo, [
+      { toc_indicator_target_id: 999999, contributing_indicator: 1 },
+    ]);
+
+    expect(catalogReads.length).toBeGreaterThan(0);
+    expect(targetRows).toHaveLength(1);
+    expect(targetRows[0].toc_indicator_target_id).toBe(333606);
+    expect(targetRows.map((row) => row.toc_indicator_target_id)).not.toContain(
+      999999,
+    );
+  });
+
+  it('CTA-TEST-4b — an own id that IS in the catalog is kept (TTD step 1 unchanged, CTA-R-4)', async () => {
+    const { repo, targetRows, catalogReads } = buildCtaRepository([
+      SINGLE_2026_META,
+    ]);
+
+    await ctaSave(repo, [
+      { toc_indicator_target_id: 333606, contributing_indicator: 1 },
+    ]);
+
+    expect(catalogReads.length).toBeGreaterThan(0);
+    expect(targetRows).toHaveLength(1);
+    expect(targetRows[0].toc_indicator_target_id).toBe(333606);
+  });
+
+  it('CTA-TEST-4c — with an empty catalog the own id is kept as today: nothing to validate against (CTA-S-4 BUT clause)', async () => {
+    const { repo, targetRows, catalogReads } = buildCtaRepository([], []);
+
+    await ctaSave(repo, [
+      { toc_indicator_target_id: 555, contributing_indicator: 1 },
+    ]);
+
+    expect(catalogReads.length).toBeGreaterThan(0);
+    expect(targetRows).toHaveLength(1);
+    expect(targetRows[0].toc_indicator_target_id).toBe(555);
+  });
+
+  it('CTA-TEST-5 — the all-years fallback list is not the phase year: a 2027-only catalog leaves the 2026 anchor NULL (CTA-DD-3)', async () => {
+    const { repo, targetRows, catalogReads } = buildCtaRepository(
+      [],
+      [
+        {
+          toc_indicator_target_id: 333607,
+          number_target: 7,
+          target_date: '2027-01-01',
+        },
+      ],
+    );
+
+    await ctaSave(repo, [{ contributing_indicator: 1 }]);
+
+    // The phase-year read came back empty and the all-years fallback ran.
+    expect(catalogReads).toEqual(['phase-year', 'all-years']);
+    expect(targetRows).toHaveLength(1);
+    expect(targetRows[0].toc_indicator_target_id).toBeNull();
+  });
+});

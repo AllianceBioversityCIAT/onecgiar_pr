@@ -1914,7 +1914,10 @@ export class ResultsTocResultRepository
 
               const catalogMetas = canonical?.catalogMetas ?? [];
               const { tocTargetId, identityResolved } =
-                this.resolveTargetIdentity(target, catalogMetas, phaseYear);
+                this.resolveTargetIdentity(target, catalogMetas, phaseYear, {
+                  resultId: result_id,
+                  indicatorId,
+                });
 
               const { row: targetInfo, claimedByAnother } =
                 await this.resolveExistingTargetRow({
@@ -2064,7 +2067,10 @@ export class ResultsTocResultRepository
 
               const catalogMetas = canonical?.catalogMetas ?? [];
               const { tocTargetId, identityResolved } =
-                this.resolveTargetIdentity(target, catalogMetas, phaseYear);
+                this.resolveTargetIdentity(target, catalogMetas, phaseYear, {
+                  resultId: result_id,
+                  indicatorId,
+                });
 
               const { row: targetInfo, claimedByAnother } =
                 await this.resolveExistingTargetRow({
@@ -2784,9 +2790,21 @@ select *
     target: any,
     catalogMetas: TocTargetCatalogMeta[],
     phaseYear?: number | null,
+    logContext?: { resultId?: number; indicatorId?: string },
   ): { tocTargetId: number | null; identityResolved: boolean } {
+    // @akili-spec bugfix/contribution-target-anchor (CTA-R-2, CTA-DD-2): the
+    // own id is trusted only when it belongs to THIS indicator's catalog
+    // metas — or when the catalog read is empty (nothing to validate against,
+    // today's behaviour). A foreign id (KPI switched on an existing tab) falls
+    // through to the remaining steps.
     const ownId = this.toNumberOrNull(target?.toc_indicator_target_id);
-    if (ownId != null) {
+    if (
+      ownId != null &&
+      (catalogMetas.length === 0 ||
+        catalogMetas.some(
+          (meta) => this.toNumberOrNull(meta.toc_indicator_target_id) === ownId,
+        ))
+    ) {
       return { tocTargetId: ownId, identityResolved: true };
     }
 
@@ -2817,6 +2835,34 @@ select *
         tocTargetId: this.toNumberOrNull(byNumberDate.toc_indicator_target_id),
         identityResolved: true,
       };
+    }
+
+    // @akili-spec bugfix/contribution-target-anchor (CTA-R-1, CTA-DD-1/3/4/6):
+    // a target with no usable identity anchors to the indicator's ONLY catalog
+    // meta for the result's phase year. Counted by `target_date === phaseYear`
+    // (never by list length: the catalog read falls back to ALL years when the
+    // phase year has none). `identityResolved` stays false so TTD's skip rule
+    // for a second identity-less meta is unchanged — this only fills the anchor.
+    if (phaseYear != null) {
+      const phaseYearMetas = catalogMetas.filter(
+        (meta) => meta.target_date === phaseYear,
+      );
+      if (phaseYearMetas.length === 1) {
+        return {
+          tocTargetId: this.toNumberOrNull(
+            phaseYearMetas[0].toc_indicator_target_id,
+          ),
+          identityResolved: false,
+        };
+      }
+      if (phaseYearMetas.length > 1) {
+        // Ambiguous year: never guess; ids/count only (.cursorrules).
+        this._logger.warn(
+          `saveInditicatorsContributing: ambiguous ToC target for the phase year ` +
+            `- result_id=${logContext?.resultId}, indicator_id=${logContext?.indicatorId}, ` +
+            `candidates=${phaseYearMetas.length}`,
+        );
+      }
     }
 
     return { tocTargetId: null, identityResolved: false };
