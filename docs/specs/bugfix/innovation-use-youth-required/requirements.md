@@ -10,7 +10,7 @@
 | Depth | Lite |
 | Approval Mode | gated |
 | Module | results (Innovation Use, result type 2) |
-| Ticket(s) | Marc Schut batch 1, item 7 · INC-167167 · epic P2-3094 · Jira child probably P2-4049 (UNVERIFIED — confirm in Jira, owner Santiago) |
+| Ticket(s) | Marc Schut batch 1, item 7 · INC-167167 · epic P2-3094 · Jira child P2-4049 (confirmed by Santiago 2026-11-12) |
 | Proposal | `proposal.md` (approved 2026-11-10, Option A) |
 | Status | approved (Santiago, 2026-11-11) |
 

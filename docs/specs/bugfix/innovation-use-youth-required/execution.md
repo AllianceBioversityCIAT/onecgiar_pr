@@ -172,3 +172,12 @@
 - Tell the owner of 18805, or record the decision not to (R-2).
 - Confirm the Jira child (P2-4049?) and post the closure comment.
 - Archive the spec once PROD is applied.
+
+## IUY-T-3 — Applied on PROD (2026-11-12, Santiago)
+
+- **Check:** Santiago pasted `SHOW CREATE FUNCTION` from PROD. The definer is `prmsadmin`@`%`, both `IUY-R-2 (NEW)` blocks sit inside the 2026 W1/W2 gate (section 1 and section 2), and the rest of the body matches `before.sql`. **PASS.**
+- ⚠️ **Order:** the function went live on PROD **before** the front and back code. That code is on qa-dev and perf (`2dee39a47`), not yet on master. Until the release, PROD result 18805 (Editing) shows a red section with neither the new alert nor the null Non-youth. Only that one result is affected; the owner fills Youth to clear it.
+- **Decisions (Santiago, 2026-11-12):**
+  - Nobody is notified; owners see the alert once the code is in PROD (R-2 closed).
+  - Jira child confirmed as **P2-4049**.
+  - Archive the spec as soon as the code reaches PROD.

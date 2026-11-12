@@ -8,7 +8,7 @@
 | Type | Bug |
 | Deliverable | software |
 | Approval Mode | gated |
-| Source | Marc Schut feedback, batch 1, item 7 (ticket INC-167167, epic P2-3094). Jira child probably P2-4049 — UNVERIFIED, confirm in Jira |
+| Source | Marc Schut feedback, batch 1, item 7 (ticket INC-167167, epic P2-3094). Jira child P2-4049 (confirmed by Santiago 2026-11-12) |
 | Decision | Option A chosen by Santiago on 2026-11-10 (Youth required, Non-youth stays derived) |
 | Impact measured | 2026-11-10 by Santiago: PROD 2 results / 2 actor rows, all Editing (status 1); PRTest 0 |
 | Date | 2026-11-10 |

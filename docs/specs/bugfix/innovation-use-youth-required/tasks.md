@@ -88,7 +88,7 @@ Covers IUY-R-1..3 and IUY-NFR-1..3. Gate logged as `auto-approved (user instruct
   - [ ] Folder `CLAUDE.md` updated and re-stamped
   - [ ] Cannot prove: hint placement and look → T-4
 
-### [~] IUY-T-3 — DB: youth-required checks in `validation_innovation_use_P25` (both sections)
+### [x] IUY-T-3 — DB: youth-required checks in `validation_innovation_use_P25` (both sections)
 
 - **Type:** db
 - **Description:** DD-2.
