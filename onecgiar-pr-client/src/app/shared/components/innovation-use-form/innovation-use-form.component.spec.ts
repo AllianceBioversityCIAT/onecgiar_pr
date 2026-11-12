@@ -1950,3 +1950,111 @@ describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
     });
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// IWH-T-1 (changes/innovation-use-w3-hide-2030, INC-168060) — the 2030 Use Projection block is not
+// rendered for W3/Bilateral results; stored 2030 values are never rewritten by the form.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+describe('InnovationUseFormComponent — IWH — 2030 block by source', () => {
+  let fixture: ComponentFixture<InnovationUseFormComponent>;
+  let component: InnovationUseFormComponent;
+  let currentResultSignal: jest.Mock;
+
+  const detect = () => {
+    fixture.changeDetectorRef.detectChanges();
+    fixture.changeDetectorRef.detectChanges();
+  };
+
+  function build(result: any, isIpsr = false, body: IpsrStep1Body = new IpsrStep1Body()) {
+    currentResultSignal.mockReturnValue(result);
+    fixture = TestBed.createComponent(InnovationUseFormComponent);
+    component = fixture.componentInstance;
+    component.isIpsr = isIpsr;
+    component.saving = false;
+    body.innov_use_2030_to_be_determined = body.innov_use_2030_to_be_determined ?? null;
+    component.body = body;
+    detect();
+  }
+
+  const block2030 = () => fixture.debugElement.query(By.css('[data-block="2030"]'));
+  const question2030 = () => fixture.debugElement.query(By.css('[data-testid="iu-field-2030-projection-question"]'));
+  const tbdRadio = () => fixture.debugElement.query(By.css('[fieldRef="[innovation-use-form]-2030-to-be-determined"]'));
+
+  beforeEach(async () => {
+    currentResultSignal = jest.fn().mockReturnValue({});
+    const apiMock: any = {
+      resultsSE: {
+        GETAllActorsTypes: jest.fn().mockReturnValue(of({ response: [] })),
+        GETInstitutionsTypeTree: jest.fn().mockReturnValue(of({ response: [] }))
+      },
+      rolesSE: { readOnly: false },
+      dataControlSE: { currentResultSignal, reportingCurrentPhase: { phaseYear: null } }
+    };
+    const fieldsMock: any = {
+      isP25: jest.fn().mockReturnValue(true),
+      isInnovationUse2030Projection2026: jest.fn().mockReturnValue(true),
+      innovationUse2030ProjectionTooltip: jest.fn().mockReturnValue(''),
+      isInnovationUseAgeFallback2026: jest.fn().mockReturnValue(false),
+      fields: jest.fn().mockReturnValue({
+        '[innovation-use-form]-core-innovation': { description: '' },
+        '[innovation-use-form]-2030-to-be-determined': { description: '' }
+      })
+    };
+    await TestBed.configureTestingModule({
+      declarations: [InnovationUseFormComponent],
+      providers: [
+        { provide: ApiService, useValue: apiMock },
+        { provide: TerminologyService, useValue: { t: jest.fn().mockReturnValue('x') } },
+        { provide: FieldsManagerService, useValue: fieldsMock },
+        { provide: InnovationControlListService, useValue: { readinessLevelsList: [], useLevelsList: [] } },
+        { provide: InnovationUseResultsService, useValue: { resultsList: [] } }
+      ],
+      imports: [TermPipe, HttpClientTestingModule],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+  });
+
+  it('1. W3/Bilaterals hides the whole 2030 block (block, question, to-be-determined radio)', () => {
+    build({ phase_year: 2026, source_name: 'W3/Bilaterals' });
+    expect(block2030()).toBeNull();
+    expect(question2030()).toBeNull();
+    expect(tbdRadio()).toBeNull();
+  });
+
+  it('2. W1/W2 keeps the 2030 block exactly as today', () => {
+    build({ phase_year: 2026, source_name: 'W1/W2' });
+    expect(block2030()).toBeTruthy();
+    expect(question2030()).toBeTruthy();
+    expect(tbdRadio()).toBeTruthy();
+    expect(component.hides2030Projection).toBe(false);
+  });
+
+  it('3. IPSR host never hides, whatever the source (getter; the block itself is DOM-unreachable from IPSR behind isP25 && !isIpsr)', () => {
+    build({ phase_year: 2026, source_name: 'W3/Bilaterals' }, true);
+    expect(component.hides2030Projection).toBe(false);
+  });
+
+  it.each([
+    ['signal returns undefined', undefined],
+    ['signal is empty', {}],
+    ['source_name is unknown', { phase_year: 2026 }]
+  ])('4. fails toward showing the block when %s', (_label, result) => {
+    build(result);
+    expect(component.hides2030Projection).toBe(false);
+    expect(block2030()).toBeTruthy();
+    expect(question2030()).toBeTruthy();
+    expect(tbdRadio()).toBeTruthy();
+  });
+
+  it('5. W3 hidden: the stored 2030 answers are left exactly as loaded', () => {
+    const body = new IpsrStep1Body();
+    body.innov_use_2030_to_be_determined = true as any;
+    body.innovation_use_2030.actors = [Object.assign(new Actor(), { actor_type_id: 4, is_active: true, result_actors_id: 9, women: 2, men: 3, how_many: 5 })];
+    const tbdBefore = body.innov_use_2030_to_be_determined;
+    const listBefore = JSON.stringify(body.innovation_use_2030);
+    build({ phase_year: 2026, source_name: 'W3/Bilaterals' }, false, body);
+    expect(block2030()).toBeNull();
+    expect(component.body.innov_use_2030_to_be_determined).toBe(tbdBefore);
+    expect(JSON.stringify(component.body.innovation_use_2030)).toBe(listBefore);
+  });
+});
