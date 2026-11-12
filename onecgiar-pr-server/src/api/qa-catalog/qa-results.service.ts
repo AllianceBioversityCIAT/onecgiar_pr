@@ -23,6 +23,8 @@ import {
   QaCatalogSource,
 } from './qa-catalog.service';
 import { QaResultsRepository } from './qa-results.repository';
+import { LabelPairs, collectLabels } from './values/label-collector';
+import { ResolvedLabels, resolveLabels } from './values/label.resolver';
 import { normalize } from './values/normalizers';
 import { resolveElementPaths, resolvePathFields } from './values/path.resolver';
 import { project } from './values/projection';
@@ -150,7 +152,7 @@ export class QaResultsService {
       ),
     );
 
-    const results: QaResultsDetailsItem[] = eligible.map((c) => {
+    const projected = eligible.map((c) => {
       const own = values.get(c.result_id) ?? {};
       const out: Record<string, unknown> = {};
       for (const f of toRead) {
@@ -166,9 +168,27 @@ export class QaResultsService {
       };
     });
 
-    // QRF NFR: route, year, counts, statements, duration - never ids, field keys, values or the API key.
+    // QVL-R-1 / R-2 / R-6 / R-9: labels describe the PROJECTED values (QVL-DD-2). `toRead` is the returned field set (`field_keys` and
+    // applicability applied), and a result's `values` only holds keys that apply to its own type, so a mixed batch never labels a
+    // field of another type. The resolver runs inside `guarded` with the counted runner: its failures are the generic 500, and a
+    // failed batch returns no partial labels. `values` is read, never written (QVL-R-5, D-4).
+    const { perResult, resolved } = await this.guarded(year, async () => {
+      const collected = collectLabels(projected, toRead);
+      return {
+        perResult: collected.perResult,
+        resolved: await resolveLabels(collected.union, { run, env: deps.env }),
+      };
+    });
+    let labelCount = 0;
+    const results: QaResultsDetailsItem[] = projected.map((item, i) => {
+      const labels = this.sliceLabels(perResult[i], resolved);
+      for (const ids of perResult[i].values()) labelCount += ids.size;
+      return { ...item, labels };
+    });
+
+    // QRF NFR: route, year, counts, statements, label pairs, duration - never ids, field keys, values, labels or the API key.
     this.logger.log(
-      `route=${DETAILS_ROUTE} year=${year} eligible=${results.length} not_eligible=${notEligible.length} statements=${statements} duration_ms=${Date.now() - startedAt}`,
+      `route=${DETAILS_ROUTE} year=${year} eligible=${results.length} not_eligible=${notEligible.length} statements=${statements} labels=${labelCount} duration_ms=${Date.now() - startedAt}`,
     );
     return {
       phase: year,
@@ -176,6 +196,20 @@ export class QaResultsService {
       results,
       not_eligible: notEligible,
     };
+  }
+
+  /** QVL-R-2: one result's slice of the batch labels, `{ list: { id: label | null } }` (plain objects, string keys), or `{}`. */
+  private sliceLabels(
+    own: LabelPairs,
+    resolved: ResolvedLabels,
+  ): Record<string, Record<string, string | null>> {
+    const labels: Record<string, Record<string, string | null>> = {};
+    for (const [list, ids] of own) {
+      const ofList: Record<string, string | null> = {};
+      for (const id of ids) ofList[id] = resolved.get(list)?.get(id) ?? null;
+      labels[list] = ofList;
+    }
+    return labels;
   }
 
   /** Base plans, then paths, then lookups (QRF-DD-6 / DD-8): each step reads what the one before left in `deferred`. */

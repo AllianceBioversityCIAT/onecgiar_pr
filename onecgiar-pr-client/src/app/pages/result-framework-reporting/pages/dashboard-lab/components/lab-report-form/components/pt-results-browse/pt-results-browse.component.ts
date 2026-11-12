@@ -320,6 +320,13 @@ const asTextOrNull = (value: unknown): string | null => asText(value) || null;
 const asRecord = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 
+/** A country PRMS can save: positive integer CLARISA id, and `matched` when PT sent a match status. */
+function hasResolvableClarisaId(country: PtCountryDto): boolean {
+  const id = country.clarisa_id;
+  if (typeof id !== 'number' || !Number.isInteger(id) || id <= 0) return false;
+  return country.match_status == null || country.match_status === 'matched';
+}
+
 /** A name string or an object with `name` (and optional CLARISA match fields). */
 function toCountry(value: unknown): PtCountryDto | null {
   if (typeof value === 'string') {
@@ -736,7 +743,9 @@ export class PtResultsBrowseComponent {
 
   /**
    * Geography from `geo_scope` (2026-10-15) with result-level `countries` / `regions_detail` /
-   * `subnational_areas`. Result-level countries win when PT sends both; `null` when nothing is set.
+   * `subnational_areas`. When both country lists exist, prefer the one with a resolvable CLARISA
+   * id (`clarisa_id > 0`, and `matched` when `match_status` is present): `geo_scope.countries`
+   * when it has one, otherwise result-level names. `null` when nothing is set.
    */
   private toGeo(item: PtRawProposal): PtGeoDto | null {
     const scope = asRecord(item.geo_scope);
@@ -747,7 +756,7 @@ export class PtResultsBrowseComponent {
     );
     const geo: PtGeoDto = {
       level: asTextOrNull(scope?.['level']),
-      countries: itemCountries.length ? itemCountries : scopeCountries,
+      countries: scopeCountries.some(hasResolvableClarisaId) ? scopeCountries : itemCountries.length ? itemCountries : scopeCountries,
       regions: (regionSource ?? []).map(toRegion).filter(nonNull),
       subnational_areas: toSubnational(item.subnational_areas) ?? toSubnational(scope?.['subnational_areas']),
       provenance: (Array.isArray(scope?.['provenance']) ? (scope['provenance'] as unknown[]) : []).map(asText).filter(Boolean),
