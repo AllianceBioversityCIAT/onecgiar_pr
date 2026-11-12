@@ -941,8 +941,16 @@ export class InnovationUseService {
       let men_non_youth = men - men_youth;
       let women_non_youth = women - women_youth;
 
-      el['men_non_youth'] = men_non_youth > 0 ? men_non_youth : 0;
-      el['women_non_youth'] = women_non_youth > 0 ? women_non_youth : 0;
+      // IUY-R-3 (P2-4049): an empty Youth is unknown, never "0 youth" — Non-youth stays null
+      // instead of the whole total. This is the read the P25 form loads, not summary.service.
+      el['men_non_youth'] =
+        el.men_youth == null ? null : men_non_youth > 0 ? men_non_youth : 0;
+      el['women_non_youth'] =
+        el.women_youth == null
+          ? null
+          : women_non_youth > 0
+            ? women_non_youth
+            : 0;
 
       if ((el.women === null || el.women === 0) && women_youth > 0) {
         el.women = women_youth;
