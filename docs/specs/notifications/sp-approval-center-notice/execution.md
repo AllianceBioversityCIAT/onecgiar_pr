@@ -221,3 +221,18 @@ These advisories are recorded only. Per the Advisory-Never-Becomes-A-Task rule, 
 - **Budget:** 4 tasks, as planned. Roughly +600 LOC including tests, against about 200 planned; the overrun is mostly spec breadth. 1 review round each for T-1 to T-3 and 3 rounds for T-4, against 1 planned.
 - **Pivot:** the any-role recipient set equals role 9 on current data. The lookup was kept (alternative 1), and the chip token was amended.
 - **Commits:** one per task plus one for the spec docs, pushed to `qa-development-2026-ss` with the user's explicit authorization ("si ves que todo funciona bien subes cambios a mi rama"). Only this spec's files are staged; the other session's work (`bugfix/achieved-counts-submitted`) is left untouched.
+
+---
+
+## 5. HITL evidence (2026-11-13, Leader via Claude in Chrome on PRTest, read-only)
+
+- **Row visual vs `mockup/reference-row.png`: PASS.** Real row in Santiago's inbox (IITA/Bioversity Center user, not the submitter): "**SP04**, as primary Science Program, has approved your center's result 10094 - MyFarmTrees Training-of-Trainers…". It shows `pi-check-circle` in the avatar, the `Decision update` chip, the `W3/Bilateral` chip, single spaces, and no action buttons. A Rejected row ("…has been rejected by the Science Program SP13", 10093) shows initials plus `Decision update`. Deviations come from app-wide styles applied after the mockup (round avatar box, monospace underlined code/title link), the same on every row type. Screenshot: `C:\Users\santiagosanchez\AppData\Local\Temp\claude-chrome-screenshots-GgKp4h\screenshot-1794583711632-3.png`.
+- **DEFECT found in the drawer (consumer named in SACN-T-4):** opening that Approved row shows the body "The primary Science Program , as primary Science Program, has tagged as a contributing Science Program to result 10094 … on behalf of the Center". That is the contributor-request template with empty fields. "Couldn't load the approval chain" also appears. Screenshot: `C:\Users\santiagosanchez\AppData\Local\Temp\claude-chrome-screenshots-GgKp4h\screenshot-1794583838529-7.png`. The type label is correct; the sentence is not.
+- **Still open:** the submitter-side row (needs the submitter's inbox or a read-only SQL on `notification` for result 10094).
+
+### Drawer sentence fix (2026-11-13, Leader-inline, user-approved "fix it now")
+
+- **Root cause:** `notification-item.drawerHeader()` had no Updates-row branch. `isBilateralContributorRequest` (`isBilateralResult && !isPrimaryRequest`) is true for any bilateral Updates row, so the Approved notice rendered the contributor-request template with empty codes. Any bilateral Updates row was affected (Rejected and tagged notices too), not only SACN rows.
+- **Fix:** an `isUpdateSource` branch at the top of `drawerHeader()` reuses `updateTextParts` (the same parts the row and `buildResultNotificationText` use): `lead = [lead, prefix].join(' ')`, `linkTrailer` appended to `resultTitle`, `suffix` passed through, verb/tail empty. `isBilateralContributorRequest` is not changed.
+- **Red → green:** 2 new cases (`detail panel sentence for update rows`) failed before the fix and pass after. `--findRelatedTests notification-item.component.ts` gives 21 suites / 1078 tests green. `ng lint` on the 2 touched files is clean. Folder `CLAUDE.md` updated and stamped.
+- **Not yet verified:** the rendered panel on PRTest. The fix needs a commit plus a deploy (qa-dev → performance-refactor). "Couldn't load the approval chain" on the same panel is separate and not investigated.

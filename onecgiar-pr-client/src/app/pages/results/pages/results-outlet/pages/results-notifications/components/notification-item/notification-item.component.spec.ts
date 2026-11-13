@@ -40,7 +40,7 @@ import { NotificationDetailContentComponent } from '../notification-detail-conte
 import { PrimaryDeclineJustificationDialogComponent } from '../primary-decline-justification-dialog/primary-decline-justification-dialog.component';
 // NOTIF-T-5: property-based chip check — every rendered type chip must be a member of this set
 // (or the fixed "Contribution request" string), never a fabricated label (NOTIF-R-3/NOTIF-AC-7).
-import { NotificationType } from '../../../../../../../../shared/constants/notification-type.constants';
+import { NotificationType, buildResultNotificationText } from '../../../../../../../../shared/constants/notification-type.constants';
 // SACN-T-4 (`sp-approval-center-notice`): the "Decision update" chip string, reused rather than
 // redeclared (forward pointer from SACN-T-3).
 import { BILATERAL_DECISION_NOTICE_COPY } from '../../../../../../../../internationalization/bilateral-decision-notice.copy';
@@ -4486,6 +4486,38 @@ describe('NotificationItemComponent', () => {
         obj_version: { id: 1 }
       },
       ...overrides
+    });
+
+    describe('detail panel sentence for update rows (SACN follow-up, PRTest 2026-11-13)', () => {
+      it('uses the row sentence, never the contributor-request template, for an Approved bilateral notice', () => {
+        component.notification = approvedCenterNoticeFixture();
+
+        const h = component.drawerHeader();
+        const sentence = [h.lead, h.verb, h.responderCode, h.tail].join(' ');
+
+        expect(h.leadCode).toBeUndefined();
+        expect(sentence).not.toContain(CONTRIBUTION_REQUEST_DRAWER_COPY.header.bilateralContributorVerb.trim());
+        expect(sentence).not.toContain(CONTRIBUTION_REQUEST_DRAWER_COPY.header.onBehalfOf);
+        expect(h.lead).toBe(buildResultNotificationText(component.notification).split(' 9330 - ')[0]);
+        expect(h.lead).toContain('SP06');
+        expect(h.lead).toContain("has approved your center's result");
+        expect(h.suffix).toBeUndefined();
+        expect(h.resultCode).toBe(9330);
+      });
+
+      it('keeps the link trailer and suffix of a legacy center decision row', () => {
+        component.notification = approvedCenterNoticeFixture({
+          obj_notification_type: { type: NotificationType.BILATERAL_RESULT_REJECTED },
+          text: 'where your center was tagged, has been rejected by the Science Program SP13.'
+        });
+
+        const h = component.drawerHeader();
+
+        expect(h.lead).toBe('The result');
+        expect(h.resultTitle).toBe('Solar-powered cold storage adoption in Kenyan markets,');
+        expect(h.suffix).toBe('where your center was tagged, has been rejected by the Science Program SP13.');
+        expect(h.verb).toBe('');
+      });
     });
 
     describe('reference row (SACN-R-6)', () => {
