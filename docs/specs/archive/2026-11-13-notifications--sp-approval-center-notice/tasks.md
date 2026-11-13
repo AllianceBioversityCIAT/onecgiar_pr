@@ -5,15 +5,15 @@
 - **Module / feature:** `notifications` / bilateral approval notice for center staff
 - **Linked spec:** `requirements.md` (SACN-R-1..9) + `design.md` (SACN-DD-1..5)
 - **Branch:** `qa-development-2026-ss` (current checkout)
-- **Status:** in-progress (T-1, T-2, T-3 PASS · T-4 [~] code PASS, pending user HITL check)
+- **Status:** done (T-1..T-4 PASS; T-4 HITL closed 2026-11-13 on PRTest, see `execution.md` section 5)
 - **Budget (design §11):** 4 tasks · ~200 LOC · 1 review round
 
 ## 2. Pre-flight checklist
 
 - [x] `requirements.md` and `design.md` approved (2026-10-02).
-- [ ] Proposal OQ-1..OQ-4 accepted at their defaults (submitter wording unchanged · Reject unchanged except chip · lead center only · chip on Approved + Rejected).
+- [x] Proposal OQ-1..OQ-4 accepted at their defaults (submitter wording unchanged · Reject unchanged except chip · lead center only · chip on Approved + Rejected).
 - [x] No migration (SACN-NFR-1).
-- [ ] No in-flight spec editing `getBilateralReviewRecipientIds` / `buildBilateralReviewDescription` / `getResultNotificationTextParts` (check `git status` and open specs before T2/T3).
+- [x] No in-flight spec editing `getBilateralReviewRecipientIds` / `buildBilateralReviewDescription` / `getResultNotificationTextParts` (check `git status` and open specs before T2/T3).
 
 **Test command rule:** always scoped (`--testPathPattern`), never the full suite.
 
@@ -106,10 +106,10 @@
   - **Red run:** `cd onecgiar-pr-client && npx jest --testPathPattern notification-item.component.spec --silent --reporters=summary --no-coverage`
   - **Disqualifier:** jsdom proves presence, not looks. **Visual match to `mockup/reference-row.png` (icon size, chip colours, line wrap) has no automated gate** → manual look in the running app (or a T6 visual review) at the HITL pause; if it does not match, the task is not done regardless of green specs.
   - **Consumers:** `rowTypeChipLabel` — row template and drawer `view` metadata (verify drawer still shows a sensible type label).
-- **Status:** [~] code PASS 2026-10-02 (attempt 3, post-Pivot; see `execution.md`) — pending user HITL visual + manual check
+- **Status:** [x] PASS 2026-11-13 (code PASS 2026-10-02 attempt 3; HITL row PASS, drawer defect fixed in 577a8b832 and verified on PRTest)
 - **Definition of done:**
   - [x] Spec cases above; existing chip assertions for Approved/Rejected updated.
-  - [ ] Manual check: one center user (non-role-9) and the submitter each see their row after an approval on local/test. *(Pivot: no non-9 center role exists in the data — check with a role-9 non-submitter user.)*
+  - [x] Manual check: one center user (non-role-9) and the submitter each see their row after an approval on local/test. *(Pivot: no non-9 center role exists in the data — check with a role-9 non-submitter user.)* Done 2026-11-13: center-user row seen on PRTest (10 distinct recipients in TEST); submitter row not emitted because the submitter was also the approver (by design).
   - [x] `npx ng lint --quiet` clean.
 
 ## 4. Coverage matrix (scenario / clause level)
