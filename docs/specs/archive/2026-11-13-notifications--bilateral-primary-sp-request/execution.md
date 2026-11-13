@@ -888,3 +888,15 @@ The user explicitly asked for this: "corrígela tú mismo". The Leader applied i
   - a side-by-side check against the `mockup/` PNGs. Open visual point from the T-8 review: the Center name is **bold** on the primary row, while the mockup shows it plain.
   - the concurrent-accept race check.
 - **Status:** `[~]`.
+
+---
+
+## PSR-T-11 evidence (2026-11-13, Leader via Claude in Chrome on PRTest, read-only)
+
+- **Rows vs mockups: PASS.**
+  - Primary request: "IFPRI has tagged **SP03** as the primary Science Program of result 9861…", with flag icon, `Primary Science Program request` chip and `W3/Bilateral` chip. It is decided ("Accepted by SP03 · Accepted"), so the Accept/Decline buttons are correctly gone.
+  - Contributor request: "**SP12**, as primary Science Program, has tagged **SP09** as a contributing Science Program to result 9753 … on behalf of Bioversity (Alliance)" matches `contributor-request-row.png` word for word.
+  - Screenshots: `C:\Users\santiagosanchez\AppData\Local\Temp\claude-chrome-screenshots-GgKp4h\screenshot-1794583780669-5.jpg`, `C:\Users\santiagosanchez\AppData\Local\Temp\claude-chrome-screenshots-GgKp4h\screenshot-1794583797005-6.jpg`.
+- **Flows exercised by QA on PRTest (real data):** primary accepted (9738, 9752, 9753: `Primary Program Request Accepted` Center notices). Contributor accepted (9752 by Angel Jarrin, 9731, 9653, 9525) and declined (9753, 9653, 9600, with `Result Contribution Declined` notices).
+- **Obsolete here:** §6 steps 4–5 (decline → auto-move / "moved" notice) were replaced by `primary-decline-rejects-result`, and their check now lives in PDR-T-6.
+- **Not checked:** Project Information banners, and the concurrent accept/decline race (accepted gap: not practical by hand).

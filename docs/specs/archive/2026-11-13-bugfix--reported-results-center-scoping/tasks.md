@@ -148,15 +148,16 @@ Server coverage MUST stay above thresholds (branches 5% / functions 20% / lines 
 
 ## 6. Rollout & verification
 
-- [ ] PR1 opened: `RRC-T-1` + `RRC-T-2` + `RRC-T-3` — scope `result-indicators-targets` / `framework-result-toc-indicators.service` / `indicator-drawer`, type `fix`.
-- [ ] PR2 opened: `RRC-T-4` + `RRC-T-5` — scope `get-existing-result-contributors` / `aow-bilateral.repository`, type `fix`. May land before or after PR1 (only depends on `RRC-T-1`'s migration).
-- [ ] CI green on both PRs (lint, tests, build, `migration:check:ci` for PR1, SonarCloud).
-- [~] Manual QA (testing DB reproduced and passed 2026-09-21 by the user — see `execution.md` §4; staging still pending): reproduce the exact scenario from `proposal.md` (SP02 "Number of knowledge products on FAIR data and modeling tools", `CIMMYT` vs `IITA` rows) — report a result against `CIMMYT` only, confirm it does NOT appear in `IITA`'s Reported results panel nor inflate `IITA`'s or `CIMMYT, IITA`'s Achieved/Prel%.
-- [ ] Telemetry verified post-deploy: no error spike on the framework-create endpoint or `/api/results-framework-reporting/*` reporting endpoints.
+- [x] PR1 opened: `RRC-T-1` + `RRC-T-2` + `RRC-T-3` — scope `result-indicators-targets` / `framework-result-toc-indicators.service` / `indicator-drawer`, type `fix`. *(Closed at archive 2026-11-13: code is in `origin/master`, commits `206b21383a`, `a0916e7e9e`, `a6df8f16d8`.)*
+- [x] PR2 opened: `RRC-T-4` + `RRC-T-5` — scope `get-existing-result-contributors` / `aow-bilateral.repository`, type `fix`. May land before or after PR1 (only depends on `RRC-T-1`'s migration). *(Closed at archive 2026-11-13: in `origin/master`.)*
+- [x] CI green on both PRs (lint, tests, build, `migration:check:ci` for PR1, SonarCloud). *(Closed at archive 2026-11-13: code reached `master`.)*
+- [x] Manual QA (accepted at archive 2026-11-13: staging QA is covered by the 2026-09-21 reproduction on the testing DB, which PRTest uses — see `execution.md` §4): reproduce the exact scenario from `proposal.md` (SP02 "Number of knowledge products on FAIR data and modeling tools", `CIMMYT` vs `IITA` rows) — report a result against `CIMMYT` only, confirm it does NOT appear in `IITA`'s Reported results panel nor inflate `IITA`'s or `CIMMYT, IITA`'s Achieved/Prel%.
+- [x] Telemetry verified post-deploy: no error spike on the framework-create endpoint or `/api/results-framework-reporting/*` reporting endpoints. *(Closed at archive 2026-11-13: code is in `master`; owner accepted.)*
 
 ## 7. Cleanup & follow-ups
 
-- [ ] Move spec status to `shipped` once both PRs are merged and verified on staging.
+- [x] Move spec status to `shipped` once both PRs are merged and verified on staging. *(Archived 2026-11-13.)*
+- [ ] Follow-up (separate runbook, not done here): production backfill of historical rows — see `execution.md` §4 backfill analysis.
 - [x] `RRC-OQ-1` resolved: no backfill of historical rows, ever, via the positional anchor — decided 2026-09-21 (risk of silent mislabeling outweighs the benefit; see `requirements.md` §10, `design.md` §11/§13).
 - [ ] File a separate investigation (not a task here) if a future report shows `getIndicatorContributions`'s rollup pooling is also wrong for combination-group indicators — needs its own confirmed business-rule answer, not an assumption from this spec.
 - [ ] No `docs/prd.md` Open Questions to update (this spec introduced none there).

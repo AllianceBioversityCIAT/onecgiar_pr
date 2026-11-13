@@ -12,9 +12,9 @@
 
 ## 2. Pre-flight
 
-- [ ] Branch is not `master`. Work on the current integration line per root `CLAUDE.md`.
-- [ ] **Test coordination:** before running Jest, check with sibling sessions (onecgiar-pr-52 had Cypress CT running; onecgiar-pr-31 had Jest queued). Only one test run on the machine at a time, always `--maxWorkers=2`.
-- [ ] No secrets: the ticket screenshot's `x-api-key` is never copied anywhere (BPC-NFR-2).
+- [x] Branch is not `master`. Work on the current integration line per root `CLAUDE.md`.
+- [x] **Test coordination:** before running Jest, check with sibling sessions (onecgiar-pr-52 had Cypress CT running; onecgiar-pr-31 had Jest queued). Only one test run on the machine at a time, always `--maxWorkers=2`.
+- [x] No secrets: the ticket screenshot's `x-api-key` is never copied anywhere (BPC-NFR-2).
 
 ## 3. Task list
 
@@ -41,10 +41,10 @@
   - **Consumers:** `enrichBilateralResultResponse` (the only caller; reached from 5 read paths: lines 619, 831, 857, 1043, 1139). The Reviewer greps for any other place that builds `organization_code` items for bilateral output (none known: the `quality-assessment` fixtures are separate inputs).
   - **Lint:** `npx eslint src/api/bilateral/bilateral.service.ts src/api/bilateral/bilateral.service.spec.ts --quiet`.
 - **Definition of done:**
-  - [ ] Red, then green, as described; the rest of `bilateral.service.spec.ts` stays green in the same scoped run.
-  - [ ] Payload doc: the `bilateral_projects[]` row lists the three keys, with `organization_code` = acronym. A change-log row dated 2026-10-06 says: additive, `null` when unknown, all phases, ticket `#INC-164536`. *(No automated gate; Reviewer checks.)*
-  - [ ] Lint clean; no secret in code, doc, or commit.
-  - [ ] Commit only on the user's go-ahead: `🔧 fix(bilateral.service) INC-164536: expose external_code in bilateral_projects` (no apostrophes, per Jenkins).
+  - [x] Red, then green, as described; the rest of `bilateral.service.spec.ts` stays green in the same scoped run.
+  - [x] Payload doc: the `bilateral_projects[]` row lists the three keys, with `organization_code` = acronym. A change-log row dated 2026-10-06 says: additive, `null` when unknown, all phases, ticket `#INC-164536`. *(No automated gate; Reviewer checks.)*
+  - [x] Lint clean; no secret in code, doc, or commit.
+  - [x] Commit only on the user's go-ahead: `🔧 fix(bilateral.service) INC-164536: expose external_code in bilateral_projects` (no apostrophes, per Jenkins). Done: 2587e28b0, in master.
 
 ### `BPC-T-2` — Data runbook: owner 1353 → 49 and Alliance external codes (manual, Santiago)
 
@@ -64,10 +64,10 @@
 - **Definition of done:**
   - [x] Pre-check `source = 'API'` run; result recorded (2026-10-06: 0 rows, all `source = 'Result'`; see proposal §12).
   - [x] CLARISA columns confirmed: `clarisadb8.project.organization_code` / `.external_code`.
-  - [ ] 12 rows corrected in CLARISA, previous values snapshotted.
-  - [ ] Codes loaded for mapped ids only.
-  - [ ] Post-checks green after two syncs.
-  - [ ] Reporter reply sent: field live, `"ABC"` → `"Bioversity (Alliance)"`, rotate the exposed key.
+  - [x] 12 rows corrected in CLARISA, previous values snapshotted.
+  - [x] Codes loaded for mapped ids only.
+  - [x] Post-checks green after two syncs.
+  - [ ] Reporter reply sent: field live, `"ABC"` → `"Bioversity (Alliance)"`, rotate the exposed key. *(Open at archive 2026-11-13, carried as a follow-up.)*
 
 ## 4. Dependency graph
 

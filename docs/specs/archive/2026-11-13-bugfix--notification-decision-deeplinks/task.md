@@ -4,7 +4,7 @@
 
 - **Linked spec:** `requirements.md` + `design.md` (this folder)
 - **Depth:** Lite + Bug Mode
-- **Status:** approved 2026-09-24, not-started
+- **Status:** approved 2026-09-24; T-1 and T-2 done, T-3 closed as superseded (archived 2026-11-13)
 - **Budget (from design §9):** 3 tasks, about 170 LOC, 1-2 review rounds. Exceeding it stops execution for the user.
 
 ## 2. Pre-flight
@@ -63,8 +63,9 @@
   - [ ] No hard-coded English, no new i18n key, no new styles
   - [ ] Folder `CLAUDE.md` re-stamped only if a touched folder has one
 
-### [~] `NDDL-T-3` — Manual look in the browser, amend the parent spec
+### [x] `NDDL-T-3` — Manual look in the browser, amend the parent spec (closed as SUPERSEDED, 2026-11-13)
 
+- **Closure note (archive, 2026-11-13):** closed as SUPERSEDED, not as PASS. On PRTest (2026-11-13), clicking a row in the notifications list now opens a detail side panel (later inbox revamp, spec `notifications/detail-side-panel`, archived) instead of deep-linking. The bell/list deeplink manual checklist below is no longer applicable as written. The NOTIF-R-4 amendment half was done on 2026-09-24 (see `execution.md`).
 - **Type:** docs / manual verification
 - **Description:** On a local stack with result 9544 style data (CIMMYT lead, SP01 primary), click the three notification types from the bell and from the Notifications list. Include an Approved and a **Rejected** result. Amend `notifications/bilateral-review-decision` (NOTIF-R-4) to point at this spec for the click destination.
 - **Implements:** NDDL-R-1, R-2 (drawer really opens), R-3, R-4 (new tab, popup blocker), requirements §8 substitute for the render gap; design §10 Rejected-editor risk

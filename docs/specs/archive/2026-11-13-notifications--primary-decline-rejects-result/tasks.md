@@ -167,7 +167,9 @@
 - **Definition of done:**
   - [x] Spec green; lint clean.
 
-### `PDR-T-6` — HITL: end-to-end check on the testing DB
+### `PDR-T-6` — HITL: end-to-end check on the testing DB — `[x]` CLOSED AS SUPERSEDED (2026-11-13)
+
+> **Superseded by `notifications/primary-review-not-accept` (PRA-T-2, archived 2026-11-03):** the primary Decline entry points this check exercises no longer exist in the UI (the row button is hidden, the drawer has `[showDecline]=false`, and `?action=decline` is only consumed; see `notification-item/CLAUDE.md` "PDR-T-4 … SUPERSEDED"). The steps below can no longer be run as written. The owner accepted closing it at archive.
 
 - **Type:** rollout
 - **Description:** The user runs this with the server and client on the testing DB (`prdb`). The agent does not connect to the DB. Steps:

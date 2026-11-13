@@ -234,3 +234,13 @@ User shared a second reference mockup (pill-shaped badges, icon + count + label,
 **Not Done:** real-browser verification (still no browser in this session) — now also covers the new pill's tooltip rendering and the phase-switch-preserves-filters behavior end-to-end.
 
 **Outcome:** `BIL-POM-OQ-1` is **no longer an open question for the data-existence part** — the relationship exists and is now read. What remains open (unchanged from before): whether/how to expose this "W1/W2 contributor" concept elsewhere in the product beyond this one badge, and whether `requirements.md`/`design.md` should be formally amended to record this correction (recommended before archiving this spec, since the shipped code now materially diverges from the approved design's Out-of-Scope section).
+
+---
+
+## 8. Closure checks (2026-11-13, Leader via Claude in Chrome on PRTest, read-only)
+
+- **Code location:** `d3417ac134` is an ancestor of `origin/master` (in production). T-4's PR/CI boxes are closed by that merge.
+- **BIL-POM-TEST-4 browser check: PASS.** On `/bilateral/IITA/home` (Reporting 2026, P25), Santiago is the IITA Center user. 87 project cards render the 3 pills (replicated · new · W1/W2 results), and the W1/W2 pill shows its tooltip ("W1/W2 results mapped to this project: N"). At 390 px (iframe check) the grid is 301 px wide and `scrollWidth = clientWidth`: no overflow.
+- **BIL-POM-OQ-3 spot-check: PASS.** T-PJ-003812 shows `0 replicated · 11 new`. "View results (11)" lists 11 W3 `Manual` (not replicated) results, all `Pending review`. T-PJ-003942 shows `1 replicated`. T-PJ-003211 shows `0 · 0 · 0` with 12 results in `Editing`, which is correct (Editing is not "new for review").
+- **Observed once, not reproduced:** the first load of the Reporting tab showed "Could not load projects". The reload rendered correctly and every API call returned 200. This looks transient; it is not this spec's code path.
+- **Doc divergence accepted at archive:** metric #3 shipped (§7), so `requirements.md` §Out-of-scope and `design.md` DD-2 are superseded by §7. The archive summary records it.

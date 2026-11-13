@@ -234,3 +234,11 @@ Run 1 (2026-10-01): WPT-T-1 (server lane) and WPT-T-3 (client lane) ran in paral
 - **Not Done / Assumptions (Implementer):** none in scope. It noted that the server twin is WPT-T-2 and the consumers are WPT-T-4.
 - **Decisions:** none beyond the spec.
 - **Gate:** gated mode. Awaiting the user at the continue/pause gate.
+
+---
+
+## WPT-T-5 evidence (2026-11-13, Leader via Claude in Chrome on PRTest, read-only)
+
+- **Inbox row vs `mockup/project-tagged-row.png`: PASS.** Real row (not a fixture), created 2026-11-03: "Angel Jarrin from **SP02** has tagged the bilateral project **T-PJ-004113** from your center (IITA) to result 10052 - TEST-ANGEL-This is an Impact Level Result". It has the amber `Bilateral project tagged` chip, the `W1/W2` chip and no buttons. Screenshot: `C:\Users\santiagosanchez\AppData\Local\Temp\claude-chrome-screenshots-GgKp4h\screenshot-1794583754902-4.jpg`.
+- **Gate 3 (framework create with a bilateral project → owner Center user notified): PASS by real data.** Result 10052 is an Impact contribution created from the SP reporting entry with project T-PJ-004113, and Santiago, as IITA Center user, received the row. No `CG Center tagged` row exists for 10052 in his inbox, so there is no cross-type duplicate.
+- **Not checked:** the bell popover (opening it can change read state) and Gate 2 dedup on a re-save (needs a write, or a read-only count of `notification` rows by type/user for a re-saved result).

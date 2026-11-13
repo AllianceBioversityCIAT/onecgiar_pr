@@ -5,7 +5,7 @@
 - **Module / feature:** `notifications/bilateral-primary-sp-request`
 - **Linked spec:** `requirements.md` + `design.md` (same folder)
 - **Owner / driver:** Santiago Sanchez
-- **Status:** not-started (spec approved 2026-09-30)
+- **Status:** complete, archived 2026-11-13 (spec approved 2026-09-30; T-1..T-11 `[x]`)
 - **Budget (from `design.md` §13):** 11 tasks · ~1,600–2,000 LOC · 2 review rounds on T-3/T-5, 1 elsewhere. Exceeding it → the Leader stops and escalates.
 
 ## 2. Pre-flight checklist
@@ -145,7 +145,8 @@
   - **Disqualifier:** as T-8 for visuals.
 - **DoD:** tests green.
 
-### `PSR-T-11` — HITL visual check + staging end-to-end `[~]`
+### `PSR-T-11` — HITL visual check + staging end-to-end `[x]`
+- **Closure note (archive, 2026-11-13):** accepted. Rows matched the mockups on PRTest 2026-11-13 and QA exercised accept/decline (evidence section at the end of `execution.md`). Accepted gaps: Project Information banners not checked; the concurrent accept/decline race was not tested; §6 decline steps 4-5 are obsolete (superseded by `notifications/primary-decline-rejects-result`).
 - **Type:** `rollout`
 - **Description:** Compare the rows against `mockup/*.png` (T6 visual review if available, otherwise the user) and run the staging script in §6.
 - **Implements:** defect classes without an automated gate (`requirements.md` §8)

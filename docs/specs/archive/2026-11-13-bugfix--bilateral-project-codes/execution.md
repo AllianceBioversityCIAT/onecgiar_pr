@@ -56,3 +56,19 @@
   - Step 5 checks after two syncs.
   - Step 4, waiting for the Alliance mapping file.
   - Reply to the reporter.
+
+---
+
+## BPC-T-2 post-checks (2026-11-13, run by the user on PROD, read-only)
+
+Many 8-hourly PRMS syncs have run since the CLARISA writes on 2026-10-06, so "after two syncs" is met.
+
+| Check (PRMS `clarisa_projects`) | Result | Verdict |
+|---|---|---|
+| `organization_code = 1353` | 0 | PASS |
+| `organization_code = 49`: total / with `external_code` | 85 / 84 | PASS. The 32 in the runbook were the moved and mapped projects only; org 49 already held others with codes |
+| Org 49 without a code | only id 233 | PASS (unmapped by Alliance, expected NULL) |
+| PRMS vs CLARISA join | not possible: `clarisadb8` is on another server (`Unknown database`) | Replaced by the same counts run on CLARISA |
+| CLARISA PROD `project` (same counts) | 1353 = 0; org 49 = 85 / 84; only id 233 without a code | PASS. PRMS matches CLARISA exactly, so the sync carried every row |
+
+The data part of T-2 is closed. Still open for T-2: the OpenSearch re-index (owner: Juan David, unknown), project 233's code, and the reporter reply (field live, rotate the exposed key).

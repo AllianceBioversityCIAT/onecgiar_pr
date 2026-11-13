@@ -89,7 +89,7 @@
   - [x] No new hex literals, no new `.pr-*` SCSS block — Tailwind utilities only (client `CLAUDE.md` §5 hard rule); reused existing `.bpp_results_badge`/`--has-results` classes verbatim.
   - [ ] **Verified in a real browser** — NOT done, no browser available in this session. Needs a human to run `npm start` on the Bilateral Home with mixed replicated/new/neither results, at desktop and mobile width, before `BIL-POM-T-4`'s PR (see `execution.md`).
 
-### [~] `BIL-POM-T-4` — Regression pass + PR (regression PASS; PR blocked on user go-ahead — see execution.md)
+### [x] `BIL-POM-T-4` — Regression pass + PR (regression PASS; code shipped in `d3417ac134`, in `master` — PR/CI boxes below closed by that merge; browser check PASS on PRTest 2026-11-13, see execution.md §8)
 
 - **Type:** `tests`
 - **Description:** Run the full scoped test set for the three touched areas, confirm no unrelated spec broke, and open the PR.

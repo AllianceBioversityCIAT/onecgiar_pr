@@ -12,7 +12,7 @@
 - **Module / feature:** `notifications` / W1/W2 bilateral-project-tagged notification
 - **Linked spec:** `requirements.md` (WPT-R-1..R-8, NFR-1..6) + `design.md` (DD-1..DD-5, §7–§9)
 - **Owner / driver:** Santiago Sanchez
-- **Status:** not-started
+- **Status:** complete, archived 2026-11-13 (T-1..T-5 `[x]`)
 
 ## 2. Pre-flight checklist
 
@@ -57,10 +57,10 @@
     - any existing BCT assertion (`describe('notifyBilateralContributorsOnSubmission …')`) has to be **edited** to go green, since that is a BCT regression
     - a test other than `spec.ts:250` needs its dedup expectation changed
 - **Definition of done:**
-  - [ ] Red run green, with the 8 cases
-  - [ ] Consumer specs green
-  - [ ] `npx tsc --noEmit -p onecgiar-pr-server` and eslint quiet on the touched files
-  - [ ] No secrets or PII beyond the existing log lines
+  - [x] Red run green, with the 8 cases
+  - [x] Consumer specs green
+  - [x] `npx tsc --noEmit -p onecgiar-pr-server` and eslint quiet on the touched files
+  - [x] No secrets or PII beyond the existing log lines
 
 ### [x] WPT-T-2: Server: description for the push and message
 
@@ -94,8 +94,8 @@
   - **Red run:** `cd onecgiar-pr-server && npx jest --testPathPattern "notification/notification.service.spec" --silent --reporters=summary --forceExit`
   - **Disqualifier:** if a `RESULT_CENTER_TAGGED` or BCT description assertion changes, stop and escalate (out of scope).
 - **Definition of done:**
-  - [ ] All shapes green; the old-sentence assertions updated, not deleted
-  - [ ] tsc and eslint quiet on the touched files
+  - [x] All shapes green; the old-sentence assertions updated, not deleted
+  - [x] tsc and eslint quiet on the touched files
 
 ### [x] WPT-T-3: Client: copy file, parser twin, `segments` text parts
 
@@ -124,8 +124,8 @@
   - **Presence caveat:** these tests prove the data shape, not what is rendered. Rendering is WPT-T-4's job.
   - **Disqualifier:** if a `RESULT_CENTER_TAGGED` case in this spec needs editing, stop.
 - **Definition of done:**
-  - [ ] Spec green; the old assertions updated
-  - [ ] `npx ng lint --quiet` clean on the touched files (or `npx eslint <files>`)
+  - [x] Spec green; the old assertions updated
+  - [x] `npx ng lint --quiet` clean on the touched files (or `npx eslint <files>`)
 
 ### [x] WPT-T-4: Client: render `segments` in 3 consumers, plus the amber chip
 
@@ -159,11 +159,12 @@
   - **Presence caveat:** a class assertion proves the token is wired, not that the colour is visible or matches the mockup. jsdom cannot evaluate colour, so that check is WPT-T-5.
   - **Disqualifier:** if those suites were already red before the change (memory: the client suite is broadly red on this branch), record the baseline failures first. Only new failures count against this task. A pre-existing red is not a pass, and it is not this task's failure either.
 - **Definition of done:**
-  - [ ] The 3 specs green (or no new failures against the recorded baseline)
-  - [ ] Lint clean on the touched files
+  - [x] The 3 specs green (or no new failures against the recorded baseline)
+  - [x] Lint clean on the touched files
 
-### [~] WPT-T-5: Manual gate: visual match and real recipients
+### [x] WPT-T-5: Manual gate: visual match and real recipients
 
+- **Closure note (archive, 2026-11-13):** accepted. Inbox row PASS vs the mockup and Gate 3 PASS with real data (result 10052), see the evidence section at the end of `execution.md`. Accepted gaps: bell popover not checked; Gate 2 re-save dedup not run. Follow-up: delete the local fixture notification rows 49028-49030 (local DB).
 - **Type:** manual (HITL)
 - **Description:**
   - **Gate 1 (localhost:4200, real browser):** create a fixture or real notification, then compare the inbox row, the Updates item and the bell to `mockup/project-tagged-row.png`. Check:
@@ -181,7 +182,7 @@
 - **Verification:** a screenshot per gate, recorded in `execution.md`
   - **Falsifier:** the chip is violet or green, `()` is visible, there's only one row in gate 2, or the row appears for the saver
   - **Disqualifier:** a gate run against seed data whose project owner doesn't resolve (R-5) is not evidence. Choose a project with a known `organization_code`.
-- **Definition of done:** [ ] Gates 1–4 recorded as PASS, or as FAIL with a follow-up
+- **Definition of done:** [x] Gates 1 and 4 PASS (local inbox, 2026-10-01); Gate 3 PASS (PRTest real data, 2026-11-13). Gate 2 and the bell are accepted gaps (see the closure note above).
 
 ## 4. Clause coverage
 
