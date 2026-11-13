@@ -527,6 +527,15 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
   readonly farmerCountUnit = FARMER_COUNT_UNIT;
 
   /**
+   * IWH (INC-168060): the "2030 Use Projection" block is not part of the MDS for W3/Bilateral results, so it is not
+   * rendered for them. Display only — the loaded 2030 values stay in `body` and travel back unchanged on save.
+   * Fails toward showing the block while `source_name` is unknown (in-flight load), and never applies to IPSR step 1.
+   */
+  get hides2030Projection(): boolean {
+    return !this.isIpsr && this.api?.dataControlSE?.currentResultSignal?.()?.source_name === W3_BILATERALS_SOURCE_NAME;
+  }
+
+  /**
    * Result-level half of the gate: not IPSR, phase year >= 2026, and not a bilateral result.
    *
    * 🛑 Phase year, never portfolio (IFC-DD-5; prtest holds 2025 results inside P25). `isPhaseYearAtLeast` fails

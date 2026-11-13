@@ -240,12 +240,15 @@ export class TypeInnovationUseComponent implements OnInit {
     return [actor.women, actor.women_youth, actor.men, actor.men_youth, actor.how_many, actor.other_actor_type, actor.addressing_demands].some(filled);
   }
 
-  /** BIL-1 — any VISIBLE actor list (current use, or the 2030 projection while shown) holds such a row. */
+  /**
+   * BIL-1 — the VISIBLE current-use actor list holds such a row. INC-168060: the 2030 projection block is no
+   * longer rendered here (not MDS for W3/bilateral), so its stored actors are not checked: the person cannot see
+   * or fix them, and they must not block the save.
+   */
   get hasActorMissingType(): boolean {
     // Same gate as the template: only an explicit "Yes" hides current use (NULL shows it).
     const current = this.body.innov_use_to_be_determined !== true ? (this.body.actors ?? []) : [];
-    const projection = this.showProjection2030Lists ? (this.body.innovation_use_2030?.actors ?? []) : [];
-    return [...current, ...projection].some((actor: any) => this.actorMissingType(actor));
+    return current.some((actor: any) => this.actorMissingType(actor));
   }
 
   /** Numeric use level (0..9) behind the selected `innovation_use_level_id`; -1 when nothing is picked. */
@@ -903,7 +906,7 @@ export class TypeInnovationUseComponent implements OnInit {
     // "1 field to fix · Actors (a row has figures but no actor type…)" rather than the bare "Actors",
     // `getSectionMdsStatus` drops the section to `partial`, and `canSubmitFromRail` refuses and names
     // it. Scope = the same rows the save refuses on (`hasActorMissingType`): current use only while
-    // the use is not "to be determined", plus the 2030 list while it is shown.
+    // the use is not "to be determined" (the 2030 list is no longer rendered — INC-168060).
     const actorWithoutType = this.hasActorMissingType;
     this.mdsTracker.setSectionFields('type-specific', [
       {

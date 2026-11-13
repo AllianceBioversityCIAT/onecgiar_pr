@@ -1,6 +1,6 @@
 # type-innovation-use (bilateral)
 
-**Verified:** 2026-11-11 · qa-development-2026-ss · quick/innovation-use-actors-sentence-ipsr (INC-168060: current-use Actors description adds the reporting-year sentence — current use is MDS; Nicoleta); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: Current Use Update block + 4th MDS item `use-current-update` (blocks Submit); prior: 2026-10-14 · fix/innovation-use-phase-copy · current use hides only on an explicit "Yes" (NULL shows it); bilateral results DO roll over; prior: 2026-10-07 · The use-level ladder (not MDS since P2-3785 AC1) moved under full metadata, before the questions it gates.
+**Verified:** 2026-11-12 · qa-development-2026-ss · changes/innovation-use-w3-hide-2030 IWH-T-2 (INC-168060: 2030 Use Projection block removed from the form, `hasActorMissingType` checks current-use actors only, payload unchanged); prior: 2026-11-11 · quick/innovation-use-actors-sentence-ipsr (INC-168060: current-use Actors description adds the reporting-year sentence — current use is MDS; Nicoleta); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: Current Use Update block + 4th MDS item `use-current-update` (blocks Submit); prior: 2026-10-14 · fix/innovation-use-phase-copy · current use hides only on an explicit "Yes" (NULL shows it); bilateral results DO roll over; prior: 2026-10-07 · The use-level ladder (not MDS since P2-3785 AC1) moved under full metadata, before the questions it gates.
 
 ## What it is
 BIL-RAU-T-8 pointer: Section 1 (`section-general-info`) now renders the Annual updating block
@@ -138,7 +138,7 @@ P2-3556 (load gate), P2-3390 (the three Investment tables).
   Yes/No saved "Yes" as that same `true`, the opposite of every other reader. Rows saved before the fix
   still carry the inverted answer (no backfill yet); unticking keeps their Women/Men so they are not wiped.
   "Age disaggregation not available" persists through the legacy writer only when the key travels.
-- **P2-3428 — 2030 Use Projection** (full metadata, optional, not MDS): `body.innovation_use_2030`
+- **P2-3428 — 2030 Use Projection** — ⚠️ **block REMOVED from this form by INC-168060** (Nicoleta, 2026-11-11: not MDS for W3/bilateral). The form no longer renders it and `hasActorMissingType` checks current-use actors only; `buildPayload`, `showProjection2030Lists`, `projection2030` and `addProjection2030*` stay, so stored data is kept and sent back as loaded. Original design (historical) — (full metadata, optional, not MDS): `body.innovation_use_2030`
   `{ actors, organization, measures }`, stored under `section_id = 2` — the same key the W1/W2 v2
   endpoint uses — through the legacy summary endpoint (`SummaryService.saveInnovationUse` →
   `InnoDevService.saveAnticipatedInnoUser(…, 2)`). "This is yet to be determined" retires the section-2

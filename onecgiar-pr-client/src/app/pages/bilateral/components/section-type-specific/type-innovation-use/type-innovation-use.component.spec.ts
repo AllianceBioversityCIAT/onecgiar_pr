@@ -450,28 +450,23 @@ describe('TypeInnovationUseComponent', () => {
   describe('2030 Use Projection (P2-3428)', () => {
     const html = () => readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
 
-    it('shows the W1/W2 title, guidance note, question and tooltip from the shared copy', () => {
+    it('INC-168060 — the form no longer renders the 2030 projection block (not MDS for W3/bilateral)', () => {
       const t = html();
-      expect(t).toContain('[label]="projection2030Copy.title"');
-      expect(t).toContain('[description]="projection2030Copy.guidance"');
-      expect(t).toContain('[label]="projection2030Copy.question"');
-      expect(t).toContain('[tooltip]="projection2030Copy.tooltip"');
-      const copy = build().projection2030Copy;
-      expect(copy.title).toBe('2030 Use Projection');
-      expect(copy.question).toBe('What is the projected innovation use by end of 2030?');
-      expect(copy.guidance).toContain('href="https://docs.google.com/document/d/1mkt4bS51CyGmHKfkvuonAiJhkl4n-mLE/"');
-      expect(copy.guidance).toContain("United Nations definition of 'youth'");
+      expect(t).not.toContain('projection2030Copy.title');
+      expect(t).not.toContain('showProjection2030Lists');
+      expect(t).not.toContain('addProjection2030Actor');
+      expect(t).toContain('INC-168060');
     });
 
-    it('offers Actors, Organizations and Other quantitative measures with the W1/W2 buttons, none required', () => {
-      const t = html();
-      const block = t.slice(t.indexOf('[label]="projection2030Copy.title"'), t.indexOf('P2-3424 — optional, not MDS'));
-      expect(block).toContain('name="Add actor"');
-      expect(block).toContain('name="Add organization"');
-      expect(block).toContain('name="Add other"');
-      expect(block).not.toContain('[required]="true"');
-      expect(block).toContain('context: { $implicit: actor, required: false }');
-      expect(t).toContain('@if (showProjection2030Lists) {');
+    it('INC-168060 — keeps sending the stored 2030 answer and actors back as loaded', () => {
+      build();
+      component.body = {
+        innov_use_2030_to_be_determined: false,
+        innovation_use_2030: { actors: [{ actor_type_id: 1, women: 20 }], organization: [], measures: [] }
+      };
+      const payload: any = (component as any).buildPayload();
+      expect(payload.innov_use_2030_to_be_determined).toBe(false);
+      expect(payload.innovation_use_2030.actors).toEqual([{ actor_type_id: 1, women: 20 }]);
     });
 
     it('hides the three lists while the 2030 use is yet to be determined', () => {
@@ -1137,15 +1132,15 @@ describe('TypeInnovationUseComponent', () => {
       expect(component.hasActorMissingType).toBe(false);
     });
 
-    it('also catches the 2030 projection actors while that list is shown (same server writer)', () => {
+    it('INC-168060 — a typeless actor in the 2030 projection no longer blocks the save (the block is gone from the form)', () => {
       build();
       component.body = {
         innov_use_to_be_determined: true,
-        innov_use_2030_to_be_determined: false,
+        innov_use_2030_to_be_determined: null,
         innovation_use_2030: { actors: [{ actor_type_id: null, how_many: 7, is_active: true }], organization: [], measures: [] }
       };
 
-      expect(component.hasActorMissingType).toBe(true);
+      expect(component.hasActorMissingType).toBe(false);
     });
 
     it('a result rolled over with the question UNANSWERED (null) still counts its visible current actors', () => {

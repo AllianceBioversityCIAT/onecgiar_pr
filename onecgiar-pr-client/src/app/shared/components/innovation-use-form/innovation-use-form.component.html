@@ -466,6 +466,7 @@
     [disabled]="saving"
     [body]="bodyAsAny"></app-studies-link>
 
+  @if (!hides2030Projection) {
   <app-pr-radio-button
     [readOnly]="saving"
     fieldRef="[innovation-use-form]-2030-to-be-determined"
@@ -831,6 +832,7 @@
         [(ngModel)]="body.innov_use_2030_justification"></app-pr-textarea>
       <div appFeedbackValidation [labelText]="projection2030JustificationLabel" [isComplete]="!!body.innov_use_2030_justification?.trim()"></div>
     }
+  }
   }
 
   <!-- Estimates CGIAR Component -->
