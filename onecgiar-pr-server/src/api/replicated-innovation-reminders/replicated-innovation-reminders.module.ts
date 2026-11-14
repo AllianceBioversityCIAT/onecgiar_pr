@@ -7,6 +7,10 @@ import { EmailNotificationManagementModule } from '../../shared/microservices/em
 import { GlobalParameterRepository } from '../global-parameter/repositories/global-parameter.repository';
 import { TemplateRepository } from '../platform-report/repositories/template.repository';
 import { Version } from '../versioning/entities/version.entity';
+import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
+import { CenterFocalPointsService } from './center-focal-points.service';
+import { CenterMelFocalPoint } from './entities/center-mel-focal-point.entity';
+import { CenterReminderRouting } from './entities/center-reminder-routing.entity';
 import { PendingInnovationRepository } from './repositories/pending-innovation.repository';
 import { ReminderCampaignRepository } from './repositories/reminder-campaign.repository';
 import { ReminderDispatcher } from './reminder-dispatcher.service';
@@ -24,11 +28,17 @@ import { ReplicatedInnovationRemindersService } from './replicated-innovation-re
   imports: [
     RoleByUserModule,
     EmailNotificationManagementModule,
-    TypeOrmModule.forFeature([Version]),
+    TypeOrmModule.forFeature([
+      Version,
+      CenterReminderRouting,
+      CenterMelFocalPoint,
+      ClarisaCenter,
+    ]),
   ],
   controllers: [ReplicatedInnovationRemindersController],
   providers: [
     ReplicatedInnovationRemindersService,
+    CenterFocalPointsService,
     ReminderDispatcher,
     ReplicatedInnovationReminderCron,
     ReminderCampaignRepository,

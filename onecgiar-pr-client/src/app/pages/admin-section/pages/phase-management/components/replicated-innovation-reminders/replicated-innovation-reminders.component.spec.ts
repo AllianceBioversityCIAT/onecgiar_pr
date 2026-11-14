@@ -8,6 +8,28 @@ import { ResultsApiService } from '../../../../../../shared/services/api/results
 import { ReminderCampaignList, ReminderCampaignView } from '../../../../../../shared/interfaces/replicated-innovation-reminders.interface';
 import { REMINDER_TZ_OFFSET_MINUTES, ReplicatedInnovationRemindersComponent } from './replicated-innovation-reminders.component';
 
+/**
+ * Jest replaces `@spartan-ng/brain/*` with a mock that has no BrnCheckbox, so the real `hlm-checkbox`
+ * cannot be compiled here. This stand-in keeps the contract the template uses (`aria-label`, `checked`,
+ * `disabled`, `checkedChange`) as a role=checkbox button.
+ */
+jest.mock('@spartan/checkbox', () => {
+  const { Component, EventEmitter } = jest.requireActual('@angular/core');
+  class HlmCheckboxStub {
+    ariaLabel = '';
+    checked = false;
+    disabled = false;
+    checkedChange = new EventEmitter();
+  }
+  Component({
+    selector: 'hlm-checkbox',
+    inputs: ['checked', 'disabled', { name: 'ariaLabel', alias: 'aria-label' }],
+    outputs: ['checkedChange'],
+    template: `<button type="button" role="checkbox" [attr.aria-label]="ariaLabel" [attr.aria-checked]="checked" (click)="checkedChange.emit(!checked)"></button>`
+  })(HlmCheckboxStub);
+  return { HlmCheckboxImports: [HlmCheckboxStub] };
+});
+
 const campaign = (over: Partial<ReminderCampaignView> = {}): ReminderCampaignView => ({
   id: 1,
   version_id: 36,
@@ -71,6 +93,7 @@ describe('ReplicatedInnovationRemindersComponent', () => {
   async function setup(listResponse: any = of(list([])), offsetAt: (at: Date) => number = () => 300) {
     api = {
       GET_reminderCampaigns: jest.fn().mockReturnValue(listResponse),
+      GET_centerFocalPoints: jest.fn().mockReturnValue(of({ response: [] })),
       POST_reminderCampaign: jest.fn().mockReturnValue(of({ response: campaign() })),
       PATCH_reminderCampaignDate: jest.fn().mockReturnValue(of({ response: campaign() })),
       PATCH_reminderCampaignCancel: jest.fn().mockReturnValue(of({ response: campaign({ status: 'CANCELLED' }) })),

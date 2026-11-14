@@ -101,6 +101,41 @@ export const REPLICATED_INNOVATION_REMINDERS_COPY = {
     colReason: 'Reason',
     colDeveloper: 'Developer (free text)'
   },
+  centerFocalPoints: {
+    title: 'Center focal points',
+    description: 'Contacts who receive the Center email. When a Center is opted in, its focal points receive every reminder for results led by that Center.',
+    loading: 'Loading Center focal points',
+    loadError: 'The Center focal points could not be loaded.',
+    empty: 'No Centers found',
+    columns: { center: 'Center', optIn: 'Receives all reminders', contacts: 'Active contacts', actions: 'Actions' },
+    optInLabel: (center: string): string => `Focal point receives all reminders for ${center}`,
+    optInText: 'Receives all reminders',
+    noFocalPoint: 'No focal point',
+    editContacts: 'Edit contacts',
+    routingError: 'The setting could not be saved.',
+    dialog: {
+      title: (center: string): string => `Focal points: ${center}`,
+      description: 'Deactivated contacts stop receiving mail. Contacts are never deleted.',
+      empty: 'No focal point',
+      active: 'Active',
+      inactive: 'Inactive',
+      activate: 'Reactivate',
+      deactivate: 'Deactivate',
+      edit: 'Edit',
+      close: 'Close',
+      addHeading: 'Add a focal point',
+      editHeading: 'Edit focal point',
+      name: 'Name (optional)',
+      email: 'Email',
+      add: 'Add',
+      adding: 'Adding',
+      saveChanges: 'Save changes',
+      saving: 'Saving',
+      cancelEdit: 'Cancel edit',
+      emailRequired: 'Enter an email address.',
+      requestError: 'The request failed. Try again.'
+    }
+  },
   outcome: (sent: number, skipped: number, failed: number): string => `Dispatch finished: ${sent} sent, ${skipped} skipped, ${failed} failed.`,
   outcomeByType: (type: ReminderMessageType, sent: number): string => `${REPLICATED_INNOVATION_REMINDERS_COPY.messageTypes[type]}: ${sent} sent`
 } as const;

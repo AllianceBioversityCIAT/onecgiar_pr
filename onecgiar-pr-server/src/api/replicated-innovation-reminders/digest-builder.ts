@@ -39,6 +39,8 @@ export interface BuildInput {
   activeUsers: Map<string, { name: string }>;
   meliaByInitiative: Map<number, MailRecipient[]>;
   centerMelByCenter: Map<string, MailRecipient[]>;
+  /** Lead Center codes whose focal points receive ALL their results (RCF-R-2). Empty = today's routing. */
+  optedInCenters: Set<string>;
 }
 
 export type ReminderMessageType = 'DEVELOPER' | 'MELIA_SUMMARY' | 'CENTER';
@@ -146,7 +148,8 @@ export function build(
   input: BuildInput,
   innovationUseRouting: InnovationUseRouting = INNOVATION_USE_ROUTING,
 ): BuildResult {
-  const { activeUsers, meliaByInitiative, centerMelByCenter } = input;
+  const { activeUsers, meliaByInitiative, centerMelByCenter, optedInCenters } =
+    input;
   const rows = [...input.rows].sort(compareRows);
 
   const byDeveloper = new Map<string, PendingInnovationRowV2[]>();
@@ -172,6 +175,15 @@ export function build(
   };
 
   for (const r of rows) {
+    // @akili-spec changes/rir-center-focal-routing
+    // RCF-R-2: a result led by an opted-in Center goes to that Center's email, whatever its source
+    // or type. Everything below is the pre-change routing (RCF-R-3).
+    const leadCenter = (r.lead_center_code ?? '').trim();
+    if (leadCenter && optedInCenters.has(leadCenter)) {
+      push(byCenter, leadCenter, r);
+      continue;
+    }
+
     if (r.source === BILATERAL_SOURCE) {
       const code = (r.lead_center_code ?? '').trim();
       if (code) push(byCenter, code, r);
@@ -251,13 +263,23 @@ export function build(
       list.forEach((r) => markUnreachable(r, 'NO_CENTER_MEL'));
       continue;
     }
+    // RCF-R-4: CC = active MELIA of the owning SPs of the W1/W2 rows listed; W3 rows add none.
+    const cc = new Set<string>();
+    for (const id of new Set(
+      list
+        .filter((r) => r.source !== BILATERAL_SOURCE)
+        .map((r) => r.initiative_id),
+    )) {
+      for (const mail of emailsOf(meliaByInitiative.get(id))) cc.add(mail);
+    }
+    for (const mail of to) cc.delete(mail);
     const centerName =
       list.find((r) => r.lead_center_name)?.lead_center_name ?? null;
     messages.push({
       type: 'CENTER',
       messageKey: `CENTER:${code}`,
       to,
-      cc: [],
+      cc: [...cc].sort((a, b) => a.localeCompare(b)),
       greetingName: centerName || code,
       results: uniqueItems(list),
       centerCode: code,

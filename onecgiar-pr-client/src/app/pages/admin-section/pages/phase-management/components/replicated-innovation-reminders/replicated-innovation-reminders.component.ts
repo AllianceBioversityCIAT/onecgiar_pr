@@ -20,6 +20,7 @@ import {
 import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
 import { OffsetAt, localInputToUtcIso, offsetLabel, utcIsoToLocalInput } from './reminder-time.util';
 import { ReminderPreviewDrawerComponent } from './reminder-preview-drawer.component';
+import { CenterFocalPointsComponent } from './center-focal-points/center-focal-points.component';
 
 /** Override point: the admin's UTC offset AT a given instant (`Date#getTimezoneOffset` semantics, DST aware). Tests pin it; production reads the platform. */
 export const REMINDER_TZ_OFFSET_MINUTES = new InjectionToken<OffsetAt>('REMINDER_TZ_OFFSET_MINUTES');
@@ -40,7 +41,7 @@ interface PendingConfirm {
  */
 @Component({
   selector: 'app-replicated-innovation-reminders',
-  imports: [HlmButtonImports, HlmBadge, HlmDialogImports, HlmInputImports, HlmSkeleton, HlmTableImports, ReminderPreviewDrawerComponent],
+  imports: [HlmButtonImports, HlmBadge, HlmDialogImports, HlmInputImports, HlmSkeleton, HlmTableImports, ReminderPreviewDrawerComponent, CenterFocalPointsComponent],
   templateUrl: './replicated-innovation-reminders.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })

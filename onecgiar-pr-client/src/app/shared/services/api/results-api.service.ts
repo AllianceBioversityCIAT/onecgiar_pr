@@ -1,4 +1,10 @@
-import { ReminderCampaignList, ReminderCampaignView, ReminderCreateBody, ReminderEnvelope, ReminderPreview, ReminderSendOutcome } from '../../interfaces/replicated-innovation-reminders.interface';
+import {
+  CenterFocalPointCreateBody,
+  CenterFocalPointUpdateBody,
+  CenterFocalPointView,
+  CenterRoutingResult,
+  CenterRoutingView,
+  ReminderCampaignList, ReminderCampaignView, ReminderCreateBody, ReminderEnvelope, ReminderPreview, ReminderSendOutcome } from '../../interfaces/replicated-innovation-reminders.interface';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
@@ -1919,6 +1925,26 @@ export class ResultsApiService {
 
   POST_reminderCampaignSend(id: number) {
     return this.http.post<ReminderEnvelope<ReminderSendOutcome>>(`${this.reminderCampaignsUrl}/${id}/send`, {});
+  }
+
+  // @akili-spec changes/rir-center-focal-routing (RCF-T-4)
+  private readonly centerFocalPointsUrl = environment.apiBaseUrl + 'api/replicated-innovation-reminders/center-focal-points';
+
+  GET_centerFocalPoints() {
+    return this.http.get<ReminderEnvelope<CenterRoutingView[]>>(this.centerFocalPointsUrl);
+  }
+
+  POST_centerFocalPoint(body: CenterFocalPointCreateBody) {
+    return this.http.post<ReminderEnvelope<CenterFocalPointView>>(this.centerFocalPointsUrl, body);
+  }
+
+  PATCH_centerFocalPoint(id: number, body: CenterFocalPointUpdateBody) {
+    return this.http.patch<ReminderEnvelope<CenterFocalPointView>>(`${this.centerFocalPointsUrl}/${id}`, body);
+  }
+
+  /** `code` goes exactly as the GET returned it. */
+  PATCH_centerRouting(code: string, body: { route_all_to_center: boolean }) {
+    return this.http.patch<ReminderEnvelope<CenterRoutingResult>>(`${this.centerFocalPointsUrl}/centers/${encodeURIComponent(code)}/routing`, body);
   }
 
   // @akili-spec results/impact-results-reporting/result-detail-impact (IRD-T-1, design §5)

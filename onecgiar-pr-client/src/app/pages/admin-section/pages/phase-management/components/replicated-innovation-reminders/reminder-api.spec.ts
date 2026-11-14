@@ -83,4 +83,39 @@ describe('ResultsApiService reminder campaign methods', () => {
     expect(totals.messages).toBe(2);
     expect(totals.by_type.DEVELOPER.results).toBe(3);
   });
+
+  // RCF-T-4: Center focal points
+  const cfp = `${environment.apiBaseUrl}api/replicated-innovation-reminders/center-focal-points`;
+
+  it('GET_centerFocalPoints -> GET /center-focal-points', () => {
+    service.GET_centerFocalPoints().subscribe();
+    const req = http.expectOne(cfp);
+    expect(req.request.method).toBe('GET');
+    req.flush({});
+  });
+
+  it('POST_centerFocalPoint -> POST /center-focal-points with the body', () => {
+    const body = { center_code: 'CENTER-17', email: 'a@x.org' };
+    service.POST_centerFocalPoint(body).subscribe();
+    const req = http.expectOne(cfp);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(body);
+    req.flush({});
+  });
+
+  it('PATCH_centerFocalPoint -> PATCH /center-focal-points/:id', () => {
+    service.PATCH_centerFocalPoint(4, { is_active: false }).subscribe();
+    const req = http.expectOne(`${cfp}/4`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ is_active: false });
+    req.flush({});
+  });
+
+  it('PATCH_centerRouting -> PATCH /center-focal-points/centers/:code/routing', () => {
+    service.PATCH_centerRouting('CENTER-17', { route_all_to_center: true }).subscribe();
+    const req = http.expectOne(`${cfp}/centers/CENTER-17/routing`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ route_all_to_center: true });
+    req.flush({});
+  });
 });
