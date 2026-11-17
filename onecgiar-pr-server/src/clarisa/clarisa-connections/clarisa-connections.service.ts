@@ -91,6 +91,7 @@ export class ClarisaConnectionsService {
     return 1;
   }
 
+  /** @deprecated P2-3911 — use `QaSpAccessService.getSpLink`; remove once the new QA is in PROD. */
   async clarisaQaToken(officialCode: string, user: TokenDto) {
     try {
       const config = {

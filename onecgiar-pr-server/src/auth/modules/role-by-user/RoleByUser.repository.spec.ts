@@ -164,6 +164,43 @@ describe('RoleByUserRepository', () => {
     });
   });
 
+  describe('hasRoleOnProgramByOfficialCode (P2-3911)', () => {
+    it('matches by official code, the given roles and active rows only', async () => {
+      mockQuery.mockResolvedValue([{ has_role: 1 }]);
+
+      const result = await repository.hasRoleOnProgramByOfficialCode(
+        10,
+        'SP01',
+        [3, 4, 5, 6],
+      );
+
+      expect(result).toBe(true);
+      const [query, params] = mockQuery.mock.calls.at(-1);
+      expect(params).toEqual([10, 'SP01', [3, 4, 5, 6]]);
+      expect(query).toContain('ci.official_code = ?');
+      expect(query).toContain('rbu.role IN (?)');
+      expect(query).toContain('rbu.active > 0');
+      expect(query).toContain('ci.active > 0');
+    });
+
+    it('returns false when there is no match', async () => {
+      mockQuery.mockResolvedValue([{ has_role: '0' }]);
+
+      await expect(
+        repository.hasRoleOnProgramByOfficialCode(10, 'SP01', [6]),
+      ).resolves.toBe(false);
+    });
+
+    it('returns false without querying when no roles are given', async () => {
+      mockQuery.mockClear();
+
+      await expect(
+        repository.hasRoleOnProgramByOfficialCode(10, 'SP01', []),
+      ).resolves.toBe(false);
+      expect(mockQuery).not.toHaveBeenCalled();
+    });
+  });
+
   describe('hasActiveRoleOnInitiative', () => {
     it('returns true when the EXISTS query reports a match', async () => {
       mockQuery.mockResolvedValue([{ has_role: '1' }]);
