@@ -6,7 +6,7 @@ import {
   CenterRoutingView,
   ReminderCampaignList, ReminderCampaignView, ReminderCreateBody, ReminderEnvelope, ReminderPreview, ReminderSendOutcome } from '../../interfaces/replicated-innovation-reminders.interface';
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { catchError, map, of, tap, throwError, Observable, firstValueFrom } from 'rxjs';
 import { ResultBody } from '../../interfaces/result.interface';
@@ -293,8 +293,18 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/geographic-scope/get/all/prms`);
   }
 
+  /** @deprecated P2-3911 — legacy QA iframe token via CLARISA; use `GET_QaSpLink`. Remove once the new QA is in PROD. */
   GET_ClarisaQaToken(offcial_code) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/clarisa/qa/token/${offcial_code}`);
+  }
+
+  /**
+   * P2-3911 — one-time code for the Science Program view of the new QA. Call it on EVERY iframe
+   * (re)load; the code works once and lasts 60 s, so it must never be cached.
+   */
+  GET_QaSpLink(programCode: string | null) {
+    const params = programCode ? new HttpParams().set('programCode', programCode) : undefined;
+    return this.http.get<{ response: { code: string; expiresAt: string } }>(`${this.baseApiBaseUrl}qa/sp-link`, { params });
   }
 
   GET_AllCLARISARegions() {

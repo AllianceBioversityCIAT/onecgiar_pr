@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, NO_ERRORS_SCHEMA, Output, provideZonele
 import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
+import { delay } from 'rxjs/operators';
 
 import { QualityAssuranceComponent } from './quality-assurance.component';
 import { QualityAssuranceService } from './quality-assurance.service';
@@ -11,8 +12,8 @@ import { ResultLevelService } from '../results/pages/result-creator/services/res
 /**
  * P2-3322 — zoneless change detection regression guard.
  *
- * `selectOptionEvent()` hides the QA iframe, fetches the CLARISA token and re-shows the iframe inside a
- * `setTimeout(100)`. As a plain field that delayed write notified nothing, so the iframe never rendered and
+ * `selectOptionEvent()` hides the QA iframe, fetches a QA code (P2-3911; was a CLARISA token) and re-shows
+ * the iframe asynchronously. As a plain field that delayed write notified nothing, so the iframe never rendered and
  * the page stayed on the "Select an Initiative to display the content" placeholder until a reload.
  * These tests assert on the RENDERED DOM, not on the flag.
  */
@@ -63,7 +64,8 @@ describe('QualityAssuranceComponent (zoneless change detection)', () => {
       },
       resultsSE: {
         GET_AllInitiatives: () => of({ response: initiatives }),
-        GET_ClarisaQaToken: () => of({ response: { token: 'a-token' } })
+        // Async like a real HTTP call: the iframe must render from a write that lands after the first CD pass.
+        GET_QaSpLink: () => of({ response: { code: 'a-code', expiresAt: '2026-11-17T00:00:00Z' } }).pipe(delay(50))
       }
     };
 
@@ -82,11 +84,11 @@ describe('QualityAssuranceComponent (zoneless change detection)', () => {
     fixture = TestBed.createComponent(QualityAssuranceComponent);
   });
 
-  it('renders the QA iframe once the token resolves on first load', async () => {
+  it('renders the QA iframe once the QA code resolves on first load', async () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    // The iframe is gated until the token arrives and the deferred re-show fires.
+    // The iframe is gated until the QA code arrives.
     expect(iframeBlockEl()).toBeFalsy();
 
     await tick(150);
