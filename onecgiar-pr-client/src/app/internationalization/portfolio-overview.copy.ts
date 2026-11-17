@@ -40,6 +40,14 @@ export const PORTFOLIO_OVERVIEW_COPY = {
     segmentActionLabel: 'Filter the page to {program}, {bucket}, {type} ({count} results)',
     programActionLabel: 'Filter the page to {program}'
   },
+  // Key of the two bars per row (INC-168045 follow-up): same bucket rule as the chart (TBC-DD-2)
+  barKey: {
+    ariaLabel: 'How to read the bars',
+    submitted: 'Top bar: Submitted',
+    submittedHint: '(every status except Editing)',
+    editing: 'Bottom bar, striped: Editing',
+    countsHint: 'Numbers show inside a segment when they fit; hover a row for the full breakdown.'
+  },
   // "By Center" tab, view-only (TBC-R-10, TBC-DD-9): same shape as typologyChart, no action labels are used
   dimensionProgram: 'By Program / Accelerator',
   dimensionCenter: 'By Center (W3/Bilateral)',

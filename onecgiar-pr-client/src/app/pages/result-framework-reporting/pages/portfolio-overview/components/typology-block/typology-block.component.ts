@@ -24,6 +24,12 @@ const TYPE_TOKEN: Record<string, string> = {
   '': '--pr-color-neutral-800'
 };
 
+/**
+ * Count colour inside each segment (INC-168045): white by default, the heading ink on the three fills where white
+ * stays under 4.5:1 (yellow-500 3.6, red-200 3.6, neutral-800 3.8 vs heading ink 4.9 / 5.0 / 4.7).
+ */
+const LABEL_ON_LIGHT_FILL = new Set(['Capacity sharing for development', 'Innovation use', '']);
+
 /** Level card marker dots keep `var()` references, never resolved values (T-4 advisory). */
 const LEVEL_TOKEN: Record<TypologyLevel, string> = {
   output: '--pr-color-result-level-2',
@@ -36,11 +42,15 @@ const LEVEL_TOKEN: Record<TypologyLevel, string> = {
  * Resolves the 10 type tokens once (design 6.4). A canvas cannot read `var()`, so the computed value is used
  * when available; otherwise (jsdom, SSR) the `var(--pr-...)` reference itself is the fallback, never a literal colour.
  */
-function resolveTypeColours(): TypologyChartColours {
+function resolveTokens(tokenOf: (key: string) => string): TypologyChartColours {
   const style = typeof document !== 'undefined' && typeof getComputedStyle === 'function' ? getComputedStyle(document.documentElement) : null;
   const pick = (token: string): string => style?.getPropertyValue(token).trim() || `var(${token})`;
-  return Object.fromEntries(Object.entries(TYPE_TOKEN).map(([key, token]) => [key, pick(token)]));
+  return Object.fromEntries(Object.keys(TYPE_TOKEN).map(key => [key, pick(tokenOf(key))]));
 }
+
+const resolveTypeColours = (): TypologyChartColours => resolveTokens(key => TYPE_TOKEN[key]);
+const resolveLabelColours = (): TypologyChartColours =>
+  resolveTokens(key => (LABEL_ON_LIGHT_FILL.has(key) ? '--pr-text-heading' : '--pr-color-white'));
 
 /**
  * Typology view (specs changes/portfolio-overview-revamp/typology-view and changes/portfolio-typology-bar-chart) —
@@ -60,14 +70,15 @@ export class PortfolioTypologyBlockComponent {
 
   readonly copy = PORTFOLIO_OVERVIEW_COPY;
   private readonly colours = resolveTypeColours();
+  private readonly labelColours = resolveLabelColours();
 
   /** Cards always describe all page rows (the page already passes the filtered rows). */
   readonly cards = computed<LevelCard[]>(() => levelCards(this.rows()));
   readonly visibleCards = computed<LevelCard[]>(() => this.cards().filter(card => card.level !== 'unclassified' || card.count > 0));
   readonly dimension = signal<TypologyDimension>('program');
-  readonly programChart = computed<TypologyChart>(() => buildTypologyChart(programTypeMatrix(this.rows()), this.colours, this.copy.typologyChart));
+  readonly programChart = computed<TypologyChart>(() => buildTypologyChart(programTypeMatrix(this.rows()), this.colours, this.copy.typologyChart, true, this.labelColours));
   /** View-only (TBC-DD-9): lead-Center counts differ from the Center filter, so the chart never writes the selection. */
-  readonly centerChart = computed<TypologyChart>(() => buildTypologyChart(centerTypeMatrix(this.rows()), this.colours, this.copy.typologyCenterChart, false));
+  readonly centerChart = computed<TypologyChart>(() => buildTypologyChart(centerTypeMatrix(this.rows()), this.colours, this.copy.typologyCenterChart, false, this.labelColours));
   readonly chart = computed<TypologyChart>(() => (this.dimension() === 'center' ? this.centerChart() : this.programChart()));
 
   levelLabel(level: TypologyLevel): string {

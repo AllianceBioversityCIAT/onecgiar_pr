@@ -49,9 +49,29 @@
     </hlm-tabs-list>
 
     <div [hlmTabsContent]="dimension()" class="!text-[13px]">
+      <!-- Key of the two bars per row (INC-168045): solid = Submitted bucket, striped = Editing. The swatch stripes copy EDITING_DECAL (2px on, 3px off, 45deg) -->
+      <ul
+        class="m-0 mt-[12px] flex list-none flex-wrap items-center gap-x-[20px] gap-y-[6px] p-0 text-[12px] text-[var(--pr-text-secondary)]"
+        [attr.aria-label]="copy.barKey.ariaLabel"
+        data-testid="typology-bar-key">
+        <li class="flex items-center gap-[8px]" data-testid="typology-bar-key-submitted">
+          <span aria-hidden="true" class="h-[10px] w-[22px] shrink-0 rounded-[2px] bg-[var(--pr-text-subtle)]"></span>
+          <span>
+            <span class="font-semibold text-[var(--pr-text)]">{{ copy.barKey.submitted }}</span>
+            <span class="text-[var(--pr-text-muted)]"> {{ copy.barKey.submittedHint }}</span>
+          </span>
+        </li>
+        <li class="flex items-center gap-[8px]" data-testid="typology-bar-key-editing">
+          <span
+            aria-hidden="true"
+            class="h-[10px] w-[22px] shrink-0 rounded-[2px] bg-[var(--pr-text-subtle)] bg-[repeating-linear-gradient(45deg,color-mix(in_srgb,var(--pr-text-heading)_25%,transparent)_0_2px,transparent_2px_5px)]"></span>
+          <span class="font-semibold text-[var(--pr-text)]">{{ copy.barKey.editing }}</span>
+        </li>
+        <li class="text-[var(--pr-text-muted)]" data-testid="typology-bar-key-counts">{{ copy.barKey.countsHint }}</li>
+      </ul>
       <!-- Bar chart (mouse and keyboard table actions share one output) -->
       <app-pr-viz-chart
-        class="mt-[12px] block w-full"
+        class="mt-[8px] block w-full"
         [options]="chart().option"
         [tableModel]="chart().table"
         [chartTitle]="chart().table.caption"

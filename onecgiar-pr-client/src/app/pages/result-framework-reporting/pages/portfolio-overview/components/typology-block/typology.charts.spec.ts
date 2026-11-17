@@ -172,6 +172,40 @@ describe('typology.charts (TBC-T-3)', () => {
     });
   });
 
+  describe('counts inside the segments (INC-168045)', () => {
+    type Label = { show: boolean; position: string; color: string; textBorderColor: string; formatter: (p: { value?: unknown }) => string };
+    type Fit = (p: { rect: { width: number }; labelRect: { width: number } }) => { fontSize?: number };
+    const labelled = (labels: TypologyChartColours = {}) =>
+      buildTypologyChart(MATRIX, COLOURS, COPY, true, labels).option.series as unknown as { id: string; label: Label; labelLayout: Fit }[];
+
+    it('shows every count inside its segment, outlined in the segment colour', () => {
+      for (const s of labelled()) {
+        expect(s.label.show).toBe(true);
+        expect(s.label.position).toBe('inside');
+        expect(s.label.textBorderColor).toBe(COLOURS[s.id.split('|')[1]]);
+      }
+    });
+
+    it('prints the count and nothing for an empty segment', () => {
+      const { formatter } = labelled()[0].label;
+      expect(formatter({ value: 6 })).toBe('6');
+      expect(formatter({ value: 0 })).toBe('');
+      expect(formatter({})).toBe('');
+    });
+
+    it('keeps the label only when it fits inside the segment (else size 0, the tooltip still has it)', () => {
+      const fit = labelled()[0].labelLayout;
+      expect(fit({ rect: { width: 40 }, labelRect: { width: 14 } })).toEqual({});
+      expect(fit({ rect: { width: 18 }, labelRect: { width: 14 } })).toEqual({ fontSize: 0 });
+    });
+
+    it('takes the count colour per type from labelColours, white token when missing', () => {
+      const byId = Object.fromEntries(labelled({ 'Policy change': 'var(--pr-text-heading)' }).map(s => [s.id, s.label.color]));
+      expect(byId['editing|Policy change']).toBe('var(--pr-text-heading)');
+      expect(byId['submitted|Knowledge product']).toBe('var(--pr-color-white)');
+    });
+  });
+
   describe('tooltip (TBC-R-3, TBC-DD-8)', () => {
     const TWO: ProgramTypeMatrix = {
       programs: [{ key: 'SP01', name: 'Breeding for Tomorrow', submitted: m([['Knowledge product', 2], ['Policy change', 1]]), editing: m([['Knowledge product', 1], ['Policy change', 3]]), total: 7 }],

@@ -40,6 +40,12 @@ const HEIGHT_PADDING = 80;
 const MIN_HEIGHT = 240;
 /** Diagonal stripes mark the Editing bucket so it is not colour-only (TBC-DD-7). */
 const EDITING_DECAL = { symbol: 'rect', dashArrayX: [1, 0], dashArrayY: [2, 3], rotation: Math.PI / 4 };
+/** Horizontal room (px) a segment keeps around its count; a count that does not fit stays in the tooltip only (INC-168045). */
+const LABEL_PADDING = 6;
+
+/** Shows a count only when it fits inside its own segment; otherwise the label is drawn at size 0 (tooltip still has it). */
+const fitInsideSegment = (params: { rect: { width: number }; labelRect: { width: number } }): { fontSize?: number } =>
+  params.rect.width >= params.labelRect.width + LABEL_PADDING ? {} : { fontSize: 0 };
 
 const fill = (template: string, values: Record<string, string | number>): string =>
   template.replace(/\{(\w+)\}/g, (match, name: string) => (name in values ? String(values[name]) : match));
@@ -52,7 +58,14 @@ const truncate = (label: string, max: number): string => (label.length <= max ? 
 const countOf = (row: ProgramTypeRow, bucket: TypologyBucket, typeKey: string): number => (bucket === 'editing' ? row.editing : row.submitted).get(typeKey) ?? 0;
 
 /** `interactive: false` (the Center tab, TBC-DD-9) drops the axis-label events and every table action; everything else is identical. */
-export function buildTypologyChart(matrix: ProgramTypeMatrix, colours: TypologyChartColours, copy: TypologyChartCopy, interactive = true): TypologyChart {
+/** `labelColours` (same keys as `colours`) sets the count colour per type; a missing key falls back to the white token. */
+export function buildTypologyChart(
+  matrix: ProgramTypeMatrix,
+  colours: TypologyChartColours,
+  copy: TypologyChartCopy,
+  interactive = true,
+  labelColours: TypologyChartColours = {}
+): TypologyChart {
   const { programs, types } = matrix;
 
   const programLabel = (row: ProgramTypeRow): string => {
@@ -72,6 +85,18 @@ export function buildTypologyChart(matrix: ProgramTypeMatrix, colours: TypologyC
       stack: bucket,
       barMaxWidth: 16,
       data: programs.map(row => countOf(row, bucket, type.key)),
+      // Count inside the segment (INC-168045); the outline in the segment colour keeps it readable over the Editing stripes.
+      label: {
+        show: true,
+        position: 'inside',
+        fontSize: 11,
+        fontWeight: 600,
+        color: labelColours[type.key] ?? 'var(--pr-color-white)',
+        textBorderColor: colours[type.key] ?? colours[''],
+        textBorderWidth: 2,
+        formatter: (params: { value?: unknown }): string => (Number(params?.value) > 0 ? String(params.value) : '')
+      },
+      labelLayout: fitInsideSegment,
       itemStyle: {
         color: colours[type.key] ?? colours[''],
         ...(bucket === 'editing' ? { decal: EDITING_DECAL } : {})
