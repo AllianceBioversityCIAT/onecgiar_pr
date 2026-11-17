@@ -37,7 +37,8 @@ export class QualityAssuranceComponent implements OnInit, OnDestroy {
 
   allInitiatives = [];
   official_code = null;
-  qaUrl = environment.qaUrl;
+  // Environments carry a trailing slash (`https://qatest…/`); strip it so the iframe is `/sp`, not `//sp`.
+  qaUrl = (environment.qaUrl ?? '').replace(/\/+$/, '');
   readonly qaOrigin = QualityAssuranceComponent.originOf(environment.qaUrl);
 
   readonly showIframe = signal<boolean>(false);

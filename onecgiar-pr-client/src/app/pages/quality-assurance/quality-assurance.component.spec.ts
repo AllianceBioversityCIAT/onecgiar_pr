@@ -74,7 +74,8 @@ describe('QualityAssuranceComponent (P2-3911 SP link)', () => {
       component.ngOnInit();
 
       expect(getQaSpLink).toHaveBeenCalledWith('SP01');
-      expect(lastUrl()).toBe(`${environment.qaUrl}/sp?code=${encodeURIComponent('code+1/=')}`);
+      expect(lastUrl()).toBe(`${environment.qaUrl.replace(/\/+$/, '')}/sp?code=${encodeURIComponent('code+1/=')}`);
+      expect(lastUrl()).not.toMatch(/[^:]\/\/sp\?/);
       expect(component.showIframe()).toBe(true);
     });
 
@@ -218,6 +219,12 @@ describe('QualityAssuranceComponent (P2-3911 SP link)', () => {
       expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain('This program is not in QA yet');
       expect(fixture.nativeElement.querySelector('app-pr-button.qa_reload')).toBeTruthy();
     });
+  });
+
+  it('never builds //sp when qaUrl has a trailing slash', () => {
+    component.qaUrl = 'https://qa.example.test';
+    component.selectOptionEvent('SP01');
+    expect(lastUrl()).toBe(`https://qa.example.test/sp?code=${encodeURIComponent('code+1/=')}`);
   });
 
   it('originOf returns null for an invalid URL', () => {
