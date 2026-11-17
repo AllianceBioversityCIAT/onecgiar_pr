@@ -13,7 +13,7 @@
 ## 1. Pre-flight
 
 - [ ] Branch `qa-development-2026-ss`, tree clean except this spec.
-- [ ] RIR is live in PROD (PR #786). No open campaign this phase. If one is open, tell the user before T-5.
+- [x] RIR is live in PROD (PR #786). No open campaign this phase. If one is open, tell the user before T-5.
 
 ## 2. Task list
 
@@ -185,7 +185,7 @@
   - [x] `ng build` green.
   - [x] Existing reminders specs still green.
 
-### RCF-T-5: PRTest smoke + PROD count (HITL)
+### RCF-T-5: PRTest smoke + PROD count (HITL) [x]
 
 - **Type:** manual verification · **Estimate:** S · **Review:** skip-eligible
   - **Reason:** no code. The claim to prove: every check below is recorded with evidence in `execution.md`.
@@ -205,8 +205,8 @@
 - **Consumers:** none.
 - **Skills:** `claude-in-chrome` (read-only browsing; never click write buttons without the user's go-ahead).
 - **Done:**
-  - [ ] 5 steps recorded.
-  - [ ] PROD count shared with the user for the reply to Nicoleta/Enrico.
+  - [x] 5 steps recorded (step 3 and dark mode waived by the user, 2026-11-14).
+  - [x] PROD count shared with the user for the reply to Nicoleta/Enrico.
 
 ## 3. Coverage (scenario/clause level)
 

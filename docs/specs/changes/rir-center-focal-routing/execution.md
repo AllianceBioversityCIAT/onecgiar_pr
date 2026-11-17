@@ -196,3 +196,61 @@ Repo grep: "bilateral" only at `1791700000000-RIR-RecipientModelV2.ts:371` (Cent
 4. READABILITY: `hlm-checkbox` Jest stub duplicated in two specs.
 
 **Running totals vs budget (design §11):** tasks 4/5 · ≈1,412 server + ≈703 client = **≈2,115 added lines** (budget ≈650; overrun accepted 2026-11-13, see Budget Tripwire) · review rounds 4/6.
+
+## Delivery — 2026-11-13
+
+- Commit `5f7ad600d` on `qa-development-2026-ss` (user go-ahead "si hazlo primero a mi rama luego a performance refactor"), explicit paths only (31 files; `AGENTS.md`, `bilateral-pdf-mds-only` files and `a.py` excluded).
+- Pre-push gates: server `--findRelatedTests` on 9 changed files → 13 suites / 195 passed; client `--findRelatedTests` (T-4) → 448 suites / 12,221 passed.
+- Pushed `qa-development-2026-ss` (fe50f30cc..5f7ad600d); `performance-refactor` fast-forwarded in the user's checkout and pushed (fe50f30cc..5f7ad600d). PRTest prdb already has `RCFCenterRouting1793400000000` applied (T-1 HITL), so the deploy will find it executed.
+- RCF-T-5 (HITL PRTest smoke + PROD read-only counts) pending the PRTest deploy.
+
+### RCF-T-5: PRTest smoke + PROD count (HITL) — in progress `[~]`
+
+**Step 5 — PROD read-only (user, PRMSPROD, 2026-11-13)**
+- Active Reporting phase: `version.id = 8` "Reporting 2026" (2026), single row.
+- ICARDA-led (`CENTER-07`) pending replicated innovations, `findPending` predicate:
+
+| source | result_type_id | n |
+|---|---|---|
+| W1/W2 | 2 (Innovation Use) | 16 |
+| W1/W2 | 7 (Innovation Development) | 61 |
+| W3 | 7 (Innovation Development) | 8 |
+| **total** | | **85** |
+
+  Today these 85 split into developer digests (W1/W2 ID, 61 minus unreachable), the MELIA summary (16 IU + unreachable ID) and the ICARDA Center email (8 W3). With the opt-in, all 85 go in one ICARDA Center email with the W1/W2 MELIA in CC. Disqualifier for step 1 cleared: both W1/W2 and W3 rows exist.
+- Active ICARDA focal points: 1 — id 10 Enrico Bonaiuti `e.bonaiuti@cgiar.org`, active. (A second contact, if wanted, is added through the new admin UI after release.)
+- P-12 in PROD: `{{resultCount}} bilateral innovation(s)` at position 2715 in `…_center` only; q4_notice / final_reminder / melia_summary = 0 → the migration's scoped REPLACE will apply in PROD (Reviewer T-1 RELIABILITY advisory cleared).
+- Open campaigns in PROD (`is_active = 1 AND status NOT IN ('SENT','CANCELLED')`): 0 rows → pre-flight cleared.
+
+**Steps 1–4 (PRTest, 2026-11-14, Leader via browser, admin session)**
+- Mail safety: non-prod dispatch sends every message only to `rir_test_recipient_email` and empties CC (`reminder-dispatcher.service.ts:449-450`). Preview `redirected_to` = the user's own address. The preview is a dry-run and sends nothing. Test campaign id 12 (Final reminder, Pending, scheduled 2026-11-18 06:55 local) was created by the user.
+- Step 1 — preview campaign 12 (phase version 36): 16 messages (CENTER 9 / 110 rows, DEVELOPER 1 / 1, MELIA_SUMMARY 6 / 13), 4 unreachable. `CENTER:CENTER-07`: 1 To, 10 rows, all type 2, SP01 + SP09, **CC 0**. None of those 10 result codes appears in any other digest. "bilateral" appears only in PRTest result titles ("Test Bilaterals - SP09"), not in copy.
+- Step 2 — toggled ICARDA off: PATCH `centers/CENTER-07/routing` saved (`route_all_to_center:false`). The preview **still** has the same 10 rows in `CENTER:CENTER-07`, and totals are unchanged. Toggled back on: `route_all_to_center:true` confirmed by GET. The checkbox state followed the server both times.
+  - **Disqualifier hit (tasks.md T-5):** the preview is identical on vs off, and CC 0 even though SP01 has MELIA (CC on the SP01 developer digest). So PRTest's 10 ICARDA rows are W3 only, which already went to the Center before this change. The W1/W2 → Center route and the MELIA CC are **not yet proven on PRTest**. Needed: a PRTest Center with pending W1/W2 + W3 rows (TEST read-only SQL handed to the user), then opt it in temporarily and preview.
+- **Disqualifier cleared, 2026-11-14.** The user's TEST read-only SQL (findPending predicate, version 36) found only `CENTER-01` (AfricaRice) with W1/W2 rows: 1 W1/W2 and 3 W3, with 1 active contact. CENTER-01 was opted in temporarily from the UI:
+  - Before: `CENTER:CENTER-01` = 3 W3 rows (type 2: 8064 SP01, 8116 SP09, 7188 SP13), CC 0. The W1/W2 row 8555 (SP01, type 7) was in the DEVELOPER digest.
+  - Opted in: `CENTER:CENTER-01` = 4 rows incl. 8555. **CC 1** (SP01 MELIA, not a To address). The DEVELOPER digest disappeared (1→0 messages). None of the 4 codes appears in any other digest or in unreachable. Total results stay at 124 (no row lost or duplicated). → RCF-R-2, R-4, R-10 proven. Falsifier (an opted-in row in a developer digest) is not red.
+  - Opted out again: only `CENTER-07` remains opted in, and the preview's (message_key → result codes) map is identical to the baseline. → RCF-R-3 (off = today's routing) proven.
+- Duplicate POST: "Edit contacts" ICARDA → `E.Bonaiuti@cgiar.org` (mixed case) → POST 409, inline message "This email already exists for the Center; reactivate the existing contact instead." Contact count stayed at 1. Screenshot `C:\Users\santiagosanchez\AppData\Local\Temp\claude-chrome-screenshots-qcMzSW\screenshot-1794665225485-3.png`. (Reactivate wording shown for an active contact = existing advisory.)
+- Step 3 — non-admin 403: pending, needs a non-admin session (user).
+- Step 4 — visual: light mode renders. Action column is cut off ("Edit c…") at a 1280 px viewport and fits at 1568 px (overflow from long Center names). Dark mode pending (user toggles the theme).
+- **User decisions, 2026-11-14:**
+  - Step 3 (non-admin 403) **waived by the user**: the admin module is not reachable for non-admins. Server guard evidence stays the T-3 metadata test (`@Roles(ADMIN, APPLICATION)` + `ValidRoleGuard`).
+  - Dark-mode check **waived by the user**: dark mode is not used.
+  - Campaign 12 **kept pending on purpose** by the user. Any send from PRTest goes only to the test recipient.
+  - Action-column overflow → **fix now** as a T-4 rework (Implementer spawned).
+- Campaign 12 left **Pending** on purpose for the re-preview. It must be cancelled before 2026-11-18. If it fires, all 16 messages go only to the test recipient.
+
+### RCF-T-4 rework — Action column overflow (2026-11-14)
+
+- Origin: T-5 visual check. At a 1280 px viewport the Center focal points table overflowed its card and the "Edit contacts" button was cut off.
+- Cause: Spartan `hlmTd` applies `whitespace-nowrap` (`onecgiar-pr-client/src/app/spartan/table/src/lib/hlm-table.ts:107`), so long Center names never wrap.
+- Attempt 1 (Implementer): `center-focal-points.component.html` only. Center `<td>` gets `min-w-[14rem] whitespace-normal!`, and both name spans get `break-words`. The Action cell is unchanged and keeps nowrap. No copy, testid or logic change.
+- Implementer verification: Jest `--testPathPattern=center-focal-points` 1 suite / 12 passed. `ng lint` on the html: file ignored by the flat config (inconclusive, not a pass).
+- Leader evidence re-run (non-author): same Jest command → 12/12 passed → VERIFIED.
+- `REVIEW_SKIPPED`: CSS-utility-only change of 3 class tokens in one template, no behaviour, data or contract change. Review intensity met.
+- Pending: browser check at 1280 px on PRTest after the user commits and pushes to perf.
+
+### RCF-T-5 closed `[x]` (2026-11-14)
+
+All checks are recorded above. Step 3 (403) and dark mode were waived by the user. Proven on PRTest: RCF-R-2/R-3/R-4/R-10 via the CENTER-01 temporary opt-in, plus the duplicate 409. PROD counts are recorded (ICARDA 85 rows, 61 developer rows leave the developer digests).
