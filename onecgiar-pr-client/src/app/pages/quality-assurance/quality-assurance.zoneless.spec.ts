@@ -82,6 +82,7 @@ describe('QualityAssuranceComponent (zoneless change detection)', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(QualityAssuranceComponent);
+    fixture.componentInstance.qaSpEmbed = 'new';
   });
 
   it('renders the QA iframe once the QA code resolves on first load', async () => {

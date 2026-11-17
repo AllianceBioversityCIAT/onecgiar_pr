@@ -7,6 +7,18 @@ import { Observable, Subscription } from 'rxjs';
 import { QualityAssuranceService } from './quality-assurance.service';
 
 export const QA_SP_RELOAD_MESSAGE_TYPE = 'qa-sp:reload-required';
+
+/**
+ * P2-3911 — which QA the page embeds, from `environment.qaSpEmbed`:
+ * - `'new'`: Science Program view of the new QA (`{qaUrl}/sp?code=…`, code from `GET api/qa/sp-link`).
+ * - `'legacy'`: old QA through the CLARISA token (`{qaUrl}/crp?crp_id=…&token=…`).
+ * Anything else, including a missing key (the environment file is per-environment and gitignored),
+ * resolves to `'legacy'`, so an environment only switches when its file says `'new'`.
+ */
+export type QaSpEmbedMode = 'new' | 'legacy';
+export function resolveQaSpEmbed(value: unknown): QaSpEmbedMode {
+  return value === 'new' ? 'new' : 'legacy';
+}
 export const QA_SP_GENERIC_ERROR = 'Quality Assurance could not be opened. Please try again.';
 
 /**
@@ -39,6 +51,7 @@ export class QualityAssuranceComponent implements OnInit, OnDestroy {
   official_code = null;
   // Environments carry a trailing slash (`https://qatest…/`); strip it so the iframe is `/sp`, not `//sp`.
   qaUrl = (environment.qaUrl ?? '').replace(/\/+$/, '');
+  qaSpEmbed: QaSpEmbedMode = resolveQaSpEmbed((environment as { qaSpEmbed?: unknown }).qaSpEmbed);
   readonly qaOrigin = QualityAssuranceComponent.originOf(environment.qaUrl);
 
   readonly showIframe = signal<boolean>(false);
@@ -123,6 +136,10 @@ export class QualityAssuranceComponent implements OnInit, OnDestroy {
     }
 
     this.loading.set(true);
+    if (this.qaSpEmbed === 'legacy') {
+      this.loadLegacyIframe();
+      return;
+    }
     this.linkSubscription = this.api.resultsSE.GET_QaSpLink(this.official_code).subscribe({
       next: ({ response }) => {
         this.loading.set(false);
@@ -141,7 +158,28 @@ export class QualityAssuranceComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Legacy QA (PROD until the new QA is live): CLARISA token, same URL as before P2-3911. */
+  private loadLegacyIframe() {
+    this.linkSubscription = this.api.resultsSE.GET_ClarisaQaToken(this.official_code).subscribe({
+      next: ({ response }) => {
+        this.loading.set(false);
+        const token = response?.token;
+        if (!token) {
+          this.fail(QA_SP_GENERIC_ERROR);
+          return;
+        }
+        this.sanitizedUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${environment.qaUrl}/crp?crp_id=${this.official_code}&token=${token}`));
+        this.showIframe.set(true);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.fail(QA_SP_GENERIC_ERROR);
+      }
+    });
+  }
+
   handleQaMessage(event: MessageEvent) {
+    if (this.qaSpEmbed !== 'new') return;
     if (!this.qaOrigin || event.origin !== this.qaOrigin) return;
     if (event.data?.type !== QA_SP_RELOAD_MESSAGE_TYPE) return;
 

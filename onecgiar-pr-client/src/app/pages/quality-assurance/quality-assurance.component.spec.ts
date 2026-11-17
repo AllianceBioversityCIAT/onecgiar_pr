@@ -1,7 +1,7 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
-import { QA_SP_GENERIC_ERROR, QA_SP_RELOAD_MESSAGE_TYPE, QualityAssuranceComponent } from './quality-assurance.component';
+import { QA_SP_GENERIC_ERROR, QA_SP_RELOAD_MESSAGE_TYPE, QualityAssuranceComponent, resolveQaSpEmbed } from './quality-assurance.component';
 import { ApiService } from '../../shared/services/api/api.service';
 import { ResultLevelService } from '../results/pages/result-creator/services/result-level.service';
 import { QualityAssuranceService } from './quality-assurance.service';
@@ -46,7 +46,8 @@ describe('QualityAssuranceComponent (P2-3911 SP link)', () => {
       },
       resultsSE: {
         GET_AllInitiatives: jest.fn(() => of({ response: initiatives })),
-        GET_QaSpLink: getQaSpLink
+        GET_QaSpLink: getQaSpLink,
+        GET_ClarisaQaToken: jest.fn(() => of({ response: { token: 'legacy-token' } }))
       }
     };
 
@@ -62,6 +63,8 @@ describe('QualityAssuranceComponent (P2-3911 SP link)', () => {
 
     fixture = TestBed.createComponent(QualityAssuranceComponent);
     component = fixture.componentInstance;
+    // The environment file is per-environment and gitignored: never depend on its qaSpEmbed value.
+    component.qaSpEmbed = 'new';
   });
 
   afterEach(() => {
@@ -225,6 +228,64 @@ describe('QualityAssuranceComponent (P2-3911 SP link)', () => {
     component.qaUrl = 'https://qa.example.test';
     component.selectOptionEvent('SP01');
     expect(lastUrl()).toBe(`https://qa.example.test/sp?code=${encodeURIComponent('code+1/=')}`);
+  });
+
+  describe("qaSpEmbed switch ('new' in TEST, 'legacy' in PROD)", () => {
+    it.each([
+      ['new', 'new'],
+      ['legacy', 'legacy'],
+      [undefined, 'legacy'],
+      ['NEW', 'legacy'],
+      [true, 'legacy']
+    ])('resolves %p to %p (only an explicit "new" switches)', (value, expected) => {
+      expect(resolveQaSpEmbed(value)).toBe(expected);
+    });
+
+    describe("'legacy'", () => {
+      beforeEach(() => {
+        component.qaSpEmbed = 'legacy';
+      });
+
+      it('uses the CLARISA token and the old /crp URL, never the new code route', () => {
+        component.ngOnInit();
+
+        expect(apiMock.resultsSE.GET_ClarisaQaToken).toHaveBeenCalledWith('SP01');
+        expect(getQaSpLink).not.toHaveBeenCalled();
+        expect(lastUrl()).toBe(`${environment.qaUrl}/crp?crp_id=SP01&token=legacy-token`);
+        expect(component.showIframe()).toBe(true);
+      });
+
+      it('asks for a new token on program change', () => {
+        component.ngOnInit();
+        component.selectOptionEvent('SP02');
+
+        expect(apiMock.resultsSE.GET_ClarisaQaToken.mock.calls.map(c => c[0])).toEqual(['SP01', 'SP02']);
+        expect(lastUrl()).toContain('crp_id=SP02');
+      });
+
+      it('ignores qa-sp:reload-required messages', () => {
+        component.ngOnInit();
+        postFromQa();
+
+        expect(apiMock.resultsSE.GET_ClarisaQaToken).toHaveBeenCalledTimes(1);
+        expect(component.showReloadButton()).toBe(false);
+      });
+
+      it('shows the generic error when the token does not come back', () => {
+        apiMock.resultsSE.GET_ClarisaQaToken.mockReturnValueOnce(throwError(() => ({ status: 500 })));
+        component.selectOptionEvent('SP01');
+
+        expect(component.errorMessage()).toBe(QA_SP_GENERIC_ERROR);
+        expect(component.showIframe()).toBe(false);
+      });
+
+      it('shows the generic error when the token is empty', () => {
+        apiMock.resultsSE.GET_ClarisaQaToken.mockReturnValueOnce(of({ response: { token: null } }));
+        component.selectOptionEvent('SP01');
+
+        expect(component.errorMessage()).toBe(QA_SP_GENERIC_ERROR);
+      });
+    });
   });
 
   it('originOf returns null for an invalid URL', () => {
