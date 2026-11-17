@@ -1,6 +1,6 @@
 # portfolio-overview
 
-**Verified:** 2026-11-10 · spec changes/portfolio-typology-bar-chart (2026-11-10) + bugfix/centers-block-status-tiles (2026-11-05) + changes/portfolio-overview-feedback-round/contribution-requests-by-pa (2026-11-04) + funding-filter (Funding bar dimension) + cleanup-and-approved · prior: 2026-10-27
+**Verified:** 2026-11-17 · quick/typology-bar-counts-key (2026-11-17) + spec changes/portfolio-typology-bar-chart (2026-11-10) + bugfix/centers-block-status-tiles (2026-11-05) + changes/portfolio-overview-feedback-round/contribution-requests-by-pa (2026-11-04) + funding-filter (Funding bar dimension) + cleanup-and-approved · prior: 2026-10-27
 
 **What this owns:** the **admin-only** `/portfolio-overview` screen — figures for the WHOLE portfolio in the open
 phase: KPI deck, status, results by typology, progress against ToC KPIs, CGIAR Centers, W3/Bilateral projects, filtered results detail + Excel export. Ticket **P2-3304**;
@@ -101,6 +101,7 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 ## Results by typology (2026-11-10, spec `changes/portfolio-typology-bar-chart`; supersedes TYV-R-3..6, R-8)
 
 - `components/typology-block/` after the status section, inside `hasFigures()` (skeleton `portfolio-overview-skeleton-typology`); level cards + `app-pr-viz-chart`: two bars per row (Submitted = every non-`editing` slot, Editing = `resolveStatusSlot === 'editing'`), stacked by type, one token colour per type (`TYPE_TOKEN`), Editing decal, row tooltip (`trigger: 'axis'`). Pure seams: `typology.aggregate.ts` (matrix), `typology.charts.ts` (option + table), `typology.click.ts` (resolver).
+- **Counts + bar key (quick/typology-bar-counts-key, INC-168045):** each series has an inside `label`; `fitInsideSegment` (`labelLayout`) sets `fontSize: 0` when the count does not fit, so small segments keep it in the tooltip only. Count colour per type = `labelColours` (5th arg of `buildTypologyChart`; heading ink on the 3 light fills `LABEL_ON_LIGHT_FILL`, white elsewhere). The key `typology-bar-key` above the chart explains the two bars; its striped swatch must stay in step with `EDITING_DECAL` (SVG pattern rotate(45), 2px on / 3px off): change one, change the other.
 - 🛑 **P/A tab WRITES the global selection** (TYV-R-8 "read-only" is gone): segment -> program + type + bucket slots in ONE `setSelection` (keeps Project/Center/Funding; same click toggles off); P/A label toggles program; catch-all is never a target. **Center tab is view-only** (W3 via `fundingOf`, lead Center, A->Z) — no click writes. Input `rows` = `data.filteredRows()`.
 
 ## Progress against ToC KPIs (2026-10-15, spec `changes/portfolio-overview-revamp/toc-kpi-progress`)
