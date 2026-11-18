@@ -1238,4 +1238,126 @@ describe('PortfolioOverviewComponent', () => {
     build(OPEN_PHASE);
     expect(component.eyebrow()).toBe('PORTFOLIO · REPORTING CYCLE 2026 · P25');
   });
+
+  // PRE-T-3: the Filters dropdown in the Results detail toolbar writes the REAL service selection (no stub of toggleValue).
+  describe('Results detail Filters dropdown (PRE-T-3, PRE-R-1/2/3/5)', () => {
+    const q = <T extends Element = HTMLElement>(sel: string) => fixture.nativeElement.querySelector(sel) as T | null;
+    const refresh = () => fixture.detectChanges();
+    // Rows that keep the page non-empty under every selection below (the section unmounts at 0 filtered rows, FDE R-9).
+    const DATA = [...OPEN_PHASE, raw({ source_name: 'W3/Bilaterals', status_id: '1' }), raw({ source_name: 'W3/Bilaterals', status_id: '7', status_name: 'Rejected' })];
+    const TRIGGER = '[data-testid="detail-filters-trigger"]';
+    const openPanel = () => {
+      q<HTMLButtonElement>(TRIGGER)!.click();
+      refresh();
+    };
+    const pick = (dimension: string, value: string) => {
+      q(`[data-testid="detail-filter-item-${dimension}-${value}"]`)!.dispatchEvent(new CustomEvent('selected'));
+      refresh();
+    };
+    const topBarCount = (dimension: string) =>
+      q(`[data-testid="filter-trigger-${dimension}"] [data-testid="filter-trigger-count"]`)?.textContent?.trim() ?? null;
+
+    it('PRE-R-1: the button sits between Search and Export inside the results detail toolbar', () => {
+      build(DATA);
+      const search = q('[data-testid="detail-search"]')!;
+      const button = q(TRIGGER)!;
+      const exportBtn = q('[data-testid="detail-export"]')!;
+      expect(button.closest('app-portfolio-results-detail')).toBeTruthy();
+      expect(search.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(button.compareDocumentPosition(exportBtn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('PRE-R-2: ticking Status = Rejected in the panel writes the service selection and the top-bar Status trigger shows 1', () => {
+      build(DATA);
+      expect(topBarCount('status')).toBeNull();
+      openPanel();
+      pick('status', 'rejected');
+      expect([...component.data.selection().status]).toEqual(['rejected']);
+      expect(topBarCount('status')).toBe('1');
+      expect(q(TRIGGER)!.getAttribute('aria-label')).toBe('Filters, 1 selected');
+    });
+
+    it('PRE-R-2: ticking Funding in the panel is the top-bar Funding selection too', () => {
+      build(DATA);
+      openPanel();
+      pick('funding', 'bilateral');
+      expect([...component.data.selection().funding]).toEqual(['bilateral']);
+      expect(topBarCount('funding')).toBe('1');
+    });
+
+    it('PRE-R-2: a value set in the top bar is checked when the panel opens', () => {
+      build(DATA);
+      component.data.toggleValue('status', 'editing');
+      refresh();
+      openPanel();
+      expect(q('[data-testid="detail-filter-item-status-editing"]')!.getAttribute('aria-checked')).toBe('true');
+      expect(q('[data-testid="detail-filter-item-funding-w1w2"]')!.getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('PRE-R-3: Clear empties Funding and Status but keeps Program = SP01', () => {
+      build(DATA);
+      component.data.toggleValue('program', 'SP01');
+      component.data.toggleValue('funding', 'bilateral');
+      component.data.toggleValue('status', 'editing');
+      refresh();
+      openPanel();
+      q<HTMLButtonElement>('[data-testid="detail-filters-clear"]')!.click();
+      refresh();
+      expect(component.data.selection().funding.size).toBe(0);
+      expect(component.data.selection().status.size).toBe(0);
+      expect([...component.data.selection().program]).toEqual(['SP01']);
+    });
+
+    it('PRE-R-5: Filters pending disables the button', () => {
+      build(DATA, {}, { query: { project: '5' }, dimensions$: new Subject() });
+      refresh();
+      expect(component.data.filtersPending()).toBe(true);
+      expect(q<HTMLButtonElement>(TRIGGER)!.disabled).toBe(true);
+    });
+
+    it('PRE-R-5: the button is enabled again once the filters resolve', () => {
+      const dimensions$ = new Subject<any>();
+      build(DATA, {}, { query: { project: '5' }, dimensions$ });
+      refresh();
+      expect(q<HTMLButtonElement>(TRIGGER)!.disabled).toBe(true);
+      dimensions$.next({ projects: [], centers: [] });
+      dimensions$.complete();
+      refresh();
+      expect(component.data.filtersPending()).toBe(false);
+      expect(q<HTMLButtonElement>(TRIGGER)!.disabled).toBe(false);
+    });
+
+    it('PRE-R-1: the Status section lists the six slots in the page order, Funding the two sources', () => {
+      build(DATA);
+      openPanel();
+      const values = (dim: string) => Array.from(fixture.nativeElement.querySelectorAll(`[data-testid^="detail-filter-item-${dim}-"]`)).map((e: any) => e.getAttribute('data-testid').replace(`detail-filter-item-${dim}-`, ''));
+      expect(values('status')).toEqual(component.data.options().status.map(o => o.value));
+      expect(values('status').length).toBe(6);
+      expect(values('funding')).toEqual(component.data.options().funding.map(o => o.value));
+    });
+
+    it('PRE-R-2: ticking in the panel updates the table count, which equals the KPI total (S-2.1 stays true)', () => {
+      build(DATA);
+      const listed = () => Number(/^\s*(\d+) results?/.exec(q('[data-testid="detail-count"]')!.textContent ?? '')![1]);
+      const before = listed();
+      expect(before).toBe(component.data.kpiTotals().totalResults);
+      openPanel();
+      pick('funding', 'bilateral');
+      pick('status', 'rejected');
+      const after = component.data.kpiTotals().totalResults;
+      expect(after).toBeGreaterThan(0);
+      expect(after).toBeLessThan(before);
+      expect(listed()).toBe(after);
+    });
+
+    it('PRE-R-5: an empty listed rows state (search with no match) keeps the button enabled', () => {
+      build(DATA);
+      const search = q<HTMLInputElement>('[data-testid="detail-search"]')!;
+      search.value = 'zzz-no-such-result';
+      search.dispatchEvent(new Event('input'));
+      refresh();
+      expect(q('[data-testid="detail-no-results"]')).toBeTruthy();
+      expect(q<HTMLButtonElement>(TRIGGER)!.disabled).toBe(false);
+    });
+  });
 });

@@ -197,6 +197,15 @@ export const PORTFOLIO_OVERVIEW_COPY = {
     clearSearch: 'Clear search',
     tableCaption: 'Results of the current selection',
     opensInNewTab: '(opens in new tab)',
+    // Filters dropdown in the toolbar (spec changes/portfolio-rejection-reason-export, PRE-R-1..R-6)
+    filters: {
+      label: 'Filters',
+      triggerName: (n: number) => (n > 0 ? `Filters, ${n} selected` : 'Filters'),
+      funding: 'Funding',
+      status: 'Status',
+      hint: 'These filters also filter the whole page.',
+      clear: 'Clear'
+    },
     sortBy: (column: string) => `Sort by ${column}`,
     previous: 'Previous page',
     next: 'Next page',

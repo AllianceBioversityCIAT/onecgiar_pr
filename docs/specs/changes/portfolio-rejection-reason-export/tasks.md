@@ -70,7 +70,7 @@
   - [ ] Screen table column set unchanged (the existing component spec stays green)
   - [ ] `tsc`, Jest, and lint green; coverage ≥ client gates
 
-### PRE-T-3 — Client: Filters dropdown in the Results detail toolbar
+### [x] PRE-T-3 — Client: Filters dropdown in the Results detail toolbar
 
 - **Type:** client
 - **Description:** Create `components/detail-filters/` (`app-portfolio-detail-filters`) per design §8.1 (Spartan Popover + Brain Command, two sections, count badge, hint line, Clear). Add `<ng-content select="[detailFilters]" />` to the results-detail toolbar between Search and Export (§8.2). Wire it on the page to `data.options()`, `data.selection()`, `data.filtersPending()`, `toggleValue`, and `clearDimension('funding')` + `clearDimension('status')` (§8.3). Add copy keys under `PORTFOLIO_OVERVIEW_COPY.detail`.

@@ -380,7 +380,18 @@
         [dimensionsMap]="data.dimensions().map"
         [partial]="data.isPartial()"
         [fetchedCount]="data.fetchedCount()"
-        [phaseName]="data.phaseName()" />
+        [phaseName]="data.phaseName()">
+        <!-- PRE-T-3: Funding + Status of the SAME global selection the top bar edits (PRE-R-2); Clear keeps the other dimensions (PRE-R-3). -->
+        <app-portfolio-detail-filters
+          detailFilters
+          [fundingOptions]="data.options().funding"
+          [statusOptions]="data.options().status"
+          [fundingSelected]="data.selection().funding"
+          [statusSelected]="data.selection().status"
+          [disabled]="data.filtersPending()"
+          (toggled)="data.toggleValue($event.dimension, $event.value)"
+          (cleared)="data.clearDimension('funding'); data.clearDimension('status')" />
+      </app-portfolio-results-detail>
     }
     </div>
 

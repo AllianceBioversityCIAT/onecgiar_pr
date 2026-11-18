@@ -13,6 +13,7 @@ import { STATUS_GUIDE_URL } from '../../../../shared/constants/portfolio-links.c
 import { PortfolioCentersBlockComponent } from './components/centers-block/centers-block.component';
 import { FilterBarComponent } from './components/filter-bar/filter-bar.component';
 import { PortfolioResultsDetailComponent } from './components/results-detail/results-detail.component';
+import { PortfolioDetailFiltersComponent } from './components/detail-filters/detail-filters.component';
 import { PortfolioContributionRequestsBlockComponent } from './components/contribution-requests-block/contribution-requests-block.component';
 import { PortfolioProjectsBlockComponent } from './components/projects-block/projects-block.component';
 import { PortfolioTocKpiBlockComponent } from './components/toc-kpi-block/toc-kpi-block.component';
@@ -97,6 +98,7 @@ export function getCategoryShortName(category: string): string {
     PortfolioProjectsBlockComponent,
     PortfolioContributionRequestsBlockComponent,
     PortfolioResultsDetailComponent,
+    PortfolioDetailFiltersComponent,
     PortfolioTocKpiBlockComponent,
     PortfolioTypologyBlockComponent,
     HlmSeparatorImports,

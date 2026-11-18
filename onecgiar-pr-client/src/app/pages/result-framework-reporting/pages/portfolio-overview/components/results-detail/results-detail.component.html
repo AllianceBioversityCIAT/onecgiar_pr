@@ -24,6 +24,8 @@
           data-testid="detail-search"
           (input)="setSearch($any($event.target).value)" />
       </div>
+      <!-- Filters dropdown slot (PRE-T-3): projected by the page, which binds it to the global selection. -->
+      <ng-content select="[detailFilters]" />
       <button
         hlmBtn
         variant="outline"
