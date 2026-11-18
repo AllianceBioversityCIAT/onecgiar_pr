@@ -209,6 +209,8 @@ In both branches of `results/summary/innovation_dev.service.ts` (`:254-273`, `:2
 ### INA-DD-10 — Bilateral editor reuses the shared copy and its own single-total path
 No new component: the actor card gets the two questions inline with the shared constants. Households reuses the card's "does not apply" handler. Not in the MDS tracker (P-15).
 
+**Amended 2026-11-18 (execute, from the INA-T-8 review):** leaving Farmers clears `count_unit`, but it does **not** restore the grid that Households wiped. The forced "does not apply" tick stays visible, and the user can untick it. This is a deliberate difference from the shared form: INA-R-8, the grid restore, is written for the Centre form, while R-21 is a SHOULD and the card owns its own tick.
+
 ### INA-DD-11 — Docs in both repos, schema logic untouched
 PRMS: `bilateral-result-summaries.en.md` (§ actor follow-up table `:324-333`, ingestion steps `:512-528`, messages `:535-546`, inactive rows `:553`, alignment `:561-563`, new change-log row), Swagger text on `InnovationUseActorDto.use_nature` (`create-bilateral.dto.ts:489-500`). Fetcher (`onecgiar_result_functions`, branch from `dev-fetcher`): `docs/guides/08-innovation-use.md`, `02-changelog.md`, `openapi.json`, `use_nature.description` in `validator/schemas/innovation_use.json`. No enum or condition change (P-20).
 

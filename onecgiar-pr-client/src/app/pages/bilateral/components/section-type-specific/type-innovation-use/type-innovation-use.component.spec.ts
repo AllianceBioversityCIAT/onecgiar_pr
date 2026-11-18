@@ -1817,4 +1817,121 @@ describe('TypeInnovationUseComponent', () => {
       expect(template.slice(block, actors)).toContain('(ngModelChange)="onNewUsersAddedChange()"');
     });
   });
+
+  /**
+   * INA-T-8 (changes/innovation-use-nature-all-actors, INA-R-21 / INA-AC-11 / INA-DD-10) — the two follow-up
+   * answers on the actor card. Unit question on Farmers cards only; nature question on every card with a type;
+   * both only from the 2026 phase. Autosaved through `onFieldChange()`, no REQUIRED marker, not in the MDS.
+   */
+  describe('actor follow-up answers (INA-T-8)', () => {
+    const FARMERS = 1;
+    const RESEARCHERS = 2;
+    const html = () => readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
+    const loadActors = (actors: any[]) => {
+      bilateralApi.GET_innovationUse.mockReturnValue(of({ response: { innov_use_to_be_determined: false, actors } }));
+      return build();
+    };
+    const lastPayload = () => autoSave.schedulePayload.mock.calls.at(-1)[1];
+
+    it.each([
+      ['Researchers, 2026', RESEARCHERS, 2026, false, true],
+      ['Farmers, 2026', FARMERS, 2026, true, true],
+      ['Farmers, phase not resolved yet', FARMERS, null, true, true],
+      ['Farmers, 2025 (pre-2026 shows nothing new)', FARMERS, 2025, false, false],
+      ['Researchers, 2025', RESEARCHERS, 2025, false, false],
+      ['no type selected, 2026', null, 2026, false, false]
+    ])('%s', (_label, typeId, year, unit, nature) => {
+      creation.reportingYear.set(year as number | null);
+      loadActors([{ actor_type_id: typeId, is_active: true }]);
+      const actor = component.visibleActors[0];
+      expect(component.showCountUnitQuestion(actor)).toBe(unit);
+      expect(component.showUseNatureQuestion(actor)).toBe(nature);
+    });
+
+    it('picking "innovation_applied" puts use_nature on that row of the PATCH payload and autosaves', () => {
+      loadActors([
+        { actor_type_id: RESEARCHERS, is_active: true },
+        { actor_type_id: RESEARCHERS, is_active: true }
+      ]);
+      component.selectUseNature(component.visibleActors[1], 'innovation_applied');
+      expect(autoSave.schedulePayload).toHaveBeenCalledTimes(1);
+      const [first, second] = lastPayload().innovatonUse.actors;
+      expect(second.use_nature).toBe('innovation_applied');
+      expect(first.use_nature).toBeUndefined();
+    });
+
+    it('round-trips the stored codes of the loaded rows into the payload', () => {
+      loadActors([{ actor_type_id: FARMERS, count_unit: 'individuals', use_nature: 'information_received', is_active: true }]);
+      component.onFieldChange();
+      expect(lastPayload().innovatonUse.actors[0]).toMatchObject({ count_unit: 'individuals', use_nature: 'information_received' });
+    });
+
+    it('Farmers -> Households takes the single-total path: tick on, grid and total wiped, autosaved', () => {
+      loadActors([{ actor_type_id: FARMERS, women: 5, men: 6, how_many: 11, sex_and_age_disaggregation: false, is_active: true }]);
+      component.selectCountUnit(component.visibleActors[0], 'households');
+      const row = lastPayload().innovatonUse.actors[0];
+      expect(row).toMatchObject({ count_unit: 'households', sex_and_age_disaggregation: true, women: null, men: null, how_many: null });
+    });
+
+    it('Households on a row already on a single total keeps the typed total', () => {
+      loadActors([{ actor_type_id: FARMERS, how_many: 40, sex_and_age_disaggregation: true, is_active: true }]);
+      component.selectCountUnit(component.visibleActors[0], 'households');
+      expect(lastPayload().innovatonUse.actors[0]).toMatchObject({ count_unit: 'households', how_many: 40, sex_and_age_disaggregation: true });
+    });
+
+    it('Individuals does not touch the grid', () => {
+      loadActors([{ actor_type_id: FARMERS, women: 5, men: 6, how_many: 11, sex_and_age_disaggregation: false, is_active: true }]);
+      component.selectCountUnit(component.visibleActors[0], 'individuals');
+      expect(lastPayload().innovatonUse.actors[0]).toMatchObject({ count_unit: 'individuals', women: 5, men: 6, how_many: 11 });
+    });
+
+    it('leaving Farmers clears count_unit but keeps use_nature; staying on Farmers keeps both', () => {
+      loadActors([{ actor_type_id: FARMERS, count_unit: 'households', use_nature: 'innovation_applied', is_active: true }]);
+      const actor = component.visibleActors[0];
+      component.onActorTypeChange(actor);
+      expect(actor).toMatchObject({ count_unit: 'households', use_nature: 'innovation_applied' });
+      actor.actor_type_id = RESEARCHERS;
+      component.onActorTypeChange(actor);
+      expect(lastPayload().innovatonUse.actors[0]).toMatchObject({ count_unit: null, use_nature: 'innovation_applied' });
+    });
+
+    it('gives every actor row its own radio-group key, stable across calls', () => {
+      loadActors([
+        { actor_type_id: RESEARCHERS, is_active: true },
+        { actor_type_id: RESEARCHERS, is_active: true }
+      ]);
+      const [a, b] = component.visibleActors;
+      expect(component.followUpRowKey(a)).not.toBe(component.followUpRowKey(b));
+      expect(component.followUpRowKey(a)).toBe(component.followUpRowKey(a));
+    });
+
+    it('does not change what the MDS tracker publishes', () => {
+      loadActors([{ actor_type_id: FARMERS, is_active: true }]);
+      const before = JSON.stringify(mdsTracker.setSectionFields.mock.calls.at(-1));
+      component.selectCountUnit(component.visibleActors[0], 'individuals');
+      component.selectUseNature(component.visibleActors[0], 'information_received');
+      expect(JSON.stringify(mdsTracker.setSectionFields.mock.calls.at(-1))).toBe(before);
+    });
+
+    it('markup: native radios with the shared copy, gated by the two getters, no REQUIRED marker', () => {
+      const template = html();
+      const card = template.slice(template.indexOf('<ng-template #actorCard'), template.indexOf('<ng-template #organizationCard'));
+      const start = card.indexOf('@if (showCountUnitQuestion(actor))');
+      expect(start).toBeGreaterThan(card.indexOf('label="Actor type"'));
+      const block = card.slice(start, card.indexOf('<!-- P2-3785 (4b)'));
+      for (const needle of [
+        'followUpCopy.countUnitQuestion',
+        'followUpCopy.useNatureQuestion',
+        'followUpCopy.countUnitOptions',
+        'followUpCopy.useNatureOptions',
+        'pr-native-radio',
+        '[attr.name]="followUpRowKey(actor)',
+        '(change)="selectCountUnit(actor, option.value)"',
+        '(change)="selectUseNature(actor, option.value)"'
+      ]) {
+        expect(block).toContain(needle);
+      }
+      expect(block).not.toMatch(/required|REQUIRED/);
+    });
+  });
 });
