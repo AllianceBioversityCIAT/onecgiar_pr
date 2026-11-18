@@ -29,6 +29,13 @@ import {
   totalCumulativeUse
 } from '../../../../../shared/utils/current-use-update.util';
 
+import {
+  FARMER_COUNT_UNIT,
+  FARMER_FOLLOW_UP_COPY,
+  FARMER_FOLLOW_UP_MIN_PHASE_YEAR,
+  FARMERS_ACTOR_TYPE_ID
+} from '../../../../../shared/components/innovation-use-form/farmer-follow-up';
+
 const SECTION_NAME = 'type-specific';
 
 /** actor_type_id whose row needs a free-text label (mirrors the W1/W2 anticipated-user-demand form). */
@@ -118,6 +125,8 @@ export class TypeInnovationUseComponent implements OnInit {
   readonly projection2030Copy = INNOVATION_USE_2030_PROJECTION_COPY;
   /** P2-3985 — same copy as the W1/W2 "Current Use Update" block. */
   readonly currentUseCopy = CURRENT_USE_UPDATE_COPY;
+  /** INA-T-8 — the shared Farmers follow-up copy (same constants as the W1/W2 form). */
+  readonly followUpCopy = FARMER_FOLLOW_UP_COPY;
   /** P2-3785 (4b) — the two sex groups, each with its Youth / Non-youth split, as in pooled reporting. */
   readonly genderGroups = [
     { key: 'women', label: 'Women', youthWarning: BILATERAL_INNOVATION_USE_ACTORS_COPY.womenYouthWarning },
@@ -757,6 +766,61 @@ export class TypeInnovationUseComponent implements OnInit {
       this.body.has_scaling_studies = null;
       this.body.scaling_studies_urls = [];
     }
+    this.onFieldChange();
+  }
+
+  /**
+   * INA-T-8 (changes/innovation-use-nature-all-actors, INA-R-21 / INA-DD-10) — the follow-up questions on the
+   * actor card. Both need a selected type and the 2026 phase (phase year, never portfolio; an unresolved year
+   * counts as the running cycle, as `showInnovationLinkQuestion`). The unit question is Farmers-only; the nature
+   * question is on every card. Neither is MDS (INA-P-15): they never reach `updateMds()`.
+   */
+  private get followUpPhaseOpen(): boolean {
+    const year = this.creationService.reportingYear();
+    return year == null || year >= FARMER_FOLLOW_UP_MIN_PHASE_YEAR;
+  }
+
+  showUseNatureQuestion(actor: any): boolean {
+    const typeId = actor?.actor_type_id;
+    return this.followUpPhaseOpen && typeId !== null && typeId !== undefined && `${typeId}`.trim() !== '';
+  }
+
+  showCountUnitQuestion(actor: any): boolean {
+    return this.showUseNatureQuestion(actor) && actor.actor_type_id == FARMERS_ACTOR_TYPE_ID;
+  }
+
+  private readonly followUpRowKeys = new WeakMap<object, number>();
+  private followUpRowSeq = 0;
+
+  /** A stable, unique radio-group name per actor row (several rows share the page). */
+  followUpRowKey(actor: any): string {
+    if (!this.followUpRowKeys.has(actor)) this.followUpRowKeys.set(actor, this.followUpRowSeq++);
+    return `bil-iu-follow-up-${this.followUpRowKeys.get(actor)}`;
+  }
+
+  /**
+   * Unit answered. "Households" reuses this card's own "does not apply" single-total handler
+   * (`onDisaggregationChange`): it ticks the box and wipes the grid. A row already on a single total keeps its
+   * typed total. "Individuals" leaves the row as it is.
+   */
+  selectCountUnit(actor: any, value: string): void {
+    actor.count_unit = value ?? null;
+    if (value === FARMER_COUNT_UNIT.HOUSEHOLDS && !actor.sex_and_age_disaggregation) {
+      actor.sex_and_age_disaggregation = true;
+      this.onDisaggregationChange(actor);
+      return;
+    }
+    this.onFieldChange();
+  }
+
+  selectUseNature(actor: any, value: string): void {
+    actor.use_nature = value ?? null;
+    this.onFieldChange();
+  }
+
+  /** Away from Farmers the unit answer goes (INA-R-21); the nature answer stays, it applies to every type. */
+  onActorTypeChange(actor: any): void {
+    if (actor?.count_unit && actor.actor_type_id != FARMERS_ACTOR_TYPE_ID) actor.count_unit = null;
     this.onFieldChange();
   }
 
