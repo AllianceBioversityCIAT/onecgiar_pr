@@ -493,6 +493,7 @@ export class TypeInnovationUseComponent implements OnInit {
         this.body = response || {};
         this.hydrateOrganizations();
         this.hydrateStoredAnswers();
+        this.normalizeHouseholdsActors(); // @akili-spec changes/innovation-use-nature-all-actors (INA-T-8 households lock)
         this.hydrateInnovationLink();
         this.hydrateInvestmentTables();
         this.loaded.set(true);
@@ -610,17 +611,50 @@ export class TypeInnovationUseComponent implements OnInit {
    */
   onDisaggregationChange(actor: any): void {
     if (actor?.sex_and_age_disaggregation) {
-      actor.women = null;
-      actor.women_youth = null;
-      actor.men = null;
-      actor.men_youth = null;
+      this.clearBreakdown(actor);
       actor.how_many = null;
-      actor.age_disaggregation_not_available = null;
-      actor.youth_split_applied_by_system = null;
     } else {
       this.syncTotal(actor);
     }
     this.onFieldChange();
+  }
+
+  /** Drops the Women/Men grid and the age-only fallback; the single "How many" is left to the caller. */
+  private clearBreakdown(actor: any): void {
+    actor.women = null;
+    actor.women_youth = null;
+    actor.men = null;
+    actor.men_youth = null;
+    actor.age_disaggregation_not_available = null;
+    actor.youth_split_applied_by_system = null;
+  }
+
+  /**
+   * @akili-spec changes/innovation-use-nature-all-actors (INA-T-8 households lock) — a Farmers row answered
+   * Households reports one total, so its "does not apply" tick is locked ON while the unit stays Households
+   * (the template binds `[readOnly]` to this). Individuals, or leaving Farmers (which clears the unit), unlocks it.
+   */
+  isHouseholdsRow(actor: any): boolean {
+    return actor?.count_unit === FARMER_COUNT_UNIT.HOUSEHOLDS;
+  }
+
+  /**
+   * @akili-spec changes/innovation-use-nature-all-actors (INA-T-8 households lock) — a row stored as Households
+   * with the tick off (answered before the lock existed) would show the Women/Men grid the unit rules out. Put it on
+   * the single total once, on load: the tick goes on, the grid goes, and the reporter's number is kept — the typed
+   * "How many" if there is one, else the Women + Men sum. Mutates the loaded rows only: nothing is saved here, the
+   * next save carries it (hydration normalises the booleans the same way).
+   */
+  private normalizeHouseholdsActors(): void {
+    (this.body.actors ?? []).forEach((actor: any) => {
+      if (!this.isHouseholdsRow(actor) || actor.sex_and_age_disaggregation) return;
+      // A 0 beside a Women/Men grid is an unset total, not a typed one: the grid sum is the number the reporter gave.
+      const typed = this.toCount(actor.how_many);
+      const total = typed || (this.actorTotal(actor) ?? typed);
+      actor.sex_and_age_disaggregation = true;
+      this.clearBreakdown(actor);
+      actor.how_many = total;
+    });
   }
 
   /** Non-youth is never stored: it is the group total minus its youth (server `summary.service.ts` derives it the same way). */
@@ -800,8 +834,9 @@ export class TypeInnovationUseComponent implements OnInit {
 
   /**
    * Unit answered. "Households" reuses this card's own "does not apply" single-total handler
-   * (`onDisaggregationChange`): it ticks the box and wipes the grid. A row already on a single total keeps its
-   * typed total. "Individuals" leaves the row as it is.
+   * (`onDisaggregationChange`): it ticks the box and wipes the grid, and the box then stays locked on
+   * (`isHouseholdsRow`, INA-T-8 households lock). A row already on a single total keeps its
+   * typed total. "Individuals" leaves the row as it is and unlocks the box without unticking it.
    */
   selectCountUnit(actor: any, value: string): void {
     actor.count_unit = value ?? null;

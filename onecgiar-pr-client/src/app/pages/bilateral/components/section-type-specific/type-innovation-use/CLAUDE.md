@@ -1,6 +1,6 @@
 # type-innovation-use (bilateral)
 
-**Verified:** 2026-11-18 · INC-168062 (INA-T-8): current-use actor cards ask the optional unit (Farmers only) and nature (every type) questions from 2026, not in the MDS tracker; prior: 2026-11-12 · qa-development-2026-ss · changes/innovation-use-w3-hide-2030 IWH-T-2 (INC-168060: 2030 Use Projection block removed from the form, `hasActorMissingType` checks current-use actors only, payload unchanged); prior: 2026-11-11 · quick/innovation-use-actors-sentence-ipsr (INC-168060: current-use Actors description adds the reporting-year sentence — current use is MDS; Nicoleta); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: Current Use Update block + 4th MDS item `use-current-update` (blocks Submit); prior: 2026-10-14 · fix/innovation-use-phase-copy · current use hides only on an explicit "Yes" (NULL shows it); bilateral results DO roll over; prior: 2026-10-07 · The use-level ladder (not MDS since P2-3785 AC1) moved under full metadata, before the questions it gates.
+**Verified:** 2026-11-18 · INC-168062 (INA-T-8 households lock): the "does not apply" tick is locked ON while the unit is Households, and a loaded Households row with the tick off is normalised on load; prior: 2026-11-18 · INC-168062 (INA-T-8): current-use actor cards ask the optional unit (Farmers only) and nature (every type) questions from 2026, not in the MDS tracker; prior: 2026-11-12 · qa-development-2026-ss · changes/innovation-use-w3-hide-2030 IWH-T-2 (INC-168060: 2030 Use Projection block removed from the form, `hasActorMissingType` checks current-use actors only, payload unchanged); prior: 2026-11-11 · quick/innovation-use-actors-sentence-ipsr (INC-168060: current-use Actors description adds the reporting-year sentence — current use is MDS; Nicoleta); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: Current Use Update block + 4th MDS item `use-current-update` (blocks Submit); prior: 2026-10-14 · fix/innovation-use-phase-copy · current use hides only on an explicit "Yes" (NULL shows it); bilateral results DO roll over; prior: 2026-10-07 · The use-level ladder (not MDS since P2-3785 AC1) moved under full metadata, before the questions it gates.
 
 ## What it is
 BIL-RAU-T-8 pointer: Section 1 (`section-general-info`) now renders the Annual updating block
@@ -173,6 +173,13 @@ P2-3556 (load gate), P2-3390 (the three Investment tables).
   Farmers clears `count_unit`, **keeps `use_nature`**. Optional on purpose: no REQUIRED marker, and neither answer
   reaches `updateMds()` / the tracker (INA-P-15). ⚠️ Recorded divergence (INA-DD-10): the grid wiped by Households is
   not restored when the row later leaves Farmers — do not add that here without the spec.
+- 🛑 **Households lock (INA-T-8 reopened, prtest result 10122).** While `count_unit === 'households'`
+  (`isHouseholdsRow`) the "Sex and age disaggregation does not apply" tick is locked ON (`[readOnly]` on the
+  `app-pr-checkbox`, which disables the native input; it stays visible, never hidden), so the Women/Men grid cannot
+  come back. `loadData` runs `normalizeHouseholdsActors()` once after hydration: a stored Households row with the tick
+  off is ticked, its grid cleared (`clearBreakdown`, shared with `onDisaggregationChange`) and its `how_many` kept (typed
+  total, else the Women + Men sum). ⚠️ Nothing is autosaved on load: the fix reaches the DB with the next user save.
+  Individuals unlocks the tick without unticking it; leaving Farmers clears the unit, which unlocks it too.
 - ⚠️ **`count_unit` / `use_nature` ride on the loaded actor rows**, there is no per-key mapper. A new code path that
   rebuilds actor rows from named fields would drop the picks without an error.
 - ⚠️ **The follow-up answers are NOT in `mdsTracker`.** Publishing them would hold Submit on questions the editor
