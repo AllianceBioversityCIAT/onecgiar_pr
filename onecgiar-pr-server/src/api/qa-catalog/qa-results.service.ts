@@ -252,6 +252,7 @@ export class QaResultsService {
     const filter = {
       phaseYear: query.phase_year,
       programIds: query.program_ids,
+      programCodes: query.program_codes,
       resultTypeKeys: query.result_type_keys,
     };
     return this.guarded(

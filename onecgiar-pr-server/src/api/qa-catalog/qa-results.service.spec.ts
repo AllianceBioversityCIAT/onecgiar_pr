@@ -108,6 +108,7 @@ const build = (rows: FakeRow[] = FIXTURE) => {
 const query = (over: Record<string, unknown> = {}) => ({
   phase_year: 2026,
   program_ids: [] as number[],
+  program_codes: [] as string[],
   result_type_keys: [] as string[],
   page: 1,
   page_size: 100,
@@ -148,6 +149,16 @@ describe('QaResultsService.list', () => {
     expect(repo.count).toHaveBeenCalledWith(
       expect.objectContaining({ phaseYear: 2026, programIds: [5] }),
     );
+  });
+
+  it('forwards program_codes to page, count and breakdown as programCodes', async () => {
+    const { service, repo } = build();
+    await service.list(query({ program_codes: ['SP01'] }));
+    for (const fn of [repo.findPage, repo.count, repo.breakdown]) {
+      expect(fn).toHaveBeenCalledWith(
+        expect.objectContaining({ phaseYear: 2026, programCodes: ['SP01'] }),
+      );
+    }
   });
 
   it('program 5 AND policy_change: only program 5 policy changes; total 2; breakdown over the filtered set', async () => {

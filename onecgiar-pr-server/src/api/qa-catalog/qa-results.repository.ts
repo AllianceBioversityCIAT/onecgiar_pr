@@ -44,6 +44,8 @@ export interface EligibilityFilter {
   phaseYear: number;
   /** CLARISA initiative ids, matched against the LEAD program only; empty/absent = no filter. */
   programIds?: readonly number[];
+  /** Program official codes (e.g. `SP01`), matched against the LEAD program only; empty/absent = no filter. */
+  programCodes?: readonly string[];
   /** Catalog keys; empty/absent = no filter. A key with no id matches nothing. */
   resultTypeKeys?: readonly string[];
 }
@@ -282,6 +284,11 @@ WHERE r.id IN (${placeholders(unique.length)})`,
     if (programIds.length > 0) {
       programClause = `\n  AND rbi.inititiative_id IN (${placeholders(programIds.length)})`;
       params.push(...programIds);
+    }
+    const programCodes = [...new Set(filter.programCodes ?? [])];
+    if (programCodes.length > 0) {
+      programClause += `\n  AND ci.official_code IN (${placeholders(programCodes.length)})`;
+      params.push(...programCodes);
     }
 
     const from = `FROM result r
