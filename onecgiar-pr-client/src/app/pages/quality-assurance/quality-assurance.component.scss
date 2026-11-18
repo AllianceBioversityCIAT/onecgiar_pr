@@ -48,3 +48,35 @@
     height: 100vh !important;
   }
 }
+
+// P2-3911 — 'new' mode: the button lives in its own bar above the iframe instead of floating over
+// the QA header. Legacy keeps the absolute `.expand_icon` above.
+.qa_toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 8px;
+}
+
+.expand_icon.expand_icon_bar {
+  position: static !important;
+  margin: 0;
+  border: none;
+  font: inherit;
+}
+
+.iframe_container_new.expand {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--pr-color-white);
+
+  .qa_toolbar {
+    padding: 8px 10px;
+  }
+
+  .embedded {
+    flex: 1;
+    height: auto !important;
+    min-height: 0;
+    border-radius: 0;
+  }
+}
