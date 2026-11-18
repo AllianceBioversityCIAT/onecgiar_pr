@@ -675,6 +675,25 @@ describe('ResultsApiService', () => {
     });
   });
 
+  describe('GET_QaSpLink (P2-3911)', () => {
+    it('requests a code for the program with the programCode query param', () => {
+      service.GET_QaSpLink('SP01').subscribe();
+
+      const req = httpMock.expectOne(r => r.url === `${environment.apiBaseUrl}api/qa/sp-link`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.get('programCode')).toBe('SP01');
+      req.flush({ response: { code: 'x', expiresAt: 'y' } });
+    });
+
+    it('omits programCode when none is given (admin without a program)', () => {
+      service.GET_QaSpLink(null).subscribe();
+
+      const req = httpMock.expectOne(r => r.url === `${environment.apiBaseUrl}api/qa/sp-link`);
+      expect(req.request.params.has('programCode')).toBe(false);
+      req.flush({ response: { code: 'x', expiresAt: 'y' } });
+    });
+  });
+
   describe('GET_AllCLARISARegions', () => {
     it('should call GET_AllCLARISARegions and return expected data', done => {
       service.GET_AllCLARISARegions().subscribe(response => {

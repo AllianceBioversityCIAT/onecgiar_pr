@@ -170,6 +170,24 @@ describe('PortfolioTypologyBlockComponent (TBC-T-4)', () => {
       expect(instance.fill('unclassified')).toBe('var(--pr-color-neutral-800)');
     });
 
+    it('INC-168045 count colours: heading ink on the three light fills, white elsewhere (token strings)', () => {
+      const f = create([...baseRows(), { submitter: 'SP01', result_type: 'Innovation use', status_id: 3 }]);
+      const option = (chartDebug(f).componentInstance as PrVizChartComponent).options() as unknown as { series: { id: string; label: { color: string } }[] };
+      const byType = new Map(option.series.map(s => [s.id.split('|')[1], s.label.color]));
+      expect(byType.get('Innovation use')).toBe('var(--pr-text-heading)');
+      expect(byType.get('Knowledge product')).toBe('var(--pr-color-white)');
+    });
+
+    it('INC-168045 shows the key of the two bars, from the copy, above the chart', () => {
+      const key = el(create()).querySelector('[data-testid="typology-bar-key"]') as HTMLElement;
+      expect(key.getAttribute('aria-label')).toBe(PORTFOLIO_OVERVIEW_COPY.barKey.ariaLabel);
+      expect(key.querySelector('[data-testid="typology-bar-key-submitted"]')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        `${PORTFOLIO_OVERVIEW_COPY.barKey.submitted} ${PORTFOLIO_OVERVIEW_COPY.barKey.submittedHint}`
+      );
+      expect(key.querySelector('[data-testid="typology-bar-key-editing"]')?.textContent?.trim()).toBe(PORTFOLIO_OVERVIEW_COPY.barKey.editing);
+      expect(key.querySelector('[data-testid="typology-bar-key-counts"]')?.textContent?.trim()).toBe(PORTFOLIO_OVERVIEW_COPY.barKey.countsHint);
+    });
+
     it('fills come from tokens only: no hex anywhere in the markup', () => {
       expect(el(create()).innerHTML).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
     });

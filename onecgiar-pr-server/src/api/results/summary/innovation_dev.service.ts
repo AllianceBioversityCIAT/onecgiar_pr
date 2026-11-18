@@ -25,6 +25,10 @@ import { EvidencesRepository } from '../evidences/evidences.repository';
 import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
 import { ResultAnswer } from '../result-questions/entities/result-answers.entity';
 import { ResultCoreInnovUseSectionEnum } from '../../results-framework-reporting/result_innov_section/enum/result_innov_section.enum';
+import {
+  toCountUnit,
+  toUseNature,
+} from '../result-actors/farmer-follow-up.constant';
 
 /** P2-3428 — the 2030 projection rows share the actor/organization/measure tables, keyed by section. */
 const INNOVATION_USE_SECTION_FUTURE = ResultCoreInnovUseSectionEnum.FUTURE;
@@ -271,6 +275,8 @@ export class InnoDevService {
               how_many: el?.how_many,
               addressing_demands: this.isNullData(el?.addressing_demands),
               ...this.ageFallbackFields(el),
+              // @akili-spec changes/innovation-use-nature-all-actors (INA-T-4, INA-DD-9)
+              ...this.followUpFields(el),
             },
           );
         } else {
@@ -301,6 +307,8 @@ export class InnoDevService {
             how_many: el?.how_many,
             addressing_demands: this.isNullData(el?.addressing_demands),
             ...this.ageFallbackFields(el),
+            // @akili-spec changes/innovation-use-nature-all-actors (INA-T-4, INA-DD-9)
+            ...this.followUpFields(el),
             ...sectionStamp,
           });
         }
@@ -520,6 +528,25 @@ export class InnoDevService {
         el.youth_split_applied_by_system == null
           ? null
           : !!el.youth_split_applied_by_system;
+    }
+    return fields;
+  }
+
+  /**
+   * @akili-spec changes/innovation-use-nature-all-actors (INA-T-4, INA-R-21, INA-DD-9)
+   *
+   * `count_unit` / `use_nature` of an actor row, through the same whitelist as the v2 writer (only
+   * the allowed codes are stored, anything else is NULL). Written only when the key travels: the
+   * bilateral editor sends the loaded rows back as they are, while Result Review
+   * (`summary.service.ts`) and the pre-P25 callers omit them and must not clear a stored answer.
+   */
+  private followUpFields(el: any) {
+    const fields: Record<string, string | null> = {};
+    if (el && 'count_unit' in el) {
+      fields.count_unit = toCountUnit(el.count_unit);
+    }
+    if (el && 'use_nature' in el) {
+      fields.use_nature = toUseNature(el.use_nature);
     }
     return fields;
   }

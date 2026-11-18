@@ -9,7 +9,11 @@ import { EmailNotificationManagementModule } from '../../shared/microservices/em
 import { EmailNotificationManagementService } from '../../shared/microservices/email-notification-management/email-notification-management.service';
 import { GlobalParameterRepository } from '../global-parameter/repositories/global-parameter.repository';
 import { TemplateRepository } from '../platform-report/repositories/template.repository';
+import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 import { Version } from '../versioning/entities/version.entity';
+import { CenterFocalPointsService } from './center-focal-points.service';
+import { CenterMelFocalPoint } from './entities/center-mel-focal-point.entity';
+import { CenterReminderRouting } from './entities/center-reminder-routing.entity';
 import { ReplicatedInnovationRemindersController } from './replicated-innovation-reminders.controller';
 import { ReplicatedInnovationReminderCron } from './replicated-innovation-reminders.cron';
 import { ReplicatedInnovationRemindersModule } from './replicated-innovation-reminders.module';
@@ -47,12 +51,16 @@ describe('ReplicatedInnovationRemindersModule', () => {
         ...foreign.map((provide) => ({ provide, useValue: {} })),
         { provide: DataSource, useValue: { createEntityManager: jest.fn() } },
         { provide: getRepositoryToken(Version), useValue: {} },
+        { provide: getRepositoryToken(CenterMelFocalPoint), useValue: {} },
+        { provide: getRepositoryToken(CenterReminderRouting), useValue: {} },
+        { provide: getRepositoryToken(ClarisaCenter), useValue: {} },
         { provide: EmailNotificationManagementService, useValue: {} },
         { provide: RoleByUserRepository, useValue: {} },
       ],
     }).compile();
 
     expect(moduleRef.get(ReplicatedInnovationRemindersService)).toBeDefined();
+    expect(moduleRef.get(CenterFocalPointsService)).toBeDefined();
     expect(moduleRef.get(ReplicatedInnovationReminderCron)).toBeDefined();
     expect(
       moduleRef.get(ReplicatedInnovationRemindersController),

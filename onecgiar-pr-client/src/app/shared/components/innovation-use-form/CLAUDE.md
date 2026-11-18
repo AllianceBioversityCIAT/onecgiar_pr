@@ -1,6 +1,6 @@
 # innovation-use-form
 
-**Verified:** 2026-11-12 · qa-development-2026-ss · bugfix/innovation-use-youth-required IUY-T-2 (INC-167167: empty Youth keeps Non-youth empty + hint, both grids; `validateYouth` now derives on the edited row); 2026-11-11 · changes/innovation-use-w3-hide-2030 IWH-T-1 (INC-168060: 2030 block hidden for W3/Bilaterals); quick/innovation-use-actors-sentence-ipsr (INC-168060 feedback: `narrativeActors` P25 sentence now depends on `isIpsr` — IPSR step 1 keeps "by end of 2030" (scaling ambition), Innovation Use keeps the reporting-year sentence; `isIpsr` is a static host input, so the `computed` reading it is safe); 2026-11-10 · quick/innovation-use-actors-sentence (INC-168060: P25 actors narrative now asks for actual users in the reporting year, not the 2030 projection); quick/remove-farmer-helper-note (Nicoleta: italic helper note under Q-b removed, `helper` key dropped); prior: 2026-11-03 · T-7 findings (re-click Households restores the grid; unsaved Households "How many" required); IFC-T-7 fixes (Individuals keeps a hand-set single total; Q-b gap); IFC-T-4 (changes/innovation-use-farmer-count-nature): Farmers follow-up block, gate and Households coupling (uncommitted); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update rules moved to `shared/utils/current-use-update.util.ts` (shared with the bilateral form); prior: 2026-09-11 · branch performance-refactor · 5791b85b9
+**Verified:** 2026-11-18 · INC-168062 (INA-T-6) · changes/innovation-use-nature-all-actors: follow-up questions shown on every actor row (scope vs mandatory, nature question, W3 shown not blocking); prior: 2026-11-12 · qa-development-2026-ss · bugfix/innovation-use-youth-required IUY-T-2 (INC-167167: empty Youth keeps Non-youth empty + hint, both grids; `validateYouth` now derives on the edited row); 2026-11-11 · changes/innovation-use-w3-hide-2030 IWH-T-1 (INC-168060: 2030 block hidden for W3/Bilaterals); quick/innovation-use-actors-sentence-ipsr (INC-168060 feedback: `narrativeActors` P25 sentence now depends on `isIpsr` — IPSR step 1 keeps "by end of 2030" (scaling ambition), Innovation Use keeps the reporting-year sentence; `isIpsr` is a static host input, so the `computed` reading it is safe); 2026-11-10 · quick/innovation-use-actors-sentence (INC-168060: P25 actors narrative now asks for actual users in the reporting year, not the 2030 projection); quick/remove-farmer-helper-note (Nicoleta: italic helper note under Q-b removed, `helper` key dropped); prior: 2026-11-03 · T-7 findings (re-click Households restores the grid; unsaved Households "How many" required); IFC-T-7 fixes (Individuals keeps a hand-set single total; Q-b gap); IFC-T-4 (changes/innovation-use-farmer-count-nature): Farmers follow-up block, gate and Households coupling (uncommitted); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update rules moved to `shared/utils/current-use-update.util.ts` (shared with the bilateral form); prior: 2026-09-11 · branch performance-refactor · 5791b85b9
 
 ## What it is
 The shared Innovation Use questionnaire: use level (0-9), narrative/actors blocks, the
@@ -63,29 +63,36 @@ The shared Innovation Use questionnaire: use level (0-9), narrative/actors block
   visual**: it emits no `.pr-field.mandatory` / `.pr-input.mandatory`, because this field is already
   counted once by the directive above — adding those classes would turn "1 field missing" into "2".
 
-## Farmers follow-up block (IFC, `changes/innovation-use-farmer-count-nature`)
+## Follow-up questions block (IFC `changes/innovation-use-farmer-count-nature` + INA `changes/innovation-use-nature-all-actors`)
 
-Under the "Actor type" select of every **Farmers** row, in BOTH blocks (current use + 2030), one `<ng-template
-#farmerFollowUp>` (end of the `.html`, rendered through `ngTemplateOutlet`) asks Q-a (households / individual
-actors) and Q-b (information received / innovation applied). Copy, codes and the Farmers id live in
+Under the "Actor type" select of every active row, in BOTH blocks (current use + 2030), one `<ng-template
+#farmerFollowUp>` (end of the `.html`, via `ngTemplateOutlet`) draws two parts inside `data-testid="iu-follow-up"`: the
+Farmers part (`iu-farmer-follow-up`: title + Q-a households / individual actors, Farmers rows only) and the nature part
+(`iu-nature-follow-up`: Q-b information received / innovation applied, any row with a type, no title). Copy, codes and the Farmers id live in
 `farmer-follow-up.ts` — **verbatim from `docs/specs/changes/.../mockup/farmer-follow-up-questions.png`, pinned
 string by string in the spec; never paraphrase** (QA reads it back). The mock-up's italic helper note ("If your
 numbers include both groups…") was removed on Nicoleta's request (2026-11-10) — do not restore it. The mock-up's developer note ("Single choice.
 Stored as ...") is NOT copy and is never rendered.
 
-- 🛑 **Gate = `isFarmerFollowUpRow(actor)`**: `!isIpsr` + `isPhaseYearAtLeast(2026)` + `source_name !== 'W3/Bilaterals'`
-  + `actor_type_id == 1` + `is_active !== false`. Phase year and `source_name` both come from `currentResultSignal()`
-  (same `GET results/get/:id` row). Never `isP25()` (IFC-DD-5). Unknown year = no block.
-- `removeOther()` stops disabling Farmers when `isFarmerFollowUpResult()` (second Farmers row = split received/applied).
-  Every other type, and every out-of-scope result, keeps the one-row rule.
+- 🛑 **Scope vs mandatory (INA-DD-5/6).** `isFollowUpScope()` = where the questions are SHOWN: `!isIpsr` + `isPhaseYearAtLeast(2026)`,
+  any `source_name` (W1/W2 and W3/Bilaterals). `isFollowUpMandatory()` = where they are REQUIRED (`[required]` on both cards):
+  the scope minus W3/Bilaterals, which shows them editable and never blocking (INA-R-20; the 2030 block stays hidden by IWH).
+  Row gates: `isFarmerFollowUpRow` (scope + `is_active !== false` + `actor_type_id == 1`) = title + Q-a; `isNatureFollowUpRow`
+  (scope + active + a type selected) = Q-b. Phase year and `source_name` come from `currentResultSignal()`. Never `isP25()` (IFC-DD-5). Unknown year = no block.
+- ⚠️ **`isFarmerFollowUpResult()` (scope minus W3) is now read ONLY by the youth rules** (`validateYouth`, `showYouthRequiredHint`).
+  It must not gain readers (design P-9): a follow-up question gated on it would silently drop W3.
+- `removeOther()` returns `[]` inside the scope: every type can repeat (INA-R-9), rows of one type are told apart by their nature
+  answer, each Q-b radio group named by `farmerRowKey(actorItem)`. Outside it (2025, IPSR, unknown phase) the one-row rule stays (only "Other" twice).
 - **Households** (`onCountUnitChange`) reuses the single-total path: sets `sex_and_age_disaggregation = true`, wipes the
   grid with `cleanActor` (only when the row actually changes shape — a typed single total survives), and
   `isHouseholdsRow()` hides the "does not apply" tick. **Individuals** puts the grid back ONLY when the previous
   answer was Households; ⚠️ a row the reporter put on a single total by hand keeps its `how_many` and tick (IFC-T-7:
   the unconditional version wiped a stored total on the first answer).
 - Households re-clicked (unit -> null) restores the grid like Individuals; an unsaved Households row's "How many" is `[required]` via `isHouseholdsRow` (every other unsaved field keeps `!!result_actors_id`).
-- `onActorTypeChange` (select `ngModelChange`) clears both answers away from Farmers; it never adds keys to rows that
-  never had them (IPSR payloads unchanged).
+- Advisory (INA-R-20): on W3 a Farmers row answered "Households" now collapses to a single total (grid and "does not apply"
+  tick hidden), because `isHouseholdsRow` reads the scope, not `isFollowUpMandatory()`.
+- `onActorTypeChange` (select `ngModelChange`) clears only `count_unit` away from Farmers (INA-R-8): `use_nature` applies to
+  every type and is kept. A Households row gets its grid back; rows that never had the keys get none (IPSR payloads unchanged).
 - ⚠️ **`app-pr-radio-button` cannot draw an option description** (plain `{{ label }}` only). Q-b uses it with
   `[hideOptions]="true"` for the field card / REQUIRED pill / `.pr-field.mandatory` marker (what the mandatory scan
   counts) and draws its own options with the shared `pr-native-radio` class. No Spartan radio-group is installed under
@@ -96,7 +103,8 @@ Stored as ...") is NOT copy and is never rendered.
   and `innovationDevInfoBody.ts` declares the two fields (TS2339 trap above).
 - Q-b radiogroup carries `-mt-[27px]`: the hidden-options card still leaves its bottom margin + empty `.pr-field`
   padding + block gap (41px vs Q-a's 10px, measured IFC-T-7). Re-measure if `app-field-card` spacing changes.
-- Specs: the `Farmers follow-up (IFC-T-4)` describe in `innovation-use-form.component.spec.ts`, run per block.
+- Specs, in `innovation-use-form.component.spec.ts`, run per block: the `Farmers follow-up (IFC-T-4)` describe and the
+  `nature question on every row (INA-T-6)` one (every row, W3 shown not blocking, repeatable types).
 - Not provable in jsdom: placement and visual likeness to the mock-up (IFC-T-7 visual check).
 
 ## Section 7 of P2-3537 — the age-only fallback and the 50/50 split

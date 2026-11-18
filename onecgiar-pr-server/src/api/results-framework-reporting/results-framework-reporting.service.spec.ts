@@ -2235,6 +2235,29 @@ describe('ResultsFrameworkReportingService', () => {
         { id: '6', short_name: 'P6', full_name: 'Project 6', is_w3: '0' },
       ],
       centers: [{ code: 'CENTER-03', acronym: 'CIAT', name: 'Alliance' }],
+      rejections: [
+        {
+          result_id: '1',
+          comment: '  Evidence link broken  ',
+          initiative_code: 'SP03',
+          initiative_name: 'Program 3',
+          rejected_at: '2026-11-10',
+        },
+        {
+          result_id: '2',
+          comment: '   ',
+          initiative_code: null,
+          initiative_name: null,
+          rejected_at: '2026-11-11',
+        },
+        {
+          result_id: '3',
+          comment: null,
+          initiative_code: 'SP01',
+          initiative_name: 'Program 1',
+          rejected_at: '2026-11-12',
+        },
+      ],
     });
 
     beforeEach(() => {
@@ -2274,7 +2297,46 @@ describe('ResultsFrameworkReportingService', () => {
           { code: 'CENTER-99', acronym: 'CENTER-99', name: 'CENTER-99' },
         ],
         w3ProjectIds: [5],
+        rejections: [
+          {
+            resultId: 1,
+            comment: 'Evidence link broken',
+            programCode: 'SP03',
+            programName: 'Program 3',
+            rejectedAt: '2026-11-10',
+          },
+          {
+            resultId: 2,
+            comment: null,
+            programCode: null,
+            programName: null,
+            rejectedAt: '2026-11-11',
+          },
+          {
+            resultId: 3,
+            comment: null,
+            programCode: 'SP01',
+            programName: 'Program 1',
+            rejectedAt: '2026-11-12',
+          },
+        ],
       });
+    });
+
+    it('returns rejections: [] when the query returns none (PRE-R-8)', async () => {
+      mockResultRepository.getPortfolioResultDimensions.mockResolvedValue({
+        ...rows(),
+        rejections: [],
+      });
+      const result = (await service.getPortfolioResultDimensions()) as any;
+      expect(result.response.rejections).toEqual([]);
+
+      mockResultRepository.getPortfolioResultDimensions.mockResolvedValue({
+        ...rows(),
+        rejections: undefined,
+      });
+      const again = (await service.getPortfolioResultDimensions()) as any;
+      expect(again.response.rejections).toEqual([]);
     });
 
     it('keeps a Center code missing from the catalogue, labelled by its code', async () => {

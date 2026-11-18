@@ -1,7 +1,7 @@
 // @akili-spec changes/portfolio-overview-revamp/filtered-detail-export (FDE-T-1)
 // Expected values are hard-coded from requirements.md scenarios, never computed with the code under test.
 import type { PortfolioResultDimensions } from '../../../../../../shared/interfaces/portfolio-result-dimensions.interface';
-import type { RawResult } from '../../services/portfolio-overview.service';
+import type { PortfolioDimensionsState, RawResult } from '../../services/portfolio-overview.service';
 import {
   buildDetailLabels,
   exportFileName,
@@ -31,7 +31,7 @@ const row = (over: Partial<RawResult> = {}): RawResult => ({
   ...over
 });
 
-const NO_LABELS: DetailLabels = { projects: new Map(), centers: new Map() };
+const NO_LABELS: DetailLabels = { projects: new Map(), centers: new Map(), rejections: new Map() };
 
 const dims = (): PortfolioResultDimensions => ({
   versionId: 25,
@@ -54,7 +54,8 @@ const dims = (): PortfolioResultDimensions => ({
     { code: 'C2', acronym: 'IRRI', name: 'Rice' },
     { code: 'C3', acronym: 'ABC', name: 'Abc' }
   ],
-  w3ProjectIds: [7]
+  w3ProjectIds: [7],
+  rejections: []
 });
 
 describe('toDetailRows', () => {
@@ -182,7 +183,7 @@ describe('searchRows (S-5.1)', () => {
 });
 
 describe('export (S-8.1, S-8.2)', () => {
-  it('toExportRows keys follow R-3 order plus Link, with the full title and no creator fields', () => {
+  it('toExportRows keys follow R-3 order, the 3 rejection columns after Status (PRE-R-7), plus Link, with the full title and no creator fields', () => {
     const long = 'x'.repeat(300);
     const [r] = toExportRows(toDetailRows([row({ title: long, result_code: 55, version_id: 25 })], 'ready', NO_LABELS), 'https://pr.example');
     expect(Object.keys(r)).toEqual([
@@ -193,6 +194,9 @@ describe('export (S-8.1, S-8.2)', () => {
       'P/A',
       'Source',
       'Status',
+      'Rejection reason',
+      'Rejected by',
+      'Rejected on',
       'Origin',
       'Lead Center',
       'Contributing Centers',
@@ -219,5 +223,65 @@ describe('export (S-8.1, S-8.2)', () => {
 
   it('resultUrl follows the result-detail route with ?phase=', () => {
     expect(resultUrl(1234, 25, 'https://pr.example')).toBe('https://pr.example/result/result-detail/1234/general-information?phase=25');
+  });
+});
+
+describe('rejection columns in the export (PRE-R-7, PRE-R-9)', () => {
+  const rejected = (id: number, over: Partial<RawResult> = {}) => row({ id, result_code: 200 + id, status_id: 7, status_name: 'Rejected', ...over });
+  const fixtureMap = (long = ''): PortfolioResultDimensions => ({
+    ...dims(),
+    rejections: [
+      { resultId: 1, comment: 'Evidence link broken', programCode: 'SP03', programName: 'Climate Action', rejectedAt: '2026-11-10' },
+      // Result 2 was rejected twice; the server serves only the newest record (PRE-R-8, DD-3).
+      { resultId: 2, comment: 'Newest reason', programCode: 'SP05', programName: 'Policy Innovations', rejectedAt: '2026-11-14' },
+      { resultId: 3, comment: null, programCode: null, programName: null, rejectedAt: '2026-11-12' },
+      // Result 5 is approved now but was rejected earlier and resubmitted.
+      { resultId: 5, comment: 'Old reason', programCode: 'SP03', programName: 'Climate Action', rejectedAt: '2026-10-01' },
+      { resultId: 7, comment: long, programCode: 'SP03', programName: 'Climate Action', rejectedAt: '2026-11-15' }
+    ]
+  });
+  const cells = (rows: RawResult[], status: PortfolioDimensionsState['status'], long = '') => {
+    const labels = buildDetailLabels(fixtureMap(long));
+    return toExportRows(toDetailRows(rows, status, labels), 'https://pr.example').map(r => [r['Rejection reason'], r['Rejected by'], r['Rejected on']]);
+  };
+
+  it('rejected row with a full record: reason, "<SP code> - <program name>", date', () => {
+    expect(cells([rejected(1)], 'ready')).toEqual([['Evidence link broken', 'SP03 - Climate Action', '2026-11-10']]);
+  });
+
+  it('rejected row rejected twice: the newest record as served', () => {
+    expect(cells([rejected(2)], 'ready')).toEqual([['Newest reason', 'SP05 - Policy Innovations', '2026-11-14']]);
+  });
+
+  it('rejected row with a null comment and a null SP: each missing value reads the dash, the date stays', () => {
+    expect(cells([rejected(3)], 'ready')).toEqual([['—', '—', '2026-11-12']]);
+  });
+
+  it('rejected row with no record at all: three dashes', () => {
+    expect(cells([rejected(4)], 'ready')).toEqual([['—', '—', '—']]);
+  });
+
+  it('a non-rejected row reads three dashes even when its id has a record (rejected, then resubmitted)', () => {
+    expect(cells([row({ id: 5, status_id: 6, status_name: 'Approved' })], 'ready')).toEqual([['—', '—', '—']]);
+  });
+
+  it('rejected row with the map not ready: Unavailable in all three cells (error and loading)', () => {
+    expect(cells([rejected(6)], 'error')).toEqual([['Unavailable', 'Unavailable', 'Unavailable']]);
+    expect(cells([rejected(6)], 'loading')).toEqual([['Unavailable', 'Unavailable', 'Unavailable']]);
+  });
+
+  it('a non-rejected row reads the dash when the map is not ready', () => {
+    expect(cells([row({ id: 8 })], 'error')).toEqual([['—', '—', '—']]);
+  });
+
+  it('PRE-R-9: a 40,000-character comment is cut to 32,767 characters and keeps its start', () => {
+    const [[reason]] = cells([rejected(7)], 'ready', 'a'.repeat(40000));
+    expect(reason.length).toBe(32767);
+    expect(reason.startsWith('aaaa')).toBe(true);
+  });
+
+  it('PRE-R-9: a comment within the limit is not cut', () => {
+    const [[reason]] = cells([rejected(7)], 'ready', 'b'.repeat(32767));
+    expect(reason.length).toBe(32767);
   });
 });

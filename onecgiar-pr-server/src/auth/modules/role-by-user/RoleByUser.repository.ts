@@ -355,6 +355,47 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
     }
   }
 
+  /**
+   * P2-3911 — "does this user hold one of `roles` on the ACTIVE program whose official code is
+   * `officialCode`". Same active conditions as {@link hasActiveRoleOnInitiative}
+   * (`role_by_user.active`, `clarisa_initiatives.active`), keyed by official code (e.g. `SP01`)
+   * because that is what the Quality Assurance selector carries.
+   */
+  async hasRoleOnProgramByOfficialCode(
+    userId: number,
+    officialCode: string,
+    roles: RoleEnum[],
+  ): Promise<boolean> {
+    if (!roles?.length) return false;
+    const queryData = `
+    SELECT
+      EXISTS (
+        SELECT 1
+        FROM role_by_user rbu
+        INNER JOIN clarisa_initiatives ci
+          ON ci.id = rbu.initiative_id
+          AND ci.active > 0
+        WHERE rbu.\`user\` = ?
+          AND ci.official_code = ?
+          AND rbu.role IN (?)
+          AND rbu.active > 0
+      ) AS has_role;
+    `;
+    try {
+      const result: Array<{ has_role: number | string }> = await this.query(
+        queryData,
+        [userId, officialCode, roles],
+      );
+      return !!Number(result?.[0]?.has_role ?? 0);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: RoleByUserRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async $_isValidRole(
     userId: number,
     type: RoleTypeEnum = RoleTypeEnum.APPLICATION,

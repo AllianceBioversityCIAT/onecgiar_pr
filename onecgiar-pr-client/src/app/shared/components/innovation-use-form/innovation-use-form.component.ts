@@ -506,15 +506,16 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
   }
 
   /**
-   * IFC-R-4 / IFC-DD-7 — the actors whose type is disabled in the "Actor type" select of the other rows.
+   * IFC-R-4 / INA-R-9 / INA-DD-5 — the actors whose type is disabled in the "Actor type" select of the other rows.
    *
-   * "Other" (5) is always allowed twice. From the follow-up scope on, so is Farmers: a second Farmers row is
-   * how a reporter splits "received" from "applied" (each row carries its own answers). Every other type keeps
-   * today's one-row rule. Outside the scope (2025, bilateral, IPSR, unknown phase) nothing changes.
+   * Inside the follow-up scope (`isFollowUpScope()`) no type is disabled: every type can repeat, because rows of the
+   * same type are told apart by their nature answer (a second Farmers or Researchers row splits "received" from
+   * "applied"). Outside the scope (2025, IPSR, unknown phase) today's rule stays: only "Other" (5) is allowed twice.
+   * Other components (IPSR step n1/n3, anticipated-innovation-user, review drawer) have their own `removeOther`.
    */
   removeOther(actors) {
-    const farmersRepeatable = this.isFarmerFollowUpResult();
-    return actors.filter(item => item.actor_type_id != 5 && !(farmersRepeatable && item.actor_type_id == FARMERS_ACTOR_TYPE_ID));
+    if (this.isFollowUpScope()) return [];
+    return actors.filter(item => item.actor_type_id != 5);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -536,22 +537,43 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
   }
 
   /**
-   * Result-level half of the gate: not IPSR, phase year >= 2026, and not a bilateral result.
+   * INA-DD-5: where the follow-up questions are SHOWN — not IPSR and phase year >= 2026, whatever the source (W1/W2 and
+   * W3/Bilaterals alike).
    *
    * 🛑 Phase year, never portfolio (IFC-DD-5; prtest holds 2025 results inside P25). `isPhaseYearAtLeast` fails
-   * toward the legacy form while the result's own year is unknown, so an in-flight load shows no block.
-   * `source_name` comes from the same `GET /api/results/get/:id` row as `phase_year` (`'W1/W2'` or
-   * `'W3/Bilaterals'`, always set), so once the year is known the source is too.
+   * toward the legacy form while the result's own year is unknown, so an in-flight load shows nothing.
    */
-  isFarmerFollowUpResult(): boolean {
+  isFollowUpScope(): boolean {
     if (this.isIpsr) return false;
-    if (!this.isPhaseYearAtLeast(FARMER_FOLLOW_UP_MIN_PHASE_YEAR)) return false;
-    return this.api?.dataControlSE?.currentResultSignal?.()?.source_name !== W3_BILATERALS_SOURCE_NAME;
+    return this.isPhaseYearAtLeast(FARMER_FOLLOW_UP_MIN_PHASE_YEAR);
   }
 
-  /** The gate of the block: the result is in scope AND this row is an active Farmers row. */
+  /** INA-DD-6: where the follow-up questions are REQUIRED — the scope, except W3/Bilaterals (shown and editable, never blocking). */
+  isFollowUpMandatory(): boolean {
+    return this.isFollowUpScope() && !this.isW3BilateralsResult();
+  }
+
+  /**
+   * W1/W2-only gate (not IPSR, phase >= 2026, not W3/Bilaterals). INA-DD-5: kept with this exact meaning for the youth
+   * rules only (`validateYouth`, `showYouthRequiredHint`); the follow-up questions read `isFollowUpScope()` instead.
+   * `source_name` comes from the same `GET /api/results/get/:id` row as `phase_year` (`'W1/W2'` or `'W3/Bilaterals'`).
+   */
+  isFarmerFollowUpResult(): boolean {
+    return this.isFollowUpScope() && !this.isW3BilateralsResult();
+  }
+
+  private isW3BilateralsResult(): boolean {
+    return this.api?.dataControlSE?.currentResultSignal?.()?.source_name === W3_BILATERALS_SOURCE_NAME;
+  }
+
+  /** The gate of the Farmers part (title + unit question): the result is in scope AND this row is an active Farmers row. */
   isFarmerFollowUpRow(actorItem): boolean {
-    return this.isFarmerFollowUpResult() && actorItem?.is_active !== false && actorItem?.actor_type_id == FARMERS_ACTOR_TYPE_ID;
+    return this.isFollowUpScope() && actorItem?.is_active !== false && actorItem?.actor_type_id == FARMERS_ACTOR_TYPE_ID;
+  }
+
+  /** The gate of the nature question (INA-R-7): the result is in scope AND this row is active with a type selected. */
+  isNatureFollowUpRow(actorItem): boolean {
+    return this.isFollowUpScope() && actorItem?.is_active !== false && !!actorItem?.actor_type_id;
   }
 
   /** Households row: the grid and the "does not apply" tick are hidden, the single total is implied (IFC-DD-2). */
@@ -562,7 +584,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
   private farmerRowKeys = new WeakMap<object, number>();
   private farmerRowSeq = 0;
 
-  /** A stable, unique radio-group name per actor row (several Farmers rows may coexist on a page). */
+  /** A stable, unique radio-group name per actor row object (several rows of one type may coexist, INA-R-9). */
   farmerRowKey(actorItem): string {
     if (!this.farmerRowKeys.has(actorItem)) this.farmerRowKeys.set(actorItem, this.farmerRowSeq++);
     return `iu-farmer-${this.farmerRowKeys.get(actorItem)}`;
@@ -574,22 +596,19 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
   }
 
   /**
-   * Actor type changed. Away from Farmers both answers go (IFC-R-1), and a row that was forced onto a single
-   * total by "Households" gets its grid back — that tick was implied by the answer, not chosen by the reporter.
-   * Rows that never carried the answers are left alone, so no key appears on them (IPSR payloads stay as today).
+   * Actor type changed. Away from Farmers only the unit answer goes (IFC-R-1, INA-R-8): `use_nature` applies to every
+   * type now and is kept. A row that was forced onto a single total by "Households" gets its grid back — that tick was
+   * implied by the answer, not chosen by the reporter. Rows that never carried a unit are left alone, so no key appears
+   * on them (IPSR payloads stay as today).
    */
   onActorTypeChange(actorItem, newTypeId) {
     actorItem.other_actor_type = null;
     if (newTypeId == FARMERS_ACTOR_TYPE_ID) return;
-    const hadAnswers = !!actorItem.count_unit || !!actorItem.use_nature;
     if (actorItem.count_unit === FARMER_COUNT_UNIT.HOUSEHOLDS) {
       this.cleanActor(actorItem);
       actorItem.sex_and_age_disaggregation = false;
     }
-    if (hadAnswers) {
-      actorItem.count_unit = null;
-      actorItem.use_nature = null;
-    }
+    if (actorItem.count_unit) actorItem.count_unit = null;
   }
 
   /**

@@ -1616,7 +1616,11 @@ describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
     fixture.changeDetectorRef.detectChanges();
   };
 
+  /** The Farmers part only (title + unit question). */
   const blockEls = () => fixture.debugElement.queryAll(By.css('[data-testid="iu-farmer-follow-up"]'));
+  /** INA-T-6: the whole follow-up of a row (Farmers part + nature part) and the nature part alone. */
+  const followUpEls = () => fixture.debugElement.queryAll(By.css('[data-testid="iu-follow-up"]'));
+  const natureEls = () => fixture.debugElement.queryAll(By.css('[data-testid="iu-nature-follow-up"]'));
   /** Row elements of ONE block: the 2030 block sits inside the `inert` wrapper, the current block does not. */
   const rowEls = (blockName: string) =>
     blockName === 'current use'
@@ -1685,8 +1689,10 @@ describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
       block.set(component, [farmer()]);
       detect();
 
-      const els = blockEls();
+      const els = followUpEls();
       expect(els.length).toBe(1);
+      expect(blockEls().length).toBe(1);
+      expect(natureEls().length).toBe(1);
       const text = els[0].nativeElement.textContent as string;
       expect(text).toContain(FARMER_FOLLOW_UP_COPY.title);
       expect(text).toContain(FARMER_FOLLOW_UP_COPY.useNatureOptions[0].label);
@@ -1709,7 +1715,7 @@ describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
       build();
       block.set(component, [farmer()]);
       detect();
-      const text = blockEls()[0].nativeElement.textContent as string;
+      const text = followUpEls()[0].nativeElement.textContent as string;
       expect(text).not.toContain('Single choice');
       expect(text).not.toContain('Stored as');
       expect(text).not.toContain('information_received');
@@ -1737,11 +1743,11 @@ describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
       expect(blockEls().length).toBe(0);
     });
 
-    it("is NOT visible for source_name = 'W3/Bilaterals'", () => {
+    it('is visible on a W3/Bilaterals Farmers row too, in the current block only (INA-R-20; the 2030 block stays hidden by IWH)', () => {
       build({ source: 'W3/Bilaterals' });
       block.set(component, [farmer()]);
       detect();
-      expect(blockEls().length).toBe(0);
+      expect(blockEls().length).toBe(block.name === 'current use' ? 1 : 0);
     });
 
     it('is NOT visible for an inactive Farmers row', () => {
@@ -1904,7 +1910,7 @@ describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
       expect(row.sex_and_age_disaggregation).toBe(true);
     });
 
-    it('switching the type away from Farmers clears both answers and restores the grid (IFC-R-1)', () => {
+    it('switching the type away from Farmers clears only count_unit, keeps use_nature and restores the grid (INA-R-8)', () => {
       build();
       const row = farmer({ count_unit: 'households', use_nature: 'innovation_applied', sex_and_age_disaggregation: true });
       block.set(component, [row]);
@@ -1913,9 +1919,10 @@ describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
       detect();
 
       expect(row.count_unit).toBeNull();
-      expect(row.use_nature).toBeNull();
+      expect(row.use_nature).toBe('innovation_applied');
       expect(row.sex_and_age_disaggregation).toBe(false);
       expect(blockEls().length).toBe(0);
+      expect(natureEls().length).toBe(1);
     });
 
     it('switching type never invents keys on rows that never had the answers', () => {
@@ -1928,26 +1935,121 @@ describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
       expect('use_nature' in row).toBe(false);
     });
 
-    it('the Farmers option is NOT disabled in a second row on a 2026 W1/W2 result; Researchers stays disabled (IFC-R-4)', () => {
-      build();
+    it.each([
+      ['2026 W1/W2', {}],
+      ['2026 W3/Bilaterals', { source: 'W3/Bilaterals' }]
+    ])('inside the scope no type is disabled in the other rows, so every type can repeat on %s (INA-R-9)', (_label, opts) => {
+      build(opts as any);
       const rows = [farmer(), farmer({ actor_type_id: RESEARCHERS, result_actors_id: 12 }), farmer({ actor_type_id: 5, result_actors_id: 13 })];
       block.set(component, rows);
-      const disabled = component.removeOther(block.rows(component)).map((a: any) => a.actor_type_id);
-      expect(disabled).not.toContain(FARMERS);
-      expect(disabled).toContain(RESEARCHERS);
-      expect(disabled).not.toContain(5);
+      expect(component.removeOther(block.rows(component))).toEqual([]);
     });
 
     it.each([
       ['phase 2025', { phase: 2025 }],
       ['unknown phase', { phase: null }],
-      ['W3/Bilaterals', { source: 'W3/Bilaterals' }],
       ['IPSR', { isIpsr: true }]
-    ])('keeps disabling Farmers in a second row on %s (rule as before)', (_label, opts) => {
+    ])('outside the scope (%s) every type but Other stays disabled in the other rows (rule as before)', (_label, opts) => {
       build(opts as any);
-      block.set(component, [farmer(), farmer({ result_actors_id: 12 })]);
-      expect(component.removeOther(block.rows(component)).map((a: any) => a.actor_type_id)).toContain(FARMERS);
+      const rows = [farmer(), farmer({ actor_type_id: RESEARCHERS, result_actors_id: 12 }), farmer({ actor_type_id: 5, result_actors_id: 13 })];
+      block.set(component, rows);
+      expect(component.removeOther(block.rows(component)).map((a: any) => a.actor_type_id)).toEqual([FARMERS, RESEARCHERS]);
     });
+  });
+
+  // INA-T-6 (changes/innovation-use-nature-all-actors): the nature question on every actor row.
+  describe.each(BLOCKS)('$name block — nature question on every row (INA-T-6)', block => {
+    const researchers = (over: Record<string, unknown> = {}) => farmer({ actor_type_id: RESEARCHERS, result_actors_id: 12, ...over });
+
+    it('2026 W1/W2 Researchers row: nature card with no Farmers title, REQUIRED, and no unit question (INA-R-7, INA-R-9)', () => {
+      build();
+      block.set(component, [researchers()]);
+      detect();
+
+      expect(natureEls().length).toBe(1);
+      expect(blockEls().length).toBe(0);
+      const text = natureEls()[0].nativeElement.textContent as string;
+      expect(text).not.toContain(FARMER_FOLLOW_UP_COPY.title);
+      expect(text).not.toContain(FARMER_FOLLOW_UP_COPY.countUnitQuestion);
+      expect(text).toContain(FARMER_FOLLOW_UP_COPY.useNatureOptions[0].description);
+      const radios = followUpEls()[0].queryAll(By.css('app-pr-radio-button'));
+      expect(radios.map(r => r.properties['label'])).toEqual([FARMER_FOLLOW_UP_COPY.useNatureQuestion]);
+      expect(radios[0].properties['required']).toBe(true);
+    });
+
+    it('Farmers row: title and both questions, both REQUIRED (unchanged)', () => {
+      build();
+      block.set(component, [farmer()]);
+      detect();
+      const radios = followUpEls()[0].queryAll(By.css('app-pr-radio-button'));
+      expect(radios.map(r => r.properties['label'])).toEqual([FARMER_FOLLOW_UP_COPY.countUnitQuestion, FARMER_FOLLOW_UP_COPY.useNatureQuestion]);
+      expect(radios.map(r => r.properties['required'])).toEqual([true, true]);
+      expect(blockEls()[0].nativeElement.textContent).toContain(FARMER_FOLLOW_UP_COPY.title);
+    });
+
+    it('W3/Bilaterals: both cards are shown but nothing is REQUIRED; the 2030 block stays hidden (INA-R-20, OQ-3)', () => {
+      build({ source: 'W3/Bilaterals' });
+      block.set(component, [farmer(), researchers()]);
+      detect();
+      if (block.name === '2030 projection') {
+        expect(followUpEls().length).toBe(0);
+        return;
+      }
+      expect(blockEls().length).toBe(1);
+      expect(natureEls().length).toBe(2);
+      const radios = followUpEls().flatMap(el => el.queryAll(By.css('app-pr-radio-button')));
+      expect(radios.length).toBe(3);
+      expect(radios.every(r => r.properties['required'] === false)).toBe(true);
+    });
+
+    it.each([
+      ['IPSR', { isIpsr: true }],
+      ['phase 2025', { phase: 2025 }],
+      ['unknown phase', { phase: null }]
+    ])('shows no nature card outside the scope (%s)', (_label, opts) => {
+      build(opts as any);
+      block.set(component, [researchers()]);
+      detect();
+      expect(natureEls().length).toBe(0);
+    });
+
+    it('shows no nature card on an inactive row or before a type is picked', () => {
+      build();
+      block.set(component, [researchers({ is_active: false }), researchers({ actor_type_id: null, result_actors_id: null })]);
+      detect();
+      expect(natureEls().length).toBe(0);
+    });
+
+    it('a second Researchers row is allowed and each row has its own radio group (INA-R-9)', () => {
+      build();
+      const a = researchers({ use_nature: 'information_received' });
+      const b = researchers({ result_actors_id: 13, use_nature: 'innovation_applied' });
+      block.set(component, [a, b]);
+      detect();
+
+      expect(natureEls().length).toBe(2);
+      const names = natureEls().map(el => [...new Set(el.queryAll(By.css('input[type="radio"]')).map(i => i.nativeElement.getAttribute('name')))]);
+      expect(names.every(n => n.length === 1)).toBe(true);
+      expect(names[0][0]).not.toBe(names[1][0]);
+      expect(component.removeOther(block.rows(component))).toEqual([]);
+    });
+  });
+
+  it.each([
+    ['2026 W1/W2', {}, { scope: true, mandatory: true, farmerResult: true }],
+    ['2026 W3/Bilaterals', { source: 'W3/Bilaterals' }, { scope: true, mandatory: false, farmerResult: false }],
+    ['IPSR', { isIpsr: true }, { scope: false, mandatory: false, farmerResult: false }],
+    ['phase 2025', { phase: 2025 }, { scope: false, mandatory: false, farmerResult: false }],
+    ['unknown phase', { phase: null }, { scope: false, mandatory: false, farmerResult: false }]
+  ])('predicates on %s (INA-DD-5: the youth gate keeps its W1/W2 meaning)', (_label, opts, expected) => {
+    build(opts as any);
+    expect(component.isFollowUpScope()).toBe(expected.scope);
+    expect(component.isFollowUpMandatory()).toBe(expected.mandatory);
+    expect(component.isFarmerFollowUpResult()).toBe(expected.farmerResult);
+    expect(component.isNatureFollowUpRow(farmer({ actor_type_id: RESEARCHERS }))).toBe(expected.scope);
+    expect(component.isNatureFollowUpRow(farmer({ actor_type_id: null }))).toBe(false);
+    expect(component.isNatureFollowUpRow(farmer({ actor_type_id: RESEARCHERS, is_active: false }))).toBe(false);
+    expect(component.isFarmerFollowUpRow(farmer())).toBe(expected.scope);
   });
 });
 

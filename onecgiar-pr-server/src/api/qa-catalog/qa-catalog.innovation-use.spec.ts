@@ -312,7 +312,7 @@ describe('QAC-T-20 innovation use (Results)', () => {
     });
 
     it.each(BLOCKS)(
-      '%s.actors: count_unit and use_nature are single selects over their closed list, shown and required only for Farmers, from 2026',
+      '%s.actors: count_unit and use_nature are single selects over their closed list, count_unit only for Farmers, use_nature for every actor type, from 2026',
       (block) => {
         const actors = get(`${block}.actors`);
         for (const [key, list] of [
@@ -322,9 +322,16 @@ describe('QAC-T-20 innovation use (Results)', () => {
           const s = sub(actors, key);
           expect(s.type).toBe('single_select');
           expect(s.control_list).toBe(list);
-          expect(s.required).toBe(false);
-          expect(s.required_when).toEqual(FARMERS);
-          expect(s.visible_when).toEqual(FARMERS);
+          // INA-R-11 (changes/innovation-use-nature-all-actors, INA-T-5): use_nature is required for every actor type.
+          if (key === 'use_nature') {
+            expect(s.required).toBe(true);
+            expect(s.required_when).toBeUndefined();
+            expect(s.visible_when).toBeUndefined();
+          } else {
+            expect(s.required).toBe(false);
+            expect(s.required_when).toEqual(FARMERS);
+            expect(s.visible_when).toEqual(FARMERS);
+          }
           expect(s.storage).toEqual({
             kind: 'column',
             table: 'result_actors',

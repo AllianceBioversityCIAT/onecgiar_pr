@@ -1,6 +1,12 @@
-import { ReminderCampaignList, ReminderCampaignView, ReminderCreateBody, ReminderEnvelope, ReminderPreview, ReminderSendOutcome } from '../../interfaces/replicated-innovation-reminders.interface';
+import {
+  CenterFocalPointCreateBody,
+  CenterFocalPointUpdateBody,
+  CenterFocalPointView,
+  CenterRoutingResult,
+  CenterRoutingView,
+  ReminderCampaignList, ReminderCampaignView, ReminderCreateBody, ReminderEnvelope, ReminderPreview, ReminderSendOutcome } from '../../interfaces/replicated-innovation-reminders.interface';
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { catchError, map, of, tap, throwError, Observable, firstValueFrom } from 'rxjs';
 import { ResultBody } from '../../interfaces/result.interface';
@@ -287,8 +293,18 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/geographic-scope/get/all/prms`);
   }
 
+  /** @deprecated P2-3911 — legacy QA iframe token via CLARISA; use `GET_QaSpLink`. Remove once the new QA is in PROD. */
   GET_ClarisaQaToken(offcial_code) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/clarisa/qa/token/${offcial_code}`);
+  }
+
+  /**
+   * P2-3911 — one-time code for the Science Program view of the new QA. Call it on EVERY iframe
+   * (re)load; the code works once and lasts 60 s, so it must never be cached.
+   */
+  GET_QaSpLink(programCode: string | null) {
+    const params = programCode ? new HttpParams().set('programCode', programCode) : undefined;
+    return this.http.get<{ response: { code: string; expiresAt: string } }>(`${this.baseApiBaseUrl}qa/sp-link`, { params });
   }
 
   GET_AllCLARISARegions() {
@@ -1919,6 +1935,26 @@ export class ResultsApiService {
 
   POST_reminderCampaignSend(id: number) {
     return this.http.post<ReminderEnvelope<ReminderSendOutcome>>(`${this.reminderCampaignsUrl}/${id}/send`, {});
+  }
+
+  // @akili-spec changes/rir-center-focal-routing (RCF-T-4)
+  private readonly centerFocalPointsUrl = environment.apiBaseUrl + 'api/replicated-innovation-reminders/center-focal-points';
+
+  GET_centerFocalPoints() {
+    return this.http.get<ReminderEnvelope<CenterRoutingView[]>>(this.centerFocalPointsUrl);
+  }
+
+  POST_centerFocalPoint(body: CenterFocalPointCreateBody) {
+    return this.http.post<ReminderEnvelope<CenterFocalPointView>>(this.centerFocalPointsUrl, body);
+  }
+
+  PATCH_centerFocalPoint(id: number, body: CenterFocalPointUpdateBody) {
+    return this.http.patch<ReminderEnvelope<CenterFocalPointView>>(`${this.centerFocalPointsUrl}/${id}`, body);
+  }
+
+  /** `code` goes exactly as the GET returned it. */
+  PATCH_centerRouting(code: string, body: { route_all_to_center: boolean }) {
+    return this.http.patch<ReminderEnvelope<CenterRoutingResult>>(`${this.centerFocalPointsUrl}/centers/${encodeURIComponent(code)}/routing`, body);
   }
 
   // @akili-spec results/impact-results-reporting/result-detail-impact (IRD-T-1, design §5)

@@ -98,3 +98,39 @@ export interface ReminderCreateBody {
   kind: ReminderKind;
   scheduled_at: string;
 }
+
+// @akili-spec changes/rir-center-focal-routing (RCF-T-4): Center focal points admin contract. Mirrors the server DTOs.
+export interface CenterFocalPointView {
+  id: number;
+  name: string | null;
+  email: string;
+  is_active: boolean;
+}
+
+export interface CenterRoutingView {
+  /** Send back exactly as returned: the server does not canonicalise the case. */
+  code: string;
+  acronym: string | null;
+  name: string | null;
+  route_all_to_center: boolean;
+  contacts: CenterFocalPointView[];
+}
+
+export interface CenterFocalPointCreateBody {
+  center_code: string;
+  name?: string;
+  email: string;
+}
+
+export interface CenterFocalPointUpdateBody {
+  name?: string;
+  email?: string;
+  is_active?: boolean;
+}
+
+export interface CenterRoutingResult {
+  center_code: string;
+  route_all_to_center: boolean;
+  active_contacts: number;
+  warning: string | null;
+}

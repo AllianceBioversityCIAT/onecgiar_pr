@@ -31,6 +31,7 @@ const input = (over: Partial<BuildInput> = {}): BuildInput => ({
   activeUsers: new Map(),
   meliaByInitiative: new Map(),
   centerMelByCenter: new Map(),
+  optedInCenters: new Set(),
   ...over,
 });
 
@@ -483,5 +484,174 @@ describe('build (RIR-T-12)', () => {
       'MELIA_SUMMARY:1',
     ]);
     expect(out.unreachable.map((u) => u.result_id)).toEqual([3]);
+  });
+});
+
+// @akili-spec changes/rir-center-focal-routing
+// RCF-T-2: opted-in Center routing (RCF-R-2, R-3, R-4, R-5). Names and emails are invented.
+describe('build with opted-in Centers (RCF-T-2)', () => {
+  const ICARDA = 'CTR-I';
+  const CIMMYT = 'CTR-C';
+  const lead = (code: string) => ({
+    lead_center_code: code,
+    lead_center_name: code === ICARDA ? 'ICARDA' : 'CIMMYT',
+  });
+  // D1: W1/W2 development, SP01, developer V, ICARDA.  U1: W1/W2 use, SP04, ICARDA.
+  // W1: W3 owned by SP02, ICARDA.  D2: W1/W2 development, SP01, developer V, CIMMYT.
+  // W3C: W3 owned by SP03, CIMMYT.
+  const fixture = () => [
+    row({
+      result_id: 1,
+      result_code: 1,
+      developer_text: 'Vera <v@x.org>',
+      ...lead(ICARDA),
+    }),
+    row({
+      result_id: 2,
+      result_code: 2,
+      result_type_id: 2,
+      initiative_id: 4,
+      initiative_code: 'SP04',
+      initiative_short_name: 'Use',
+      ...lead(ICARDA),
+    }),
+    row({
+      result_id: 3,
+      result_code: 3,
+      source: 'API',
+      initiative_id: 2,
+      initiative_code: 'SP02',
+      initiative_short_name: null,
+      ...lead(ICARDA),
+    }),
+    row({
+      result_id: 4,
+      result_code: 4,
+      developer_text: 'Vera <v@x.org>',
+      ...lead(CIMMYT),
+    }),
+    row({
+      result_id: 5,
+      result_code: 5,
+      source: 'API',
+      initiative_id: 3,
+      initiative_code: 'SP03',
+      initiative_short_name: null,
+      ...lead(CIMMYT),
+    }),
+  ];
+  const base = (over: Partial<BuildInput> = {}) =>
+    input({
+      rows: fixture(),
+      activeUsers: users('v@x.org'),
+      meliaByInitiative: new Map([
+        [1, mel('s01@x.org')],
+        [2, mel('s02@x.org')],
+        [3, mel('s03@x.org')],
+        [4, mel('s04@x.org')],
+      ]),
+      centerMelByCenter: new Map([
+        [ICARDA, mel('e@x.org')],
+        [CIMMYT, mel('c@x.org')],
+      ]),
+      ...over,
+    });
+
+  it('RCF-R-2/R-4: opted-in Center lists D1, U1 and W1 in one email, CC = MELIA of W1/W2 rows only; V keeps only D2', () => {
+    const out = build(base({ optedInCenters: new Set([ICARDA]) }));
+    expect(out.messages.map((m) => m.messageKey)).toEqual([
+      'DEVELOPER:v@x.org',
+      `CENTER:${CIMMYT}`,
+      `CENTER:${ICARDA}`,
+    ]);
+    const dev = out.messages[0];
+    expect(dev.results.map((r) => r.result_id)).toEqual([4]);
+    expect(dev.cc).toEqual(['s01@x.org']);
+    const icarda = out.messages[2];
+    expect(icarda.to).toEqual(['e@x.org']);
+    expect(icarda.results.map((r) => r.result_id)).toEqual([1, 3, 2]);
+    // SP01 (D1) and SP04 (U1) yes; SP02 (W1 is W3) must NOT be copied; the To address is never in CC.
+    expect(icarda.cc).toEqual(['s01@x.org', 's04@x.org']);
+    expect(out.messages.some((m) => m.type === 'MELIA_SUMMARY')).toBe(false);
+    expect(out.unreachable).toEqual([]);
+  });
+
+  it('RCF-R-4: a non-opted Center whose email lists only W3 rows has an empty CC', () => {
+    const out = build(base({ optedInCenters: new Set([ICARDA]) }));
+    const cimmyt = out.messages.find(
+      (m) => m.messageKey === `CENTER:${CIMMYT}`,
+    )!;
+    expect(cimmyt.results.map((r) => r.result_id)).toEqual([5]);
+    expect(cimmyt.cc).toEqual([]);
+  });
+
+  it('RCF-R-4: a MELIA address that is also a To recipient is removed from CC', () => {
+    const out = build(
+      base({
+        optedInCenters: new Set([ICARDA]),
+        centerMelByCenter: new Map([[ICARDA, mel('s01@x.org')]]),
+      }),
+    );
+    const icarda = out.messages.find(
+      (m) => m.messageKey === `CENTER:${ICARDA}`,
+    )!;
+    expect(icarda.to).toEqual(['s01@x.org']);
+    expect(icarda.cc).toEqual(['s04@x.org']);
+  });
+
+  it('RCF-R-5: opted-in Center without a focal point -> NO_CENTER_MEL for all its rows, no fallback', () => {
+    const out = build(
+      base({
+        optedInCenters: new Set([ICARDA]),
+        centerMelByCenter: new Map([[CIMMYT, mel('c@x.org')]]),
+      }),
+    );
+    expect(out.unreachable.map((u) => [u.result_id, u.reason])).toEqual([
+      [1, 'NO_CENTER_MEL'],
+      [3, 'NO_CENTER_MEL'],
+      [2, 'NO_CENTER_MEL'],
+    ]);
+    const dev = out.messages.find((m) => m.type === 'DEVELOPER')!;
+    expect(dev.results.map((r) => r.result_id)).toEqual([4]);
+    expect(out.messages.some((m) => m.type === 'MELIA_SUMMARY')).toBe(false);
+  });
+
+  it('RCF-R-2: the lead Center code is trimmed before the opt-in check', () => {
+    const out = build(
+      base({
+        rows: [
+          row({
+            result_id: 1,
+            developer_text: 'Vera <v@x.org>',
+            lead_center_code: ' CTR-I ',
+            lead_center_name: 'ICARDA',
+          }),
+        ],
+        optedInCenters: new Set([ICARDA]),
+      }),
+    );
+    expect(out.messages.map((m) => m.messageKey)).toEqual([`CENTER:${ICARDA}`]);
+  });
+
+  it('RCF-R-3 equality: no Center opted in -> output equals the pre-change output (hand-written literal)', () => {
+    const out = build(base({ optedInCenters: new Set() }));
+    const slim = out.messages.map((m) => ({
+      key: m.messageKey,
+      to: m.to,
+      cc: m.cc,
+      ids: m.results.map((r) => r.result_id),
+    }));
+    expect(slim).toEqual([
+      {
+        key: 'DEVELOPER:v@x.org',
+        to: ['v@x.org'],
+        cc: ['s01@x.org'],
+        ids: [1, 4],
+      },
+      { key: 'MELIA_SUMMARY:4', to: ['s04@x.org'], cc: [], ids: [2] },
+      { key: `CENTER:${CIMMYT}`, to: ['c@x.org'], cc: [], ids: [5] },
+      { key: `CENTER:${ICARDA}`, to: ['e@x.org'], cc: [], ids: [3] },
+    ]);
+    expect(out.unreachable).toEqual([]);
   });
 });

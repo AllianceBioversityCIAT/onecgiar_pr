@@ -27,8 +27,14 @@ import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ValidRoleGuard } from '../../shared/guards/valid-role.guard';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
+import { CenterFocalPointsService } from './center-focal-points.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
+import { UpdateCenterRoutingDto } from './dto/update-center-routing.dto';
+import {
+  CreateCenterFocalPointDto,
+  UpdateCenterFocalPointDto,
+} from './dto/upsert-center-focal-point.dto';
 import { ReplicatedInnovationRemindersService } from './replicated-innovation-reminders.service';
 
 const bodyPipe = () => new ValidationPipe({ whitelist: true, transform: true });
@@ -44,6 +50,7 @@ const bodyPipe = () => new ValidationPipe({ whitelist: true, transform: true });
 export class ReplicatedInnovationRemindersController {
   constructor(
     private readonly _service: ReplicatedInnovationRemindersService,
+    private readonly _centerFocalPoints: CenterFocalPointsService,
   ) {}
 
   @Get('campaigns')
@@ -143,6 +150,79 @@ export class ReplicatedInnovationRemindersController {
   })
   async send(@Param('id', ParseIntPipe) id: number) {
     return this.ok('Campaign dispatched', await this._service.send(id));
+  }
+
+  @Get('center-focal-points')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
+  @ApiOperation({
+    summary:
+      'Every CGIAR Center with its opt-in flag and focal points (RCF-R-7, RCF-R-8)',
+  })
+  @ApiOkResponse({ description: 'Center list, configured or not.' })
+  async listCenterFocalPoints() {
+    return this.ok('Center focal points', await this._centerFocalPoints.list());
+  }
+
+  @Post('center-focal-points')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
+  @ApiOperation({ summary: 'Add a Center focal point' })
+  @ApiBody({ type: CreateCenterFocalPointDto })
+  @ApiResponse({ status: 201, description: 'Contact created.' })
+  @ApiResponse({ status: 400, description: 'Bad email or unknown Center.' })
+  @ApiConflictResponse({ description: 'The (Center, email) already exists.' })
+  async createCenterFocalPoint(
+    @Body(bodyPipe()) dto: CreateCenterFocalPointDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.ok(
+      'Center focal point created',
+      await this._centerFocalPoints.create(dto, user?.id),
+      HttpStatus.CREATED,
+    );
+  }
+
+  @Patch('center-focal-points/centers/:code/routing')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
+  @ApiOperation({
+    summary:
+      'Turn the Center opt-in on/off; warns when on with no active contact',
+  })
+  @ApiParam({ name: 'code', type: String })
+  @ApiBody({ type: UpdateCenterRoutingDto })
+  @ApiResponse({ status: 400, description: 'Unknown Center.' })
+  async updateCenterRouting(
+    @Param('code') code: string,
+    @Body(bodyPipe()) dto: UpdateCenterRoutingDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.ok(
+      'Center routing updated',
+      await this._centerFocalPoints.setRouting(code, dto, user?.id),
+    );
+  }
+
+  @Patch('center-focal-points/:id')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
+  @ApiOperation({
+    summary: 'Edit, deactivate or reactivate a Center focal point',
+  })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiBody({ type: UpdateCenterFocalPointDto })
+  @ApiResponse({ status: 404, description: 'Unknown contact.' })
+  @ApiConflictResponse({ description: 'The (Center, email) already exists.' })
+  async updateCenterFocalPoint(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(bodyPipe()) dto: UpdateCenterFocalPointDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.ok(
+      'Center focal point updated',
+      await this._centerFocalPoints.update(id, dto, user?.id),
+    );
   }
 
   /** The `ResponseInterceptor` envelope reads `response`, `message` and `statusCode`. */

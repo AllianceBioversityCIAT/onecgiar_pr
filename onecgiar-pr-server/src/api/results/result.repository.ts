@@ -4609,14 +4609,42 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       )
     `;
 
+    // changes/portfolio-rejection-reason-export (PRE-T-1, PRE-R-7, PRE-R-8, DD-3, DD-7):
+    // results at status Rejected (7), same scope as above, with their newest REJECT/REJECTED
+    // record (legacy spelling included). initiative_id may be null (legacy rows).
+    const rejectionsSql = `
+      SELECT
+        r.id AS result_id,
+        h.comment AS comment,
+        ci.official_code AS initiative_code,
+        ci.name AS initiative_name,
+        DATE_FORMAT(h.created_at, '%Y-%m-%d') AS rejected_at
+      FROM result r
+      INNER JOIN result_review_history h ON h.id = (
+        SELECT h2.id
+        FROM result_review_history h2
+        WHERE h2.result_id = r.id
+          AND h2.action IN ('REJECT', 'REJECTED')
+        ORDER BY h2.created_at DESC, h2.id DESC
+        LIMIT 1
+      )
+      LEFT JOIN clarisa_initiatives ci ON ci.id = h.initiative_id
+      WHERE r.version_id = ?
+        AND r.is_active = 1
+        AND r.result_type_id NOT IN (10, 11)
+        AND r.status_id = 7
+    `;
+
     try {
-      const [projectLinks, centerLinks, projects, centers] = await Promise.all([
-        this.query(projectLinksSql, [versionId]),
-        this.query(centerLinksSql, [versionId]),
-        this.query(projectLabelsSql, [versionId]),
-        this.query(centerLabelsSql, [versionId]),
-      ]);
-      return { projectLinks, centerLinks, projects, centers };
+      const [projectLinks, centerLinks, projects, centers, rejections] =
+        await Promise.all([
+          this.query(projectLinksSql, [versionId]),
+          this.query(centerLinksSql, [versionId]),
+          this.query(projectLabelsSql, [versionId]),
+          this.query(centerLabelsSql, [versionId]),
+          this.query(rejectionsSql, [versionId]),
+        ]);
+      return { projectLinks, centerLinks, projects, centers, rejections };
     } catch (error) {
       // debug: false: with true the handler logs the query text and bound params.
       throw this._handlersError.returnErrorRepository({

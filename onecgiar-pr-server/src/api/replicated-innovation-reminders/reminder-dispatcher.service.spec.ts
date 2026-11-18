@@ -66,6 +66,8 @@ interface Opts {
   active?: { email: string; name: string }[];
   melia?: { initiative_id: number; name: string | null; email: string }[];
   centerMel?: { center_code: string; name: string | null; email: string }[];
+  /** Opted-in Center codes returned by findOptedInCenters (RCF-T-2). */
+  optedIn?: string[];
   claim?: boolean;
   /** name -> template body; `null` = row missing. Unlisted names get a default body. */
   templates?: Record<string, string | null>;
@@ -105,7 +107,14 @@ function setup(opts: Opts = {}) {
       .mockResolvedValue(
         opts.melia ?? [{ initiative_id: 1, name: null, email: MELIA_EMAIL }],
       ),
-    findCenterMel: jest.fn().mockResolvedValue(opts.centerMel ?? []),
+    findCenterMel: jest
+      .fn()
+      .mockImplementation((codes: string[]) =>
+        Promise.resolve(
+          (opts.centerMel ?? []).filter((m) => codes.includes(m.center_code)),
+        ),
+      ),
+    findOptedInCenters: jest.fn().mockResolvedValue(opts.optedIn ?? []),
   };
   const templateRepo = {
     findOne: jest.fn(({ where }) => {
@@ -677,6 +686,104 @@ describe('ReminderDispatcher', () => {
       expect(plan.rows).toHaveLength(3);
       expect(plan.messages).toHaveLength(3);
       expect(plan.unreachable).toEqual([]);
+    });
+
+    // @akili-spec changes/rir-center-focal-routing
+    describe('opted-in Centers (RCF-T-2, RCF-DD-3)', () => {
+      const icardaRows = () => [
+        baseRow({
+          result_id: 1,
+          result_code: 11,
+          developer_text: 'Vera <v@example.org>',
+          lead_center_code: 'CTR-I',
+          lead_center_name: 'ICARDA',
+        }),
+        baseRow({
+          result_id: 2,
+          result_code: 12,
+          result_type_id: 2,
+          initiative_id: 4,
+          initiative_code: 'SP04',
+          lead_center_code: 'CTR-I',
+          lead_center_name: 'ICARDA',
+        }),
+      ];
+      const icardaOpts = (over: Partial<Opts> = {}): Opts => ({
+        rows: icardaRows(),
+        active: [{ email: 'v@example.org', name: 'Vera' }],
+        melia: [
+          { initiative_id: 1, name: null, email: MELIA_EMAIL },
+          { initiative_id: 4, name: null, email: 'sp04@example.org' },
+        ],
+        centerMel: [
+          { center_code: 'CTR-I', name: null, email: 'e@example.org' },
+        ],
+        optedIn: ['CTR-I'],
+        ...over,
+      });
+
+      it('fetches focal points of an opted-in Center that leads only W1/W2 rows and routes them to the Center email', async () => {
+        const { dispatcher, pendingRepo } = setup(icardaOpts());
+        const plan = await dispatcher.plan(42);
+        expect(pendingRepo.findOptedInCenters).toHaveBeenCalledTimes(1);
+        expect(pendingRepo.findCenterMel).toHaveBeenCalledWith(['CTR-I']);
+        expect(plan.messages.map((m) => m.messageKey)).toEqual([
+          'CENTER:CTR-I',
+        ]);
+        expect(plan.messages[0].to).toEqual(['e@example.org']);
+        expect(plan.messages[0].cc).toEqual([MELIA_EMAIL, 'sp04@example.org']);
+        expect(plan.unreachable).toEqual([]);
+      });
+
+      it('an opted-in Center code that leads no pending row is not fetched', async () => {
+        const { dispatcher, pendingRepo } = setup(
+          icardaOpts({ optedIn: ['CTR-I', 'CTR-X'] }),
+        );
+        await dispatcher.plan(42);
+        expect(pendingRepo.findCenterMel).toHaveBeenCalledWith(['CTR-I']);
+      });
+
+      it('W3 lead Centers stay fetched together with the opted-in ones', async () => {
+        const { dispatcher, pendingRepo } = setup(
+          icardaOpts({
+            rows: [...icardaRows(), w3Row()],
+            centerMel: [
+              { center_code: 'CTR-I', name: null, email: 'e@example.org' },
+              { center_code: 'CTR-1', name: null, email: 'c1@example.org' },
+            ],
+          }),
+        );
+        await dispatcher.plan(42);
+        expect([...pendingRepo.findCenterMel.mock.calls[0][0]].sort()).toEqual([
+          'CTR-1',
+          'CTR-I',
+        ]);
+      });
+
+      it('no Center opted in: the lookup is the pre-change W3-only set and the developer keeps D1', async () => {
+        const { dispatcher, pendingRepo } = setup(
+          icardaOpts({ rows: [...icardaRows(), w3Row()], optedIn: [] }),
+        );
+        const plan = await dispatcher.plan(42);
+        expect(pendingRepo.findCenterMel).toHaveBeenCalledWith(['CTR-1']);
+        expect(plan.messages.map((m) => m.messageKey).sort()).toEqual([
+          'DEVELOPER:v@example.org',
+          'MELIA_SUMMARY:4',
+        ]);
+        expect(plan.unreachable.map((u) => u.reason)).toEqual([
+          'NO_CENTER_MEL',
+        ]);
+      });
+
+      it('an opted-in Center without a focal point makes its results unreachable', async () => {
+        const { dispatcher } = setup(icardaOpts({ centerMel: [] }));
+        const plan = await dispatcher.plan(42);
+        expect(plan.messages).toEqual([]);
+        expect(plan.unreachable.map((u) => u.reason)).toEqual([
+          'NO_CENTER_MEL',
+          'NO_CENTER_MEL',
+        ]);
+      });
     });
   });
 

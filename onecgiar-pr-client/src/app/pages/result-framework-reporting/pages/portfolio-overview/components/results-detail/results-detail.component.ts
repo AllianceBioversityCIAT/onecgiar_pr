@@ -47,8 +47,11 @@ const COLUMNS: readonly DetailColumn[] = [
 
 const SKELETON_ROWS = [0, 1, 2, 3, 4] as const;
 
-/** Excel column widths, keyed like `toExportRows`; the 13th is the hyperlink column. */
-const EXPORT_WSCOLS = EXPORT_COLUMNS.map(header => ({ header, key: header, width: header === 'Title' || header === 'Link' ? 60 : 20 }));
+const EXPORT_WIDTHS: Partial<Record<(typeof EXPORT_COLUMNS)[number], number>> = { Title: 60, Link: 60, 'Rejection reason': 60 };
+
+/** Excel column widths, keyed like `toExportRows`; the last is the hyperlink column. */
+const EXPORT_WSCOLS = EXPORT_COLUMNS.map(header => ({ header, key: header, width: EXPORT_WIDTHS[header] ?? 20 }));
+const LINK_CELL = EXPORT_COLUMNS.indexOf('Link') + 1;
 
 /**
  * Results detail: searchable, sortable, paged table of the filtered rows plus Excel export of ALL listed rows
@@ -93,7 +96,7 @@ export class PortfolioResultsDetailComponent {
 
   private readonly labels = computed(() => {
     const map = this.dimensionsMap();
-    return buildDetailLabels(map ?? { projectLinks: [], centerLinks: [], projects: [], centers: [] });
+    return buildDetailLabels(map ?? { projectLinks: [], centerLinks: [], projects: [], centers: [], rejections: [] });
   });
   private readonly detailRows = computed(() => toDetailRows(this.rows(), this.dimensionsStatus(), this.labels()));
   /** Searched and sorted: every listed row, all pages. */
@@ -141,7 +144,7 @@ export class PortfolioResultsDetailComponent {
         toExportRows(this.listed(), this.origin),
         exportFileName(this.phaseName(), new Date(), this.partial()),
         EXPORT_WSCOLS,
-        [{ cellNumber: 13, cellKey: 'Link' }],
+        [{ cellNumber: LINK_CELL, cellKey: 'Link' }],
         { exactFileName: true }
       );
     } finally {

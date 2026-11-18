@@ -2,7 +2,6 @@
 import { BadRequestException } from '@nestjs/common';
 import {
   COUNT_UNIT_CODES,
-  FARMERS_ACTOR_TYPE_ID,
   USE_NATURE_CODES,
   asksCountUnit,
   asksUseNature,
@@ -12,6 +11,7 @@ export type BilateralActorWarningCode =
   | 'actor_count_unit_missing'
   | 'actor_use_nature_missing'
   | 'actor_count_unit_not_applicable'
+  // retired — no longer emitted (INC-168062)
   | 'actor_use_nature_not_applicable'
   | 'actor_duplicate_merged';
 
@@ -38,6 +38,9 @@ export interface ActorFollowUpResult {
 }
 
 const FIELD = 'innovation_use.actors' as const;
+
+/** `actor_type` catalogue id of "Other": its rows are also told apart by `other_actor_type`. */
+const OTHER_ACTOR_TYPE_ID = 5;
 
 /** Step 1: absent, `null` or `''` counts as empty. */
 const isEmpty = (value: unknown): boolean =>
@@ -87,19 +90,14 @@ export const applyInnovationUseActorFollowUpRules = (
     assertCode(out, index, 'count_unit', COUNT_UNIT_CODES);
     assertCode(out, index, 'use_nature', USE_NATURE_CODES);
 
-    // Steps 3-4 (BIF-R-7): drop what the type is not asked.
+    // Step 3 (BIF-R-7): drop count_unit where the type is not asked.
+    // @akili-spec changes/innovation-use-nature-all-actors (INA-T-1, INA-R-3, INA-DD-4)
+    // Step 4 is retired: use_nature is never nulled and `actor_use_nature_not_applicable` is no longer emitted.
     if (!isEmpty(out.count_unit) && !asksCountUnit(actorTypeId)) {
       out.count_unit = null;
       warn(
         'actor_count_unit_not_applicable',
         'count_unit does not apply to this actor type and was ignored.',
-      );
-    }
-    if (!isEmpty(out.use_nature) && !asksUseNature(actorTypeId)) {
-      out.use_nature = null;
-      warn(
-        'actor_use_nature_not_applicable',
-        'use_nature does not apply to this actor type and was ignored.',
       );
     }
 
@@ -136,16 +134,23 @@ export const applyInnovationUseActorFollowUpRules = (
       out.sex_and_age_disaggregation = true;
     }
 
-    // Step 9 (BIF-R-11): Farmers rows without result_actors_id that the writer would merge.
-    if (
-      Number(actorTypeId) === FARMERS_ACTOR_TYPE_ID &&
-      isEmpty(out.result_actors_id)
-    ) {
-      const key = `${out.count_unit ?? ''}|${out.use_nature ?? ''}`;
+    // Step 9 (BIF-R-11, INA-R-5, INA-DD-3): rows without result_actors_id that the v2 writer
+    // would merge, on EVERY actor type. Identity = type + (other_actor_type for Other) +
+    // count_unit + use_nature, empty equals empty; `out.count_unit` is already null off Farmers.
+    // @akili-spec changes/innovation-use-nature-all-actors (INA-T-2)
+    if (!isEmpty(actorTypeId) && isEmpty(out.result_actors_id)) {
+      const part = (value: unknown) => (isEmpty(value) ? '' : String(value));
+      const typeId = Number(actorTypeId);
+      const key = [
+        typeId,
+        typeId === OTHER_ACTOR_TYPE_ID ? part(out.other_actor_type) : '',
+        part(out.count_unit),
+        part(out.use_nature),
+      ].join('|');
       if (seenPairs.has(key)) {
         warn(
           'actor_duplicate_merged',
-          'Another Farmers actor with the same count_unit and use_nature was sent; the rows are stored as one and the later one wins.',
+          'Another actor of the same type with the same count_unit and use_nature was sent; the rows are stored as one and the later one wins.',
         );
       }
       seenPairs.add(key);

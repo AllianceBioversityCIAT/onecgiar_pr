@@ -5,6 +5,7 @@ import { BrnTooltip } from '@spartan-ng/brain/tooltip';
 import { PortfolioResultsDetailComponent } from './results-detail.component';
 import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
 import { PORTFOLIO_OVERVIEW_COPY } from '../../../../../../internationalization/portfolio-overview.copy';
+import { PortfolioResultDimensions } from '../../../../../../shared/interfaces/portfolio-result-dimensions.interface';
 import { RawResult } from '../../services/portfolio-overview.service';
 
 const copy = PORTFOLIO_OVERVIEW_COPY.detail;
@@ -129,9 +130,47 @@ describe('PortfolioResultsDetailComponent (FDE-T-2)', () => {
     expect(options).toEqual({ exactFileName: true });
     expect(list).toHaveLength(60);
     expect(fileName).toMatch(/^PRMS_portfolio_results_Reporting_2026_\d{4}-\d{2}-\d{2}\.xlsx$/);
-    expect(wscols).toHaveLength(13);
-    expect(links).toEqual([{ cellNumber: 13, cellKey: 'Link' }]);
+    expect(wscols).toHaveLength(16);
+    expect(links).toEqual([{ cellNumber: 16, cellKey: 'Link' }]);
     expect(list[0].Link).toContain('/result/result-detail/');
+  });
+
+  // KZ-changes--portfolio-overview-revamp--filtered-detail-export-1 / PRE-R-7: asserted at the exportExcel sink.
+  it('exports 16 keys with the 3 rejection values of a rejected row, in file order', async () => {
+    const rejectedRow: RawResult = { ...makeRows(1)[0], id: 11, status_id: 7, status_name: 'Rejected' };
+    const dimensionsMap: PortfolioResultDimensions = {
+      versionId: 36,
+      phaseName: null,
+      projectLinks: [],
+      centerLinks: [],
+      projects: [],
+      centers: [],
+      w3ProjectIds: [],
+      rejections: [{ resultId: 11, comment: 'Evidence link broken', programCode: 'SP03', programName: 'Climate Action', rejectedAt: '2026-11-10' }]
+    };
+    const f = create({ rows: [rejectedRow], dimensionsStatus: 'ready', dimensionsMap });
+    click(f, '[data-testid="detail-export"]');
+    await f.whenStable();
+    const [list] = exportExcel.mock.calls[0];
+    expect(Object.keys(list[0])).toEqual([
+      'Code',
+      'Title',
+      'Type',
+      'Level',
+      'P/A',
+      'Source',
+      'Status',
+      'Rejection reason',
+      'Rejected by',
+      'Rejected on',
+      'Origin',
+      'Lead Center',
+      'Contributing Centers',
+      'Projects',
+      'Phase',
+      'Link'
+    ]);
+    expect([list[0]['Rejection reason'], list[0]['Rejected by'], list[0]['Rejected on']]).toEqual(['Evidence link broken', 'SP03 - Climate Action', '2026-11-10']);
   });
 
   it('exports only the searched rows', async () => {

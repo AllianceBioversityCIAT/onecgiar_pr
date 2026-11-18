@@ -1,0 +1,89 @@
+<!--
+  Same Popover + Command structure as the top-bar `filter-multi-select` (see the caveats in its html): the trigger is a plain
+  button, `[attachTo]` takes the trigger element, `*hlmPopoverPortal` is STRUCTURAL (the attribute form throws NG0201).
+  The command input is always rendered so the keyboard has a target; it is visually hidden (two short lists, no search):
+  it types nothing (`onInputKey`), Space toggles the active item like Enter, and `matchAll` keeps every option visible.
+  Two sections, Funding and Status. No selection lives here: it comes in and toggles go out (PRE-R-2).
+-->
+<hlm-popover align="end" sideOffset="6" [attachTo]="trigger" [state]="open() ? 'open' : 'closed'" (stateChanged)="onState($event)">
+  <button
+    #trigger
+    type="button"
+    hlmBtn
+    variant="outline"
+    class="gap-[8px] focus-visible:[box-shadow:var(--pr-focus-ring)]"
+    data-testid="detail-filters-trigger"
+    aria-haspopup="listbox"
+    [attr.aria-expanded]="open() ? 'true' : 'false'"
+    [attr.aria-controls]="open() ? listId : null"
+    [attr.aria-label]="triggerName()"
+    [disabled]="disabled()"
+    [attr.disabled]="disabled() ? '' : null"
+    (click)="toggleOpen()">
+    <span>{{ copy.label }}</span>
+    @if (count() > 0) {
+      <span
+        class="rounded-[999px] bg-[var(--pr-color-primary-50)] px-[6px] font-mono text-[11px] font-medium tabular-nums text-[var(--pr-color-primary-600)]"
+        data-testid="detail-filters-count"
+        aria-hidden="true"
+        >{{ count() }}</span
+      >
+    }
+    <ng-icon name="lucideChevronDown" class="shrink-0 text-[14px] text-[var(--pr-text-subtle)]" aria-hidden="true" />
+  </button>
+
+  <hlm-popover-content *hlmPopoverPortal class="!w-[280px] !max-w-[calc(100vw-32px)] gap-0 p-0">
+    <div brnCommand class="flex w-full flex-col overflow-hidden" [filter]="matchAll" (keydown.escape)="closeAndRestore(trigger)">
+      <div class="sr-only">
+        <input brnCommandInput [attr.aria-label]="copy.label" [attr.aria-controls]="listId" aria-expanded="true" (keydown)="onInputKey($event)" />
+      </div>
+
+      <div brnCommandList [id]="listId" class="light-scroll max-h-[280px] overflow-y-auto overflow-x-hidden p-[4px] outline-none" aria-multiselectable="true">
+        @for (section of sections(); track section.dimension) {
+          <div brnCommandGroup [attr.aria-label]="section.label">
+            <p class="px-[8px] pb-[2px] pt-[8px] text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">{{ section.label }}</p>
+            @for (item of section.options; track item.value) {
+              <button
+                brnCommandItem
+                type="button"
+                [value]="item.label"
+                [attr.data-testid]="'detail-filter-item-' + section.dimension + '-' + item.value"
+                [attr.aria-checked]="section.selected.has(item.value) ? 'true' : 'false'"
+                [attr.title]="item.hint || null"
+                class="flex w-full cursor-pointer items-center gap-[8px] rounded-[6px] px-[8px] py-[6px] text-left outline-none hover:bg-[var(--pr-surface-band)] data-[selected]:bg-[var(--pr-surface-band)]"
+                (selected)="pick(section.dimension, item.value)">
+                <span
+                  class="flex size-[14px] shrink-0 items-center justify-center rounded-[4px] border"
+                  [class]="
+                    section.selected.has(item.value)
+                      ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-300)] text-[var(--pr-color-white)]'
+                      : 'border-[var(--pr-border-strong)] bg-[var(--pr-surface-card)] text-transparent'
+                  "
+                  aria-hidden="true">
+                  <ng-icon name="lucideCheck" class="text-[10px]" />
+                </span>
+                <span class="min-w-0 flex-1 truncate text-[13px] font-normal text-[var(--pr-text)]">{{ item.label }}</span>
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="flex items-center justify-between gap-[8px] border-t border-[var(--pr-border)] px-[10px] py-[8px]">
+        <p class="m-0 text-[12px] font-normal text-[var(--pr-text-secondary)]" data-testid="detail-filters-hint">{{ copy.hint }}</p>
+        <button
+          type="button"
+          hlmBtn
+          variant="ghost"
+          size="sm"
+          class="shrink-0 focus-visible:[box-shadow:var(--pr-focus-ring)]"
+          data-testid="detail-filters-clear"
+          [disabled]="count() === 0"
+          [attr.disabled]="count() === 0 ? '' : null"
+          (click)="clear()">
+          {{ copy.clear }}
+        </button>
+      </div>
+    </div>
+  </hlm-popover-content>
+</hlm-popover>

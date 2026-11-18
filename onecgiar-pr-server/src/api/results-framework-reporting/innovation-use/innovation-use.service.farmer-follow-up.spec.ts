@@ -109,14 +109,16 @@ describe('InnovationUseService — Farmers row matching (IFC-T-3)', () => {
     );
   });
 
-  it('non-Farmers duplicate -> update as today, even if it carries codes', async () => {
+  // INA-R-6 / INA-DD-3 (changes/innovation-use-nature-all-actors): a non-Farmers row that does NOT
+  // carry `use_nature` keeps the type-only match, even if it carries a `count_unit`. A row that
+  // carries `use_nature` is told apart by it: see `innovation-use.service.nature-all-actors.spec.ts`.
+  it('non-Farmers duplicate without use_nature -> update as today, even if it carries a unit', async () => {
     const service = makeService([saved({ actor_type_id: RESEARCHERS })]);
 
     await run(service, [
       {
         actor_type_id: RESEARCHERS,
         count_unit: 'households',
-        use_nature: 'innovation_applied',
       },
     ]);
 

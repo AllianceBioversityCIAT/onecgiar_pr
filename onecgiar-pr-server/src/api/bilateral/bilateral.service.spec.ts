@@ -1562,6 +1562,336 @@ describe('BilateralService (unit)', () => {
     });
   });
 
+  // @akili-spec bugfix/ai-draft-subnational-geo — ADS-T-1 (INC-168504): the AI draft carries the
+  // sub-national codes on each country (`countries[i].subnational_areas`), not at the root.
+  describe('populateResultFromExtractedMds — Sub-national geo (INC-168504)', () => {
+    const result = { id: 11, result_type_id: 1 } as any;
+    const CLARISA_COUNTRIES = [
+      { id: 170, iso_alpha_2: 'CO', iso_alpha_3: 'COL', name: 'Colombia' },
+      { id: 404, iso_alpha_2: 'KE', iso_alpha_3: 'KEN', name: 'Kenya' },
+    ];
+    const CLARISA_SUBNATIONALS = [
+      {
+        id: 901,
+        code: 'CO-CUN',
+        name: 'Cundinamarca',
+        country_iso_alpha_2: 'CO',
+        is_active: true,
+      },
+      {
+        id: 902,
+        code: 'KE-30',
+        name: 'Nairobi',
+        country_iso_alpha_2: 'KE',
+        is_active: true,
+      },
+    ];
+
+    // Evaluates a TypeORM `where` (object or array of objects, values plain or `In(...)`)
+    // against fixture rows, so any query shape a correct implementation uses is served.
+    const matchWhere = (rows: any[], where: any) => {
+      const conds = Array.isArray(where) ? where : [where ?? {}];
+      const ok = (row: any, cond: any) =>
+        Object.entries(cond).every(([key, expected]: [string, any]) => {
+          const values =
+            expected && Array.isArray(expected.value)
+              ? expected.value
+              : [expected];
+          return values.includes(row[key]);
+        });
+      return rows.filter((row) => conds.some((cond) => ok(row, cond)));
+    };
+
+    const setup = (
+      scopeId: number,
+      opts: { subnationalFind?: jest.Mock } = {},
+    ) => {
+      const countriesRepo = {
+        find: jest.fn(async ({ where }: any) =>
+          matchWhere(CLARISA_COUNTRIES, where),
+        ),
+      };
+      const resultCountryRepo = {
+        updateCountries: jest.fn().mockResolvedValue(undefined),
+        getResultCountrieByIdResultAndCountryId: jest
+          .fn()
+          .mockResolvedValue(null),
+        save: jest.fn(async (rows: any[]) => {
+          rows.forEach((r, i) => (r.result_country_id = 700 + i));
+          return rows;
+        }),
+      };
+      const subnationalRepo = {
+        find:
+          opts.subnationalFind ??
+          jest.fn(async ({ where }: any) =>
+            matchWhere(CLARISA_SUBNATIONALS, where),
+          ),
+      };
+      const resultCountrySubnationalRepo = {
+        bulkUpdateSubnational: jest.fn().mockResolvedValue(undefined),
+        upsertSubnational: jest.fn().mockResolvedValue(undefined),
+      };
+      const geoScopeRepository = {
+        findOne: jest.fn().mockResolvedValue({ id: scopeId, name: 'scope' }),
+      };
+      const { service, stubs } = makeService({
+        _geoScopeRepository: geoScopeRepository,
+        _clarisaCountriesRepository: countriesRepo,
+        _resultCountryRepository: resultCountryRepo,
+        _clarisaSubnationalAreasRepository: subnationalRepo,
+        _resultCountrySubnationalRepository: resultCountrySubnationalRepo,
+      });
+      return {
+        service,
+        warn: (service as any).logger.warn as jest.Mock,
+        save: stubs.resultRepository.save as jest.Mock,
+        resultCountryRepo,
+        subnationalRepo,
+        writer: resultCountrySubnationalRepo,
+      };
+    };
+
+    const run = (service: any, scope: number, countries: any[]) =>
+      service.populateResultFromExtractedMds(
+        result,
+        { geo_focus: { scope_code: scope, countries } },
+        9,
+      );
+
+    const writtenCodes = (writer: any): string[] =>
+      Array.from(
+        new Set(
+          [
+            ...writer.bulkUpdateSubnational.mock.calls,
+            ...writer.upsertSubnational.mock.calls,
+          ].flatMap((c: any[]) => c[1]),
+        ),
+      ).sort();
+
+    const savedScopes = (save: jest.Mock): any[] =>
+      save.mock.calls.map((c) => c[0]?.geographic_scope_id);
+
+    it('a. reported: a country-level code resolves and the scope stays 5', async () => {
+      const { service, warn, save, writer } = setup(5);
+
+      await run(service, 5, [
+        { iso_alpha_2: 'CO', subnational_areas: ['CO-CUN'] },
+      ]);
+
+      expect(save).toHaveBeenCalledWith(
+        expect.objectContaining({ geographic_scope_id: 5 }),
+      );
+      expect(writtenCodes(writer)).toEqual(['CO-CUN']);
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('b. two countries: both codes resolve and are written, scope 5', async () => {
+      const { service, save, writer } = setup(5);
+
+      await run(service, 5, [
+        { iso_alpha_2: 'CO', subnational_areas: ['CO-CUN'] },
+        { iso_alpha_2: 'KE', subnational_areas: ['KE-30'] },
+      ]);
+
+      expect(save).toHaveBeenCalledWith(
+        expect.objectContaining({ geographic_scope_id: 5 }),
+      );
+      expect(writtenCodes(writer)).toEqual(['CO-CUN', 'KE-30']);
+    });
+
+    it('c. none resolves: falls back to scope 4, keeps the country, warns, writes no subnational', async () => {
+      const { service, warn, save, writer, resultCountryRepo } = setup(5);
+
+      await run(service, 5, [
+        { iso_alpha_2: 'CO', subnational_areas: ['XX-NOPE'] },
+      ]);
+
+      expect(savedScopes(save)).toContain(4);
+      expect(savedScopes(save)).not.toContain(5);
+      expect(resultCountryRepo.updateCountries).toHaveBeenCalledWith(11, [170]);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('XX-NOPE');
+      expect(writer.upsertSubnational).not.toHaveBeenCalled();
+      expect(writer.bulkUpdateSubnational).not.toHaveBeenCalled();
+    });
+
+    it('c2. none resolves with two countries: falls back to scope 3', async () => {
+      const { service, save } = setup(5);
+
+      await run(service, 5, [
+        { iso_alpha_2: 'CO', subnational_areas: ['XX-NOPE'] },
+        { iso_alpha_2: 'KE', subnational_areas: ['YY-NOPE'] },
+      ]);
+
+      expect(savedScopes(save)).toContain(3);
+      expect(savedScopes(save)).not.toContain(5);
+    });
+
+    it('d. partial: the resolved code is written, the unresolved one warns, scope 5', async () => {
+      const { service, warn, save, writer } = setup(5);
+
+      await run(service, 5, [
+        { iso_alpha_2: 'CO', subnational_areas: ['CO-CUN', 'XX-NOPE'] },
+      ]);
+
+      expect(save).toHaveBeenCalledWith(
+        expect.objectContaining({ geographic_scope_id: 5 }),
+      );
+      expect(writtenCodes(writer)).toEqual(['CO-CUN']);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('XX-NOPE');
+    });
+
+    it('e. foreign code: a code of another country is unresolved (scope 4, warn)', async () => {
+      const { service, warn, save, writer } = setup(5);
+
+      await run(service, 5, [
+        { iso_alpha_2: 'CO', subnational_areas: ['KE-30'] },
+      ]);
+
+      expect(savedScopes(save)).toContain(4);
+      expect(savedScopes(save)).not.toContain(5);
+      expect(warn).toHaveBeenCalled();
+      expect(writer.upsertSubnational).not.toHaveBeenCalled();
+    });
+
+    it('f. no half-write: a CLARISA failure writes no country and does not throw', async () => {
+      const { service, warn, resultCountryRepo } = setup(5, {
+        subnationalFind: jest.fn().mockRejectedValue(new Error('clarisa down')),
+      });
+
+      await expect(
+        run(service, 5, [{ iso_alpha_2: 'CO', subnational_areas: ['CO-CUN'] }]),
+      ).resolves.toBeUndefined();
+
+      expect(resultCountryRepo.updateCountries).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalled();
+    });
+
+    it('g. scope 4 is untouched: no sub-national lookup', async () => {
+      const { service, save, subnationalRepo } = setup(4);
+
+      await run(service, 4, [{ iso_alpha_2: 'CO' }]);
+
+      expect(subnationalRepo.find).not.toHaveBeenCalled();
+      expect(save).toHaveBeenCalledWith(
+        expect.objectContaining({ geographic_scope_id: 4 }),
+      );
+    });
+
+    // /akili-test additions — scenarios the author's red→green cases a–g leave open.
+    it('h. FR-2 none sent: scope 5 with no codes falls back to scope 4 without a CLARISA query', async () => {
+      const {
+        service,
+        warn,
+        save,
+        writer,
+        subnationalRepo,
+        resultCountryRepo,
+      } = setup(5);
+
+      await run(service, 5, [{ iso_alpha_2: 'CO' }]);
+
+      expect(subnationalRepo.find).not.toHaveBeenCalled();
+      expect(savedScopes(save)).toEqual([4]);
+      expect(resultCountryRepo.updateCountries).toHaveBeenCalledWith(11, [170]);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(writer.upsertSubnational).not.toHaveBeenCalled();
+      expect(writer.bulkUpdateSubnational).not.toHaveBeenCalled();
+    });
+
+    it('i. NFR observability: the single warn names the result id and every unresolved code', async () => {
+      const { service, warn } = setup(5);
+
+      await run(service, 5, [
+        {
+          iso_alpha_2: 'CO',
+          subnational_areas: ['CO-CUN', 'XX-NOPE', 'KE-30'],
+        },
+      ]);
+
+      expect(warn).toHaveBeenCalledTimes(1);
+      const message: string = warn.mock.calls[0][0];
+      expect(message).toContain('result 11');
+      expect(message).toContain('XX-NOPE');
+      expect(message).toContain('KE-30');
+      expect(message).not.toContain('geo_focus skipped');
+    });
+
+    it('j. DD-3 backup: a CLARISA row without country_iso_alpha_2 is matched by its code prefix', async () => {
+      const rows = [{ ...CLARISA_SUBNATIONALS[0], country_iso_alpha_2: null }];
+      const { service, save, writer, warn } = setup(5, {
+        subnationalFind: jest.fn(async ({ where }: any) =>
+          matchWhere(rows, where),
+        ),
+      });
+
+      await run(service, 5, [
+        { iso_alpha_2: 'CO', subnational_areas: ['CO-CUN'] },
+      ]);
+
+      expect(save).toHaveBeenCalledWith(
+        expect.objectContaining({ geographic_scope_id: 5 }),
+      );
+      expect(writtenCodes(writer)).toEqual(['CO-CUN']);
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('k. design §7 step 1: root-level codes are collected with the nested ones', async () => {
+      const { service, save, writer } = setup(5);
+
+      await service.populateResultFromExtractedMds(
+        result,
+        {
+          geo_focus: {
+            scope_code: 5,
+            countries: [{ iso_alpha_2: 'CO' }],
+            subnational_areas: ['CO-CUN'],
+          },
+        },
+        9,
+      );
+
+      expect(save).toHaveBeenCalledWith(
+        expect.objectContaining({ geographic_scope_id: 5 }),
+      );
+      expect(writtenCodes(writer)).toEqual(['CO-CUN']);
+    });
+
+    it('l. NFR performance: codes from several countries resolve in one CLARISA code query', async () => {
+      const { service, subnationalRepo } = setup(5);
+
+      await run(service, 5, [
+        { iso_alpha_2: 'CO', subnational_areas: ['CO-CUN', 'CO-CUN'] },
+        { iso_alpha_2: 'KE', subnational_areas: ['KE-30'] },
+      ]);
+
+      const codeQueries = subnationalRepo.find.mock.calls.filter(
+        ([arg]: any[]) => !Array.isArray(arg?.where) && arg?.where?.code,
+      );
+      expect(codeQueries).toHaveLength(1);
+      expect([...codeQueries[0][0].where.code.value].sort()).toEqual([
+        'CO-CUN',
+        'KE-30',
+      ]);
+    });
+
+    it('m. FR-5 AND IT MUST: a geo error after resolution still warns and does not throw', async () => {
+      const { service, warn, save, resultCountryRepo } = setup(5);
+      resultCountryRepo.updateCountries.mockRejectedValue(new Error('db down'));
+
+      await expect(
+        run(service, 5, [{ iso_alpha_2: 'CO', subnational_areas: ['CO-CUN'] }]),
+      ).resolves.toBeUndefined();
+
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('geo_focus skipped for result 11'),
+      );
+      expect(savedScopes(save)).not.toContain(5);
+    });
+  });
+
   describe('populateTypeSpecificFromExtractedMds', () => {
     it('forwards knowledge_product to the KP handler when promoting a KP draft', async () => {
       const { service, handlers } = makeService();
@@ -2663,7 +2993,9 @@ describe('BilateralService (unit)', () => {
           field: 'innovation_use.actors',
           index: 2,
           code: 'actor_duplicate_merged',
-          message: 'merged',
+          // @akili-spec changes/innovation-use-nature-all-actors (INA-T-2, INA-DD-2): the new step-9 text.
+          message:
+            'Another actor of the same type with the same count_unit and use_nature was sent; the rows are stored as one and the later one wins.',
         },
       ];
       const arrange = (hook: jest.Mock | undefined) => {

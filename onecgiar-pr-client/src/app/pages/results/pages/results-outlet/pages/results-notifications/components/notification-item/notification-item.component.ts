@@ -1329,6 +1329,24 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
     const resultCode = this.notification?.obj_result?.result_code ?? '';
     const resultTitle = this.notification?.obj_result?.title ?? '';
 
+    // Updates rows (Approved/Rejected notices, tagged notices, …) are not requests: the panel repeats
+    // the row's own sentence (`updateTextParts`, same join as `buildResultNotificationText`). Without
+    // this, a bilateral update fell into the contributor-request branch below and rendered
+    // "The primary Science Program , as primary Science Program, has tagged …" (PRTest 2026-11-13).
+    if (this.isUpdateSource) {
+      const parts = this.updateTextParts;
+      return {
+        lead: [parts.lead, parts.prefix].filter(part => !!part).join(' '),
+        requesterCode: '',
+        verb: '',
+        responderCode: '',
+        tail: '',
+        resultCode,
+        resultTitle: `${resultTitle}${parts.linkTrailer ?? ''}`,
+        suffix: parts.suffix ?? undefined
+      };
+    }
+
     // PSR-T-8 (design.md §6.1 "Primary request" row, PSR-R-9): "{center} has tagged {sp} as the
     // primary Science Program of result {code} - {title}". `lead` IS the Creating Center label
     // (never "Center X" — the primary sentence has no such prefix), `responderCode` is the

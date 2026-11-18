@@ -11,24 +11,39 @@
     [required]="true">
   </app-pr-select>
 
-  <app-no-data-text
-    *ngIf="!this.showIframe || !this.official_code || !this.clarisaQaToken"
-    title="Select an Initiative to display the content"></app-no-data-text>
+  @if (errorMessage()) {
+    <div
+      class="qa_error mb-[10px] rounded-[6px] border border-[var(--pr-color-red-300)] px-[12px] py-[8px] text-[13px] text-[var(--pr-color-red-300)]"
+      role="alert">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (showReloadButton()) {
+    <app-pr-button class="qa_reload" text="Reload" icon="refresh" (clickEvent)="reload()"></app-pr-button>
+  }
+
+  @if (!showIframe() && !official_code) {
+    <app-no-data-text title="Select an Initiative to display the content"></app-no-data-text>
+  }
+
+  @if (loading()) {
+    <app-no-data-text title="Loading Quality Assurance..."></app-no-data-text>
+  }
 
   <br />
 
-  <div
-    [ngClass]="{ expand: this.api.dataControlSE.show_qa_full_screen }"
-    class="iframe_container"
-    *ngIf="this.showIframe && this.clarisaQaToken && this.official_code">
-    <div class="expand_icon" (click)="this.api.dataControlSE.show_qa_full_screen = !this.api.dataControlSE.show_qa_full_screen">
-      <i class="material-icons-round">
-        {{ this.api.dataControlSE.show_qa_full_screen ? 'close_fullscreen' : 'open_in_full' }}
-      </i>
-      {{ this.api.dataControlSE.show_qa_full_screen ? 'Minimize ' : 'Open in full screen' }}
-    </div>
+  @if (showIframe() && sanitizedUrl() && official_code) {
+    <div [ngClass]="{ expand: this.api.dataControlSE.show_qa_full_screen }" class="iframe_container">
+      <div class="expand_icon" (click)="this.api.dataControlSE.show_qa_full_screen = !this.api.dataControlSE.show_qa_full_screen">
+        <i class="material-icons-round">
+          {{ this.api.dataControlSE.show_qa_full_screen ? 'close_fullscreen' : 'open_in_full' }}
+        </i>
+        {{ this.api.dataControlSE.show_qa_full_screen ? 'Minimize ' : 'Open in full screen' }}
+      </div>
 
-    <iframe title="quality-assurance" class="embedded" [src]="this.sanitizedUrl"></iframe>
-  </div>
+      <iframe title="Quality Assurance" class="embedded" [src]="sanitizedUrl()"></iframe>
+    </div>
+  }
   <br />
 </div>

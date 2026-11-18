@@ -1,288 +1,294 @@
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { QualityAssuranceComponent } from './quality-assurance.component';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { PrSelectComponent } from '../../custom-fields/pr-select/pr-select.component';
-import { LabelNamePipe } from '../../custom-fields/pr-select/label-name.pipe';
-import { ListFilterByTextAndAttrPipe } from '../../custom-fields/pr-multi-select/pipes/list-filter-by-text-and-attr.pipe';
-import { ScrollingModule } from '@angular/cdk/scrolling';
-import { FormsModule } from '@angular/forms';
-import { PrFieldHeaderComponent } from '../../custom-fields/pr-field-header/pr-field-header.component';
-import { NoDataTextComponent } from '../../custom-fields/no-data-text/no-data-text.component';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
+import { QA_SP_GENERIC_ERROR, QA_SP_RELOAD_MESSAGE_TYPE, QualityAssuranceComponent, resolveQaSpEmbed } from './quality-assurance.component';
 import { ApiService } from '../../shared/services/api/api.service';
-import { QualityAssuranceService } from './quality-assurance.service';
 import { ResultLevelService } from '../results/pages/result-creator/services/result-level.service';
-import { DomSanitizer } from '@angular/platform-browser';
-import { DataControlService } from '../../shared/services/data-control.service';
+import { QualityAssuranceService } from './quality-assurance.service';
+import { environment } from '../../../environments/environment';
 
-jest.useFakeTimers();
-
-describe('QualityAssuranceComponent', () => {
+/**
+ * P2-3911 — Science Program view of the new QA. The environment file is per-environment and
+ * gitignored, so assertions are built from `environment.qaUrl` instead of a hardcoded host.
+ */
+describe('QualityAssuranceComponent (P2-3911 SP link)', () => {
   let component: QualityAssuranceComponent;
   let fixture: ComponentFixture<QualityAssuranceComponent>;
-  let mockApiService: any;
-  let mockQualityAssuranceService: QualityAssuranceService;
-  let mockResultLevelService: any;
-  let mockDomSanitizer: any;
-  const mockInitiatives = [
-    { official_code: 1, initiative_id: 1, name: 'Initiative 1', full_name: 'Initiative 1 Full' },
-    { official_code: 2, initiative_id: 2, name: 'Initiative 2', full_name: 'Initiative 2 Full' }
+  let codeCounter: number;
+  let getQaSpLink: jest.Mock;
+  let apiMock: any;
+
+  const qaOrigin = new URL(environment.qaUrl).origin;
+  const initiatives = [
+    { official_code: 'SP01', full_name: 'Program 1' },
+    { official_code: 'SP02', full_name: 'Program 2' }
   ];
 
+  // Real DomSanitizer: the wrapped value is what Angular binds to the iframe.
+  const lastUrl = () => (component.sanitizedUrl() as any)?.changingThisBreaksApplicationSecurity as string;
+  const postFromQa = (origin = qaOrigin, data: any = { type: QA_SP_RELOAD_MESSAGE_TYPE, reason: 'code_invalid' }) =>
+    component.handleQaMessage(new MessageEvent('message', { origin, data }));
+
   beforeEach(async () => {
-    mockApiService = {
-      rolesSE: {
-        validateReadOnly: jest.fn()
-      },
+    codeCounter = 0;
+    getQaSpLink = jest.fn(() => {
+      codeCounter += 1;
+      return of({ response: { code: `code+${codeCounter}/=`, expiresAt: '2026-11-17T12:01:00Z' } });
+    });
+    apiMock = {
+      rolesSE: { isAdmin: false, validateReadOnly: jest.fn() },
       dataControlSE: {
-        myInitiativesListReportingByPortfolio: mockInitiatives,
+        myInitiativesListReportingByPortfolio: initiatives,
         detailSectionTitle: jest.fn(),
-        getCurrentPhases: jest.fn().mockReturnValue(of({ response: [] })),
-        reportingCurrentPhase: {
-          portfolioAcronym: 'TEST-PORT'
-        }
+        getCurrentPhases: () => of({ response: [] }),
+        reportingCurrentPhase: { portfolioAcronym: 'P25' },
+        show_qa_full_screen: false
       },
       resultsSE: {
-        GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: mockInitiatives })),
-        GET_ClarisaQaToken: jest.fn().mockReturnValue(of({ response: { token: 'test-token-123' } }))
+        GET_AllInitiatives: jest.fn(() => of({ response: initiatives })),
+        GET_QaSpLink: getQaSpLink,
+        GET_ClarisaQaToken: jest.fn(() => of({ response: { token: 'legacy-token' } }))
       }
     };
 
-    mockQualityAssuranceService = new QualityAssuranceService();
-    mockResultLevelService = {
-      resultLevelList: [],
-      resultLevelListSig: { set: jest.fn(), update: jest.fn() }
-    };
-
-    // P2-3322: `showIframe` is signal-backed now, so the deferred re-show really repaints and the
-    // <iframe [src]> binding is actually evaluated. A hand-rolled object is not a `SafeValue`, so it was
-    // rejected with NG0904 — spy on the real DomSanitizer instead of faking its return value.
-
     await TestBed.configureTestingModule({
-      declarations: [
-        QualityAssuranceComponent,
-        PrSelectComponent,
-        LabelNamePipe,
-        ListFilterByTextAndAttrPipe,
-        PrFieldHeaderComponent,
-        NoDataTextComponent
-      ],
-      imports: [HttpClientTestingModule, ScrollingModule, FormsModule],
+      declarations: [QualityAssuranceComponent],
       providers: [
-        {
-          provide: ApiService,
-          useValue: mockApiService
-        },
-        {
-          provide: QualityAssuranceService,
-          useValue: mockQualityAssuranceService
-        },
-        {
-          provide: ResultLevelService,
-          useValue: mockResultLevelService
-        },
-        {
-          provide: DataControlService,
-          useValue: {}
-        }
-      ]
+        { provide: ApiService, useValue: apiMock },
+        { provide: QualityAssuranceService, useValue: {} },
+        { provide: ResultLevelService, useValue: {} }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
 
     fixture = TestBed.createComponent(QualityAssuranceComponent);
     component = fixture.componentInstance;
-    mockDomSanitizer = TestBed.inject(DomSanitizer);
-    jest.spyOn(mockDomSanitizer, 'bypassSecurityTrustResourceUrl');
+    // The environment file is per-environment and gitignored: never depend on its qaSpEmbed value.
+    component.qaSpEmbed = 'new';
   });
 
-  describe('ngOnInit', () => {
-    it('should call validateReadOnly, detailSectionTitle, and initialize QA observer', () => {
-      const spyValidateReadOnly = jest.spyOn(mockApiService.rolesSE, 'validateReadOnly');
-      const spyDetailSectionTitle = jest.spyOn(mockApiService.dataControlSE, 'detailSectionTitle');
-      const spyGetCurrentPhases = jest.spyOn(mockApiService.dataControlSE, 'getCurrentPhases');
-      const spyGET_AllInitiatives = jest.spyOn(component, 'GET_AllInitiatives');
+  afterEach(() => {
+    fixture.destroy();
+    jest.restoreAllMocks();
+  });
+
+  describe('code per load', () => {
+    it('asks for a code on first load and points the iframe at {qaUrl}/sp?code=…', () => {
+      component.ngOnInit();
+
+      expect(getQaSpLink).toHaveBeenCalledWith('SP01');
+      expect(lastUrl()).toBe(`${environment.qaUrl.replace(/\/+$/, '')}/sp?code=${encodeURIComponent('code+1/=')}`);
+      expect(lastUrl()).not.toMatch(/[^:]\/\/sp\?/);
+      expect(component.showIframe()).toBe(true);
+    });
+
+    it('asks for a NEW code every time the program changes', () => {
+      component.ngOnInit();
+      component.selectOptionEvent('SP02');
+      component.selectOptionEvent('SP01');
+
+      expect(getQaSpLink.mock.calls.map(c => c[0])).toEqual(['SP01', 'SP02', 'SP01']);
+      expect(lastUrl()).toContain(encodeURIComponent('code+3/='));
+    });
+
+    it('admin sees all programs and gets a code for the first one', () => {
+      apiMock.rolesSE.isAdmin = true;
 
       component.ngOnInit();
 
-      expect(spyValidateReadOnly).toHaveBeenCalled();
-      expect(spyDetailSectionTitle).toHaveBeenCalledWith('Quality Assurance');
-      expect(mockQualityAssuranceService.$qaFirstInitObserver).toBeDefined();
-      expect(typeof mockQualityAssuranceService.$qaFirstInitObserver.next).toBe('function');
-
-      // Trigger the observer to test the subscription flow
-      mockQualityAssuranceService.$qaFirstInitObserver.next();
-
-      expect(spyGetCurrentPhases).toHaveBeenCalled();
-      expect(spyGET_AllInitiatives).toHaveBeenCalled();
+      expect(apiMock.resultsSE.GET_AllInitiatives).toHaveBeenCalledWith('P25');
+      expect(component.allInitiatives).toEqual(initiatives);
+      expect(getQaSpLink).toHaveBeenCalledWith('SP01');
     });
 
-    it('should handle getCurrentPhases subscription and call GET_AllInitiatives', () => {
-      const spyGET_AllInitiatives = jest.spyOn(component, 'GET_AllInitiatives');
+    it('drops a pending request when the user switches program', () => {
+      const pending = new Subject<any>();
+      getQaSpLink.mockReturnValueOnce(pending.asObservable());
+      component.selectOptionEvent('SP01');
+      component.selectOptionEvent('SP02');
 
+      pending.next({ response: { code: 'stale', expiresAt: 'x' } });
+
+      expect(lastUrl()).not.toContain('stale');
+      expect(lastUrl()).toContain(encodeURIComponent('code+1/='));
+    });
+
+    it('does not ask for a code without a program', () => {
+      apiMock.dataControlSE.myInitiativesListReportingByPortfolio = [];
       component.ngOnInit();
 
-      // Manually trigger the observer
-      if (mockQualityAssuranceService.$qaFirstInitObserver) {
-        mockQualityAssuranceService.$qaFirstInitObserver.next();
-      }
-
-      expect(spyGET_AllInitiatives).toHaveBeenCalled();
+      expect(getQaSpLink).not.toHaveBeenCalled();
+      expect(component.showIframe()).toBe(false);
     });
   });
 
-  describe('sanitizeUrl', () => {
-    it('should sanitize URL with official_code and token', () => {
-      component.qaUrl = 'https://qatest.ciat.cgiar.org/';
-      component.official_code = 1;
-      component.clarisaQaToken = 'test-token-123';
-      const spy = jest.spyOn(mockDomSanitizer, 'bypassSecurityTrustResourceUrl');
+  describe('errors from the back', () => {
+    it.each([
+      ['This program is not in QA yet', 404],
+      ['Quality Assurance is not available right now', 503],
+      ['You do not have access to Quality Assurance for this program', 403]
+    ])('shows "%s" and a Reload button', (message, status) => {
+      getQaSpLink.mockReturnValueOnce(throwError(() => ({ status, error: { message } })));
 
-      component.sanitizeUrl();
+      component.selectOptionEvent('SP01');
 
-      const expectedUrl = 'https://qatest.ciat.cgiar.org//crp?crp_id=1&token=test-token-123';
-      expect(spy).toHaveBeenCalledWith(expectedUrl);
-      expect(component.sanitizedUrl).toEqual(mockDomSanitizer.bypassSecurityTrustResourceUrl(expectedUrl));
+      expect(component.errorMessage()).toBe(message);
+      expect(component.showReloadButton()).toBe(true);
+      expect(component.showIframe()).toBe(false);
     });
 
-    it('should handle null values in URL', () => {
-      component.qaUrl = 'https://qatest.ciat.cgiar.org/';
-      component.official_code = null;
-      component.clarisaQaToken = null;
+    it('falls back to a generic message', () => {
+      getQaSpLink.mockReturnValueOnce(throwError(() => ({ status: 0 })));
 
-      component.sanitizeUrl();
+      component.selectOptionEvent('SP01');
 
-      const expectedUrl = 'https://qatest.ciat.cgiar.org//crp?crp_id=null&token=null';
-      expect(mockDomSanitizer.bypassSecurityTrustResourceUrl).toHaveBeenCalledWith(expectedUrl);
-    });
-  });
-
-  describe('GET_AllInitiatives', () => {
-    it('should get initiatives and select first one', () => {
-      mockApiService.rolesSE.isAdmin = true;
-      const spyGET_AllInitiatives = jest.spyOn(mockApiService.resultsSE, 'GET_AllInitiatives');
-      const spySelectOptionEvent = jest.spyOn(component, 'selectOptionEvent');
-
-      component.GET_AllInitiatives();
-
-      expect(spyGET_AllInitiatives).toHaveBeenCalledWith('TEST-PORT');
-      expect(component.allInitiatives).toEqual(mockInitiatives);
-      expect(component.official_code).toEqual(1);
-      expect(spySelectOptionEvent).toHaveBeenCalledWith(1);
+      expect(component.errorMessage()).toBe(QA_SP_GENERIC_ERROR);
     });
 
-    it('should handle empty initiatives array', () => {
-      mockApiService.rolesSE.isAdmin = true;
-      jest.spyOn(mockApiService.resultsSE, 'GET_AllInitiatives').mockReturnValue(of({ response: [] }));
-      const spySelectOptionEvent = jest.spyOn(component, 'selectOptionEvent');
+    it('Reload asks for a new code and clears the error', () => {
+      getQaSpLink.mockReturnValueOnce(throwError(() => ({ status: 502 })));
+      component.selectOptionEvent('SP01');
 
-      component.GET_AllInitiatives();
+      component.reload();
 
-      expect(component.allInitiatives).toEqual([]);
-      expect(component.official_code).toBeUndefined();
-      expect(spySelectOptionEvent).not.toHaveBeenCalled();
-    });
-
-    it('should handle null portfolioAcronym', () => {
-      mockApiService.rolesSE.isAdmin = true;
-      mockApiService.dataControlSE.reportingCurrentPhase.portfolioAcronym = null;
-      const spyGET_AllInitiatives = jest.spyOn(mockApiService.resultsSE, 'GET_AllInitiatives');
-
-      component.GET_AllInitiatives();
-
-      expect(spyGET_AllInitiatives).toHaveBeenCalledWith(null);
+      expect(getQaSpLink).toHaveBeenCalledTimes(2);
+      expect(component.errorMessage()).toBeNull();
+      expect(component.showReloadButton()).toBe(false);
+      expect(component.showIframe()).toBe(true);
     });
   });
 
-  describe('GET_ClarisaQaToken', () => {
-    it('should set clarisaQaToken on successful API response', () => {
-      component.official_code = 1;
-      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaQaToken');
-      const callbackSpy = jest.fn();
+  describe('qa-sp:reload-required', () => {
+    beforeEach(() => component.ngOnInit());
 
-      component.GET_ClarisaQaToken(callbackSpy);
+    it('ignores messages from another origin', () => {
+      postFromQa('https://evil.example.com');
 
-      expect(spy).toHaveBeenCalledWith(1);
-      expect(component.clarisaQaToken).toEqual('test-token-123');
-      expect(callbackSpy).toHaveBeenCalled();
+      expect(getQaSpLink).toHaveBeenCalledTimes(1);
+      expect(component.showReloadButton()).toBe(false);
     });
 
-    it('should handle error and invoke callback', () => {
-      component.official_code = 1;
-      const errorResponse = { error: 'Token generation failed' };
-      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaQaToken').mockReturnValue(throwError(() => errorResponse));
-      const callbackSpy = jest.fn();
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    it('ignores other message types from the QA origin', () => {
+      postFromQa(qaOrigin, { type: 'something-else' });
 
-      component.GET_ClarisaQaToken(callbackSpy);
-
-      expect(callbackSpy).toHaveBeenCalled();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(errorResponse);
-      consoleErrorSpy.mockRestore();
+      expect(getQaSpLink).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle null token in response', () => {
-      component.official_code = 1;
-      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaQaToken').mockReturnValue(of({ response: { token: null } }));
-      const callbackSpy = jest.fn();
+    it('reloads once with a new code, then shows the Reload button (no loop)', () => {
+      postFromQa();
+      expect(getQaSpLink).toHaveBeenCalledTimes(2);
+      expect(component.showReloadButton()).toBe(false);
 
-      component.GET_ClarisaQaToken(callbackSpy);
-
-      expect(component.clarisaQaToken).toBeNull();
-      expect(callbackSpy).toHaveBeenCalled();
-    });
-  });
-
-  describe('selectOptionEvent', () => {
-    it('should update official_code, get token, sanitize URL, and show iframe', () => {
-      component.official_code = null;
-      component.showIframe = false;
-      const spyGET_ClarisaQaToken = jest.spyOn(component, 'GET_ClarisaQaToken');
-      const spySanitizeUrl = jest.spyOn(component, 'sanitizeUrl');
-
-      component.selectOptionEvent(2);
-
-      expect(component.official_code).toEqual(2);
-      expect(component.showIframe).toBe(false); // Should be false initially
-
-      expect(spyGET_ClarisaQaToken).toHaveBeenCalled();
-      expect(spySanitizeUrl).toHaveBeenCalled();
-
-      // Fast-forward timers to trigger setTimeout
-      jest.runAllTimers();
-
-      expect(component.showIframe).toBe(true);
+      postFromQa();
+      postFromQa();
+      expect(getQaSpLink).toHaveBeenCalledTimes(2);
+      expect(component.showReloadButton()).toBe(true);
     });
 
-    it('should handle option without official_code', () => {
-      component.official_code = 1;
-      const spyGET_ClarisaQaToken = jest.spyOn(component, 'GET_ClarisaQaToken');
+    it('a user action (Reload) re-arms the single automatic reload', () => {
+      postFromQa();
+      postFromQa();
+      component.reload();
+      expect(getQaSpLink).toHaveBeenCalledTimes(3);
 
-      component.selectOptionEvent(undefined);
-
-      expect(component.official_code).toBeUndefined();
-      expect(spyGET_ClarisaQaToken).toHaveBeenCalled();
+      postFromQa();
+      expect(getQaSpLink).toHaveBeenCalledTimes(4);
     });
 
-    it('should reset showIframe before getting new token', () => {
-      component.showIframe = true;
-      component.official_code = 1;
+    it('listens on window while alive and stops on destroy', () => {
+      window.dispatchEvent(new MessageEvent('message', { origin: qaOrigin, data: { type: QA_SP_RELOAD_MESSAGE_TYPE } }));
+      expect(getQaSpLink).toHaveBeenCalledTimes(2);
 
-      component.selectOptionEvent(2);
-
-      expect(component.showIframe).toBe(false);
+      component.ngOnDestroy();
+      window.dispatchEvent(new MessageEvent('message', { origin: qaOrigin, data: { type: QA_SP_RELOAD_MESSAGE_TYPE } }));
+      expect(getQaSpLink).toHaveBeenCalledTimes(2);
     });
   });
 
-  describe('Component initialization', () => {
-    it('should initialize with default values', () => {
-      expect(component.allInitiatives).toEqual([]);
-      expect(component.clarisaQaToken).toBeNull();
-      expect(component.official_code).toBeNull();
-      expect(component.showIframe).toBe(false);
-      expect(component.sanitizedUrl).toBeNull();
+  describe('template', () => {
+    it('renders the iframe with title "Quality Assurance" and no sandbox', () => {
+      fixture.detectChanges();
+
+      const iframe: HTMLIFrameElement = fixture.nativeElement.querySelector('iframe');
+      expect(iframe).toBeTruthy();
+      expect(iframe.getAttribute('title')).toBe('Quality Assurance');
+      expect(iframe.hasAttribute('sandbox')).toBe(false);
     });
 
-    it('should have qaUrl from environment', () => {
-      expect(component.qaUrl).toBeDefined();
+    it('renders the back error message', () => {
+      getQaSpLink.mockReturnValue(throwError(() => ({ status: 404, error: { message: 'This program is not in QA yet' } })));
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain('This program is not in QA yet');
+      expect(fixture.nativeElement.querySelector('app-pr-button.qa_reload')).toBeTruthy();
     });
+  });
+
+  it('never builds //sp when qaUrl has a trailing slash', () => {
+    component.qaUrl = 'https://qa.example.test';
+    component.selectOptionEvent('SP01');
+    expect(lastUrl()).toBe(`https://qa.example.test/sp?code=${encodeURIComponent('code+1/=')}`);
+  });
+
+  describe("qaSpEmbed switch ('new' in TEST, 'legacy' in PROD)", () => {
+    it.each([
+      ['new', 'new'],
+      ['legacy', 'legacy'],
+      [undefined, 'legacy'],
+      ['NEW', 'legacy'],
+      [true, 'legacy']
+    ])('resolves %p to %p (only an explicit "new" switches)', (value, expected) => {
+      expect(resolveQaSpEmbed(value)).toBe(expected);
+    });
+
+    describe("'legacy'", () => {
+      beforeEach(() => {
+        component.qaSpEmbed = 'legacy';
+      });
+
+      it('uses the CLARISA token and the old /crp URL, never the new code route', () => {
+        component.ngOnInit();
+
+        expect(apiMock.resultsSE.GET_ClarisaQaToken).toHaveBeenCalledWith('SP01');
+        expect(getQaSpLink).not.toHaveBeenCalled();
+        expect(lastUrl()).toBe(`${environment.qaUrl}/crp?crp_id=SP01&token=legacy-token`);
+        expect(component.showIframe()).toBe(true);
+      });
+
+      it('asks for a new token on program change', () => {
+        component.ngOnInit();
+        component.selectOptionEvent('SP02');
+
+        expect(apiMock.resultsSE.GET_ClarisaQaToken.mock.calls.map(c => c[0])).toEqual(['SP01', 'SP02']);
+        expect(lastUrl()).toContain('crp_id=SP02');
+      });
+
+      it('ignores qa-sp:reload-required messages', () => {
+        component.ngOnInit();
+        postFromQa();
+
+        expect(apiMock.resultsSE.GET_ClarisaQaToken).toHaveBeenCalledTimes(1);
+        expect(component.showReloadButton()).toBe(false);
+      });
+
+      it('shows the generic error when the token does not come back', () => {
+        apiMock.resultsSE.GET_ClarisaQaToken.mockReturnValueOnce(throwError(() => ({ status: 500 })));
+        component.selectOptionEvent('SP01');
+
+        expect(component.errorMessage()).toBe(QA_SP_GENERIC_ERROR);
+        expect(component.showIframe()).toBe(false);
+      });
+
+      it('shows the generic error when the token is empty', () => {
+        apiMock.resultsSE.GET_ClarisaQaToken.mockReturnValueOnce(of({ response: { token: null } }));
+        component.selectOptionEvent('SP01');
+
+        expect(component.errorMessage()).toBe(QA_SP_GENERIC_ERROR);
+      });
+    });
+  });
+
+  it('originOf returns null for an invalid URL', () => {
+    expect(QualityAssuranceComponent.originOf('not a url')).toBeNull();
   });
 });

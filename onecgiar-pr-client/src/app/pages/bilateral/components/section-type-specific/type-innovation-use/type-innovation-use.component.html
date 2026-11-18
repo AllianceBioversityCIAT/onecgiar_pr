@@ -352,7 +352,7 @@
           placeholder="Select actor type"
           [required]="required"
           [(ngModel)]="actor.actor_type_id"
-          (ngModelChange)="onFieldChange()">
+          (ngModelChange)="onActorTypeChange(actor)">
         </app-pr-select>
         <!-- Night sweep 2026-09-23, BIL-1: figures without a type are not storable; say so on the row. -->
         @if (actorMissingType(actor)) {
@@ -376,13 +376,62 @@
         (ngModelChange)="onFieldChange()"></app-pr-input>
     }
 
+    <!-- INA-T-8 (INA-R-21 / INA-DD-10) — follow-up answers, 2026 onwards, once a type is picked: the unit question
+         on Farmers cards only, the nature question on every card. Copy is the shared W1/W2 constant
+         (`shared/components/innovation-use-form/farmer-follow-up.ts`), same native radio as the pooled form. Optional
+         here: no REQUIRED marker, and neither answer is published to the MDS tracker. -->
+    @if (showCountUnitQuestion(actor)) {
+      <div class="flex flex-col gap-[8px]" data-testid="iu-count-unit">
+        <div class="text-[14px] font-semibold leading-[1.45] text-[var(--pr-text)]">{{ followUpCopy.countUnitQuestion }}</div>
+        <div role="radiogroup" [attr.aria-label]="followUpCopy.countUnitQuestion" class="flex flex-col gap-[8px] px-[8px]">
+          @for (option of followUpCopy.countUnitOptions; track option.value) {
+            <label class="flex cursor-pointer items-start gap-[10px]">
+              <input
+                type="radio"
+                class="pr-native-radio mt-[2px]"
+                [attr.name]="followUpRowKey(actor) + '-unit'"
+                [value]="option.value"
+                [checked]="actor.count_unit === option.value"
+                (change)="selectCountUnit(actor, option.value)" />
+              <span class="text-[14px] leading-[1.45] text-[var(--pr-text)]">{{ option.label }}</span>
+            </label>
+          }
+        </div>
+      </div>
+    }
+    @if (showUseNatureQuestion(actor)) {
+      <div class="flex flex-col gap-[8px]" data-testid="iu-use-nature">
+        <div class="text-[14px] font-semibold leading-[1.45] text-[var(--pr-text)]">{{ followUpCopy.useNatureQuestion }}</div>
+        <div role="radiogroup" [attr.aria-label]="followUpCopy.useNatureQuestion" class="flex flex-col gap-[16px] px-[8px]">
+          @for (option of followUpCopy.useNatureOptions; track option.value) {
+            <label class="flex cursor-pointer items-start gap-[10px]">
+              <input
+                type="radio"
+                class="pr-native-radio mt-[2px]"
+                [attr.name]="followUpRowKey(actor) + '-nature'"
+                [value]="option.value"
+                [checked]="actor.use_nature === option.value"
+                (change)="selectUseNature(actor, option.value)" />
+              <span class="flex flex-col gap-[2px]">
+                <span class="text-[14px] font-semibold leading-[1.45] text-[var(--pr-text)]">{{ option.label }}</span>
+                <span class="text-[12px] leading-[1.5] text-[var(--pr-text-secondary)]">{{ option.description }}</span>
+              </span>
+            </label>
+          }
+        </div>
+      </div>
+    }
+
     <!-- P2-3785 (4b) — set up as in pooled reporting (W1/W2 `innovation-use-form`): the SAME
          checkbox, which is also what every reader of `sex_and_age_disaggregation` expects —
          ticked (`true`) means the breakdown does NOT apply and only "How many" is reported.
          The Yes/No it replaces saved "Yes, available" as that same `true`, the opposite. -->
+    <!-- @akili-spec changes/innovation-use-nature-all-actors (INA-T-8 households lock): Households is a single-total unit,
+         so the tick shows ON and is disabled (`readOnly`) while it is the answer; Individuals / leaving Farmers unlocks it. -->
     <app-pr-checkbox
       label="Sex and age disaggregation does not apply"
       [required]="false"
+      [readOnly]="isHouseholdsRow(actor)"
       [(ngModel)]="actor.sex_and_age_disaggregation"
       (ngModelChange)="onDisaggregationChange(actor)">
     </app-pr-checkbox>

@@ -2962,7 +2962,9 @@ export class BilateralService {
       sex_and_age_disaggregation: sexAndAgeDisaggregation,
       addressing_demands: a.addressing_demands ?? null,
       // @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-4, BIF-R-8, P-10): additive.
-      // Only a Farmers row has them stored (the writer's whitelist), the rest read `null`.
+      // @akili-spec changes/innovation-use-nature-all-actors (INA-T-4): `use_nature` is stored for
+      // any actor type, `count_unit` for Farmers only (the writers' whitelist); an unanswered or
+      // unsupported value reads `null`.
       count_unit: a.count_unit ?? null,
       use_nature: a.use_nature ?? null,
     };
@@ -5645,18 +5647,34 @@ export class BilateralService {
           geoFocus.scope_code,
           geoFocus.scope_label,
         );
+        let subnationalAreas = geoFocus.subnational_areas ?? [];
+        let effectiveScopeId = scope.id;
+        if (scope.id === 5 && geoFocus.countries?.length) {
+          // Resolve before any write, so a CLARISA failure leaves nothing half-written.
+          const { areas, unresolved } =
+            await this.resolveAiSubnationalAreas(geoFocus);
+          subnationalAreas = areas;
+          if (!areas.length) {
+            effectiveScopeId = geoFocus.countries.length > 1 ? 3 : 4;
+          }
+          if (unresolved.length || !areas.length) {
+            this.logger.warn(
+              `populateResultFromExtractedMds: sub-national codes not resolved for result ${result.id} [${unresolved.join(', ')}]${areas.length ? '' : ` — falling back to scope ${effectiveScopeId}`}`,
+            );
+          }
+        }
         await this.handleRegions(result, scope, geoFocus.regions ?? []);
         await this.handleCountries(
           result,
           geoFocus.countries ?? [],
-          geoFocus.subnational_areas ?? [],
-          scope.id,
+          subnationalAreas,
+          effectiveScopeId,
           userId,
         );
         await this._resultRepository.save({
           ...result,
           geographic_scope_id: this.resolveScopeId(
-            scope.id,
+            effectiveScopeId,
             geoFocus.countries,
           ),
         });
@@ -5666,6 +5684,51 @@ export class BilateralService {
         );
       }
     }
+  }
+
+  // @akili-spec bugfix/ai-draft-subnational-geo
+  /**
+   * Translates the sub-national codes an AI draft carries (`CO-CUN`) into `{ id }` objects that
+   * `lookupSubnationalAreas` accepts. Read-only; codes of other countries or unknown codes are
+   * returned as `unresolved`.
+   */
+  private async resolveAiSubnationalAreas(
+    geoFocus: Record<string, any>,
+  ): Promise<{
+    areas: { id?: number; name?: string }[];
+    unresolved: string[];
+  }> {
+    const countries: any[] = geoFocus.countries ?? [];
+    const entries = [
+      ...countries.flatMap((c) => c?.subnational_areas ?? []),
+      ...(geoFocus.subnational_areas ?? []),
+    ];
+    const codes = new Set<string>();
+    const passThrough: { id?: number; name?: string }[] = [];
+    for (const entry of entries) {
+      if (typeof entry === 'string') codes.add(entry);
+      else if (entry?.code) codes.add(entry.code);
+      else if (entry?.id != null || entry?.name != null) {
+        passThrough.push(entry);
+      }
+    }
+    if (!codes.size) return { areas: passThrough, unresolved: [] };
+
+    const allowed = new Set<string>(
+      countries.map((c) => c?.iso_alpha_2).filter(Boolean),
+    );
+    const rows = await this._clarisaSubnationalAreasRepository.find({
+      where: { code: In([...codes]), is_active: true },
+    });
+    const kept = rows.filter((row) => {
+      const iso = row.country_iso_alpha_2 ?? row.code?.split('-')[0];
+      return !allowed.size || allowed.has(iso);
+    });
+    const keptCodes = new Set(kept.map((row) => row.code));
+    return {
+      areas: [...kept.map((row) => ({ id: row.id })), ...passThrough],
+      unresolved: [...codes].filter((code) => !keptCodes.has(code)),
+    };
   }
 
   /**

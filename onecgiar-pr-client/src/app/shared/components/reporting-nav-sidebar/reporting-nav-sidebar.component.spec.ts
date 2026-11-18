@@ -417,6 +417,14 @@ describe('ReportingNavSidebarComponent', () => {
       expect(component.isRfrSectionActive('/result-framework-reporting/home')).toBe(false);
     });
 
+    it('lists Reminders right after Phase management and marks it active from the URL (ARP-R-1)', async () => {
+      await build('/admin-module/reminders');
+      expect(component.adminModuleLinks[1].path).toBe('/admin-module/phase-management');
+      expect(component.adminModuleLinks[2]).toEqual({ name: 'Reminders', path: '/admin-module/reminders', icon: 'lucideBellRing' });
+      expect(component.isSubLinkActive('/admin-module/reminders')).toBe(true);
+      expect(component.isSubLinkActive('/admin-module/phase-management')).toBe(false);
+    });
+
     it('isSubLinkActive matches by prefix', async () => {
       await build('/admin-module/tickets-dashboard');
       expect(component.isSubLinkActive('/admin-module')).toBe(true);

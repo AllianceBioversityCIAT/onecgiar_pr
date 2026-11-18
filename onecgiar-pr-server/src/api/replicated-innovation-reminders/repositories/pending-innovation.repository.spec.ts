@@ -329,4 +329,20 @@ describe('PendingInnovationRepository', () => {
       ]);
     });
   });
+  // @akili-spec changes/rir-center-focal-routing
+  describe('findOptedInCenters (RCF-T-2)', () => {
+    it('reads active center_reminder_routing rows with route_all_to_center = 1 and returns the codes', async () => {
+      const { repository, dataSource } = makeRepository([
+        { center_code: 'CENTER-1' },
+        { center_code: ' CENTER-2 ' },
+        { center_code: '' },
+      ]);
+      const result = await repository.findOptedInCenters();
+      const sql = sqlOf(dataSource.query);
+      expect(sql).toContain('FROM center_reminder_routing r');
+      expect(sql).toContain('r.route_all_to_center = 1');
+      expect(sql).toContain('r.is_active = 1');
+      expect(result).toEqual(['CENTER-1', 'CENTER-2']);
+    });
+  });
 });

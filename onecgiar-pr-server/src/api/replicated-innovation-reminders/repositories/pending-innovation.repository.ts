@@ -202,4 +202,23 @@ export class PendingInnovationRepository {
       }))
       .filter((row) => row.email);
   }
+
+  /**
+   * Centers whose focal points receive ALL reminders of the innovations they lead (`RCF-R-1`,
+   * `RCF-R-2`). Read per dispatch, never cached (`RCF-DD-3`). A missing row means off.
+   */
+  // @akili-spec changes/rir-center-focal-routing
+  async findOptedInCenters(): Promise<string[]> {
+    const rows: any[] = await this.dataSource.query(
+      `
+      SELECT r.center_code AS center_code
+      FROM center_reminder_routing r
+      WHERE r.route_all_to_center = 1
+        AND r.is_active = 1
+      `,
+    );
+    return rows
+      .map((row) => String(row.center_code ?? '').trim())
+      .filter(Boolean);
+  }
 }

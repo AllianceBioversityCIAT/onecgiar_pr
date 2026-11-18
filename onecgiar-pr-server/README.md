@@ -47,6 +47,11 @@ Missing any of the three degrades `POST /api/bilateral/center/handoff` to a `503
 
 The quality-assessment call reuses the existing `MICROSERVICE_API_KEY` as its `X-API-Key` header — no separate key is provisioned. Missing `BILATERAL_AI_QUALITY_URL` or the API key degrades the check to `unavailable` (reason `not_configured`); the Submit flow still lets the user submit without the check.
 
+- `QA_SP_ACCESS_API_URL` — base URL of the new QA API **with its prefix** (e.g. `https://<qa-api-host>/api/v1`). `GET /api/qa/sp-link` calls `POST {QA_SP_ACCESS_API_URL}/sp-access/codes` (P2-3911; contract `onecgiar_qa-sp/docs/sp-view/reporting-integration.md`).
+- `QA_SP_ACCESS_API_KEY` — secret sent as `x-api-key` on that call; same value as the QA server's `SP_ACCESS_API_KEY`. Secret store only; never logged.
+
+Missing either one makes `GET /api/qa/sp-link` answer `503` ("Quality Assurance is not available right now") without calling QA.
+
 ## Running the app
 
 ```bash

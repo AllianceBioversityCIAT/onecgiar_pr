@@ -1,11 +1,37 @@
-import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { ApiService } from '../../shared/services/api/api.service';
 import { ResultLevelService } from '../results/pages/result-creator/services/result-level.service';
-import { DomSanitizer } from '@angular/platform-browser';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { environment } from '../../../environments/environment';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import { QualityAssuranceService } from './quality-assurance.service';
 
+export const QA_SP_RELOAD_MESSAGE_TYPE = 'qa-sp:reload-required';
+
+/**
+ * P2-3911 — which QA the page embeds, from `environment.qaSpEmbed`:
+ * - `'new'`: Science Program view of the new QA (`{qaUrl}/sp?code=…`, code from `GET api/qa/sp-link`).
+ * - `'legacy'`: old QA through the CLARISA token (`{qaUrl}/crp?crp_id=…&token=…`).
+ * Anything else, including a missing key (the environment file is per-environment and gitignored),
+ * resolves to `'legacy'`, so an environment only switches when its file says `'new'`.
+ */
+export type QaSpEmbedMode = 'new' | 'legacy';
+export function resolveQaSpEmbed(value: unknown): QaSpEmbedMode {
+  return value === 'new' ? 'new' : 'legacy';
+}
+export const QA_SP_GENERIC_ERROR = 'Quality Assurance could not be opened. Please try again.';
+
+/**
+ * P2-3911 — embeds the Science Program view of the new QA platform.
+ *
+ * Every (re)load asks the Reporting back for a NEW one-time code (`GET api/qa/sp-link`) and points
+ * the iframe at `{qaUrl}/sp?code=…`; codes are never cached or reused (they work once and last 60 s).
+ * When the QA page reports `qa-sp:reload-required`, the view reloads automatically once per user
+ * action and then shows a Reload button, so a QA outage cannot loop.
+ *
+ * State is signal-backed (P2-3322): delayed writes must schedule their own render under zoneless
+ * change detection.
+ */
 @Component({
   selector: 'app-quality-assurance',
   templateUrl: './quality-assurance.component.html',
@@ -13,33 +39,44 @@ import { QualityAssuranceService } from './quality-assurance.service';
   standalone: false,
   changeDetection: ChangeDetectionStrategy.Default
 })
-export class QualityAssuranceComponent implements OnInit {
+export class QualityAssuranceComponent implements OnInit, OnDestroy {
   constructor(
     public api: ApiService,
     public resultLevelSE: ResultLevelService,
     public sanitizer: DomSanitizer,
     private qaSE: QualityAssuranceService
   ) {}
+
   allInitiatives = [];
-  clarisaQaToken = null;
   official_code = null;
-  // P2-3322: `selectOptionEvent()` sets this `false`, then re-enables it inside a `setTimeout` once the QA
-  // token resolves. As a plain field that delayed write notified nothing, so under zoneless change detection
-  // the iframe never appeared: the page stayed on the "Select an Initiative" placeholder until a reload.
-  // Signal-backed, the write schedules its own render. Public API unchanged: still a boolean `showIframe`.
-  private readonly _showIframe = signal<boolean>(false);
-  get showIframe(): boolean {
-    return this._showIframe();
+  // Environments carry a trailing slash (`https://qatest…/`); strip it so the iframe is `/sp`, not `//sp`.
+  qaUrl = (environment.qaUrl ?? '').replace(/\/+$/, '');
+  qaSpEmbed: QaSpEmbedMode = resolveQaSpEmbed((environment as { qaSpEmbed?: unknown }).qaSpEmbed);
+  readonly qaOrigin = QualityAssuranceComponent.originOf(environment.qaUrl);
+
+  readonly showIframe = signal<boolean>(false);
+  readonly sanitizedUrl = signal<SafeResourceUrl | null>(null);
+  readonly loading = signal<boolean>(false);
+  readonly errorMessage = signal<string | null>(null);
+  readonly showReloadButton = signal<boolean>(false);
+
+  /** One automatic reload per user action (program change or Reload click). */
+  private autoReloadUsed = false;
+  private linkSubscription: Subscription | null = null;
+  private readonly onMessage = (event: MessageEvent) => this.handleQaMessage(event);
+
+  static originOf(url: string): string | null {
+    try {
+      return new URL(url).origin;
+    } catch {
+      return null;
+    }
   }
-  set showIframe(value: boolean) {
-    this._showIframe.set(value);
-  }
-  qaUrl = environment.qaUrl;
-  sanitizedUrl: any = null;
 
   ngOnInit(): void {
     this.api.rolesSE.validateReadOnly();
     this.api.dataControlSE.detailSectionTitle('Quality Assurance');
+    window.addEventListener('message', this.onMessage);
 
     new Observable((observer: any) => {
       observer.next();
@@ -51,8 +88,9 @@ export class QualityAssuranceComponent implements OnInit {
     });
   }
 
-  sanitizeUrl() {
-    this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${this.qaUrl}/crp?crp_id=${this.official_code}&token=${this.clarisaQaToken}`);
+  ngOnDestroy(): void {
+    window.removeEventListener('message', this.onMessage);
+    this.linkSubscription?.unsubscribe();
   }
 
   GET_AllInitiatives() {
@@ -71,27 +109,96 @@ export class QualityAssuranceComponent implements OnInit {
     });
   }
 
-  GET_ClarisaQaToken(callback) {
-    this.api.resultsSE.GET_ClarisaQaToken(this.official_code).subscribe({
+  /** User picked a program: a new user action, so the automatic reload is available again. */
+  selectOptionEvent(option) {
+    this.official_code = option;
+    this.autoReloadUsed = false;
+    this.loadIframe();
+  }
+
+  /** Reload button: also a user action. */
+  reload() {
+    this.autoReloadUsed = false;
+    this.loadIframe();
+  }
+
+  /** Asks for a NEW code and points the iframe at it. Never reuses a previous code. */
+  loadIframe() {
+    this.linkSubscription?.unsubscribe();
+    this.showIframe.set(false);
+    this.sanitizedUrl.set(null);
+    this.errorMessage.set(null);
+    this.showReloadButton.set(false);
+
+    if (!this.official_code) {
+      this.loading.set(false);
+      return;
+    }
+
+    this.loading.set(true);
+    if (this.qaSpEmbed === 'legacy') {
+      this.loadLegacyIframe();
+      return;
+    }
+    this.linkSubscription = this.api.resultsSE.GET_QaSpLink(this.official_code).subscribe({
       next: ({ response }) => {
-        this.clarisaQaToken = response?.token;
-        callback();
+        this.loading.set(false);
+        const code = response?.code;
+        if (!code) {
+          this.fail(QA_SP_GENERIC_ERROR);
+          return;
+        }
+        this.sanitizedUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${this.qaUrl}/sp?code=${encodeURIComponent(code)}`));
+        this.showIframe.set(true);
       },
       error: err => {
-        console.error(err);
-        callback();
+        this.loading.set(false);
+        this.fail(QualityAssuranceComponent.errorText(err));
       }
     });
   }
 
-  selectOptionEvent(option) {
-    this.official_code = option;
-    this.showIframe = false;
-    this.GET_ClarisaQaToken(() => {
-      this.sanitizeUrl();
-      setTimeout(() => {
-        this.showIframe = true;
-      }, 100);
+  /** Legacy QA (PROD until the new QA is live): CLARISA token, same URL as before P2-3911. */
+  private loadLegacyIframe() {
+    this.linkSubscription = this.api.resultsSE.GET_ClarisaQaToken(this.official_code).subscribe({
+      next: ({ response }) => {
+        this.loading.set(false);
+        const token = response?.token;
+        if (!token) {
+          this.fail(QA_SP_GENERIC_ERROR);
+          return;
+        }
+        this.sanitizedUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(`${environment.qaUrl}/crp?crp_id=${this.official_code}&token=${token}`));
+        this.showIframe.set(true);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.fail(QA_SP_GENERIC_ERROR);
+      }
     });
+  }
+
+  handleQaMessage(event: MessageEvent) {
+    if (this.qaSpEmbed !== 'new') return;
+    if (!this.qaOrigin || event.origin !== this.qaOrigin) return;
+    if (event.data?.type !== QA_SP_RELOAD_MESSAGE_TYPE) return;
+
+    if (!this.autoReloadUsed) {
+      this.autoReloadUsed = true;
+      this.loadIframe();
+      return;
+    }
+    this.showReloadButton.set(true);
+  }
+
+  private fail(message: string) {
+    this.errorMessage.set(message);
+    this.showReloadButton.set(true);
+  }
+
+  /** The back sends user-facing messages (403 / program not in QA / QA unavailable / generic). */
+  static errorText(err: any): string {
+    const message = err?.error?.message;
+    return typeof message === 'string' && message.trim() ? message : QA_SP_GENERIC_ERROR;
   }
 }

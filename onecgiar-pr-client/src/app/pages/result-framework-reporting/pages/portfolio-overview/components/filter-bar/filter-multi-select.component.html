@@ -4,7 +4,8 @@
   controlled-overlay pattern `global-search-palette` and `program-overview` use.
   `[attachTo]` takes the trigger element (template ref), not a directive instance. `*brnCommandEmpty` and `*hlmPopoverPortal`
   are STRUCTURAL (they inject TemplateRef); the attribute form throws NG0201 and blanks the whole popover.
-  The search input is always rendered so the keyboard has a target; without `searchable` it is visually hidden.
+  The search input is always rendered so the keyboard has a target; without `searchable` it is visually hidden, types
+  nothing (`onInputKey`), filters nothing (`filter()` is match-all) and Space toggles the active item like Enter.
 -->
 <hlm-popover align="start" sideOffset="6" [attachTo]="trigger" [state]="open() ? 'open' : 'closed'" (stateChanged)="onState($event)">
   <button
@@ -38,10 +39,11 @@
   }
 
   <hlm-popover-content *hlmPopoverPortal class="!w-[280px] !max-w-[calc(100vw-32px)] gap-0 p-0">
-    <div brnCommand class="flex w-full flex-col overflow-hidden">
+    <div brnCommand class="flex w-full flex-col overflow-hidden" [filter]="filter()">
       <div class="border-b border-[var(--pr-border)] px-[10px] py-[6px]" [class.sr-only]="!searchable()">
         <input
           brnCommandInput
+          (keydown)="onInputKey($event)"
           class="h-[24px] w-full min-w-0 border-none bg-transparent p-0 text-[13px] font-normal text-[var(--pr-text-heading)] outline-none placeholder:text-[var(--pr-text-subtle)]"
           [attr.data-testid]="'filter-search-' + dimension()"
           [attr.aria-label]="copy.searchLabel(label())"

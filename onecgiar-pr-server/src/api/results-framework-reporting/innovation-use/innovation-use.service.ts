@@ -493,6 +493,15 @@ export class InnovationUseService {
           if (Number(el.actor_type_id) === FARMERS_ACTOR_TYPE_ID) {
             whereOptions.count_unit = toCountUnit(el?.count_unit) ?? IsNull();
             whereOptions.use_nature = toUseNature(el?.use_nature) ?? IsNull();
+          } else if ('use_nature' in el) {
+            // @akili-spec changes/innovation-use-nature-all-actors (INA-T-3, INA-R-6, INA-DD-3):
+            // every other type is told apart by its nature too, but ONLY when the caller sends the
+            // property (the Centre form, the bilateral rows that carry it). A caller that omits it
+            // (innovation_dev.service, the review update) keeps the type-only match and so updates
+            // instead of duplicating. An empty value (null, '', an unusable code) matches IsNull(),
+            // i.e. what buildActorData stores. `other_actor_type` (type 5) is set above and stays.
+            // `count_unit` is Farmers-only, so it never joins this key.
+            whereOptions.use_nature = toUseNature(el.use_nature) ?? IsNull();
           }
 
           actorExists = await this._resultActorRepository.findOne({
@@ -681,8 +690,16 @@ export class InnovationUseService {
       how_many: el?.how_many,
       addressing_demands: this.isNullData(el?.addressing_demands),
       // IFC-R-7: only the four codes are stored; anything else is NULL (IFC-DD-3).
-      count_unit: toCountUnit(el?.count_unit),
-      use_nature: toUseNature(el?.use_nature),
+      // @akili-spec changes/innovation-use-nature-all-actors (INA-T-4, INA-DD-9 amendment):
+      // only when the row carries the key. A caller that omits it (the review update,
+      // innovation_dev.service) must not turn a stored answer into NULL on the row it updates; a
+      // new row without the key is inserted with the column default (NULL).
+      ...('count_unit' in (el ?? {})
+        ? { count_unit: toCountUnit(el.count_unit) }
+        : {}),
+      ...('use_nature' in (el ?? {})
+        ? { use_nature: toUseNature(el.use_nature) }
+        : {}),
     };
   }
 

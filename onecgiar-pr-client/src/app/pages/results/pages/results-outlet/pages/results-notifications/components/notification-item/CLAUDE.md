@@ -626,3 +626,8 @@ Every `obj_owner_initiative` / `obj_shared_inititiative` mention in the template
 - Specs: `PRDS` describe in `notification-item.component.spec.ts`. Primary fixtures that assert "Needs your review" need `obj_result.status_id: 5`.
 
 **Verified:** 2026-10-21 · qa-development-2026-ss · PRDS-T-1 (`bugfix/primary-request-decision-state`): `primaryDecision`, status-aware primary footer and kind chip; jsdom only, real payload fields (`obj_result.status_id`, primary SP code on decided rows) are PRDS-T-2 (PRTest).
+
+## Updates rows in the detail panel use the row sentence (SACN follow-up)
+`drawerHeader()` checks `isUpdateSource` FIRST: the panel sentence is `[parts.lead, parts.prefix]` from `updateTextParts` (same join as `buildResultNotificationText`), `linkTrailer` appended to `resultTitle`, `parts.suffix` as `suffix`, verb/tail empty. Before, every bilateral Updates row (Approved/Rejected notices, tagged notices) fell into the `isBilateralContributorRequest` branch (`isBilateralResult && !isPrimaryRequest` is also true for update rows) and showed "The primary Science Program , as primary Science Program, has tagged …" (PRTest, result 10094). `isBilateralContributorRequest` itself is unchanged: its other readers are request-only template branches or run after the `isUpdateSource` check.
+
+**Verified:** 2026-11-13 · qa-development-2026-ss · SACN follow-up (`notifications/sp-approval-center-notice`): `drawerHeader()` update-row branch; spec `detail panel sentence for update rows`.

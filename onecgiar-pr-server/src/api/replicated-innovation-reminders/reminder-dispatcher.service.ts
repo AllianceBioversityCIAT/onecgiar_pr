@@ -202,10 +202,23 @@ export class ReminderDispatcher {
       else meliaByInitiative.set(m.initiative_id, [entry]);
     }
 
+    // @akili-spec changes/rir-center-focal-routing
+    // RCF-DD-3: focal points are needed for the W3 lead Centers AND for every opted-in Center that
+    // leads a pending row (its W1/W2 rows are routed to the Center email by `build`).
+    const optedInCenters = new Set(
+      (await this._pendingRepository.findOptedInCenters())
+        .map((c) => c.trim())
+        .filter(Boolean),
+    );
     const centerCodes = [
       ...new Set(
         rows
-          .filter((r) => r.source === BILATERAL_SOURCE && r.lead_center_code)
+          .filter((r) => r.lead_center_code)
+          .filter(
+            (r) =>
+              r.source === BILATERAL_SOURCE ||
+              optedInCenters.has((r.lead_center_code as string).trim()),
+          )
           .map((r) => r.lead_center_code as string),
       ),
     ];
@@ -219,7 +232,13 @@ export class ReminderDispatcher {
 
     return {
       rows,
-      ...build({ rows, activeUsers, meliaByInitiative, centerMelByCenter }),
+      ...build({
+        rows,
+        activeUsers,
+        meliaByInitiative,
+        centerMelByCenter,
+        optedInCenters,
+      }),
     };
   }
 

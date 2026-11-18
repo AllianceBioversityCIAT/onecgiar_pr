@@ -4,6 +4,7 @@
 // HTTP, no state. Empty cells are explicit strings (FDE-DD-3) so "none" and "unknown" stay distinct.
 import type { PortfolioResultDimensions } from '../../../../../../shared/interfaces/portfolio-result-dimensions.interface';
 import type { PortfolioDimensionsState, RawResult } from '../../services/portfolio-overview.service';
+import { scienceProgramLabel } from '../../../../../../shared/utils/science-program-label.util';
 import { PORTFOLIO_STATUS_SLOTS, resolveStatusSlot } from '../../services/portfolio-status-slot';
 import { TYPOLOGY_LEVEL_LABELS } from '../../services/portfolio-filters';
 import { levelOf } from '../typology-block/typology.aggregate';
@@ -13,6 +14,8 @@ export const UNAVAILABLE = 'Unavailable';
 export const PAGE_SIZE = 25;
 
 const W3_SOURCE = 'W3/Bilaterals';
+/** Excel's cell limit (PRE-R-9, DD-8). */
+const EXCEL_CELL_LIMIT = 32767;
 
 /** Detail row: client-only view model. Carries no creator fields by construction (FDE-R-8, S-8.1). */
 export interface DetailRow {
@@ -27,6 +30,10 @@ export interface DetailRow {
   program: string;
   source: string;
   status: string;
+  /** Rejection columns (PRE-R-7): file only, no screen column. */
+  rejectionReason: string;
+  rejectedBy: string;
+  rejectedOn: string;
   origin: 'New' | 'Replicated';
   leadCenter: string;
   contributingCenters: string;
@@ -43,6 +50,8 @@ export type SortDirection = 'asc' | 'desc';
 export interface DetailLabels {
   projects: ReadonlyMap<number, readonly string[]>;
   centers: ReadonlyMap<number, readonly string[]>;
+  /** Newest rejection per result id, as served; every value is already a displayable string (`—` when missing). */
+  rejections: ReadonlyMap<number, { reason: string; by: string; on: string }>;
 }
 
 const text = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
@@ -57,14 +66,18 @@ function addLabel(target: Map<number, string[]>, id: number, label: string): voi
 }
 
 /** Resolves the map's ids to labels once per result: project short name, Center acronym (fallbacks: full name / name / id / code). */
-export function buildDetailLabels(map: Pick<PortfolioResultDimensions, 'projectLinks' | 'centerLinks' | 'projects' | 'centers'>): DetailLabels {
+export function buildDetailLabels(map: Pick<PortfolioResultDimensions, 'projectLinks' | 'centerLinks' | 'projects' | 'centers' | 'rejections'>): DetailLabels {
   const projectNames = new Map((map.projects ?? []).map(p => [String(p.id), text(p.shortName) || text(p.fullName) || String(p.id)]));
   const centerNames = new Map((map.centers ?? []).map(c => [String(c.code), text(c.acronym) || text(c.name) || String(c.code)]));
   const projects = new Map<number, string[]>();
   const centers = new Map<number, string[]>();
   for (const [id, projectId] of map.projectLinks ?? []) addLabel(projects, Number(id), projectNames.get(String(projectId)) ?? String(projectId));
   for (const [id, code] of map.centerLinks ?? []) addLabel(centers, Number(id), centerNames.get(String(code)) ?? String(code));
-  return { projects, centers };
+  const rejections = new Map<number, { reason: string; by: string; on: string }>();
+  for (const r of map.rejections ?? []) {
+    rejections.set(Number(r.resultId), { reason: orNone(r.comment), by: orNone(scienceProgramLabel(r.programCode, r.programName)), on: orNone(r.rejectedAt) });
+  }
+  return { projects, centers, rejections };
 }
 
 const joinSorted = (labels: Iterable<string>): string => {
@@ -99,6 +112,14 @@ export function toDetailRows(rows: readonly RawResult[], mapStatus: PortfolioDim
       projects = joinSorted(id === null ? [] : (labels.projects.get(id) ?? []));
     }
 
+    // Status-slot rule (design 8.4): only a Rejected row carries a reason; the map gates it like Projects/Centers.
+    const slot = resolveStatusSlot(row);
+    let rejection = { reason: NONE, by: NONE, on: NONE };
+    if (slot === 'rejected') {
+      if (!ready) rejection = { reason: UNAVAILABLE, by: UNAVAILABLE, on: UNAVAILABLE };
+      else rejection = (id === null ? undefined : labels.rejections.get(id)) ?? rejection;
+    }
+
     return {
       id: row.id ?? null,
       code: code || NONE,
@@ -108,7 +129,10 @@ export function toDetailRows(rows: readonly RawResult[], mapStatus: PortfolioDim
       level: TYPOLOGY_LEVEL_LABELS[levelOf(row.result_type)],
       program: orNone(row.submitter),
       source: text(row.source_name) === W3_SOURCE ? 'W3/Bilateral' : 'W1/W2',
-      status: statusLabels.get(resolveStatusSlot(row)) ?? NONE,
+      status: statusLabels.get(slot) ?? NONE,
+      rejectionReason: rejection.reason,
+      rejectedBy: rejection.by,
+      rejectedOn: rejection.on,
       origin: Number(row.is_replicated) === 1 ? 'Replicated' : 'New',
       leadCenter: orNone(lead),
       contributingCenters: contributing,
@@ -166,6 +190,9 @@ export const EXPORT_COLUMNS = [
   'P/A',
   'Source',
   'Status',
+  'Rejection reason',
+  'Rejected by',
+  'Rejected on',
   'Origin',
   'Lead Center',
   'Contributing Centers',
@@ -174,7 +201,7 @@ export const EXPORT_COLUMNS = [
   'Link'
 ] as const;
 
-/** FDE-R-8: plain objects, keys in R-3 order plus `Link`; full title; never a null cell (DD-3). */
+/** FDE-R-8: plain objects, keys in R-3 order, the 3 rejection columns after `Status`, plus `Link`; reason cut to Excel's cell limit (PRE-R-9); full title; never a null cell (DD-3). */
 export function toExportRows(rows: readonly DetailRow[], origin: string): Record<(typeof EXPORT_COLUMNS)[number], string>[] {
   return rows.map(r => ({
     Code: r.code,
@@ -184,6 +211,9 @@ export function toExportRows(rows: readonly DetailRow[], origin: string): Record
     'P/A': r.program,
     Source: r.source,
     Status: r.status,
+    'Rejection reason': r.rejectionReason.slice(0, EXCEL_CELL_LIMIT),
+    'Rejected by': r.rejectedBy,
+    'Rejected on': r.rejectedOn,
     Origin: r.origin,
     'Lead Center': r.leadCenter,
     'Contributing Centers': r.contributingCenters,

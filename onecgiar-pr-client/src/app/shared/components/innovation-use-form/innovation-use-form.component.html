@@ -844,57 +844,67 @@
   the 2030 blocks. Copy is verbatim from mockup/farmer-follow-up-questions.png (see farmer-follow-up.ts) and the
   mock-up's developer note ("Single choice. Stored as ...") is deliberately NOT rendered.
 
-  Both questions are required. They go through `app-pr-radio-button`, which supplies the field card, the
+  INA-T-6: the block is two parts. The Farmers part (title + unit question) shows on Farmers rows; the nature part
+  (question card, no title) shows on every active row with a type. Both are required where `isFollowUpMandatory()`
+  holds (W1/W2) and shown but optional on W3/Bilaterals. They go through `app-pr-radio-button`, which supplies the field card, the
   REQUIRED pill and the `.pr-field.mandatory` marker that the mandatory-field scan counts. That primitive can
   only draw a plain-text label per option, so Q-b hides its own option list (`[hideOptions]`) and draws the
   options here, with the same native radio (`pr-native-radio`) plus a bold label and a grey description.
 -->
 <ng-template #farmerFollowUp let-actorItem>
-  @if (isFarmerFollowUpRow(actorItem)) {
-    <div data-testid="iu-farmer-follow-up" class="mt-[16px] flex flex-col gap-[12px]">
-      <div class="text-[14px] font-semibold leading-[1.45] text-[var(--pr-text)]">{{ farmerFollowUpCopy.title }}</div>
+  @if (isNatureFollowUpRow(actorItem)) {
+    <div data-testid="iu-follow-up" class="mt-[16px] flex flex-col gap-[12px]">
+      <!-- Farmers part (IFC): the title and the households / individuals question, Farmers rows only. -->
+      @if (isFarmerFollowUpRow(actorItem)) {
+        <div data-testid="iu-farmer-follow-up" class="flex flex-col gap-[12px]">
+          <div class="text-[14px] font-semibold leading-[1.45] text-[var(--pr-text)]">{{ farmerFollowUpCopy.title }}</div>
 
-      <app-pr-radio-button
-        [label]="farmerFollowUpCopy.countUnitQuestion"
-        [required]="true"
-        [readOnly]="saving"
-        [options]="farmerFollowUpCopy.countUnitOptions"
-        optionLabel="label"
-        optionValue="value"
-        [ngModel]="actorItem.count_unit"
-        (ngModelChange)="onCountUnitChange(actorItem, $event)">
-      </app-pr-radio-button>
+          <app-pr-radio-button
+            [label]="farmerFollowUpCopy.countUnitQuestion"
+            [required]="isFollowUpMandatory()"
+            [readOnly]="saving"
+            [options]="farmerFollowUpCopy.countUnitOptions"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="actorItem.count_unit"
+            (ngModelChange)="onCountUnitChange(actorItem, $event)">
+          </app-pr-radio-button>
+        </div>
+      }
 
-      <app-pr-radio-button
-        [label]="farmerFollowUpCopy.useNatureQuestion"
-        [required]="true"
-        [readOnly]="saving"
-        [hideOptions]="true"
-        [options]="farmerFollowUpCopy.useNatureOptions"
-        optionLabel="label"
-        optionValue="value"
-        [ngModel]="actorItem.use_nature"
-        (ngModelChange)="selectUseNature(actorItem, $event)">
-      </app-pr-radio-button>
-      <!-- -mt-[27px]: the Q-b card above renders its options hidden, but its bottom margin, the empty .pr-field
-           padding and the block gap still stack up. Brings header->options to Q-a's 10px (measured IFC-T-7). -->
-      <div role="radiogroup" [attr.aria-label]="farmerFollowUpCopy.useNatureQuestion" class="-mt-[27px] flex flex-col gap-[16px] px-[8px]">
-        @for (option of farmerFollowUpCopy.useNatureOptions; track option.value) {
-          <label class="flex cursor-pointer items-start gap-[10px]" [class.cursor-not-allowed]="saving || api.rolesSE.readOnly">
-            <input
-              type="radio"
-              class="pr-native-radio mt-[2px]"
-              [attr.name]="farmerRowKey(actorItem)"
-              [value]="option.value"
-              [checked]="actorItem.use_nature === option.value"
-              [disabled]="saving || api.rolesSE.readOnly"
-              (change)="selectUseNature(actorItem, option.value)" />
-            <span class="flex flex-col gap-[2px]">
-              <span class="text-[14px] font-semibold leading-[1.45] text-[var(--pr-text)]">{{ option.label }}</span>
-              <span class="text-[12px] leading-[1.5] text-[var(--pr-text-secondary)]">{{ option.description }}</span>
-            </span>
-          </label>
-        }
+      <!-- Nature part (INA-R-7): the question card on every active row with a type, no title (INA-DD-5, OQ-4). -->
+      <div data-testid="iu-nature-follow-up" class="flex flex-col gap-[12px]">
+        <app-pr-radio-button
+          [label]="farmerFollowUpCopy.useNatureQuestion"
+          [required]="isFollowUpMandatory()"
+          [readOnly]="saving"
+          [hideOptions]="true"
+          [options]="farmerFollowUpCopy.useNatureOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="actorItem.use_nature"
+          (ngModelChange)="selectUseNature(actorItem, $event)">
+        </app-pr-radio-button>
+        <!-- -mt-[27px]: the card above renders its options hidden, but its bottom margin, the empty .pr-field
+             padding and the block gap still stack up. Brings header->options to Q-a's 10px (measured IFC-T-7). -->
+        <div role="radiogroup" [attr.aria-label]="farmerFollowUpCopy.useNatureQuestion" class="-mt-[27px] flex flex-col gap-[16px] px-[8px]">
+          @for (option of farmerFollowUpCopy.useNatureOptions; track option.value) {
+            <label class="flex cursor-pointer items-start gap-[10px]" [class.cursor-not-allowed]="saving || api.rolesSE.readOnly">
+              <input
+                type="radio"
+                class="pr-native-radio mt-[2px]"
+                [attr.name]="farmerRowKey(actorItem)"
+                [value]="option.value"
+                [checked]="actorItem.use_nature === option.value"
+                [disabled]="saving || api.rolesSE.readOnly"
+                (change)="selectUseNature(actorItem, option.value)" />
+              <span class="flex flex-col gap-[2px]">
+                <span class="text-[14px] font-semibold leading-[1.45] text-[var(--pr-text)]">{{ option.label }}</span>
+                <span class="text-[12px] leading-[1.5] text-[var(--pr-text-secondary)]">{{ option.description }}</span>
+              </span>
+            </label>
+          }
+        </div>
       </div>
     </div>
   }
