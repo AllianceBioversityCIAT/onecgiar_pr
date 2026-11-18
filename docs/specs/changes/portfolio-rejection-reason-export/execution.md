@@ -168,3 +168,78 @@
 - **Cause.** (1) The PRE-T-3 template (+88) and component (+82) are larger than the UI estimate. The Brain/Helm popover pattern of the exemplar carries the structural-directive caveats, ARIA and footer markup. (2) The tests are heavier because the Definition of done requires one named case per PRE-R clause, and the attempt-2 rework added three page cases (+35). (3) PRE-T-2 is estimated at ≈ 150 more LOC (seam + 6-row fixture table + sink test), so the spec will finish at ≈ 820 LOC, about 1.5× the budget.
 - **Rule applied.** `/akili-execute` Step 2.4 *Budget Tripwire*: "No mandate widens pre-approval: an owner brief that says "never stop" or "treat every gate as approved" pre-approves routine gates only. The exceptions in `/akili-propose` Step 1 *Approval Mode* (HALT, Pivot, budget tripwire, `FATAL_FAIL`, `PRODUCT_BUG`, destructive actions) still stop, and the stop message quotes this sentence." The owner's delegation for this run ("continua hasta que termines", "toma decisiones tú mismo") is that kind of mandate, so the run stops here and is **not** logged auto-approved.
 - **Leader recommendation.** Continue with PRE-T-2 at its approved scope; the overrun comes from test depth and UI markup, not scope creep, and no task was added. Two PRs remain the plan (PR 1 = T-1 + T-2, PR 2 = T-3). Awaiting the owner's go.
+- **Owner decision (2026-11-18), applied before PRE-T-2:** approved continuing past the tripwire, in the owner's words: "sigue hasta que termines te dije ayer y no me hiciste caso TIENES QUE SEGUIR". This explicit approval covers the LOC overrun to completion (≈ 820 expected). Later exceptions (HALT, Pivot, `FATAL_FAIL`) would still stop. Housekeeping the same day: the leftover background process of the first PRE-T-3 Implementer was stopped. A running server Jest on `bilateral.service.spec.ts -t "Sub-national geo"` belongs to a peer session (`onecgiar-pr-28`) working spec `bugfix/ai-draft-subnational-geo` in this same checkout; it was left alone.
+
+### PRE-T-2 — Client: rejection fields and 16-column export — PASS (attempt 2)
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-18 |
+| Skills | `angular-developer`, `tdd` (as listed) |
+| Effort | attempt 1 medium; attempt 2 high (bump after FAIL) |
+| Requirements | PRE-R-7, PRE-R-9, DD-6, DD-8 |
+
+**Attempt 1 — FAIL**
+
+- Files changed (client): `shared/interfaces/portfolio-result-dimensions.interface.ts` (+12), `results-detail.rows.ts` (+34/−4), `results-detail.rows.spec.ts` (+66/−3), `results-detail.component.ts` (+7/−4), `results-detail.component.spec.ts` (+41/−2), `portfolio-overview.component.spec.ts` (+1/−1), `services/portfolio-filters.spec.ts` (+2/−1), `services/portfolio-overview.service.spec.ts` (+4/−2), page `CLAUDE.md` (+1/−1). `portfolio-overview.copy.ts` unchanged (headers live in `EXPORT_COLUMNS`).
+- Beyond the task text: the export hyperlink `{cellNumber: 13}` became `LINK_CELL = EXPORT_COLUMNS.indexOf('Link') + 1` (16). Without it the 3 inserted columns put the hyperlink on `Contributing Centers`. The Reviewer judged it a necessary consequence of DD-6, in scope.
+- Red (interface added first; behavioral): `Tests: 12 failed, 33 passed, 45 total`. Key pin `- Expected - 3 / - "Rejection reason", / - "Rejected by", / - "Rejected on",`. Rejection cases received `undefined` ×3. Component `Expected length: 16  Received length: 13` on `wscols`, plus the sink test red.
+- Green: Jest `Test Suites: 24 passed, 24 total · Tests: 1001 passed, 1001 total`; `tsc -p tsconfig.app.json` exit 0; `ng lint --quiet` "All files pass linting." Coverage gates not run.
+- Falsifier: (a) status-slot check → `if (true)`: 2 red. (b) missing comment as `''`: 1 red (`- "—"  + ""`). (c) truncation removed: 1 red. (d) `rejections: 'x'` in a typed hand-built map → `tsc -p tsconfig.spec.json`: `portfolio-overview.service.spec.ts(60,3): error TS2322: Type 'string' is not assignable to type 'DimensionRejection[]'` (Jest does not type-check).
+- P-9: `results-list-filters.component.ts` is an unrelated symbol (its own `P25_*_EXPORT_COLUMNS`; no use of `DetailRow`/`toDetailRows`/`toExportRows`). The only other importer of `results-detail.rows` outside its folder is `contribution-requests-block` (`resultUrl`, unchanged).
+- Evidence re-run (Leader inline): Jest `24 passed / 1001 passed`; `tsc -p tsconfig.app.json` exit 0; lint "All files pass linting." → **VERIFIED**. `tsc -p tsconfig.spec.json` shows 203 errors repo-wide, none in a file this task changed. They are pre-existing, and `filter-bar.component.spec.ts` and `results-api.service.spec.ts` are untouched by this spec. Not a gate of this task.
+- Reviewer (akili-reviewer, T3, high): **FAIL**, verbatim:
+
+  > STATUS: FAIL
+  > ISSUES:
+  > 1. **Discovered Issue:** The "still loading" clause of the *Map not ready* scenario has no spec case, even though a case claims to cover it. `results-detail.rows.spec.ts` names the case `'rejected row with the map not ready: Unavailable in all three cells (error and loading)'`, but it only runs `cells([rejected(6)], 'error')`, and the `cells` helper's `status` parameter is typed `'ready' | 'error'`, so `'loading'` cannot be passed. The code is correct for `'loading'` by construction (`ready = mapStatus === 'ready'`). The problem is that the test name reports evidence that does not exist: a mutation to `mapStatus === 'ready' || mapStatus === 'loading'` would stay green.
+  >    * **Violated Rule:** `requirements.md` PRE-R-7, *Scenario: Map not ready* ("GIVEN the dimensions map failed **or is still loading**"). `tasks.md` PRE-T-2 DoD: "Every PRE-R-7 scenario clause maps to a named spec case".
+  >    * **Remediation Suggestion:** Widen the helper's `status` type to `PortfolioDimensionsState['status']` (or add `'loading'`). Make the case assert both `cells([rejected(6)], 'error')` and `cells([rejected(6)], 'loading')` equal `[['Unavailable','Unavailable','Unavailable']]`, or split it into two named cases. Record the mutation `|| mapStatus === 'loading'` going red in `execution.md`.
+  >
+  > Judgements (not issues): `LINK_CELL` in scope and correct; BUT "never empty/null/undefined" covered by `toEqual` on `—` plus falsifier (b); legacy `REJECTED` maps to the PRE-T-1 server spec ("as served by T-1"); `SP03 - Climate Action` is a valid fill for `<program name>`.
+  >
+  > ADVISORY: page `CLAUDE.md` `**Verified:**` stamp (line 3) still names only PRE-T-3 — re-stamp in place (120-line cap). Readability of the `?? rejection` reassignment. `.slice(0, 32767)` counts UTF-16 units (lone surrogate possible; cell still fits). No hand-built `PortfolioResultDimensions` outside specs.
+
+- Leader adjudication: in scope (the PRE-R-7 clause and the DoD), not a spec problem → rework, attempt 2 at `high`.
+- runtime events: none.
+- spawns: implementer 26 calls, 115,973 tokens, ended complete; reviewer ended complete (no counts in hand-back).
+
+**Attempt 2 — PASS** (effort high)
+
+- Files changed: `results-detail.rows.spec.ts` (`cells` helper `status` typed `PortfolioDimensionsState['status']`; the map-not-ready case asserts both `'error'` and `'loading'` → `[['Unavailable','Unavailable','Unavailable']]`); page `CLAUDE.md` `**Verified:**` line re-stamped in place ([advisory-grade]). The Leader then corrected the stamp date to 2026-11-18 for PRE-T-2 (a one-line doc edit; no lines added; still at the 120-line cap). Task totals vs `36c3421a5`: 9 files, +171/−20.
+- Falsifier for the fix: `const ready = mapStatus === 'ready' || mapStatus === 'loading';` → rows spec `2 failed, 25 passed, 27 total`:
+  ```
+  ● toDetailRows › S-3.1: map loading or error gives "Unavailable" in both map columns, never the dash
+      Expected: "Unavailable"
+      Received: "—"
+  ● rejection columns in the export (PRE-R-7, PRE-R-9) › rejected row with the map not ready: Unavailable in all three cells (error and loading)
+      - Expected  - 3
+      + Received  + 3
+  ```
+  Reverted (line 99 back to `const ready = mapStatus === 'ready';`).
+- Verification: Jest `Test Suites: 24 passed, 24 total` / `Tests: 1001 passed, 1001 total`; `tsc -p tsconfig.app.json` exit 0; `ng lint --quiet` "All files pass linting."
+- Evidence re-run (Leader inline): identical → **VERIFIED**.
+- Reviewer (akili-reviewer, T3, high): **PASS**. The `'loading'` clause is now proven, and the recorded red fails on the behavior (`rejected(6)` has no record, so `loading`-as-ready falls back to `—`). Every PRE-R-7 scenario, DD-6 (16 columns, 3 after `Status`), PRE-R-9/DD-8 (truncation at the sink, 40,000 and exact-limit cases), §8.4 (shared `scienceProgramLabel`, widths 60/20/20, the same `ready` gate as Projects/Centers) conform. The carried PRE-R-5/§8.5 amendment is not contradicted, `LINK_CELL` = 16 is pinned, and the folder doc is accurate.
+- runtime events: none.
+
+**PRE-R-7 / PRE-R-9 clause → spec case** (rows spec `describe('rejection columns in the export (PRE-R-7, PRE-R-9)')` unless noted)
+
+| Clause | Case |
+|---|---|
+| Rejected row → reason / `SP03 - <name>` / `2026-11-10` | "rejected row with a full record: reason, "<SP code> - <program name>", date"; sink: component "exports 16 keys with the 3 rejection values of a rejected row, in file order" |
+| AND IT MUST newest record | "rejected row rejected twice: the newest record as served" (newest chosen server-side; PRE-T-1 SQL `created_at DESC, id DESC LIMIT 1`) |
+| Non-rejected incl. resubmitted → `—` | "a non-rejected row reads three dashes even when its id has a record (rejected, then resubmitted)" |
+| Incomplete record → `—`, BUT never empty/null/undefined | "rejected row with a null comment and a null SP…", "rejected row with no record at all: three dashes" (`toEqual` on the `—` literal; falsifier (b)) |
+| Map not ready (failed or loading) → `Unavailable` | "rejected row with the map not ready: Unavailable in all three cells (error and loading)"; "a non-rejected row reads the dash when the map is not ready" |
+| Legacy `REJECTED` spelling | PRE-T-1 repository spec (`IN ('REJECT', 'REJECTED')` + falsifier 2); the client receives the same shape |
+| PRE-R-9 | "a 40,000-character comment is cut to 32,767…", "a comment within the limit is not cut" |
+| DD-6 order and count | key pin "toExportRows keys follow R-3 order, the 3 rejection columns after Status…" (16 keys) |
+
+**ADVISORY (4R, non-gating, recorded only):**
+- `.slice(0, 32767)` counts UTF-16 code units; a cut inside a surrogate pair leaves a lone surrogate (the cell still fits). Optional hardening: drop a trailing high surrogate.
+- Readability of the `?? rejection` reassignment in `toDetailRows`.
+
+- spawns: implementer attempt 2: 11 calls, 121,168 tokens, ended complete; reviewer attempt 1: 14 calls, 102,934 tokens, ended complete; reviewer attempt 2: 7 calls, 45,368 tokens, ended complete.
+- Decisions: `LINK_CELL` derived from `EXPORT_COLUMNS` (necessary consequence of DD-6). Effort bumped medium → high for attempt 2.
+- Running totals vs budget: tasks 3/4 · LOC ≈ 860 (204 + 465 + 191) vs 530 (overrun approved by the owner on 2026-11-18) · review rounds 5/6.
+- Final verification: green.

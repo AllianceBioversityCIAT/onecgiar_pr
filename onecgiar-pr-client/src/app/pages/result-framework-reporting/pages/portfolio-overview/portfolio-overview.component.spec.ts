@@ -113,7 +113,7 @@ describe('PortfolioOverviewComponent', () => {
   let router: Router;
 
   /** GLF-T-5: the page also asks for the result -> project / Center map; `dimensions$` lets a case keep it pending. */
-  const EMPTY_MAP = { versionId: 36, phaseName: null, projectLinks: [], centerLinks: [], projects: [], centers: [], w3ProjectIds: [] };
+  const EMPTY_MAP = { versionId: 36, phaseName: null, projectLinks: [], centerLinks: [], projects: [], centers: [], w3ProjectIds: [], rejections: [] };
 
   const build = (
     items: unknown[],

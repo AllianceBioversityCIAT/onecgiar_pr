@@ -46,7 +46,7 @@
   - [ ] Swagger description mentions `rejections`
   - [ ] Commit `✨ feat(portfolio-overview) [SR-168253]: … [SPEC:changes/portfolio-rejection-reason-export]`
 
-### PRE-T-2 — Client: rejection fields and 16-column export
+### [x] PRE-T-2 — Client: rejection fields and 16-column export
 
 - **Type:** client
 - **Description:** Add `DimensionRejection` and `rejections` to `PortfolioResultDimensions`. Extend `buildDetailLabels` (the rejections map), `DetailRow` (3 fields), `toDetailRows` (the status-slot rule of design §8.4), `EXPORT_COLUMNS` / `toExportRows` (3 headers after `Status`, truncation to 32,767 characters), and `EXPORT_WSCOLS` widths. Screen columns stay unchanged.

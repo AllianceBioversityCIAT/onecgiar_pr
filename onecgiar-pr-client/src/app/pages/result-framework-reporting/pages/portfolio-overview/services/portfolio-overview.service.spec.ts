@@ -56,7 +56,8 @@ const EMPTY_DIMENSIONS: PortfolioResultDimensions = {
   centerLinks: [],
   projects: [],
   centers: [],
-  w3ProjectIds: []
+  w3ProjectIds: [],
+  rejections: []
 };
 
 describe('PortfolioOverviewService', () => {
@@ -619,7 +620,8 @@ describe('PortfolioOverviewService — global filters (GLF-T-3)', () => {
       { code: 'CENTER-03', acronym: 'CIAT', name: 'Alliance' },
       { code: 'CENTER-05', acronym: 'CIMMYT', name: 'CIMMYT' }
     ],
-    w3ProjectIds: [100, 200]
+    w3ProjectIds: [100, 200],
+    rejections: []
   };
 
   type MapEnvelope = { response?: PortfolioResultDimensions };

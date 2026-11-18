@@ -71,7 +71,8 @@ const MAP: PortfolioResultDimensions = {
     { code: 'CENTER-3', acronym: 'IRRI', name: 'International Rice Research Institute' },
     { code: 'CENTER-9', acronym: 'OFFPAGE', name: 'Center linked to a result outside the page' }
   ],
-  w3ProjectIds: [10]
+  w3ProjectIds: [10],
+  rejections: []
 };
 const INDEX = buildDimensionIndex(MAP);
 const matching = (selection: PortfolioFilterSelection, rows: FilterRow[] = ROWS, index = INDEX) =>
