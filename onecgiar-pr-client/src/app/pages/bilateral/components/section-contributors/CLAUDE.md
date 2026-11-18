@@ -1,15 +1,18 @@
 # section-contributors
 
-**Verified:** 2026-10-16 · qa-development-2026-ss · spec `bilateral/replicated-innovations-2026-pa` PAA-T-2: helper bajo el P/A de solo lectura = `contributorsPrimaryHelp` ("Change the primary Science Program in Project information, above."); nota de `sciencePrograms` corregida; prior: 2026-10-13 · qa-development-2026-ss · spec `results/program-full-names-labels-part-2` PF2-T-6: banner SP name via `bilateralProgramLabel` (`pages/bilateral/shared/`), code on a miss; prior: 2026-10-02 · qa-development-2026-ss · LPC el proyecto líder ya no se repite como chip ni como opción en Contributing W3/bilateral projects — campo propio "Lead W3/bilateral project" arriba (solo vista; el payload lo sigue mandando con is_lead: true); prior: 2026-09-30 · feat/bilateral-contributors-nicoleta-sep29 · P2-3859 filtro por Center dentro del desplegable de proyectos W3/bilaterales, una píldora por cada Center con proyectos (arranca en el Center de la página; 1-oct: antes solo dos); P2-3865 nota "What is a contributor?" (definición CLARISA + "elige entidades distintas a la que reporta") justo antes de los campos de contribuyentes (tras el bloque ToC); P2-3864 el centro líder ya no se repite como chip ★ ni como opción en Contributing CGIAR centers (solo vista; el payload lo sigue mandando); prior: 2026-09-29 · JuanGuzman-io/p2-3821-us-understanding · P2-3821 External partners sale
+**Verified:** 2026-11-18 · qa-development-2026-ss @ 0f83d6a03 · spec `changes/bilateral-partners-mds` BPX-T-2 (decisión 2026-11-18, obligatorio por Angel Jarrin; **sustituye P2-3821**): External partners vuelve a Block 1 para todo tipo, obligatorio solo si `isPartnerRequired()` (editable y no KP), con ítem `external-partners` en el tracker; la nota de campos ocultos cuenta solo el enlazado; `hasFullMetadataFields` oculta toggle/nota/contenedor en tipos 2 y 7; prior: 2026-10-16 · qa-development-2026-ss · spec `bilateral/replicated-innovations-2026-pa` PAA-T-2: helper bajo el P/A de solo lectura = `contributorsPrimaryHelp` ("Change the primary Science Program in Project information, above."); nota de `sciencePrograms` corregida; prior: 2026-10-13 · qa-development-2026-ss · spec `results/program-full-names-labels-part-2` PF2-T-6: banner SP name via `bilateralProgramLabel` (`pages/bilateral/shared/`), code on a miss; prior: 2026-10-02 · qa-development-2026-ss · LPC el proyecto líder ya no se repite como chip ni como opción en Contributing W3/bilateral projects — campo propio "Lead W3/bilateral project" arriba (solo vista; el payload lo sigue mandando con is_lead: true); prior: 2026-09-30 · feat/bilateral-contributors-nicoleta-sep29 · P2-3859 filtro por Center dentro del desplegable de proyectos W3/bilaterales, una píldora por cada Center con proyectos (arranca en el Center de la página; 1-oct: antes solo dos); P2-3865 nota "What is a contributor?" (definición CLARISA + "elige entidades distintas a la que reporta") justo antes de los campos de contribuyentes (tras el bloque ToC); P2-3864 el centro líder ya no se repite como chip ★ ni como opción en Contributing CGIAR centers (solo vista; el payload lo sigue mandando); prior: 2026-09-29 · JuanGuzman-io/p2-3821-us-understanding · P2-3821 External partners sale
 del tracker MDS y se muda a Full metadata, opcional para todo tipo (se retiran el marcador
-`required` y el hint rojo; el banner de centros se muda a Block 1, junto al selector de centros);
+`required` y el hint rojo) — **parte de partners SUSTITUIDA el 2026-11-18 por `changes/bilateral-partners-mds`**;
+sigue vigente: el banner de centros en Block 1, junto al selector de centros;
 prior: 2026-09-24 · yzuniga/p2-3368-linked-bundled · P2-3823 blindaje (claves solo al tocar la pregunta, selector sin pérdida, entrada normalizada) + P2-3368 AC10-AC14 la pregunta enlazado/agrupado ya se guarda (se retira el `Coming soon`); prior: 2026-09-23 · JuanGuzman-io/fix-p2-3228-result · P2-3228 Lead center cae al centro líder del resultado sin proyecto; prior: 2026-09-22 · JuanGuzman-io/review-p2-3793-understanding · BCT-T-6 lock + auto-select derived Centers; prior: 2026-09-21 · santiago.sanchez/qa-development-2026-ss · BIL-T-1 `centersLoadFailed` + Retry banner for a failed centers-catalogue load; prior: 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3520 los cuatro selectores ya no se abren en solo-lectura; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección
 
 ## Qué es
 Sección 2 del formulario bilateral (W3/Bilateral): a quién se atribuye el resultado — centro líder,
-centros CGIAR contribuyentes, proyectos W3/bilaterales y programas científicos en Block 1, y
-—detrás del toggle Full Metadata— los socios externos (opcionales desde P2-3821) y la pregunta de
-resultado enlazado/agrupado. Historia: **P2-3368**, **P2-3821**.
+centros CGIAR contribuyentes, proyectos W3/bilaterales, programas científicos y **socios externos**
+en Block 1 (los socios, para todo tipo de resultado) y —detrás del toggle Full Metadata— la pregunta
+de resultado enlazado/agrupado. Los socios son **obligatorios** solo mientras `isPartnerRequired()`
+(editable y no KP). Historia: **P2-3368**, **P2-3821** (sustituido para socios),
+**`changes/bilateral-partners-mds`** (decisión 2026-11-18, obligatorio por Angel Jarrin; sustituye P2-3821).
 
 Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de campo específica,
 `app-bilateral-field-quality-flag` muestra el feedback de Contributors & Partners.
@@ -31,18 +34,22 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
 - **Progreso / Submit:** `BilateralMdsTrackerService.setSectionFields('contributors', […],
   'partners')` incluye `lead-center`; `lead-project` cuenta solo si el resultado cargado tiene
   proyecto líder (los resultados de API o versionados pueden no tenerlo). 🛑 **`external-partners`
-  YA NO se publica al tracker desde P2-3821** (el PO alineó el cliente con el Fetcher, que nunca
-  exigió `contributing_partners`): el campo se movió a Full metadata y es opcional para **todos**
-  los tipos, así que ya no puede bloquear Submit ni la completitud de la sección. Ver la trampa más
-  abajo — la invariante de no reportar satisfecho lo que el payload descarta sigue viva, sólo que
-  ahora vive en `hiddenFieldsWithValues()`, no en el tracker.
+  se publica de nuevo (BPX-R-2, `changes/bilateral-partners-mds`, decisión 2026-11-18) pero SOLO
+  mientras `isPartnerRequired()`** = `!readOnly() && !isKnowledgeProduct()`: `filled:
+  partnersHydrated() && externalPartnersSatisfied()` (≥1 socio **o** "no external partners").
+  Un resultado de solo lectura (#9503: Pending Review sin socios) o un KP **no** lo registra, así
+  que nunca queda retenido. El efecto `republishPartnersScope` re-publica cuando cambia ese scope
+  (el status llega tarde o el resultado rechazado pasa a editable); trackea solo
+  `isPartnerRequired()`, el resto se lee en `untracked`. El servidor repite la regla en
+  `assertSubmittable` (BPX-R-5, no-KP sin fila activa ni flag → 400). Esto **sustituye P2-3821**.
   ⚠️ **El grupo `toc` que publica `<app-section-toc>` en este mismo bucket va todo
   `optional: true` desde el 9-sep-2026** (decisión del PO): se lista en el checklist pero **no
   cuenta** para el porcentaje ni para `overallStatus()`, que es el único gate del "Submit for
-  review". Con el Primary Science Program elegido ya se puede pasar a Pending Review; el servidor
-  nunca pidió más (`bilateral-center.service.ts → submitForReview`: centro líder del que el usuario
-  es miembro + Science Program asignado). Los ítems de `partners` (`lead-center`, y `lead-project`
-  cuando hay proyecto líder) **sí** siguen contando; `external-partners` ya no (P2-3821).
+  review". Ese relajamiento es solo de la UI: el servidor exige (`bilateral-center.service.ts →
+  assertSubmittable`, que `submitForReview` invoca) el centro líder del que el usuario es miembro,
+  un Science Program asignado y, para resultados no-KP, una respuesta de socios (≥1 fila activa
+  rol 2/8 o `no_applicable_partner`; si no, 400, BPX-R-5). Los ítems de `partners` (`lead-center`, y `lead-project`
+  cuando hay proyecto líder) **sí** siguen contando; `external-partners` también, solo si `isPartnerRequired()`.
 - **Coming soon:** ya **no queda ningún control** en ese estado. El último en salir fue
   enlazado/agrupado el 24-sep-2026 (P2-3368 AC10-AC14); los contributing science programs habían
   salido el 3-sep. La regla sigue viva: un control sin storage va **visible pero deshabilitado con
@@ -149,13 +156,12 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
 - ⚠️ **Rol de socio como en pool funding:** `8` si hay fila en `results_knowledge_product`, `2` si
   no. Elegirlo mal **no revienta**: esconde los socios del GET y del green check (`IN (2,8)`).
 - 🛑 **INVARIANTE: nada se reporta como satisfecho mientras el payload descarta sus claves.**
-  Antes vivía en el tracker (`external-partners` sólo iba `filled: true` si `partnersHydrated()`);
-  **desde P2-3821 el campo ya no está en el tracker**, así que la invariante se mudó a
-  `hiddenFieldsWithValues()`: el conteo de socios sólo suma 1 cuando `partnersHydrated() &&
-  externalPartnersSatisfied()`, nunca antes. Sin esto, el GET de detalle podía fallar, el usuario
-  elegía socios, la nota de "N campos ocultos" prometía guardarlos y **cada PATCH tiraba
-  `institutions`**: no se escribía nada. Si tocas `buildContributorsPayload()`, toca también
-  `hiddenFieldsWithValues()`.
+  Vive en el tracker otra vez (BPX-R-2 escenario 3): `external-partners` solo va `filled: true`
+  si `partnersHydrated() && externalPartnersSatisfied()`; con la lectura pendiente o fallida cuenta
+  como faltante aunque el usuario haya elegido socios en pantalla, porque `buildContributorsPayload()`
+  omite `institutions`/`no_external_partners` y **cada PATCH tiraría los socios**. (Entre P2-3821 y
+  BPX esta invariante vivió en `hiddenFieldsWithValues()`; ya no: esa nota cuenta solo el enlazado,
+  BPX-R-7.) Si tocas `buildContributorsPayload()`, toca también `updateContributorsMds()`.
 - ⚠️ **El efecto de hidratación NO se reintenta solo.** `hydrateWhenReady` sólo corre cuando cambia
   una de sus señales, y tras la carga inicial ninguna cambia. Por eso el fallo se muestra:
   `partnersLoadFailed()` pinta un `app-alert-status status="error"` con el botón
@@ -168,11 +174,10 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
   de "External partners" atascado). Ahora `centersLoadFailed()` pinta el mismo patrón
   `app-alert-status status="error"` + botón **Retry loading centers** → `retryLoadCenters()`.
   🛑 **Desde P2-3821 este banner vive en Block 1** (`sc-block--centers`, junto al selector de
-  centros, BIL-R-5/BIL-DD-3), **no** junto a `partnersLoadFailed()`: reporta un fallo de catálogo
-  que bloquea todo el guardado, y debe seguir visible aunque Full metadata esté colapsado — el
-  banner de socios (`partnersLoadFailed()`) sí se movió dentro de Full metadata, porque es sobre un
-  campo que ahora vive ahí. No se tocó `CentersService` (fuera de alcance, ~25 pantallas
-  consumidoras — Option C rechazada).
+  centros, BIL-R-5/BIL-DD-3): reporta un fallo de catálogo que bloquea todo el guardado, y debe
+  seguir visible aunque Full metadata esté colapsado. Desde BPX el banner de socios
+  (`partnersLoadFailed()`) también está en Block 1, dentro de `sc-block--partners`. No se tocó
+  `CentersService` (fuera de alcance, ~25 pantallas consumidoras — Option C rechazada).
 - ⚠️ Mismo mecanismo para los socios: `saveContributors` se dispara con cada cambio de
   centro/proyecto, así que un `institutions: []` prematuro **borraría los socios guardados**. El
   `error` del GET deja `partnersHydrated` en `false` a propósito.
@@ -180,22 +185,28 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
   control de "lo lidera un socio" y el centro líder es de solo lectura, así que el valor es
   derivable. Se manda explícito porque la validación trata `NULL` como "sin contestar" y nunca
   pondría la sección en verde. Si bilateral admite lead partner algún día, este es el punto a tocar.
-- ✅ **`external-partners` YA NO se publica al tracker — decisión P2-3821, no un descuido.**
-  Historia completa: se sacó el 25-ago (el dato no se guardaba y Submit quedaba bloqueado sin
-  salida), se **restauró** con P2-3443 una vez la persistencia se arregló, y el 29-sep-2026 el PO
-  la sacó por tercera vez y esta vez **a propósito y para quedarse**: alineó el formulario con el
-  Fetcher, que nunca exigió `contributing_partners` (`common_fields.json`, ver
-  `docs/specs/bilateral/contributors-partners-optional/requirements.md`). El campo se movió a Full
-  metadata y es opcional para todo tipo de resultado — ya no bloquea Submit ni cuenta para la
-  completitud de la sección.
-  🛑 **Si la persistencia vuelve a romperse, la reparación es arreglar `partnersHydrated()` /
-  `buildContributorsPayload()` — NO restaurar el ítem del tracker.** Restaurarlo revertiría la
-  decisión P2-3821 sin que nadie lo pidiera: la UI ya no llama obligatorio a este campo (sin
-  marcador `required`, sin hint rojo), y un ítem de tracker detrás de eso volvería a bloquear
-  Submit sin que la pantalla explique por qué — el mismo defecto que motivó sacarlo la primera vez.
+- ✅ **`external-partners` vuelve al tracker y a Block 1 — `changes/bilateral-partners-mds`
+  (decisión 2026-11-18, obligatorio por Angel Jarrin; sustituye P2-3821).**
+  Historia: se sacó el 25-ago (el dato no se guardaba y Submit quedaba bloqueado sin salida), se
+  restauró con P2-3443, el 29-sep-2026 P2-3821 lo sacó otra vez (opcional, en Full metadata, para
+  alinear con el Fetcher), y el 18-nov-2026 se **revirtió a propósito** (BPX-DD-1/DD-2):
+  - **Placement (BPX-R-1):** el bloque (checkbox "no external partners", multi-select, chips,
+    banner `partnersLoadFailed()`) está en `sc-block--partners`, Block 1, **para todo tipo**, y no
+    se pinta de nuevo dentro de Full metadata.
+  - **Obligatorio (BPX-R-2):** `[required]="isPartnerRequired()"` + hint rojo "Add at least one
+    external partner, or tick 'This result has no external partners'." mientras falte respuesta.
+  - **Nunca faltante en solo lectura (BPX-R-3) ni en KP (BPX-R-4):** `isPartnerRequired()` es
+    `false` → sin marcador, sin hint, sin ítem. Es lo que evita el callejón #9503 que P2-3821
+    resolvió quitando el ítem por completo.
+  - 🛑 **No "arregles" un fallo de persistencia quitando `!readOnly()` ni el ítem:** repara
+    `partnersHydrated()` / `buildContributorsPayload()`.
   Centros y proyectos siguen fuera del tracker por otro motivo (P2-3348: van
   `[required]="false"`, y trackear un campo que la UI llama Optional bloquea Submit sin
-  explicación) — misma razón, ahora también la de socios.
+  explicación).
+- ✅ **`hasFullMetadataFields` (BPX-DD-3):** `!linkedQuestionOwnedElsewhere()`. Con los socios en
+  Block 1, Full metadata solo guarda la pregunta de enlazado, que los tipos 2 y 7 no hacen aquí:
+  para ellos el toggle, la nota de campos ocultos y el contenedor **no se pintan**, y el banner
+  queda con su primera frase (sin "Add the full metadata…").
 - ✅ **Enlazado/agrupado ya se persiste** (P2-3368 AC10-AC14, 24-sep-2026): `has_innovation_link` +
   `linked_results` en `SaveBilateralContributorsDto`, y de vuelta en el detalle como
   `commonFields.has_innovation_link` + `linkedResults`. `hiddenFieldsWithValues()` vuelve a contarlo.
@@ -247,9 +258,9 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
   **la pantalla mentía**. Se arregló desde aquí y **no tocando `pr-multi-select`**, que es
   compartido por toda la app; en modo editable `!readOnly()` vale `true`, o sea exactamente lo de
   antes (`validateShowDeleteButton`, líneas 259/262, da `false` en los dos casos).
-  ⚠️ **Sigue con `[isStatic]="true"` duro**, y por tanto clicable en solo-lectura, el
-  `app-pr-checkbox` *"This result has no external partners"* (línea 168); no entraba en el alcance
-  del ticket. El multi-select de *Select a result* **ya se corrigió** el 24-sep (P2-3368): pasa
+  El `app-pr-checkbox` *"This result has no external partners"* también usa
+  `[isStatic]="!readOnly()"` (html ~L309, con su comentario P2-3520), así que los cuatro selectores
+  y el checkbox siguen la misma regla. El multi-select de *Select a result* **ya se corrigió** el 24-sep (P2-3368): pasa
   `[isStatic]="!readOnly()"` y lo cubre `section-contributors.readonly.spec.ts`.
 - ⚠️ **`selectedProject().sciencePrograms` puede venir `[]` al cargar un resultado existente**
   (`bilateral-creation.service.ts`). `loadResult` toma el proyecto líder del catálogo del Center si
@@ -290,7 +301,9 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
 `section-contributors.component.spec.ts` — 157 casos (P2-3228 añadió 3: etiqueta del Lead center sin proyecto; BCT-T-6 añadió 12: lock/auto-select de centros
 derivados; BIL-T-1 añadió 7: centers-load-failure regression; P2-3821/BCP-T-1 reescribió los casos
 del tracker y de `hiddenFieldsWithValues()` para que ninguno espere `external-partners`, y añadió los
-de `showFullMetadata`). El template se sobreescribe con
+de `showFullMetadata` — **historia, esa regla quedó SUSTITUIDA por BPX-T-2 (2026-11-18):** los casos
+del tracker ahora esperan `external-partners` cuando `isPartnerRequired()`, y los de
+`hiddenFieldsWithValues()` cuentan solo el enlazado). El template se sobreescribe con
 `<div></div>`: **no hay assertions de DOM**, todo va por signals/computeds — y eso es justo lo que
 dejó pasar el hueco de P2-3520 (ver la trampa de `isStatic`).
 
@@ -298,7 +311,8 @@ dejó pasar el hueco de P2-3520 (ver la trampa de `isStatic`).
 renderizado en el DOM real; P2-3821/BCP-T-2 añadió 6: el picker "External partners" ausente/presente
 según `showAllFields()` para tipo 1 y tipo 2, sin marcador `required` ni hint rojo, y el banner de
 centros renderizado con Full metadata colapsado — y reescribió los casos de `PARTNER_PICKER_LABELS`
-para expandir Full metadata antes de buscar "External partners"), y **sí renderiza el template
+para expandir Full metadata antes de buscar "External partners" — **historia: la parte de socios
+quedó SUSTITUIDA por BPX-T-2 (2026-11-18), el picker está siempre en Block 1**), y **sí renderiza el template
 real** (stubea solo `<app-section-toc>`, que arrastra el diálogo de Spartan). Mide, por cada uno de
 los cuatro selectores, cuántos nodos enfocables no deshabilitados quedan: 0 en solo-lectura, >0 en
 editable.

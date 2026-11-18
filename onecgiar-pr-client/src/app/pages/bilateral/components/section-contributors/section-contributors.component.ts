@@ -488,8 +488,10 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   // Put the tag back — never a silently-dropped value — if a control here ever loses its storage.
 
   // ─────────────────────────────────────────────────────────────────────────
-  // P2-3821 · External partners (optional; the Fetcher never required it — see BIL-DD-1).
-  // Answer it with at least one partner OR the "no partners" checkbox, in Full metadata.
+  // @akili-spec changes/bilateral-partners-mds · External partners (decision 2026-11-18, supersedes
+  // P2-3821's "optional"). It lives in Block 1 for every type; it is REQUIRED for an editable non-KP
+  // result (`isPartnerRequired()`) and stays optional for Knowledge Products. Answer it with at
+  // least one partner OR the "no partners" checkbox.
   // ─────────────────────────────────────────────────────────────────────────
   /**
    * Same catalogue W1/W2 uses for External partners (`InstitutionsService`), read through the SIGNAL
@@ -522,10 +524,10 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   /**
    * The read failed and there is NO automatic second chance: `hydrateWhenReady` only re-runs when
    * one of the signals it tracks changes, and after the initial load none of them does. Without a
-   * visible error the section became a black hole: before P2-3821, the user picked partners, the
-   * (then-mandatory) block went green and Submit unlocked, while every PATCH silently dropped
-   * `institutions`. So the failure is shown with a Retry; the hidden-fields note (BIL-R-4) is what
-   * now signals whether the answer can actually be saved, since the field is no longer tracked.
+   * visible error the section became a black hole: the user picked partners, the (mandatory) block
+   * went green and Submit unlocked, while every PATCH silently dropped `institutions`. So the
+   * failure is shown with a Retry, and `updateContributorsMds()` keeps `external-partners`
+   * unfilled meanwhile (`partnersHydrated()`; @akili-spec changes/bilateral-partners-mds BPX-R-2).
    */
   readonly partnersLoadFailed = signal(false);
 
@@ -558,9 +560,17 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   readonly contributorNoteHtml = BILATERAL_CONTRIBUTORS_COPY.contributorNote.html(CLARISA_GLOSSARY_URL);
 
   /**
-   * BIL-AC-5/BIL-AC-7 (P2-3821, supersedes P2-3368 AC5/AC7) — the field is satisfied by EITHER at
-   * least one partner OR the explicit "none" declaration. Kept for the payload (`is_lead_by_partner`
-   * companion keys) and the hidden-fields count; it no longer gates Submit or the tracker.
+   * BPX-R-2/R-3/R-4 — partners are required only when the centre user can edit the result and it is
+   * not a Knowledge Product. Read-only results (e.g. #9503 ingested in Pending Review) never
+   * carry the marker, the hint or the tracker item. Optional call: hosts stub the creation service
+   * field by field.
+   */
+  readonly isPartnerRequired = computed(() => !this.readOnly() && !this.creationService.isKnowledgeProduct?.());
+
+  /**
+   * @akili-spec changes/bilateral-partners-mds BPX-R-2 (decision 2026-11-18, restores P2-3368
+   * AC5/AC7) — the field is satisfied by EITHER at least one partner OR the explicit "none"
+   * declaration. It feeds the tracker item (editable non-KP only) and the template hint.
    */
   readonly externalPartnersSatisfied = computed(() => this.noExternalPartners() || this.selectedPartnerInstitutionIds().length > 0);
 
@@ -652,20 +662,12 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
    * this section never renders.
    */
   readonly hiddenFieldsWithValues = computed(() => {
+    if (this.linkedQuestionOwnedElsewhere()) return 0;
     // P2-3823 — unhydrated keys never travel (`buildContributorsPayload`), so after a failed read
-    // the note must not promise to save them. Also 0 for the result types that do not ask the
-    // question here at all (`linkedQuestionOwnedElsewhere()`).
-    const linkedCount =
-      this.linkedQuestionOwnedElsewhere() || !this.linkedHydrated()
-        ? 0
-        : this.hasLinkedResult() !== null || this.selectedLinkedResultIds().length > 0
-          ? 1
-          : 0;
-    // P2-3821 — External partners moved into Full metadata and became optional, but the note still
-    // promises to save it once it actually can: `partnersHydrated()` is the same payload guard
-    // `buildContributorsPayload()` reads, so this never promises a key the next PATCH would omit.
-    const partnerCount = this.partnersHydrated() && this.externalPartnersSatisfied() ? 1 : 0;
-    return linkedCount + partnerCount;
+    // the note must not promise to save them.
+    if (!this.linkedHydrated()) return 0;
+    // BPX-R-7: External partners lives in Block 1 again, so it is never "hidden" and not counted.
+    return this.hasLinkedResult() !== null || this.selectedLinkedResultIds().length > 0 ? 1 : 0;
   });
 
   readonly showHiddenFieldsNote = computed(() => !this.showAllFields() && this.hiddenFieldsWithValues() > 0);
@@ -705,13 +707,23 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   readonly fullMetadataButtonLabel = computed(() => (this.showAllFields() ? 'Hide full metadata' : 'Complete full metadata'));
 
   /**
-   * BIL-DD-2 (P2-3821) — the Full metadata container's own gate, holding the intro line and the
-   * External partners block. It must NOT share `showLinkedResultQuestion`'s type exclusion: that
-   * gate is `false` for Innovation Use (2) and Innovation Development (7), which would hide the
-   * partner block for those two types (BIL-R-1 requires it for every type). The linked question
-   * stays nested under its own, narrower gate.
+   * @akili-spec changes/bilateral-partners-mds BPX-DD-3 — with External partners in Block 1, the
+   * Full metadata container only holds the linked question, which Innovation Use (2) and
+   * Innovation Development (7) do not ask here. For those types the toggle, the hidden-fields note
+   * and the container render nothing, and the banner drops its "Add the full metadata" sentence.
    */
-  readonly showFullMetadata = computed(() => this.showAllFields());
+  readonly hasFullMetadataFields = computed(() => !this.linkedQuestionOwnedElsewhere());
+
+  /**
+   * BPX-DD-2 — `updateContributorsMds()` is otherwise only called imperatively, so a readOnly flip
+   * after load (the status lands, or the result is rejected and becomes editable) would leave a
+   * stale `external-partners` item. Track only `isPartnerRequired()`; the publish itself reads
+   * other signals, which must not become dependencies of this effect.
+   */
+  private readonly republishPartnersScope = effect(() => {
+    this.isPartnerRequired();
+    untracked(() => this.updateContributorsMds());
+  });
 
   readonlyLeadCenterInstitutionId: number | null = null;
   readonlyLeadProjectId: number | null = null;
@@ -987,12 +999,11 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
    * additions beyond the lead pair, so they are no longer counted. If product wants them mandatory,
    * flip `[required]` in the template and re-add the item here — not the other way round.
    *
-   * 🛑 P2-3821 (supersedes P2-3443/P2-3368 AC5/AC7): External partners is NOT in this list. The PO
-   * decision aligned the client with the Fetcher, which never required `contributing_partners` —
-   * the field moved into Full metadata and became optional, so it can no longer block Submit or
-   * count toward the section's completion. If the tracker item is ever restored, the invariant that
-   * used to guard it still applies: never report it `filled` while `buildContributorsPayload()` is
-   * omitting its keys (`partnersHydrated()` gates that).
+   * 🛑 @akili-spec changes/bilateral-partners-mds BPX-R-2/R-3/R-4 (decision 2026-11-18, reverts
+   * P2-3821's removal): `external-partners` is listed again, but ONLY while `isPartnerRequired()`
+   * (editable and not a Knowledge Product). A read-only result (#9503) or a KP never carries it, and
+   * the effect below re-publishes when that scope changes. INVARIANT (P2-3443): never report it
+   * `filled` while `buildContributorsPayload()` is omitting its keys — `partnersHydrated()` gates it.
    */
   updateContributorsMds(): void {
     this.mdsTracker.setSectionFields(
@@ -1010,6 +1021,13 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
               key: 'lead-project',
               label: 'Lead project',
               filled: this.readonlyLeadProjectId != null,
+            }]
+          : []),
+        ...(this.isPartnerRequired()
+          ? [{
+              key: 'external-partners',
+              label: 'External partners',
+              filled: this.partnersHydrated() && this.externalPartnersSatisfied(),
             }]
           : []),
       ],
@@ -1113,9 +1131,8 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
         // Same posture for the linked/bundled keys: unhydrated means "do not send", so a failed
         // read can never let a blank answer overwrite the stored one.
         this.linkedHydrated.set(false);
-        // P2-3821: External partners is no longer tracked here, so there is nothing to re-publish
-        // for it — but `updateContributorsMds()` still owns `lead-center` / `lead-project`, and
-        // this failure does not change either of those.
+        // Re-publish so `external-partners` drops back to unfilled: the section must not stay
+        // green on a selection whose keys the next PATCH will discard.
         this.updateContributorsMds();
       }
     });
