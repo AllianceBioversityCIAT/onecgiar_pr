@@ -250,3 +250,9 @@ Tripwire: stop and escalate above ~1,450 LOC, ~420 prod LOC, or 18 review rounds
 ## Required cross-references
 
 `requirements.md` · `proposal.md` · `bilateral/innovation-use-actor-follow-up/design.md` (BIF-DD-4, §5) · `archive/2026-11-03-changes--innovation-use-farmer-count-nature/design.md` · `archive/2026-11-12-bugfix--innovation-use-youth-required/sql/` · `archive/2026-11-12-changes--innovation-use-w3-hide-2030/` · `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` · `onecgiar-pr-server/docs/qa-catalog.en.md`
+
+> **Amendment 2026-11-18, INA-T-8 reopened from HITL testing on prtest (Angel, result 10122).** In the bilateral editor a Farmers row answered **Households** is a single-total row (Households accepts only the total, as defined by Nicoleta, BIF-R-3, and as the shared form's `isHouseholdsRow` already enforces). While `count_unit = 'households'`:
+> - the card's "Sex and age disaggregation does not apply" checkbox stays ticked and **cannot be unticked**, so the Women/Men grid cannot reappear;
+> - a row loaded with `count_unit = 'households'` and the box unticked is normalised to ticked on load, without wiping a typed total.
+>
+> To get the grid back, the reporter picks **Individual actors**. Picking it unlocks the box and does not auto-untick it.

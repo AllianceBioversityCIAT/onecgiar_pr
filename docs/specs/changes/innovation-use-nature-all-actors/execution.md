@@ -609,3 +609,50 @@ S2 rows:
   - HITL before/after run on prtest: as tabled above.
 - **Prod application:** deferred to INA-T-11, the prod window.
 
+### INA-T-8: REOPENED (HITL finding on prtest, 2026-11-18)
+
+**Finding.** Angel, result 10122, bilateral editor:
+- A Farmers row answered **Households** still showed the Women/Men grid.
+- "Sex and age disaggregation does not apply" was unticked, and Women had 5 entered.
+
+**Root cause** (`type-innovation-use.component.ts:806-813`):
+- `selectCountUnit` ticks the box once when Households is picked.
+- The box stays editable, so unticking it brings back the grid on a Households row.
+- A row loaded with households and no tick is never normalised.
+
+This contradicts "Households = total only". The shared form already enforces it through `isHouseholdsRow`.
+
+**Not a defect.** The Youth value 3 for Women 5 is the pre-existing 50/50 fallback of "Age disaggregation not available".
+
+**Decision (user, "corrije pronto").** Fix inside INA-T-8, as attempt 3. The design is amended (see `design.md`, amendment of 2026-11-18 on households).
+
+**INA-T-8 attempt 3 (households lock): PASS**
+
+- **Implementer** (effort `xhigh`). Files changed in `…/type-innovation-use/`: `.ts`, `.html`, `.spec.ts`, `CLAUDE.md`.
+  - `isHouseholdsRow` checks `count_unit === 'households'`.
+  - `normalizeHouseholdsActors()` runs once in `loadData`, after `hydrateStoredAnswers`.
+  - `clearBreakdown` was extracted from `onDisaggregationChange` with no behaviour change.
+  - On load, the total is the typed `how_many` when it is non-zero, otherwise women + men.
+  - The `.html` adds `[readOnly]="isHouseholdsRow(actor)"` on `app-pr-checkbox`. Its native input binds `[disabled]` to that value.
+- **Red run:** 6 assertion failures (5 load-normalisation, 1 markup) and 3 "not a function" failures. **Green:** folder 180/180, eslint clean.
+- **Reviewer (full): PASS.**
+  - `pr-checkbox.component.html:6` really disables the native input, so the tick cannot be removed.
+  - Falsifier rows (a) to (d) hold.
+  - No data is destroyed.
+  - The 2030 block is not rendered, so leaving it out is safe.
+  - The `CLAUDE.md` text matches the code.
+- **Evidence re-run (Leader): VERIFIED.**
+  - `npx jest src/app/pages/bilateral src/app/shared/components/innovation-use-form`: 70 suites, 3049/3049.
+  - `npx tsc --noEmit -p tsconfig.app.json`: exit 0.
+  - `npx ng lint --quiet`: "All files pass linting", exit 0.
+- **ADVISORY:**
+  - No component test covers the `readOnly` input on its own. The risk is low, because it shares one expression with a path the contract tests already cover.
+  - The normalised row reaches the DB only on the next user save. Until then, a row like 10122 stays stored unticked.
+  - Inactive rows are also visited by the normaliser. This is harmless.
+- **spawns:**
+
+  | Role | Calls | Tokens | Ended | Reported by host |
+  |---|---|---|---|---|
+  | Implementer | 34 | ~183k | complete | no |
+  | Reviewer | 14 | ~96k | complete | no |
+
