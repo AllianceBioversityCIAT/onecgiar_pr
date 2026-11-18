@@ -169,7 +169,7 @@
   - [ ] Snapshot regenerated, not hand-edited.
   - [ ] Doc v-row names the spec and the new version.
 
-### [ ] INA-T-6 — Centre form: nature question on every row, scope vs mandatory, every type repeatable
+### [x] INA-T-6 — Centre form: nature question on every row, scope vs mandatory, every type repeatable
 
 - **Type:** client
 - **Description:** In the shared `innovation-use-form` (DD-5, DD-6):
@@ -249,7 +249,7 @@
   - [ ] Counts before/after pasted into `execution.md`.
   - [ ] No credentials or connection strings in any file (`.cursorrules`).
 
-### [ ] INA-T-8 — Bilateral editor: show and save both answers on actor cards
+### [x] INA-T-8 — Bilateral editor: show and save both answers on actor cards
 
 - **Type:** client
 - **Description:** In `type-innovation-use` `#actorCard` (`.html:344`), current-use cards with a type selected and a phase ≥ 2026 show:

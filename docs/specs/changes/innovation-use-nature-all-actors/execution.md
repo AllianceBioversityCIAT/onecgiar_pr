@@ -334,3 +334,155 @@ All paths are under `onecgiar-pr-server/`.
 
 **Concurrency note:** another session committed `93ebf5f3b` (SR-168253, 11:05) on this same branch during the run. The cut-1 commits stage only INC-168062 paths, listed explicitly.
 
+### Release of cut 1 to TEST (part of INA-T-11): pushed 2026-11-18 at 12:10, with the user's go-ahead ("1, hazlo tú")
+
+| Field | Value |
+|---|---|
+| `qa-development-2026-ss` | Pushed `93ebf5f3b..eccb0132b`, then `1ae11e52d` |
+| Extra commit `1ae11e52d` | Renumbers our `qa-catalog.en.md` change-log row to **v1.35**, because P2-3911 (`program_codes`) on `performance-refactor` had already used v1.34 |
+| Merge | Built in a separate worktree (`git worktree add --detach`) so the in-flight T-6 and T-8 Implementers in the main checkout were not disturbed |
+| `qa-catalog.en.md` conflict | Resolved by keeping both rows: v1.34 `program_codes`, then v1.35 `use_nature` |
+
+**Checks on the merged tree**
+
+- `tsc --noEmit`: exit 0, run with a junction to the server `node_modules`.
+- Jest over `qa-catalog`, `bilateral/handlers` and `innovation-use`: 65 of 67 suites pass and 1485 of 1486 tests pass. Two suites fail:
+  - `qa-catalog.module.spec`: already failing on HEAD before this cut.
+  - `qa-catalog.snapshot.spec`: the "committed snapshot is current" test fails on the 455-line text of the snapshot.
+- Diagnosis of the snapshot failure: the worktree checkout converted the file to CRLF (`core.autocrlf=true`). After `npm run qa-catalog:snapshot`, git reported no content change (`i/lf w/lf`) and the spec passed 28/28. It is a Windows checkout artifact, not a content mismatch.
+
+**Push and cleanup**
+
+- The first push was rejected: `origin/performance-refactor` had moved to `1d20c6e76` (P2-3911 result-detail, client files only, no overlap with this cut).
+- The merge was redone on the new tip with the same resolution and pushed as `1d20c6e76..3ec1b5f2c  HEAD -> performance-refactor`.
+- The junction was removed first, and `git worktree remove` followed. The real `node_modules` is intact.
+- **Concurrency:** another session keeps committing SR-168253 work on `qa-development-2026-ss` (`93ebf5f3b`, `1fe11a266`).
+
+**Still open in INA-T-11:** Daniel's E2E on TEST, which settles P-21 and P-22, and the ticket reply.
+
+### INA-T-6 — Centre form: nature question on every row, scope vs mandatory, every type repeatable — PASS (attempt 2)
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-18 |
+| Attempts | 2 |
+| Covers | INA-R-7, R-8, R-9, R-20 · INA-AC-6, AC-11 (shared form) |
+| Skills / effort | `angular-developer`, `tailwind-design-system`, `tdd` · `high` (attempt 1) → `xhigh` (attempt 2, the retry bump) |
+
+**Attempt 1**
+
+- **Files changed:** `onecgiar-pr-client/src/app/shared/components/innovation-use-form/innovation-use-form.component.{ts,html,spec.ts}`.
+  - New predicates: `isFollowUpScope`, `isFollowUpMandatory`, `isNatureFollowUpRow`.
+  - `removeOther` and `isFarmerFollowUpRow` now read the scope.
+  - `isFarmerFollowUpResult` keeps its W1/W2 meaning and has an independent body.
+  - The template splits into `iu-follow-up` > `iu-farmer-follow-up` + `iu-nature-follow-up`.
+  - `[required]="isFollowUpMandatory()"`.
+  - `onActorTypeChange` clears only `count_unit`.
+- **Red:** 23 failed / 237 passed. 18 failures are behavioural (examples: nature card count 0 instead of 1; `removeOther` in scope returned 10 instead of `[]`; `use_nature` came back null after a type change). 5 failures were "not a function" on the new methods.
+- **Green:** 4 suites, 260/260. Host suites: 23 suites, 361/361.
+- **Reviewer (full): FAIL.** The only issue: the folder `CLAUDE.md` was stale at `:76`, `:79` and `:87`, and `Verified:` was not re-stamped. This violates `onecgiar-pr-client/CLAUDE.md` §10 "Folder docs". Every functional point passed:
+  - youth equivalence;
+  - IWH 2030 still hidden;
+  - no stale `count_unit` (the host sends the key on every row);
+  - the IFC test rewrites are legitimate;
+  - the W3 marker is per DD-6;
+  - radio names are unique.
+
+**Attempt 2** (rework, docs only; full Reviewer report relayed verbatim)
+
+- **Files changed:** `…/innovation-use-form/CLAUDE.md`, 185 → 193 lines. Section rewritten, P-9 warning added, test ids and the Specs describe added, `Verified:` re-stamped as `2026-11-18 · INC-168062 (INA-T-6)`. Includes an advisory line on W3 Households collapsing to a single total.
+- **Green:** 260/260.
+- **Re-review: PASS.** Every statement matches the code (`.ts:516-519`, `:546-554`, `:570-581`, `:588-591`, `:604-612`, `:730`, `:746`; `.html:856,859,864,876,879,896`).
+
+**Evidence re-run (Leader inline, after every worker and reviewer reported): VERIFIED**
+
+- Jest command: `npx jest src/app/shared/components/innovation-use-form src/app/pages/bilateral/components/section-type-specific/type-innovation-use src/app/pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-use-info src/app/pages/ipsr --silent --reporters=summary --no-coverage`
+  - Result: `Test Suites: 92 passed, 92 total · Tests: 1447 passed, 1447 total`.
+- `npx ng lint --quiet`: "All files pass linting.", exit 0.
+
+**Other records**
+
+- runtime events: none.
+- spawns, all `not reported by host`:
+
+  | Role | Calls | Tokens | Ended |
+  |---|---|---|---|
+  | Implementer, attempt 1 | 58 | ~218k | complete |
+  | Reviewer | 12 | ~105k | fail |
+  | Implementer, attempt 2 | 32 | ~153k | complete |
+  | Re-reviewer | 7 | ~101k | complete |
+
+**ADVISORY (recorded, not tasks)**
+
+- RISK: on W3, a Farmers row answered "Households" now shows a single total, because `isHouseholdsRow` reads the scope (R-20). Add this to the AC-11 manual check on TEST.
+- A11Y: the W3 "Optional" pill next to the `-mt-[27px]` offset has not been checked visually. Add it to the AC-11 manual check.
+- READABILITY: the `farmerRowKey` / `iu-farmer-` names now serve every actor type.
+- READABILITY: the folder `CLAUDE.md` is 193 lines against the 120-line cap of `docs/COMPONENT-DOCS.md`. It was already 185 before this task. Cleanup is pending.
+
+### INA-T-8 — Bilateral editor: show and save both answers on actor cards — PASS (attempt 2)
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-18 |
+| Attempts | 2 |
+| Covers | INA-R-21 · INA-AC-11 (bilateral editor) |
+| Skills / effort | `angular-developer`, `tailwind-design-system`, `tdd` · `high` (attempt 1) → `xhigh` (attempt 2) |
+
+**Attempt 1**
+
+- **Files changed:** `onecgiar-pr-client/src/app/pages/bilateral/components/section-type-specific/type-innovation-use/type-innovation-use.component.{ts,html,spec.ts}`.
+  - `showUseNatureQuestion` / `showCountUnitQuestion`: phase ≥ 2026, or the year is unresolved.
+  - The copy comes from the shared `farmer-follow-up.ts`.
+  - Native radios with names keyed through a WeakMap.
+  - Households goes through `onDisaggregationChange`.
+  - `onActorTypeChange` clears `count_unit` and then calls `onFieldChange()`.
+  - Not added to `mdsTracker`.
+- **Red:** with no-op stubs, 9 failed / 5 passed. All failures are behavioural (examples: `showUseNatureQuestion` returned false where true was expected; `schedulePayload` was called 0 times where 1 was expected).
+- **Green:** folder 166/166. Folder eslint clean.
+- **Reviewer (full): FAIL.** The only issue: the folder `CLAUDE.md` was not updated and not re-stamped (`onecgiar-pr-client/CLAUDE.md` §10). Every functional point passed:
+  - all 5 falsifier rows;
+  - both disqualifiers clear: the save path is `PATCH summary/innovation-use/create/result/:id`, and loaded rows carry the codes;
+  - `updateMds` and `onFieldChange` unchanged;
+  - a11y OK.
+
+**Attempt 2** (rework; full Reviewer report relayed verbatim)
+
+- **Files changed:**
+  - `…/type-innovation-use/CLAUDE.md`, 164 → ~185 lines: Contract bullet, the INA-T-8 entry, two Traps, `Verified:` re-stamped as `2026-11-18 · INC-168062 (INA-T-8)`.
+  - `spec.ts` [advisory-grade]: a guard test that `followUpRowKey` differs per row, plus a markup check that `name` is bound to it.
+- **Green:** 167/167. eslint clean.
+- **Re-review: PASS.** The `CLAUDE.md` text matches the code. Feature code is unchanged since attempt 1. The new test is not tautological.
+
+**Evidence re-run: VERIFIED.** Same joint run as T-6 above: 92 suites, 1447/1447; `ng lint` exit 0.
+
+**Other records**
+
+- runtime events: none.
+- spawns, all `not reported by host`:
+
+  | Role | Calls | Tokens | Ended |
+  |---|---|---|---|
+  | Implementer, attempt 1 | 50 | ~162k | partial (full `ng lint` not finished; the Leader ran it in the re-run) |
+  | Reviewer | 11 | ~109k | fail |
+  | Implementer, attempt 2 | 20 | ~141k | complete |
+  | Re-reviewer | 12 | ~66k | complete |
+
+**Decisions made (execute-time spec edits)**
+
+- 2026-11-18: `design.md` INA-DD-10 amended. The bilateral editor does not restore the grid when an actor leaves Farmers, a deliberate divergence from the shared form (INA-R-8 is Centre-form only; R-21 is SHOULD). Recorded at the T-8 re-review advisory.
+
+**ADVISORY (recorded, not tasks)**
+
+- RELIABILITY: if the type is cleared to null, `use_nature` is kept and saved while its question is hidden. Harmless, because the server whitelists the codes.
+- READABILITY: the folder `CLAUDE.md` is over the 120-line cap. Pre-existing (164 lines). Cleanup is pending.
+
+### Cut 2 (UI) summary: T-6 and T-8 PASS
+
+| Measure | Value |
+|---|---|
+| Review rounds so far | 12 (tripwire 18) |
+| Prod LOC | ~240 total (tripwire 420) |
+| Total LOC | ~2,200 (raised tripwire ~2,600) |
+
+Remaining: T-7 (SQL, needs `SHOW CREATE FUNCTION` from Santiago), T-10 (fetcher docs + prod promotion), T-11 (TEST E2E by Daniel, prod).
+
