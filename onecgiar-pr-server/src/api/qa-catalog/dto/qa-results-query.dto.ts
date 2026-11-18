@@ -1,13 +1,21 @@
 // @akili-spec quality-assurance/qa-results-feed
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import {
   QA_RESULTS_PAGE_MAX,
   QA_RESULTS_PAGE_SIZE_DEFAULT,
   QA_RESULTS_PAGE_SIZE_MAX,
   QA_RESULTS_PHASE_YEAR_MAX,
   QA_RESULTS_PHASE_YEAR_MIN,
+  QA_RESULTS_PROGRAM_CODE_MAX_LENGTH,
   QA_RESULTS_PROGRAM_ID_MAX,
 } from '../qa-results.constants';
 
@@ -53,6 +61,17 @@ export class QaResultsQueryDto {
   @Min(1, { each: true })
   @Max(QA_RESULTS_PROGRAM_ID_MAX, { each: true })
   program_ids: number[] = [];
+
+  @ApiPropertyOptional({
+    example: 'SP01,SP06',
+    description:
+      'Comma-separated program official codes; matches the LEAD program only, like program_ids (both ANDed when both are sent). Absent or empty = no filter',
+    type: String,
+  })
+  @Transform(({ value }) => toTokens(value))
+  @IsString({ each: true })
+  @MaxLength(QA_RESULTS_PROGRAM_CODE_MAX_LENGTH, { each: true })
+  program_codes: string[] = [];
 
   @ApiPropertyOptional({
     example: 'policy_change,knowledge_product',

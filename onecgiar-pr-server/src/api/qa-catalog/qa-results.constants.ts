@@ -21,6 +21,9 @@ export const QA_RESULTS_PAGE_MAX = 1_000_000;
 /** Largest id a `program_ids` value may carry: the signed 32-bit range of the CLARISA id column. */
 export const QA_RESULTS_PROGRAM_ID_MAX = 2_147_483_647;
 
+/** Longest `program_codes` entry (official codes such as `SP01`); a longer one is a 400, never a query. */
+export const QA_RESULTS_PROGRAM_CODE_MAX_LENGTH = 32;
+
 /** QRF-DD-12 / OQ-5 (confirmed 2026-10-28): most `result_ids` one `details` call may carry. */
 export const QA_RESULTS_BATCH_MAX = 50;
 

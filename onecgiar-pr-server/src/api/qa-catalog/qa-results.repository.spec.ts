@@ -253,6 +253,73 @@ describe('QaResultsRepository.count and breakdown (QRF-R-6)', () => {
   });
 });
 
+describe('QaResultsRepository program_codes filter', () => {
+  it('matches official codes against the lead program, bound after the type ids', async () => {
+    const { repo, sqlOf, paramsOf } = makeRepo();
+    await repo.findPage({
+      ...PAGE,
+      programCodes: ['SP01', 'SP06'],
+      resultTypeKeys: ['policy_change'],
+    });
+    const sql = sqlOf();
+    // `ci` is joined on the lead row (initiative_role_id = 1), so the code is the lead program's.
+    expect(sql).toMatch(
+      /initiative_role_id = 1\nINNER JOIN clarisa_initiatives ci ON ci\.id = rbi\.inititiative_id/,
+    );
+    expect(sql).toMatch(/^\s+AND ci\.official_code IN \(\?, \?\)$/m);
+    expect(sql).not.toContain('rbi.inititiative_id IN');
+    expect(sql).not.toContain("'SP01'");
+    expect(paramsOf()).toEqual([2026, 1, 2, 1, 'SP01', 'SP06', 100, 0]);
+  });
+
+  it('ANDs with program_ids, ids bound before codes', async () => {
+    const { repo, sqlOf, paramsOf } = makeRepo();
+    await repo.findPage({ ...PAGE, programIds: [50], programCodes: ['SP01'] });
+    const sql = sqlOf();
+    expect(sql).toMatch(
+      /^\s+AND rbi\.inititiative_id IN \(\?\)\n\s+AND ci\.official_code IN \(\?\)$/m,
+    );
+    expect(paramsOf().slice(-4)).toEqual([50, 'SP01', 100, 0]);
+  });
+
+  it('deduplicates codes; empty = no filter', async () => {
+    const dup = makeRepo();
+    await dup.repo.count({ phaseYear: 2026, programCodes: ['SP01', 'SP01'] });
+    expect(dup.sqlOf()).toMatch(/AND ci\.official_code IN \(\?\)$/m);
+    const none = makeRepo();
+    await none.repo.findPage({ ...PAGE, programCodes: [] });
+    const absent = makeRepo();
+    await absent.repo.findPage(PAGE);
+    expect(none.sqlOf()).toBe(absent.sqlOf());
+    expect(none.sqlOf()).not.toContain('ci.official_code IN');
+  });
+
+  it('applies to count and to both breakdown queries (by_program and by_result_type)', async () => {
+    const page = makeRepo();
+    await page.repo.findPage({ ...PAGE, programCodes: ['SP01'] });
+    const count = makeRepo([[{ total: '3' }]]);
+    await expect(
+      count.repo.count({ phaseYear: 2026, programCodes: ['SP01'] }),
+    ).resolves.toBe(3);
+    expect(count.paramsOf()).toEqual(page.paramsOf().slice(0, -2));
+
+    const b = makeRepo([
+      [{ clarisa_id: 50, code: 'SP01', total: 3 }],
+      [{ result_type_id: 2, total: 3 }],
+    ]);
+    await expect(
+      b.repo.breakdown({ phaseYear: 2026, programCodes: ['SP01'] }),
+    ).resolves.toEqual({
+      by_program: [{ clarisa_id: 50, code: 'SP01', count: 3 }],
+      by_result_type: [{ key: 'innovation_use', count: 3 }],
+    });
+    for (const i of [0, 1]) {
+      expect(b.sqlOf(i)).toMatch(/^\s+AND ci\.official_code IN \(\?\)$/m);
+      expect(b.paramsOf(i)).toEqual(count.paramsOf());
+    }
+  });
+});
+
 describe('QaResultsRepository.classify (QRF-R-8)', () => {
   const base = {
     result_code: 7777,
