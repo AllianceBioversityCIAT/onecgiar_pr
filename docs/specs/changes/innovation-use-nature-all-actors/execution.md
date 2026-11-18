@@ -545,3 +545,67 @@ Remaining: T-7 (SQL, needs `SHOW CREATE FUNCTION` from Santiago), T-10 (fetcher 
 
 **Status: `[~]`.** The DoD needs the before/after counts from prtest. Santiago runs `checks.sql`, applies `after.sql` once cut 2 is live on TEST, then re-runs `checks.sql`.
 
+### Release of cut 2 to TEST (part of INA-T-11) — 2026-11-18, user go-ahead "si, sube la entrega 2 a TEST"
+
+- **Push:** `qa-development-2026-ss` pushed (`1fe11a266..6b49e3af3`). It was merged into `performance-refactor` in a separate worktree. The merge was clean, no conflicts. Pushed `3ec1b5f2c..a111f7af3`.
+- **CI run 44360904023, attempt 1:** `backend checks` FAILED.
+  - Result: `Tests: 7383 passed, 7383 total · Test Suites: 2 failed, 397 passed`.
+  - The 2 failed suites (`qa-catalog.module.spec`, `app.module.spec`) "failed to run". Each jest worker was killed (SIGKILL / SIGTERM) at about 2 GB heap: an out-of-memory on the CI runner, not a test failure.
+  - Cut 2 changes only client files and spec docs. The frontend checks passed.
+- **Fix:** re-ran only the failed jobs (`gh run rerun --failed`).
+- **Attempt 2:** all green.
+  - Backend checks ✓
+  - Publish images ✓
+  - Jenkins `prms-reporting-tool-dev-cd` triggered ✓
+- **Follow-up (not done, needs owner OK):** CI jest has no memory bound, so the OOM can recur. Proposed fix: `npm run test:cov -- --ci --maxWorkers=2 --workerIdleMemoryLimit=1G` in `.github/workflows/reporting-tool-dev-cicd.yml`. This file is a shared pipeline.
+
+**INA-T-7 — prtest BEFORE run of `checks.sql`** (Santiago, 2026-11-18, from screenshots plus the CSV `sql/evidence/prtest-before-S3b.csv`)
+
+| Check | Result |
+|---|---|
+| V0 | `DEFINER prdbusertst@%`, `LAST_ALTERED 2026-11-12 11:44:14`, `has_ina_r_10 = 0` (the IUY version is live) |
+| S1a | `results_affected 3 · actor_rows 4 · green_now 1` |
+| S1b | 11026 (status 1, validation **1**); 11464 (status 1, validation 0); 12100 (status 1, validation 0) |
+| S2 | 6 rows, listed below |
+| S3a | W3/API: `42 results · 47 rows` |
+| S3b | 42 ids saved as CSV: 31 with validation 1, 11 with validation 0. They must be identical AFTER |
+| S4 | Not run before |
+| S5 | Not run. S1a already gives the OQ-1 impact: **1 result (11026, Editing) goes from green to not green**; the other 2 were already not green |
+
+S2 rows:
+
+| Result | Section | Actor row (type) | Validation |
+|---|---|---|---|
+| 11026 | 2 | 1052 (type 2) | 1 |
+| 11026 | 2 | 1054 (type 3) | 1 |
+| 11357 | 1 | 1060 (Farmers) | 0 |
+| 11464 | 1 | 1080 (type 2) | 0 |
+| 11619 | 2 | 1099 (Farmers) | 0 |
+| 12100 | 1 | 1170 (type 5) | 0 |
+
+**INA-T-7: prtest AFTER run of `checks.sql`.** Santiago applied `after.sql` on prtest on 2026-11-18. Source: his screenshots, plus the S3b ids transcribed into `sql/evidence/prtest-after-S3b.csv`.
+
+| Check | Result | Expected | OK |
+|---|---|---|---|
+| V0 | `has_ina_r_10 = 1`, `LAST_ALTERED 2026-11-18 18:27:21`, DEFINER `prdbusertst@%` | 1 | ✅ |
+| S1a | `results_affected 3 · actor_rows 4 · green_now 0` | green_now 0 (was 1) | ✅ |
+| S1b | 11026 → 0 (was **1**); 11464 → 0; 12100 → 0 | all 0 | ✅ |
+| S2 | same 6 rows, all validation 0 | answering the rows makes the result green | ✅ (manual step pending on the form) |
+| S3a | `42 · 47` | unchanged | ✅ |
+| S3b | `diff` before/after over 42 ids: **IDENTICAL** (31 × 1, 11 × 0) | W3 unaffected | ✅ |
+| S4 | `results_with_null_count_unit 2 · farmer_rows 2 · green_now 0` | green_now 0 | ✅ |
+| S5 | Editing: `results_with_missing_nature 3 · green_today_will_turn_not_green 0 · actor_rows 4` | 0 after | ✅ |
+
+- **OQ-1 impact on prtest:** exactly **1** result (11026, Editing, two non-Farmers rows in the 2030 block) went from green to not green.
+- **INA-AC-7:** met on prtest.
+- **Remaining:** apply on prod at the prod release. Use the prod DEFINER, and run `checks.sql` before and after.
+
+### INA-T-7: PASS (prtest)
+
+- **Closing records:**
+  - Reviewer function lens: PASS.
+  - Reviewer `checks.sql` lens: PASS.
+  - Leader re-runs: VERIFIED (inline `diff -w` and the scripted S3b comparison).
+  - HITL before/after run on prtest: as tabled above.
+- **Prod application:** deferred to INA-T-11, the prod window.
+
