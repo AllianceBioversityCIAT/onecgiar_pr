@@ -1,6 +1,7 @@
 import { Component, DoCheck, ElementRef, OnInit, OnDestroy, ViewChild, effect, inject, signal, NgZone } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { distinctUntilChanged, filter, map } from 'rxjs/operators';
 import { HlmSidebarService } from '@spartan/sidebar';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -21,6 +22,22 @@ import { dismissPtUnsavedEvidence, readPtUnsavedEvidence } from '../../../../sha
 
 /** IPSR result types (P-6: type 11, Complementary innovation, is deliberately NOT included). */
 const IPSR_RESULT_TYPE_IDS = new Set([10]);
+
+/** `phase.app_module_id` of IPSR phases; this route only opens Reporting ones. */
+const IPSR_APP_MODULE_ID = 2;
+
+/**
+ * P2-3911 — phase to open when the link carries no `?phase=` (QA's "Open in Reporting" link): the
+ * OPEN Reporting phase the result has a version in, else its most recent one (phase_year, then id).
+ * IPSR rows are skipped; `null` when nothing qualifies, which keeps the server's default phase.
+ */
+export function pickDefaultResultPhase(phases: readonly Partial<Phases>[] | null | undefined): Partial<Phases> | null {
+  const reporting = (phases ?? []).filter(phase => phase?.id != null && Number(phase.app_module_id) !== IPSR_APP_MODULE_ID);
+  const newestFirst = [...reporting].sort(
+    (a, b) => Number(b.phase_year ?? 0) - Number(a.phase_year ?? 0) || Number(b.id) - Number(a.id)
+  );
+  return newestFirst.find(phase => phase.status) ?? newestFirst[0] ?? null;
+}
 
 @Component({
   selector: 'app-result-detail',
@@ -217,6 +234,9 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
     this.api.updateUserData(() => {});
     this.api.resultsSE.currentResultCode = this.activatedRoute.snapshot.paramMap.get('id');
     this.api.resultsSE.currentResultPhase = this.activatedRoute.snapshot.queryParamMap.get('phase');
+    if (!this.api.resultsSE.currentResultPhase && this.api.resultsSE.currentResultCode) {
+      await this.resolveMissingPhase(this.api.resultsSE.currentResultCode);
+    }
     this.pdfSE.link.set(this.getPdfLink());
     this.pdfSE.enabled.set(true);
     this.shareRequestModalSE.inNotifications = false;
@@ -233,6 +253,32 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
     this.currentResultSE.GET_resultById();
     this.greenChecksSE.getGreenChecks();
     this.GET_versioningResult();
+  }
+
+  /**
+   * P2-3911 — a link without `?phase=` used to fall back to the server's default phase and could
+   * show "Not reported" for a result that does have a version elsewhere. Picks the phase from the
+   * same by-code list the not-found screen shows and writes it into the URL in place (same path,
+   * so the open section is kept). A failing or empty lookup leaves the old behavior untouched.
+   * The reuse strategy keeps this component alive on a query-only change, so loading simply
+   * continues here with the chosen phase instead of waiting for a re-init.
+   */
+  private async resolveMissingPhase(code: string): Promise<void> {
+    let phases: Phases[] = [];
+    try {
+      const { response } = await firstValueFrom(this.api.resultsSE.GET_versioningResultByCode(code));
+      phases = (response ?? []) as Phases[];
+    } catch {
+      return;
+    }
+    const phase = pickDefaultResultPhase(phases);
+    // The user may have left this result while the lookup was in flight.
+    if (!phase || this.activatedRoute.snapshot.paramMap.get('id') !== code) return;
+
+    this.api.resultsSE.currentResultPhase = String(phase.id);
+    const tree = this.router.parseUrl(this.router.url);
+    tree.queryParams = { ...tree.queryParams, phase: String(phase.id) };
+    await this.router.navigateByUrl(tree, { replaceUrl: true });
   }
 
   GET_resultIdToCode() {
