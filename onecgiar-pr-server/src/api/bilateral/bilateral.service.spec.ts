@@ -2993,7 +2993,9 @@ describe('BilateralService (unit)', () => {
           field: 'innovation_use.actors',
           index: 2,
           code: 'actor_duplicate_merged',
-          message: 'merged',
+          // @akili-spec changes/innovation-use-nature-all-actors (INA-T-2, INA-DD-2): the new step-9 text.
+          message:
+            'Another actor of the same type with the same count_unit and use_nature was sent; the rows are stored as one and the later one wins.',
         },
       ];
       const arrange = (hook: jest.Mock | undefined) => {

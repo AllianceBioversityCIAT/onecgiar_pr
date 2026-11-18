@@ -1,4 +1,5 @@
 // @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-1)
+// @akili-spec changes/innovation-use-nature-all-actors (INA-T-1)
 import { BadRequestException } from '@nestjs/common';
 import * as constants from '../../results/result-actors/farmer-follow-up.constant';
 import { applyInnovationUseActorFollowUpRules } from './innovation-use-actor-follow-up.rules';
@@ -48,8 +49,8 @@ describe('applyInnovationUseActorFollowUpRules', () => {
     });
   });
 
-  describe('steps 3-4: not applicable (BIF-R-7)', () => {
-    it('drops both on type 3 and warns twice', () => {
+  describe('steps 3-4: count_unit not applicable (BIF-R-7, INA-R-3, INA-R-4)', () => {
+    it('drops count_unit on type 3, keeps use_nature and warns once', () => {
       const out = run(
         row(
           {
@@ -62,14 +63,33 @@ describe('applyInnovationUseActorFollowUpRules', () => {
         ),
       );
       expect(out.actors[0].count_unit).toBeNull();
-      expect(out.actors[0].use_nature).toBeNull();
+      expect(out.actors[0].use_nature).toBe('innovation_applied');
       expect(out.actors[0].women).toBe(5);
       expect(out.warnings.map((w) => [w.code, w.index])).toEqual([
         ['actor_count_unit_not_applicable', 2],
-        ['actor_use_nature_not_applicable', 2],
       ]);
       expect(out.warnings[0].field).toBe('innovation_use.actors');
       expect(typeof out.warnings[0].message).toBe('string');
+    });
+
+    it('nulls count_unit "households" on type 4, keeps use_nature, warns count_unit only (INA-R-4)', () => {
+      const out = run(
+        row(
+          {
+            count_unit: 'households',
+            use_nature: 'innovation_applied',
+            how_many: 10,
+          },
+          0,
+          4,
+        ),
+      );
+      expect(out.actors[0].count_unit).toBeNull();
+      expect(out.actors[0].use_nature).toBe('innovation_applied');
+      expect(out.actors[0].how_many).toBe(10);
+      expect(out.warnings.map((w) => w.code)).toEqual([
+        'actor_count_unit_not_applicable',
+      ]);
     });
 
     it('does not apply the households single-total rule to a non-Farmers row', () => {
@@ -81,12 +101,182 @@ describe('applyInnovationUseActorFollowUpRules', () => {
       expect(out.actors[0].women_youth).toBe(250);
     });
 
-    it('gives no *_missing warnings for a non-Farmers row that sends nothing', () => {
-      expect(run(row({}, 0, 4)).warnings).toEqual([]);
+    it('gives no count_unit_missing warning for a non-Farmers row that sends nothing', () => {
+      expect(
+        run(row({ use_nature: 'information_received' }, 0, 4)).warnings,
+      ).toEqual([]);
     });
   });
 
-  describe('steps 5-6: missing (BIF-R-6)', () => {
+  describe('use_nature on every actor type (INA-R-1, INA-R-2, INA-R-3)', () => {
+    it.each([2, 3, 4, 5])(
+      'type %p keeps its use_nature and emits no warning',
+      (typeId) => {
+        const out = run(
+          row({ use_nature: 'information_received', how_many: 4 }, 0, typeId),
+        );
+        expect(out.actors[0].use_nature).toBe('information_received');
+        expect(out.warnings).toEqual([]);
+      },
+    );
+
+    it.each([2, 3, 4, 5])(
+      'type %p without use_nature warns actor_use_nature_missing and does not 400',
+      (typeId) => {
+        const out = run(row({ how_many: 40 }, 0, typeId));
+        expect(out.actors[0].use_nature).toBeUndefined();
+        expect(out.warnings).toEqual([
+          {
+            field: 'innovation_use.actors',
+            index: 0,
+            code: 'actor_use_nature_missing',
+            message: expect.any(String),
+          },
+        ]);
+      },
+    );
+
+    it.each([null, ''])(
+      'type 3 treats use_nature %p as empty and warns missing',
+      (empty) => {
+        const out = run(row({ use_nature: empty }, 4, 3));
+        expect(out.warnings.map((w) => [w.code, w.index])).toEqual([
+          ['actor_use_nature_missing', 4],
+        ]);
+      },
+    );
+
+    it('never emits actor_use_nature_not_applicable, whatever the type', () => {
+      const out = applyInnovationUseActorFollowUpRules(
+        [1, 2, 3, 4, 5, null, undefined].map((actorTypeId, index) => ({
+          actor: { use_nature: 'innovation_applied' },
+          index,
+          actorTypeId,
+        })),
+      );
+      expect(
+        out.warnings.filter(
+          (w) => w.code === 'actor_use_nature_not_applicable',
+        ),
+      ).toEqual([]);
+    });
+
+    it('does not warn missing on a row whose type could not be resolved', () => {
+      // `row()` defaults an undefined type to Farmers, so build the input directly.
+      for (const actorTypeId of [null, undefined, '']) {
+        expect(
+          applyInnovationUseActorFollowUpRules([
+            { actor: {}, index: 0, actorTypeId },
+          ]).warnings,
+        ).toEqual([]);
+      }
+    });
+
+    it('still rejects an invalid use_nature on every type', () => {
+      expect(messageOf(() => run(row({ use_nature: 'applied' }, 0, 4)))).toBe(
+        'actors[0].use_nature must be one of: information_received, innovation_applied; received "applied".',
+      );
+    });
+
+    it("keeps both of Daniel's result-10120 Researchers rows (INA-R-1)", () => {
+      const out = run(
+        row(
+          {
+            how_many: 25,
+            women: 10,
+            men: 15,
+            use_nature: 'information_received',
+          },
+          0,
+          2,
+        ),
+        row(
+          {
+            how_many: 12,
+            women: 5,
+            men: 7,
+            use_nature: 'innovation_applied',
+          },
+          1,
+          2,
+        ),
+      );
+      expect(out.actors.map((a) => a.use_nature)).toEqual([
+        'information_received',
+        'innovation_applied',
+      ]);
+      expect(out.actors.map((a) => [a.how_many, a.women, a.men])).toEqual([
+        [25, 10, 15],
+        [12, 5, 7],
+      ]);
+      expect(out.warnings).toEqual([]);
+    });
+
+    it("keeps all six rows of Daniel's 16 Nov payload; households keeps only how_many (INA-R-1, BIF-R-3)", () => {
+      const out = run(
+        row(
+          {
+            count_unit: 'individuals',
+            how_many: 30,
+            women: 10,
+            men: 20,
+            use_nature: 'information_received',
+          },
+          0,
+          1,
+        ),
+        row(
+          {
+            count_unit: 'individuals',
+            how_many: 12,
+            women: 5,
+            men: 7,
+            use_nature: 'innovation_applied',
+          },
+          1,
+          1,
+        ),
+        row(
+          {
+            count_unit: 'households',
+            how_many: 50,
+            women: 30,
+            men: 20,
+            use_nature: 'innovation_applied',
+          },
+          2,
+          1,
+        ),
+        row({ how_many: 25, use_nature: 'information_received' }, 3, 2),
+        row({ how_many: 12, use_nature: 'innovation_applied' }, 4, 2),
+        row(
+          {
+            other_actor_type: 'Journalists',
+            how_many: 8,
+            use_nature: 'information_received',
+          },
+          5,
+          5,
+        ),
+      );
+      expect(out.actors.map((a) => a.use_nature)).toEqual([
+        'information_received',
+        'innovation_applied',
+        'innovation_applied',
+        'information_received',
+        'innovation_applied',
+        'information_received',
+      ]);
+      const households = out.actors[2];
+      expect(households.how_many).toBe(50);
+      expect(households.women).toBeNull();
+      expect(households.men).toBeNull();
+      expect(households.sex_and_age_disaggregation).toBe(true);
+      expect(out.warnings).toEqual([]);
+    });
+  });
+
+  describe('steps 5-6: missing (BIF-R-6, INA-R-2)', () => {
     it('warns twice on a Farmers row with no fields', () => {
       const out = run(row({}));
       expect(out.warnings.map((w) => w.code)).toEqual([
@@ -181,47 +371,90 @@ describe('applyInnovationUseActorFollowUpRules', () => {
     });
   });
 
-  describe('step 9: duplicate pair (BIF-R-11)', () => {
+  describe('step 9: duplicate identity on every type (BIF-R-11, INA-R-5)', () => {
+    // @akili-spec changes/innovation-use-nature-all-actors (INA-T-2, INA-AC-4)
+    const MESSAGE =
+      'Another actor of the same type with the same count_unit and use_nature was sent; the rows are stored as one and the later one wins.';
+    const dups = (out: ReturnType<typeof run>) =>
+      out.warnings.filter((w) => w.code === 'actor_duplicate_merged');
     const pair = {
       count_unit: 'individuals',
       use_nature: 'innovation_applied',
     };
 
-    it('warns on the later index only', () => {
+    it('warns on the later index only, with the new message', () => {
       const out = run(row({ ...pair }, 0), row({ ...pair }, 1));
-      const dup = out.warnings.filter(
-        (w) => w.code === 'actor_duplicate_merged',
-      );
-      expect(dup.map((w) => w.index)).toEqual([1]);
+      expect(dups(out).map((w) => w.index)).toEqual([1]);
+      expect(dups(out)[0].message).toBe(MESSAGE);
     });
 
     it('treats empty = empty', () => {
       const out = run(row({}, 0), row({ count_unit: null }, 1));
-      expect(
-        out.warnings.filter((w) => w.code === 'actor_duplicate_merged'),
-      ).toHaveLength(1);
+      expect(dups(out)).toHaveLength(1);
     });
 
-    it('does not warn when use_nature differs', () => {
+    it('does not warn when use_nature differs (Farmers)', () => {
       const out = run(
         row({ ...pair, use_nature: 'information_received' }, 0),
         row({ ...pair }, 1),
       );
-      expect(
-        out.warnings.filter((w) => w.code === 'actor_duplicate_merged'),
-      ).toEqual([]);
+      expect(dups(out)).toEqual([]);
     });
 
-    it('ignores rows that carry result_actors_id and non-Farmers rows', () => {
+    it.each([
+      ['Researchers (3)', 3, undefined, undefined],
+      ['Other (5), same other_actor_type', 5, 'Bees', 'Bees'],
+    ])(
+      '%s: same nature warns once, different nature does not',
+      (_label, typeId, otherA, otherB) => {
+        const a = {
+          use_nature: 'innovation_applied',
+          other_actor_type: otherA,
+        };
+        const b = {
+          use_nature: 'innovation_applied',
+          other_actor_type: otherB,
+        };
+        const same = run(row(a, 0, typeId), row(b, 1, typeId));
+        expect(dups(same)).toHaveLength(1);
+        expect(dups(same)[0].message).toBe(MESSAGE);
+
+        const different = run(
+          row(a, 0, typeId),
+          row({ ...b, use_nature: 'information_received' }, 1, typeId),
+        );
+        expect(dups(different)).toEqual([]);
+      },
+    );
+
+    it('does not warn for two Other rows with a different other_actor_type', () => {
+      const nature = { use_nature: 'innovation_applied' };
+      const out = run(
+        row({ ...nature, other_actor_type: 'Bees' }, 0, 5),
+        row({ ...nature, other_actor_type: 'Birds' }, 1, 5),
+      );
+      expect(dups(out)).toEqual([]);
+    });
+
+    it('does not warn across different types with the same nature', () => {
+      const nature = { use_nature: 'innovation_applied' };
+      const out = run(row({ ...nature }, 0, 3), row({ ...nature }, 1, 4));
+      expect(dups(out)).toEqual([]);
+    });
+
+    it('warns for two non-Farmers rows that both omit use_nature', () => {
+      const out = run(row({}, 0, 3), row({}, 1, 3));
+      expect(dups(out).map((w) => w.index)).toEqual([1]);
+    });
+
+    it('ignores rows that carry result_actors_id', () => {
       const out = run(
         row({ ...pair, result_actors_id: 9 }, 0),
         row({ ...pair }, 1),
-        row({}, 2, 3),
-        row({}, 3, 3),
+        row({ result_actors_id: 7 }, 2, 3),
+        row({ result_actors_id: 8 }, 3, 3),
       );
-      expect(
-        out.warnings.filter((w) => w.code === 'actor_duplicate_merged'),
-      ).toEqual([]);
+      expect(dups(out)).toEqual([]);
     });
   });
 
@@ -240,42 +473,37 @@ describe('applyInnovationUseActorFollowUpRules', () => {
     expect(actor).toEqual({ count_unit: 'households', how_many: 5, women: 2 });
   });
 
-  describe('applicability switch (BIF-R-9)', () => {
+  describe('applicability switch (BIF-R-9, INA-DD-1)', () => {
     afterEach(() => jest.restoreAllMocks());
 
-    it('flipping asksUseNature changes only the use_nature outcomes', () => {
-      const input = () =>
-        run(
-          row(
-            { count_unit: 'individuals', use_nature: 'innovation_applied' },
-            0,
-            3,
-          ),
-          row({}, 1, 3),
-        );
-      const before = input();
-      jest.spyOn(constants, 'asksUseNature').mockReturnValue(true);
-      const after = input();
-      expect(before.warnings.map((w) => w.code)).toEqual([
-        'actor_count_unit_not_applicable',
-        'actor_use_nature_not_applicable',
-      ]);
-      expect(after.warnings.map((w) => [w.code, w.index])).toEqual([
-        ['actor_count_unit_not_applicable', 0],
-        ['actor_use_nature_missing', 1],
-      ]);
-      expect(after.actors[0].use_nature).toBe('innovation_applied');
-      expect(after.actors[0].count_unit).toBeNull();
+    it('asksUseNature can only gate the missing warning; it never drops a value', () => {
+      jest.spyOn(constants, 'asksUseNature').mockReturnValue(false);
+      const out = run(
+        row({ use_nature: 'innovation_applied' }, 0, 3),
+        row({}, 1, 3),
+      );
+      expect(out.actors[0].use_nature).toBe('innovation_applied');
+      expect(out.warnings).toEqual([]);
     });
   });
 });
 
 describe('predicates', () => {
-  it('are Farmers-only today', () => {
+  it('asksCountUnit stays Farmers-only (INA-R-4)', () => {
     expect(constants.asksCountUnit(1)).toBe(true);
     expect(constants.asksCountUnit('1')).toBe(true);
-    expect(constants.asksUseNature(1)).toBe(true);
     expect(constants.asksCountUnit(3)).toBe(false);
+    expect(constants.asksCountUnit(undefined)).toBe(false);
+  });
+
+  it('asksUseNature is true for every resolved type and false for an unresolved one (INA-DD-1)', () => {
+    expect(constants.asksUseNature(1)).toBe(true);
+    expect(constants.asksUseNature('2')).toBe(true);
+    expect(constants.asksUseNature(3)).toBe(true);
+    expect(constants.asksUseNature(4)).toBe(true);
+    expect(constants.asksUseNature(5)).toBe(true);
     expect(constants.asksUseNature(undefined)).toBe(false);
+    expect(constants.asksUseNature(null)).toBe(false);
+    expect(constants.asksUseNature('')).toBe(false);
   });
 });

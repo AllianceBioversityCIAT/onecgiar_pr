@@ -490,7 +490,7 @@ export class InnovationUseActorDto {
 
   @ApiPropertyOptional({
     description:
-      'Nature of the use reported. Applies to Farmers (actor_type_id 1) only. A missing answer is accepted with a warning; an invalid code is a 400.',
+      'Nature of the use reported. Applies to every actor type. A missing answer is accepted with a warning; an invalid code is a 400.',
     enum: [...USE_NATURE_CODES],
     nullable: true,
     example: 'innovation_applied',

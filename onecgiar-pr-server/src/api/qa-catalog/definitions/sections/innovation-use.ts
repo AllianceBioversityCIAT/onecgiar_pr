@@ -271,7 +271,8 @@ function usageLists(
           'single_select',
           'use_nature',
           'actor_use_nature',
-          FARMERS_RULE,
+          // INA-R-11 (changes/innovation-use-nature-all-actors): required for every actor type, no actor_type condition.
+          ALWAYS,
         ),
         sub(
           'result_actors',

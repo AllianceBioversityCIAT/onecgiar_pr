@@ -37,7 +37,7 @@ x-api-key: <CLARISA key registered for QA>
 {
   "portfolio": "P25",
   "phase": 2026,
-  "catalog_version": "2026.34",
+  "catalog_version": "2026.35",
   "generated_at": "2026-10-06T12:00:00.000Z",
   "result_types": [
     { "key": "innovation_development", "label": "Innovation development", "level": "output" }
@@ -298,7 +298,7 @@ Notes:
 
 ---
 
-## Catalog at revision 34 (2026.34)
+## Catalog at revision 35 (2026.35)
 
 Counts measured on the code catalog on 2026-10-09 (the same data the endpoint returns); revision 31 (QRF-T-9) changes no count, only value bindings; revision 33 (IFC-T-6) adds 4 subfields (2 per Innovation Use actor list) and 4 conditional subfield requirements; revision 34 (ITD-T-2) removes the team diversity field (1 field, 2 subfields, 2 conditional subfield requirements); counts below updated by hand:
 
@@ -434,7 +434,7 @@ Example for `phase_year` 2026, `result_ids` `[900001, 900002, 900003]` and `fiel
 ```json
 {
   "phase": 2026,
-  "catalog_version": "2026.34",
+  "catalog_version": "2026.35",
   "results": [
     {
       "result_id": 900001,
@@ -584,7 +584,7 @@ No source filters on an active or deleted flag: an inactive option still has its
 | `complementary_innovation_enabler_types` | table | Enabler group name | The level-0 parent's group is shown as a header | no row, or blank text |
 | `actor_types` | table | Actor type name | — | no row, or blank text |
 | `actor_count_unit` | constant | households "Households" · individuals "Individual actors" | — | id not in the constant |
-| `actor_use_nature` | constant | information_received "Actors who received information, advice or inputs" · innovation_applied "Actors who applied the innovation" | — | id not in the constant |
+| `actor_use_nature` | constant | information_received "Actors who received information, advice or inputs" · innovation_applied "Actors who applied the innovation" | — | id not in the constant; the field is required for every actor type, not only Farmers (2026.35) |
 | `capdev_training_lengths` | table | Capacity-development term name, read from the normalized value (length 4 is "Long-term") | — | no row, or blank text |
 | `capdev_degrees` | table | Same source as `capdev_training_lengths` (1 PhD, 2 Master) | — | no row, or blank text |
 | `capdev_delivery_methods` | table | Delivery method name | — | no row, or blank text |
@@ -867,3 +867,4 @@ These are deliberate and tracked; each one is **additive** when resolved.
 | 2026-11-05 | **v1.32 — 2026-11-05: team diversity removed from Innovation development; catalog_version 2026.34.** The field `innovation_dev.team_diversity` and its subfields `actions` and `other_text` are no longer in the catalog, and the closed lists `question_options_team_diversity` (113 to 115) and `question_options_team_diversity_actions` (116 to 121) are gone with them: the 2026 Innovation development form no longer asks the question (phase-gated 2026 removal, like Megatrends). Answers already stored for 2025 results stay in the database but are not exposed through the catalog or the results feed; the bilateral key is unchanged. Consumers holding `2026.33` re-read the catalog and stop expecting the field. Spec `changes/remove-innovation-team-diversity`, ITD-T-2. |
 | 2026-11-10 | **v1.33 — 2026-11-10: `labels` added to `POST /api/qa/results/details` (spec `quality-assurance/qa-value-labels`, QVL-T-6); `catalog_version` unchanged (2026.34).** Each element of `results` gains `labels`, an additive object `{ "<control list>": { "<option id>": "<label>" or null } }` with the canonical 2026 form text of every option id found in that result's `values` (only the lists and ids that result holds; `{}` when none; the person-bearing lists `users` and `directory_users` only with their field). `values`, the catalog, its hash and every other property are unchanged, so no revision bump. The labels of a batch are read in one statement per source, and the details log line gains `labels=<n>` after `statements=` (the sum over results of the (list, id) pairs each holds). Documented: the `labels` shape and a synthetic example, the 55-row label table, new "What QA must NOT assume" items, known gap 6 narrowed, new known gaps 19 to 25, and the person-bearing keys table. No existing consumer breaks while it ignores unknown properties. |
 | 2026-11-18 | **v1.34 — 2026-11-18: `program_codes` filter on `GET /api/qa/results`; `catalog_version` unchanged (2026.34).** New optional query parameter `program_codes`: comma-separated program official codes (for example `SP01`), each at most 32 characters (a longer one is a 400). It matches the **lead** program only, the same as `program_ids`, which is unchanged; when both are sent they are ANDed. It applies to `items`, `total` and `breakdown` (both `by_program` and `by_result_type`). Additive only. |
+| 2026-11-18 | **v1.35 — 2026-11-18: `use_nature` required for every actor type in Innovation Use; catalog_version 2026.35.** On `innovation_use.current_use.actors` and `innovation_use.projection_2030.actors`, the subfield `use_nature` is now required for every actor type: it has no `actor_type` condition in `visible_when` / `required_when` and carries `required: true`. `count_unit` keeps its Farmers-only condition. No key, type or list changes. Consumers holding `2026.34` re-read the catalog. Spec `changes/innovation-use-nature-all-actors`, INA-T-5. |
