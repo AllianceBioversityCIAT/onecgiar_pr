@@ -20,6 +20,7 @@ import {
   lucideTicket,
   lucideLayers,
   lucideBookOpen,
+  lucideBellRing,
   lucideUserCog,
   lucidePanelLeft,
   lucideSparkles,
@@ -101,6 +102,7 @@ interface IconFlyout {
       lucideTicket,
       lucideLayers,
       lucideBookOpen,
+      lucideBellRing,
       lucideUserCog,
       lucidePanelLeft,
       lucideSparkles,
@@ -181,6 +183,8 @@ export class ReportingNavSidebarComponent {
   readonly adminModuleLinks: NavSubLink[] = [
     { name: 'Tickets dashboard', path: '/admin-module/tickets-dashboard', icon: 'lucideTicket' },
     { name: 'Phase management', path: '/admin-module/phase-management', icon: 'lucideLayers' },
+    // @akili-spec changes/admin-reminders-page (ARP-T-1)
+    { name: 'Reminders', path: '/admin-module/reminders', icon: 'lucideBellRing' },
     { name: 'Knowledge products', path: '/admin-module/knowledge-products', icon: 'lucideBookOpen' },
     { name: 'User management', path: '/admin-module/user-management', icon: 'lucideUserCog' },
     // @akili-spec changes/mass-reporting-flow

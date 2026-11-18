@@ -1,0 +1,329 @@
+<!--
+  Row / card actions, shared. Only the actions a status allows are rendered (ARP-R-5); `busy` disables them,
+  it never hides them. `p` prefixes the testids so the next-send card and the row never share one
+  (rows keep the pre-existing `rir-*-btn` ids; the more button and card 3 are new, so they use `arp-*`).
+-->
+<ng-template #actionsTpl let-c let-p="p">
+  @if (showSendAgain(c)) {
+    <button
+      hlmBtn
+      variant="outline"
+      size="sm"
+      type="button"
+      [disabled]="busy()"
+      [attr.title]="copy.sendAgainHint"
+      (click)="sendAgain(c)"
+      [attr.data-testid]="p + '-send-again-btn'">
+      {{ copy.actions.sendAgain }}
+    </button>
+  }
+  @if (showPreviewOrSend(c)) {
+    @if (showEditOrCancel(c)) {
+      <button hlmBtn size="sm" type="button" [disabled]="busy()" (click)="requestSend(c)" [attr.data-testid]="p + '-send-btn'">
+        {{ copy.actions.sendNow }}
+      </button>
+      <hlm-popover align="end" sideOffset="4" [state]="menuFor() === p + '-' + c.id ? 'open' : 'closed'" (stateChanged)="onMenuState(p + '-' + c.id, $event)">
+        <button
+          hlmBtn
+          variant="ghost"
+          size="sm"
+          type="button"
+          aria-haspopup="menu"
+          [attr.aria-expanded]="menuFor() === p + '-' + c.id ? 'true' : 'false'"
+          [attr.aria-label]="copy.history.moreActionsFor(kindLabel(c.kind))"
+          (click)="toggleMenu(p + '-' + c.id)"
+          [attr.data-testid]="p === 'rir' ? 'arp-more-btn' : p + '-more-btn'">
+          <span class="material-icons-round text-[18px] leading-none" aria-hidden="true">more_vert</span>
+        </button>
+        <hlm-popover-content *hlmPopoverPortal role="menu" [attr.aria-label]="copy.history.moreActions" class="!w-44 gap-0 p-1">
+          <button
+            type="button"
+            role="menuitem"
+            class="flex w-full items-center rounded-md px-3 py-2 text-left text-[13px] hover:bg-[var(--pr-color-accents-1)] focus-visible:bg-[var(--pr-color-accents-1)] focus-visible:outline-none disabled:opacity-50"
+            [disabled]="busy()"
+            (click)="closeMenu(); openPreview(c)"
+            [attr.data-testid]="p + '-preview-btn'">
+            {{ copy.actions.preview }}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            class="flex w-full items-center rounded-md px-3 py-2 text-left text-[13px] hover:bg-[var(--pr-color-accents-1)] focus-visible:bg-[var(--pr-color-accents-1)] focus-visible:outline-none disabled:opacity-50"
+            [disabled]="busy()"
+            (click)="closeMenu(); startEdit(c)"
+            [attr.data-testid]="p + '-edit-btn'">
+            {{ copy.actions.editDate }}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            class="flex w-full items-center rounded-md px-3 py-2 text-left text-[13px] text-[var(--pr-color-red-300)] hover:bg-[var(--pr-color-red-50)] focus-visible:bg-[var(--pr-color-red-50)] focus-visible:outline-none disabled:opacity-50"
+            [disabled]="busy()"
+            (click)="closeMenu(); cancel(c)"
+            [attr.data-testid]="p + '-cancel-btn'">
+            {{ copy.actions.cancel }}
+          </button>
+        </hlm-popover-content>
+      </hlm-popover>
+    } @else {
+      <button hlmBtn variant="outline" size="sm" type="button" [disabled]="busy()" (click)="openPreview(c)" [attr.data-testid]="p + '-preview-btn'">
+        {{ copy.actions.preview }}
+      </button>
+      <button hlmBtn size="sm" type="button" [disabled]="busy()" (click)="requestSend(c)" [attr.data-testid]="p + '-send-btn'">
+        {{ copy.actions.sendNow }}
+      </button>
+    }
+  }
+</ng-template>
+
+<section class="flex flex-col gap-4" data-testid="rir-section" aria-labelledby="rir-heading">
+  <h2 id="rir-heading" class="sr-only">{{ copy.title }}</h2>
+
+  @if (actionError(); as e) {
+    <p role="alert" class="border-destructive/40 bg-destructive/10 text-destructive rounded-md border p-3 text-sm" data-testid="rir-action-error">
+      {{ e }}
+    </p>
+  }
+  @if (outcomeMessage(); as o) {
+    <p role="status" class="border-border bg-muted text-foreground rounded-md border p-3 text-sm" data-testid="rir-outcome">{{ o }}</p>
+    @if (outcomeByType().length) {
+      <ul class="border-border bg-muted text-foreground list-disc rounded-md border p-3 ps-8 text-sm" data-testid="rir-outcome-by-type">
+        @for (line of outcomeByType(); track line) {
+          <li>{{ line }}</li>
+        }
+      </ul>
+    }
+  }
+
+  @if (loading()) {
+    <div class="flex flex-col gap-4" role="status" [attr.aria-label]="copy.loading" data-testid="rir-loading">
+      <div class="grid gap-4 md:grid-cols-3">
+        <hlm-skeleton class="h-24 w-full rounded-xl" />
+        <hlm-skeleton class="h-24 w-full rounded-xl" />
+        <hlm-skeleton class="h-24 w-full rounded-xl" />
+      </div>
+      <hlm-skeleton class="h-8 w-full" />
+      <hlm-skeleton class="h-8 w-full" />
+    </div>
+  } @else if (loadError(); as err) {
+    <div class="flex items-center gap-3" data-testid="rir-load-error">
+      <p role="alert" class="text-destructive text-sm">{{ err }}</p>
+      <button hlmBtn variant="outline" size="sm" type="button" (click)="load()">{{ copy.retry }}</button>
+    </div>
+  } @else {
+    @if (list(); as l) {
+      <div class="grid gap-4 md:grid-cols-3" role="group" [attr.aria-label]="copy.cards.cardsLabel">
+        <div
+          class="flex flex-col gap-1 rounded-xl border border-[var(--pr-color-accents-2)] bg-white p-4 shadow-sm"
+          data-testid="arp-card-pending">
+          <span class="text-[12px] font-semibold text-[var(--pr-color-accents-5)]">{{ copy.cards.pendingTitle }}</span>
+          <span class="text-[24px] font-bold leading-[32px] tabular-nums text-[var(--pr-color-secondary-400)]">{{ l.pending_total }}</span>
+          <span class="text-[12px] text-[var(--pr-color-accents-5)]">{{ l.phase.phase_name }}</span>
+        </div>
+
+        <div
+          class="flex flex-col gap-1 rounded-xl border p-4 shadow-sm"
+          [class]="
+            l.unreachable_total > 0
+              ? 'border-[var(--pr-color-yellow-300)] bg-[var(--pr-color-yellow-50)]'
+              : 'border-[var(--pr-color-accents-2)] bg-white'
+          "
+          [attr.data-state]="l.unreachable_total > 0 ? 'warning' : 'ok'"
+          data-testid="arp-card-unreachable">
+          <span class="text-[12px] font-semibold" [class]="l.unreachable_total > 0 ? 'text-[var(--pr-color-yellow-800)]' : 'text-[var(--pr-color-accents-5)]'">{{
+            copy.cards.unreachableTitle
+          }}</span>
+          <span
+            class="text-[24px] font-bold leading-[32px] tabular-nums"
+            [class]="l.unreachable_total > 0 ? 'text-[var(--pr-color-yellow-800)]' : 'text-[var(--pr-color-secondary-400)]'"
+            >{{ l.unreachable_total }}</span
+          >
+          <button
+            hlmBtn
+            variant="link"
+            size="sm"
+            type="button"
+            class="h-auto w-fit justify-start p-0 text-[12px]"
+            (click)="fixFocalPoints.emit()"
+            data-testid="arp-fix-focal-btn">
+            {{ copy.cards.fixFocalPoints }}
+          </button>
+        </div>
+
+        <div
+          class="flex flex-col gap-1 rounded-xl border border-[var(--pr-color-primary-100)] bg-[var(--pr-color-primary-50)] p-4 shadow-sm"
+          data-testid="arp-card-next">
+          <span class="text-[12px] font-semibold text-[var(--pr-color-primary-400)]">{{ copy.cards.nextTitle }}</span>
+          @if (nextCampaign(); as n) {
+            <span class="text-[16px] font-bold leading-[24px] text-[var(--pr-color-secondary-400)]">{{ kindLabel(n.kind) }}</span>
+            <span class="text-[12px] text-[var(--pr-color-accents-5)]"
+              >{{ displayDate(n.scheduled_at) }} · <span data-testid="arp-next-relative">{{ relativeTime(n.scheduled_at) }}</span></span
+            >
+            <div class="mt-2 flex flex-wrap items-center gap-2">
+              <ng-container [ngTemplateOutlet]="actionsTpl" [ngTemplateOutletContext]="{ $implicit: n, p: 'arp-next' }" />
+            </div>
+          } @else {
+            <span class="text-[14px] font-semibold text-[var(--pr-color-secondary-400)]" data-testid="arp-next-empty">{{ copy.cards.nextEmpty }}</span>
+            <span class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.cards.nextEmptyHint }}</span>
+          }
+        </div>
+      </div>
+    }
+
+    <div class="overflow-hidden rounded-xl border border-[var(--pr-color-accents-2)] bg-white shadow-sm">
+      <div class="flex flex-wrap items-baseline justify-between gap-2 px-4 py-3">
+        <h3 class="m-0 text-[14px] font-semibold text-[var(--pr-color-secondary-400)]">{{ copy.history.title }}</h3>
+        <p class="m-0 text-[12px] text-[var(--pr-color-accents-5)]" data-testid="arp-zone-line">{{ zoneLine() }}</p>
+      </div>
+      @if (campaigns().length === 0) {
+        <p class="px-4 pb-4 text-[12px] text-[var(--pr-color-accents-5)]" data-testid="rir-empty">{{ copy.empty }}</p>
+      } @else {
+        <div hlmTableContainer>
+          <table hlmTable data-testid="rir-table">
+            <thead hlmTHead class="bg-[var(--pr-color-accents-1)]">
+              <tr hlmTr>
+                <th hlmTh>{{ copy.columns.kind }}</th>
+                <th hlmTh>{{ copy.columns.scheduled }}</th>
+                <th hlmTh>{{ copy.columns.status }}</th>
+                <th hlmTh>{{ copy.columns.sentAt }}</th>
+                <th hlmTh>{{ copy.columns.delivery }}</th>
+                <th hlmTh>{{ copy.columns.actions }}</th>
+              </tr>
+            </thead>
+            <tbody hlmTBody>
+              @for (c of campaigns(); track c.id) {
+                <tr hlmTr [attr.data-testid]="'rir-row-' + c.id">
+                  <td hlmTd>{{ kindLabel(c.kind) }}</td>
+                  <td hlmTd>
+                    @if (editing(); as ed) {
+                      @if (ed.id === c.id) {
+                        <div class="flex flex-col gap-1">
+                          <input
+                            hlmInput
+                            type="datetime-local"
+                            [attr.aria-label]="copy.schedule.dateLabel"
+                            [value]="ed.value"
+                            (input)="setEditValue($any($event.target).value)"
+                            data-testid="rir-edit-input" />
+                          <span class="text-muted-foreground text-[12px]">{{ timeZoneHintFor(ed.value) }}</span>
+                          @if (editError(); as ee) {
+                            <span role="alert" class="text-destructive text-[12px]">{{ ee }}</span>
+                          }
+                          <div class="flex gap-2">
+                            <button hlmBtn size="sm" type="button" [disabled]="busy()" (click)="saveEdit()" data-testid="rir-edit-save">
+                              {{ copy.actions.save }}
+                            </button>
+                            <button hlmBtn variant="outline" size="sm" type="button" [disabled]="busy()" (click)="discardEdit()">
+                              {{ copy.actions.discard }}
+                            </button>
+                          </div>
+                        </div>
+                      } @else {
+                        {{ displayDate(c.scheduled_at) }}
+                      }
+                    } @else {
+                      {{ displayDate(c.scheduled_at) }}
+                    }
+                  </td>
+                  <td hlmTd>
+                    <span hlmBadge variant="outline" [class]="statusClass(c.status)" data-testid="rir-status">{{ statusLabel(c.status) }}</span>
+                    @if (c.last_error && c.status === 'FAILED') {
+                      <span class="block text-[12px] text-[var(--pr-color-red-300)]">{{ c.last_error }}</span>
+                    }
+                  </td>
+                  <td hlmTd data-testid="rir-sent-at">
+                    {{ c.sent_at ? displayDate(c.sent_at) : copy.noValue }}
+                    @if (sentBeforeSchedule(c)) {
+                      <span class="block text-[12px] text-[var(--pr-color-accents-5)]" [attr.data-testid]="'arp-sent-early-' + c.id">{{
+                        copy.history.sentManually
+                      }}</span>
+                    }
+                  </td>
+                  <td hlmTd>
+                    <app-delivery-bar
+                      [sent]="c.sent_count"
+                      [unreachable]="c.unreachable_count"
+                      [skipped]="c.skipped_count"
+                      [failed]="c.failed_count"
+                      [dispatched]="c.status === 'SENT' || !!c.sent_at" />
+                  </td>
+                  <td hlmTd>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <ng-container [ngTemplateOutlet]="actionsTpl" [ngTemplateOutletContext]="{ $implicit: c, p: 'rir' }" />
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+    <div class="flex flex-col gap-3 rounded-xl border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-accents-1)] p-4">
+      <h3 class="m-0 text-[14px] font-semibold text-[var(--pr-color-secondary-400)]">{{ copy.schedule.heading }}</h3>
+      @if (scheduleKind(); as k) {
+        <form class="flex flex-wrap items-end gap-3" (submit)="$event.preventDefault(); schedule(k)" data-testid="rir-schedule">
+          @if (sendAgainKind() === k) {
+            <p class="w-full text-[12px] text-[var(--pr-color-accents-5)]" [attr.data-testid]="'rir-send-again-hint-' + k">{{ copy.sendAgainHint }}</p>
+          }
+          <div class="flex flex-col gap-1">
+            <label for="arp-schedule-kind-select" class="text-[12px] font-medium text-[var(--pr-color-secondary-400)]">{{ copy.schedule.kindLabel }}</label>
+            <hlm-native-select selectId="arp-schedule-kind-select" [value]="k" (valueChange)="onKindChange($event)" data-testid="arp-schedule-kind">
+              @for (opt of missingKinds(); track opt) {
+                <option hlmNativeSelectOption [value]="opt">{{ kindLabel(opt) }}</option>
+              }
+            </hlm-native-select>
+          </div>
+          <label class="flex flex-col gap-1 text-[12px] font-medium text-[var(--pr-color-secondary-400)]">
+            <span>{{ copy.schedule.dateLabel }}</span>
+            <input
+              hlmInput
+              type="datetime-local"
+              [value]="draftOf(k)"
+              (input)="setDraft(k, $any($event.target).value)"
+              [attr.data-testid]="'rir-draft-' + k" />
+          </label>
+          <button hlmBtn type="submit" [disabled]="busy()" [attr.data-testid]="'rir-submit-' + k">
+            {{ busy() ? copy.actions.scheduling : copy.actions.schedule }}
+          </button>
+          <p class="m-0 flex w-full flex-wrap gap-x-2 text-[12px] text-[var(--pr-color-accents-5)]">
+            <span [attr.data-testid]="'rir-tz-hint-' + k">{{ timeZoneHintFor(draftOf(k)) }}</span>
+            @if (utcHintFor(draftOf(k)); as utc) {
+              <span class="font-semibold text-[var(--pr-color-secondary-400)]" data-testid="arp-utc-hint">{{ utc }}</span>
+            }
+          </p>
+          @if (draftError()[k]; as de) {
+            <span role="alert" class="w-full text-[12px] text-destructive">{{ de }}</span>
+          }
+        </form>
+      } @else {
+        <p class="m-0 text-[12px] text-[var(--pr-color-accents-5)]" data-testid="arp-schedule-full">{{ copy.schedule.allOpen }}</p>
+      }
+    </div>
+  }
+
+  <hlm-dialog role="alertdialog" [state]="confirm() ? 'open' : 'closed'" (closed)="dismissConfirm()">
+    <hlm-dialog-content *hlmDialogPortal="let ctx" [showCloseButton]="false" data-testid="rir-confirm">
+      @if (confirm(); as cf) {
+        <hlm-dialog-header>
+          <h2 hlmDialogTitle>{{ copy.confirm.title }}</h2>
+          <p hlmDialogDescription data-testid="rir-confirm-text">{{ copy.confirm.description(cf.messages) }}</p>
+        </hlm-dialog-header>
+        <hlm-dialog-footer>
+          <button hlmBtn variant="outline" type="button" [disabled]="busy()" (click)="dismissConfirm()">{{ copy.confirm.cancel }}</button>
+          <button hlmBtn type="button" [disabled]="busy()" (click)="confirmSend()" data-testid="rir-confirm-send">
+            {{ busy() ? copy.actions.sending : copy.confirm.confirm }}
+          </button>
+        </hlm-dialog-footer>
+      }
+    </hlm-dialog-content>
+  </hlm-dialog>
+
+  <app-reminder-preview-drawer
+    [open]="previewOpen()"
+    [loading]="previewLoading()"
+    [error]="previewError()"
+    [preview]="previewData()"
+    (closed)="closePreview()" />
+</section>

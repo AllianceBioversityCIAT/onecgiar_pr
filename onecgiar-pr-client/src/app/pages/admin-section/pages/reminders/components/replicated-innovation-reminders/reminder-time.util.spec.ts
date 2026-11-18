@@ -1,5 +1,5 @@
 // @akili-spec changes/replicated-innovation-reminders (RIR-T-6, RIR-R-5)
-import { localInputToUtcIso, offsetLabel, utcIsoToLocalInput } from './reminder-time.util';
+import { localInputToUtcIso, offsetLabel, utcClock, utcIsoToLocalInput } from './reminder-time.util';
 
 describe('reminder-time.util', () => {
   it('converts a local 08:00 in UTC-5 (offset 300) to 13:00Z', () => {
@@ -42,5 +42,11 @@ describe('reminder-time.util', () => {
       expect(utcIsoToLocalInput('2026-11-15T08:00:00.000Z', rome)).toBe('2026-11-15T09:00');
       expect(utcIsoToLocalInput('2026-10-19T07:00:00.000Z', rome)).toBe('2026-10-19T09:00');
     });
+  });
+
+  it('reads the UTC clock of an instant, and is empty for garbage', () => {
+    expect(utcClock('2026-12-02T14:00:00.000Z')).toBe('14:00');
+    expect(utcClock('2026-12-02T23:05:00.000Z')).toBe('23:05');
+    expect(utcClock('nope')).toBe('');
   });
 });

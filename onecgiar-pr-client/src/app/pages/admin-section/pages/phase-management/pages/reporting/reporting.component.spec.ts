@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReportingComponent } from './reporting.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
@@ -65,5 +67,12 @@ describe('ReportingComponent', () => {
       expect(section.textContent).toContain('Target phase: Current');
       expect(fixture.nativeElement.querySelectorAll('app-other-functionalities').length).toBe(2);
     });
+  });
+
+  it('no longer renders the reminders or focal points blocks (ARP-R-3)', () => {
+    const html = readFileSync(join(__dirname, 'reporting.component.html'), 'utf8');
+    expect(html).not.toContain('app-replicated-innovation-reminders');
+    expect(html).not.toContain('app-center-focal-points');
+    expect(fixture.nativeElement.querySelector('app-replicated-innovation-reminders')).toBeNull();
   });
 });

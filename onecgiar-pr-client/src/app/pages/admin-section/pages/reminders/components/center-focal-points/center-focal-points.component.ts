@@ -1,25 +1,26 @@
 // @akili-spec changes/rir-center-focal-routing (RCF-T-4)
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HlmBadge } from '@spartan/badge';
 import { HlmButtonImports } from '@spartan/button';
-import { HlmCheckboxImports } from '@spartan/checkbox';
 import { HlmDialogImports } from '@spartan/dialog';
 import { HlmInputImports } from '@spartan/input';
 import { HlmSkeleton } from '@spartan/skeleton';
 import { HlmTableImports } from '@spartan/table';
-import { REPLICATED_INNOVATION_REMINDERS_COPY } from '../../../../../../../internationalization/replicated-innovation-reminders.copy';
-import { CenterFocalPointView, CenterRoutingView } from '../../../../../../../shared/interfaces/replicated-innovation-reminders.interface';
-import { ResultsApiService } from '../../../../../../../shared/services/api/results-api.service';
+import { REPLICATED_INNOVATION_REMINDERS_COPY } from '../../../../../../internationalization/replicated-innovation-reminders.copy';
+import { CenterFocalPointView, CenterRoutingView } from '../../../../../../shared/interfaces/replicated-innovation-reminders.interface';
+import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
+
+export type FocalFilter = 'all' | 'missing' | 'optIn';
 
 /**
- * Phase management -> Reporting: per-Center opt-in ("focal point receives all reminders") and the
+ * Reminders page: per-Center opt-in ("focal point receives all reminders") and the
  * Center focal point contacts (RCF-R-7, RCF-R-8). Contacts are never deleted, only deactivated.
  * Any in-flight mutation locks every action.
  */
 @Component({
   selector: 'app-center-focal-points',
-  imports: [HlmButtonImports, HlmBadge, HlmCheckboxImports, HlmDialogImports, HlmInputImports, HlmSkeleton, HlmTableImports],
+  imports: [HlmButtonImports, HlmBadge, HlmDialogImports, HlmInputImports, HlmSkeleton, HlmTableImports],
   templateUrl: './center-focal-points.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -30,6 +31,9 @@ export class CenterFocalPointsComponent implements OnInit {
   protected readonly copy = REPLICATED_INNOVATION_REMINDERS_COPY.centerFocalPoints;
   protected readonly commonCopy = REPLICATED_INNOVATION_REMINDERS_COPY;
 
+  /** Centers with no active contact; emitted after a successful load and after every contacts change, never on loading/error. */
+  readonly missingCount = output<number>();
+
   readonly loading = signal(true);
   readonly loadError = signal<string | null>(null);
   readonly centers = signal<CenterRoutingView[]>([]);
@@ -38,6 +42,36 @@ export class CenterFocalPointsComponent implements OnInit {
   readonly rowError = signal<Record<string, string>>({});
   /** Server warning by Center code, shown when the opt-in was turned on with no active contact (RCF-R-8). */
   readonly warnings = signal<Record<string, string>>({});
+  /** Text for the polite live region: the outcome of the last opt-in change (ARP-NFR-1). */
+  readonly liveMessage = signal('');
+  protected readonly chips: { key: FocalFilter; testKey: string; label: string }[] = [
+    { key: 'all', testKey: 'all', label: this.copy.chipAll },
+    { key: 'missing', testKey: 'missing', label: this.copy.chipMissing },
+    { key: 'optIn', testKey: 'optin', label: this.copy.chipOptIn }
+  ];
+
+  /** Toolbar state (ARP-R-8): chip filter and free-text query, both client-side. */
+  readonly filter = signal<FocalFilter>('all');
+  readonly query = signal('');
+  readonly counts = computed(() => {
+    const list = this.centers();
+    return {
+      all: list.length,
+      missing: list.filter(c => this.activeContacts(c).length === 0).length,
+      optIn: list.filter(c => c.route_all_to_center).length
+    };
+  });
+  readonly visibleCenters = computed(() => {
+    const q = this.query().trim().toLowerCase();
+    const f = this.filter();
+    return this.centers().filter(c => {
+      if (f === 'missing' && this.activeContacts(c).length > 0) return false;
+      if (f === 'optIn' && !c.route_all_to_center) return false;
+      if (!q) return true;
+      const haystack = [c.code, c.acronym, c.name, ...c.contacts.flatMap(x => [x.name, x.email])];
+      return haystack.some(v => !!v && v.toLowerCase().includes(q));
+    });
+  });
 
   readonly dialogCode = signal<string | null>(null);
   readonly dialogCenter = computed(() => this.centers().find(c => c.code === this.dialogCode()) ?? null);
@@ -60,6 +94,7 @@ export class CenterFocalPointsComponent implements OnInit {
         next: res => {
           this.centers.set(res?.response ?? []);
           this.loading.set(false);
+          this.emitMissing();
         },
         error: err => {
           this.loadError.set(this.messageOf(err, this.copy.loadError));
@@ -73,6 +108,12 @@ export class CenterFocalPointsComponent implements OnInit {
   }
   activeContacts(c: CenterRoutingView): CenterFocalPointView[] {
     return c.contacts.filter(x => x.is_active);
+  }
+  /** Up to two initials of a contact (name, else email local part) for the pill avatar. */
+  initials(x: CenterFocalPointView): string {
+    const src = (x.name || x.email.split('@')[0] || '').trim();
+    const parts = src.split(/[\s._-]+/).filter(Boolean);
+    return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
   }
   contactLabel(x: CenterFocalPointView): string {
     return x.name ? `${x.name} <${x.email}>` : x.email;
@@ -94,11 +135,16 @@ export class CenterFocalPointsComponent implements OnInit {
           const r = res?.response;
           this.setRouting(c.code, r?.route_all_to_center ?? value);
           this.warnings.update(w => ({ ...w, [c.code]: r?.warning ?? '' }));
+          const on = r?.route_all_to_center ?? value;
+          this.liveMessage.set(on ? this.copy.routingOnAnnounce(this.centerLabel(c)) : this.copy.routingOffAnnounce(this.centerLabel(c)));
+          this.emitMissing();
         },
         error: err => {
           this.busy.set(false);
           this.setRouting(c.code, !value);
-          this.rowError.update(e => ({ ...e, [c.code]: this.messageOf(err, this.copy.routingError) }));
+          const message = this.messageOf(err, this.copy.routingError);
+          this.rowError.update(e => ({ ...e, [c.code]: message }));
+          this.liveMessage.set(message);
         }
       });
   }
@@ -189,8 +235,13 @@ export class CenterFocalPointsComponent implements OnInit {
     this.busy.set(false);
     this.formError.set(this.messageOf(err, this.copy.dialog.requestError));
   }
+  private emitMissing(): void {
+    this.missingCount.emit(this.centers().filter(c => this.activeContacts(c).length === 0).length);
+  }
+
   private patchContacts(code: string, fn: (list: CenterFocalPointView[]) => CenterFocalPointView[]): void {
     this.centers.update(list => list.map(c => (c.code === code ? { ...c, contacts: fn(c.contacts) } : c)));
+    this.emitMissing();
   }
   /** The contact set changed, so a previous "no active contact" warning may no longer hold. */
   private clearWarning(code: string): void {

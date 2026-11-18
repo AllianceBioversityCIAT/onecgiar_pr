@@ -44,3 +44,9 @@ export function offsetLabel(offsetMinutes: number): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `UTC${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
 }
+
+/** `HH:mm` of a UTC ISO instant, read in UTC (the server clock), for the "Sends at HH:MM UTC" hint. */
+export function utcClock(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(11, 16);
+}

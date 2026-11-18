@@ -1,0 +1,42 @@
+<div class="flex flex-col gap-6 p-6" data-testid="arp-page">
+  <header class="flex flex-col gap-3">
+    <nav hlmBreadcrumb>
+      <ol hlmBreadcrumbList class="text-[13px]">
+        <li hlmBreadcrumbItem>{{ copy.breadcrumbModule }}</li>
+        <li hlmBreadcrumbSeparator></li>
+        <li hlmBreadcrumbItem>
+          <span hlmBreadcrumbPage>{{ copy.breadcrumbCurrent }}</span>
+        </li>
+      </ol>
+    </nav>
+    <div class="flex flex-col gap-1">
+      <h1 class="m-0 text-[20px] font-bold leading-[28px] text-[var(--pr-color-secondary-500)]">{{ copy.title }}</h1>
+      <p class="m-0 text-[12px] leading-[18px] text-[var(--pr-color-accents-5)]">{{ copy.description }}</p>
+    </div>
+  </header>
+
+  <hlm-tabs [tab]="activeTab()" (tabActivated)="setTab($event)">
+    <hlm-tabs-list [attr.aria-label]="copy.tabsLabel">
+      <button hlmTabsTrigger="reminders" type="button" class="!text-[13px]" data-testid="arp-tab-reminders">{{ copy.tabReminders }}</button>
+      <button hlmTabsTrigger="focalPoints" type="button" class="!text-[13px]" data-testid="arp-tab-focal-points">
+        {{ copy.tabFocalPoints }}
+        @if (showMissing()) {
+          <span
+            class="ml-2 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-yellow-50)] px-1.5 text-[11px] font-semibold tabular-nums text-[var(--pr-color-yellow-800)]"
+            data-testid="arp-missing-pill"
+            aria-hidden="true"
+            >{{ missingCount() }}</span
+          >
+          <span class="sr-only" data-testid="arp-missing-text">{{ copy.missingCountText(missingCount()!) }}</span>
+        }
+      </button>
+    </hlm-tabs-list>
+
+    <div [hlmTabsContent]="'reminders'" data-testid="arp-panel-reminders">
+      <app-replicated-innovation-reminders (fixFocalPoints)="setTab('focalPoints')" />
+    </div>
+    <div [hlmTabsContent]="'focalPoints'" data-testid="arp-panel-focal-points">
+      <app-center-focal-points (missingCount)="missingCount.set($event)" />
+    </div>
+  </hlm-tabs>
+</div>
