@@ -1,8 +1,8 @@
 // @akili-spec changes/portfolio-overview-revamp/global-filters (GLF-T-4, design 6.4, DD-10)
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal, viewChild } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideCheck, lucideChevronDown } from '@ng-icons/lucide';
-import { BrnCommandImports } from '@spartan-ng/brain/command';
+import { BrnCommand, BrnCommandImports } from '@spartan-ng/brain/command';
 import { HlmPopover, HlmPopoverContent, HlmPopoverPortal } from '@spartan/popover';
 import { PORTFOLIO_OVERVIEW_COPY } from '../../../../../../internationalization/portfolio-overview.copy';
 import type { FilterOption, TypologyOptionGroup } from '../../services/portfolio-filters';
@@ -50,6 +50,13 @@ export class FilterMultiSelectComponent {
   readonly toggled = output<string>();
 
   protected readonly open = signal(false);
+  private readonly command = viewChild(BrnCommand);
+
+  /** Same rule as Brain's own default filter; used when the visible search box is on. */
+  private readonly searchFilter = (value: string, search: string): boolean => value.toLowerCase().includes(search.toLowerCase());
+  /** Non-searchable: the input is hidden, so whatever reaches it must never hide an option. */
+  private readonly matchAll = (): boolean => true;
+  protected readonly filter = computed(() => (this.searchable() ? this.searchFilter : this.matchAll));
 
   protected readonly count = computed(() => this.selected().size);
   protected readonly triggerName = computed(() => (this.count() > 0 ? `${this.label()}, ${this.copy.selectedCount(this.count())}` : this.label()));
@@ -81,6 +88,17 @@ export class FilterMultiSelectComponent {
 
   protected isSelected(value: string): boolean {
     return this.selected().has(value);
+  }
+
+  /**
+   * Non-searchable only: the command input is just the keyboard target (arrows and Enter are Brain's own). Space is the
+   * Enter equivalent: it emits `selected` on the key manager's active item, which is Brain's protected `selectActiveItem()`.
+   * No printable key may reach the hidden input. A searchable input keeps typing (a space included).
+   */
+  protected onInputKey(event: KeyboardEvent): void {
+    if (this.searchable() || event.ctrlKey || event.metaKey || event.altKey || event.key.length !== 1) return;
+    event.preventDefault();
+    if (event.key === ' ') this.command()?.keyManager.activeItem?.selected.emit();
   }
 
   protected pick(value: string): void {

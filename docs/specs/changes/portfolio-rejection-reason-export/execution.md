@@ -327,3 +327,31 @@ The harness mounted `app-portfolio-results-detail` with `app-portfolio-detail-fi
 - runtime events: none. Attempts used: 3 of 3 (FAIL, PASS, reopened → PASS).
 - spawns: implementer attempt 3: 33 calls, 175,212 tokens, ended complete (stopped by the Leader after delivering, because it still held a background job); reviewer: ended complete (host gave no counts).
 - Running totals: tasks 3/5 closed (PRE-T-4 in progress; PRE-T-5 added) · LOC ≈ 920 · review rounds 6 (budget 6; the overrun was owner-approved).
+
+### PRE-T-5 — Client: Space toggles in the top-bar multi-select — PASS (2026-11-18)
+
+| Field | Value |
+|---|---|
+| Final status | PASS (attempt 1) |
+| Skills / effort | `angular-developer`, `spartan` · high |
+| Requirements | PRE-R-6 reference level, design §8.1 Keyboard; owner-approved scope addition |
+
+- Files changed (4, +66/−6): `components/filter-bar/filter-multi-select.component.{ts,html,spec.ts}`, page `CLAUDE.md` (Verified stamp in place, Filters bullet extended, 120 lines).
+- Mechanism:
+  - `viewChild(BrnCommand)`, plus a `filter` computed: match-all when the dimension is not searchable; when it is searchable, `searchFilter`, character-identical to Brain's default `(value, search) => value.toLowerCase().includes(search.toLowerCase())` (`spartan-ng-brain-command.mjs:22`). The app never calls `provideBrnCommandConfig`, so searchable filtering is unchanged.
+  - `onInputKey` returns early for searchable dimensions, for ctrl/meta/alt combos and for non-printable keys. Otherwise it calls `preventDefault()`, and Space runs `keyManager.activeItem?.selected.emit()`, the body of `selectActiveItem()`.
+  - The `toggled` output and `filter-bar.component.html:14` (`[searchable]="d === 'project' || d === 'center'"`) are unchanged.
+- CT red (throwaway, real keys, unfixed code): non-searchable `Timed out retrying after 10000ms ... +'x'` (x typed into the hidden input), then `Expected to find element: [data-testid^="filter-item-d-"]:not([data-hidden]), but never found it` (typing x hid every item).
+- CT green (`3 passing`):
+  - Non-searchable: typing x hides nothing and the input stays empty; real Space emits `toggled` once with the active item; the active item is unchanged.
+  - Searchable: "Alpha " stays in the input and filters to 1 item; Space selects nothing; Enter emits `toggled('a')`.
+  - Escape closes the list, and focus returns to the trigger.
+  - The harness and the Cypress output folders were deleted.
+- Falsifiers on final code: (a) Space emit removed → `expected toggled to have been called exactly once, but it was never called`; (b) searchable guard removed → the `'Alpha '` case red. Both reverted.
+- Verification: Jest `23 passed / 657 passed`; `tsc` exit 0; lint clean; build exit 0.
+- Evidence re-run (Leader inline): Jest `23 passed / 657 passed`, `tsc` exit 0, "All files pass linting.", `ng build` exit 0 → **VERIFIED**.
+- Reviewer (akili-reviewer, T3, high): **PASS**. Filter identical to Brain's default; searchable early return keeps typing and Enter-only toggling; contract and `searchable` binding unchanged; Space with no active item is a no-op; edits stay inside the declared files.
+- ADVISORY (recorded only): IME `Process`/`Dead` keys can still write stray text into the hidden non-searchable input (harmless: match-all keeps every option visible); a comment on the Jest `command()` `any` cast.
+- runtime events: the Implementer re-sent its completion report six times while holding a background job; the Leader stopped it after the report was received (no work lost).
+- spawns: implementer 61 calls, ≈140,000 tokens, ended complete (stopped by the Leader); reviewer ended complete.
+- Running totals: tasks PRE-T-1/2/3/5 closed, PRE-T-4 local portion done · LOC ≈ 990 · review rounds 8 (budget overrun approved by the owner on 2026-11-18).

@@ -1,4 +1,5 @@
 import { By } from '@angular/platform-browser';
+import { BrnCommand } from '@spartan-ng/brain/command';
 import { BrnPopover } from '@spartan-ng/brain/popover';
 import { HlmPopover } from '@spartan/popover';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -118,5 +119,44 @@ describe('FilterMultiSelectComponent (GLF-T-4)', () => {
 
     create({ options: [{ value: 'SP01', label: 'SP01' }] });
     expect(q('[data-testid="filter-search-program"]')!.parentElement!.classList.contains('sr-only')).toBe(true);
+  });
+
+  describe('Space in the command input (PRE-T-5)', () => {
+    const openList = () => {
+      q<HTMLButtonElement>('[data-testid="filter-trigger-program"]')!.click();
+      fixture.detectChanges();
+    };
+    const command = () => fixture.debugElement.query(sel => sel.injector.get(BrnCommand, null) !== null).injector.get(BrnCommand) as any;
+    const key = (k: string) => {
+      const event = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true });
+      q<HTMLInputElement>('input')!.dispatchEvent(event);
+      return event;
+    };
+
+    it('non-searchable: Space selects the active item, nothing printable is typed, arrows pass through, the filter is match-all', () => {
+      create({ options: [{ value: 'SP01', label: 'SP01' }] });
+      openList();
+      const emit = jest.fn();
+      command().keyManager.activeItem = { selected: { emit } };
+      expect(key(' ').defaultPrevented).toBe(true);
+      expect(emit).toHaveBeenCalledTimes(1);
+      expect(key('a').defaultPrevented).toBe(true);
+      expect(emit).toHaveBeenCalledTimes(1);
+      expect(key('ArrowDown').defaultPrevented).toBe(false);
+      expect(command().filter('SP01', 'zzz')).toBe(true);
+    });
+
+    it('searchable: Space is typed (not prevented, nothing selected) and the default substring filter stays', () => {
+      create({ dimension: 'center', label: 'Center', searchable: true, options: [{ value: 'CENTER-03', label: 'CIAT' }] });
+      q<HTMLButtonElement>('[data-testid="filter-trigger-center"]')!.click();
+      fixture.detectChanges();
+      const emit = jest.fn();
+      command().keyManager.activeItem = { selected: { emit } };
+      expect(key(' ').defaultPrevented).toBe(false);
+      expect(key('a').defaultPrevented).toBe(false);
+      expect(emit).not.toHaveBeenCalled();
+      expect(command().filter('Two words', 'two w')).toBe(true);
+      expect(command().filter('CIAT', 'zzz')).toBe(false);
+    });
   });
 });

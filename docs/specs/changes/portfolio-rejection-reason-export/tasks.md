@@ -119,7 +119,7 @@
   - [ ] Screenshots and the measurements recorded in `execution.md`
   - [ ] Ticket reply drafted for the user, mentioning the column-position change (DD-6)
 
-### PRE-T-5 — Client: Space toggles in the top-bar multi-select (added 2026-11-18, owner-approved)
+### [x] PRE-T-5 — Client: Space toggles in the top-bar multi-select (added 2026-11-18, owner-approved)
 
 - **Type:** client · **Origin:** PRE-T-4 found that Space does not toggle in the detail Filters panel (hidden `brnCommandInput` takes the keystroke). The top-bar `filter-multi-select` uses the same pattern. The owner asked on 2026-11-18 to fix it too ("arregla también el dropdown de la barra superior"). Recorded in `execution.md`.
 - **Description:** In `components/filter-bar/filter-multi-select.component.{ts,html,spec.ts}`, for a **non-searchable** dimension (hidden command input), Space on the active item toggles it exactly like Enter. It is never typed into the hidden input, and the hidden input never filters the list. A **searchable** dimension keeps typing into its visible search box (Space types a space there); Enter still toggles. Reuse the mechanism chosen for PRE-T-3 attempt 3.
