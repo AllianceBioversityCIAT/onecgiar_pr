@@ -61,7 +61,9 @@ export const REPLICATED_INNOVATION_REMINDERS_COPY = {
     kindLabel: 'Reminder',
     timeZoneHint: (zone: string, offset: string): string => `Your local time (${zone}, ${offset}). The server runs in UTC.`,
     required: 'Pick a date and time.',
-    past: 'The date must be in the future.'
+    past: 'The date must be in the future.',
+    sendsAtUtc: (time: string): string => `Sends at ${time} UTC`,
+    allOpen: 'Both reminders already have an open campaign. Send or cancel one to schedule another.'
   },
   confirm: {
     title: 'Send this reminder now?',
@@ -101,6 +103,16 @@ export const REPLICATED_INNOVATION_REMINDERS_COPY = {
     colReason: 'Reason',
     colDeveloper: 'Developer (free text)'
   },
+  page: {
+    breadcrumbModule: 'Admin module',
+    breadcrumbCurrent: 'Reminders',
+    title: 'Reminders',
+    description: 'Schedule and track the emails sent about replicated innovations, and manage the Center focal points who receive them.',
+    tabsLabel: 'Reminders sections',
+    tabReminders: 'Replicated innovation reminders',
+    tabFocalPoints: 'Center focal points',
+    missingCountText: (n: number): string => `${n} ${n === 1 ? 'Center' : 'Centers'} without a focal point`
+  },
   centerFocalPoints: {
     title: 'Center focal points',
     description: 'Contacts who receive the Center email. When a Center is opted in, its focal points receive every reminder for results led by that Center.',
@@ -113,6 +125,19 @@ export const REPLICATED_INNOVATION_REMINDERS_COPY = {
     noFocalPoint: 'No focal point',
     editContacts: 'Edit contacts',
     routingError: 'The setting could not be saved.',
+    searchLabel: 'Search Centers',
+    searchPlaceholder: 'Search by Center, contact name or email',
+    filtersLabel: 'Filter Centers',
+    chipAll: 'All',
+    chipMissing: 'No focal point',
+    chipOptIn: 'Receives all reminders',
+    noMatch: 'No Centers match',
+    addContact: 'Add contact',
+    addContactLabel: (center: string): string => `Add a focal point contact for ${center}`,
+    switchOn: 'On',
+    switchOff: 'Off',
+    routingOnAnnounce: (center: string): string => `${center} now receives all reminders.`,
+    routingOffAnnounce: (center: string): string => `${center} no longer receives all reminders.`,
     dialog: {
       title: (center: string): string => `Focal points: ${center}`,
       description: 'Deactivated contacts stop receiving mail. Contacts are never deleted.',
@@ -135,6 +160,30 @@ export const REPLICATED_INNOVATION_REMINDERS_COPY = {
       emailRequired: 'Enter an email address.',
       requestError: 'The request failed. Try again.'
     }
+  },
+  cards: {
+    pendingTitle: 'Pending replicated innovations',
+    unreachableTitle: 'Without a reachable recipient',
+    fixFocalPoints: 'Fix center focal points',
+    nextTitle: 'Next send',
+    nextEmpty: 'No reminder scheduled',
+    nextEmptyHint: 'Use the scheduler below to create one.',
+    cardsLabel: 'Reminders summary'
+  },
+  history: {
+    title: 'Reminder history',
+    zoneLine: (zone: string, offset: string): string => `Times are shown in your local time zone: ${zone} (${offset}).`,
+    sentManually: 'Sent manually, before schedule',
+    moreActions: 'More actions',
+    moreActionsFor: (kind: string): string => `More actions for ${kind}`
+  },
+  delivery: {
+    notSent: 'Not sent yet',
+    none: 'No recipients',
+    sent: (n: number): string => `${n} sent`,
+    unreachable: (n: number): string => `${n} unreachable`,
+    skipped: (n: number): string => `${n} skipped`,
+    failed: (n: number): string => `${n} failed`
   },
   outcome: (sent: number, skipped: number, failed: number): string => `Dispatch finished: ${sent} sent, ${skipped} skipped, ${failed} failed.`,
   outcomeByType: (type: ReminderMessageType, sent: number): string => `${REPLICATED_INNOVATION_REMINDERS_COPY.messageTypes[type]}: ${sent} sent`

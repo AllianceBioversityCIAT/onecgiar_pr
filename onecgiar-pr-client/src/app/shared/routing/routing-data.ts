@@ -200,6 +200,12 @@ export const adminModuleRouting: PrRoute[] = [
     loadChildren: () => import('../../pages/admin-section/pages/phase-management/phase-management.module').then(m => m.PhaseManagementModule)
   },
   {
+    // @akili-spec changes/admin-reminders-page (ARP-T-1)
+    prName: 'Reminders',
+    path: 'reminders',
+    loadComponent: () => import('../../pages/admin-section/pages/reminders/reminders-page.component').then(m => m.RemindersPageComponent)
+  },
+  {
     prName: 'Knowledge Products',
     path: 'knowledge-products',
     loadChildren: () => import('../../pages/admin-section/pages/knowledge-products/knowledge-products.module').then(m => m.KnowledgeProductsModule)

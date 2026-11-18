@@ -90,6 +90,15 @@ describe('ReplicatedInnovationRemindersComponent', () => {
     fixture.detectChanges();
   };
 
+  const kindSelect = () => q('arp-schedule-kind')?.querySelector('select') as HTMLSelectElement | null;
+  const kindOptions = () => Array.from(kindSelect()?.querySelectorAll('option') ?? []).map(o => o.value);
+  const pickKind = (value: string) => {
+    const el = kindSelect() as HTMLSelectElement;
+    el.value = value;
+    el.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+  };
+
   async function setup(listResponse: any = of(list([])), offsetAt: (at: Date) => number = () => 300) {
     api = {
       GET_reminderCampaigns: jest.fn().mockReturnValue(listResponse),
@@ -136,9 +145,10 @@ describe('ReplicatedInnovationRemindersComponent', () => {
     await setup(of(list([])));
     expect(q('rir-empty')?.textContent).toContain('No campaigns scheduled for this phase');
     expect(q('rir-table')).toBeNull();
-    // both kinds are missing, so both schedule forms render
-    expect(q('rir-schedule-Q4_NOTICE')).not.toBeNull();
-    expect(q('rir-schedule-FINAL_REMINDER')).not.toBeNull();
+    // both kinds are missing: one form, a select with both kinds, the first selected
+    expect(q('rir-schedule')).not.toBeNull();
+    expect(kindOptions()).toEqual(['Q4_NOTICE', 'FINAL_REMINDER']);
+    expect(kindSelect()!.value).toBe('Q4_NOTICE');
   });
 
   it('renders an error state with the server message and a retry', async () => {
@@ -150,24 +160,140 @@ describe('ReplicatedInnovationRemindersComponent', () => {
     expect(q('rir-load-error')).toBeNull();
   });
 
-  it('renders status badge and counts per row', async () => {
-    await setup(of(list([campaign({ status: 'SENT', sent_count: 9, skipped_count: 2, failed_count: 1, unreachable_count: 3 })])));
+  it('renders the status badge by text and the delivery bar with text per row', async () => {
+    await setup(of(list([campaign({ status: 'SENT', sent_at: '2099-01-10T12:00:00.000Z', sent_count: 9, skipped_count: 2, failed_count: 1, unreachable_count: 3 })])));
     const row = q('rir-row-1')!;
     expect(row.querySelector('[data-testid="rir-status"]')?.textContent).toContain('Sent');
-    const chip = (k: string) => row.querySelector(`[data-testid="rir-metric-${k}"]`) as HTMLElement;
-    expect(chip('sent').textContent).toMatch(/Sent\s*9/);
-    expect(chip('skipped').textContent).toMatch(/Skipped\s*2/);
-    expect(chip('failed').textContent).toMatch(/Failed\s*1/);
-    expect(chip('unreachable').textContent).toMatch(/Unreachable\s*3/);
-    expect(chip('unreachable').classList.contains('rir-chip-warning')).toBe(true);
-    expect(chip('sent').classList.contains('rir-chip-warning')).toBe(false);
+    expect(row.querySelector('[data-testid="arp-delivery-text"]')?.textContent?.trim()).toBe('9 sent · 3 unreachable · 2 skipped · 1 failed');
+    expect(row.querySelectorAll('[data-testid^="arp-delivery-seg-"]')).toHaveLength(4);
   });
 
-  it('disables Send now and Cancel on a SENDING row', async () => {
-    await setup(of(list([campaign({ status: 'SENDING' })])));
-    expect(isDisabled('rir-send-btn')).toBe(true);
-    expect(isDisabled('rir-cancel-btn')).toBe(true);
-    expect(isDisabled('rir-edit-btn')).toBe(true);
+  it('a campaign never sent shows "Not sent yet" and no bar segments', async () => {
+    await setup(of(list([campaign()])));
+    const row = q('rir-row-1')!;
+    expect(row.querySelector('[data-testid="arp-delivery-text"]')?.textContent?.trim()).toBe('Not sent yet');
+    expect(row.querySelectorAll('[data-testid^="arp-delivery-seg-"]')).toHaveLength(0);
+  });
+
+  describe('row actions per status (ARP-R-5)', () => {
+    const actionIds = (id: number) =>
+      Array.from(q(`rir-row-${id}`)!.querySelectorAll('[data-testid$="-btn"]'))
+        .map(e => e.getAttribute('data-testid'))
+        .sort();
+
+    it.each([
+      ['PENDING', ['arp-more-btn', 'rir-cancel-btn', 'rir-edit-btn', 'rir-preview-btn', 'rir-send-btn']],
+      ['FAILED', ['rir-preview-btn', 'rir-send-btn']],
+      ['SENDING', []],
+      ['CANCELLED', []]
+    ] as const)('%s row renders exactly its allowed action testids', async (status, expected) => {
+      await setup(of(list([campaign({ status })])));
+      expect(actionIds(1)).toEqual([...expected]);
+    });
+
+    it('SENT row with its kind free renders only Send again', async () => {
+      await setup(of(list([campaign({ status: 'SENT' })])));
+      expect(actionIds(1)).toEqual(['rir-send-again-btn']);
+    });
+
+    it('SENT row while another campaign of the same kind is open renders no action', async () => {
+      await setup(of(list([campaign({ id: 1, status: 'SENT' }), campaign({ id: 2, status: 'PENDING' })])));
+      expect(actionIds(1)).toEqual([]);
+    });
+
+    it('busy: a PENDING row keeps its actions rendered and disabled (not hidden)', async () => {
+      await setup(of(list([campaign()])));
+      component.busy.set(true);
+      fixture.detectChanges();
+      const row = q('rir-row-1')!;
+      for (const id of ['rir-send-btn', 'rir-preview-btn', 'rir-edit-btn', 'rir-cancel-btn']) {
+        expect(row.querySelector(`[data-testid="${id}"]`)).not.toBeNull();
+        expect(isDisabled(id)).toBe(true);
+      }
+    });
+  });
+
+  it.each([
+    ['earlier', '2099-01-10T12:00:00.000Z', '2099-01-10T11:00:00.000Z', true],
+    ['equal', '2099-01-10T12:00:00.000Z', '2099-01-10T12:00:00.000Z', false],
+    ['later', '2099-01-10T12:00:00.000Z', '2099-01-10T13:00:00.000Z', false]
+  ])('sent_at %s than scheduled_at: the manual-send note is shown only when earlier', async (_label, scheduled_at, sent_at, shown) => {
+    await setup(of(list([campaign({ id: 7, status: 'SENT', scheduled_at, sent_at })])));
+    expect(q('arp-sent-early-7') !== null).toBe(shown);
+    if (shown) expect(q('arp-sent-early-7')!.textContent).toContain('Sent manually, before schedule');
+  });
+
+  it('shows the time-zone line above the history table', async () => {
+    await setup(of(list([campaign()])));
+    expect(q('arp-zone-line')?.textContent).toContain('UTC-05:00');
+  });
+
+  describe('summary cards (ARP-R-4)', () => {
+    it('card 1 shows pending total and phase; card 2 shows the unreachable total', async () => {
+      await setup(of(list([])));
+      expect(q('arp-card-pending')?.textContent).toContain('Pending replicated innovations');
+      expect(q('arp-card-pending')?.textContent).toContain('4');
+      expect(q('arp-card-pending')?.textContent).toContain('Reporting 2026');
+      expect(q('arp-card-unreachable')?.textContent).toContain('Without a reachable recipient');
+      expect(q('arp-card-unreachable')?.textContent).toContain('1');
+    });
+
+    it('U = 0: no warning state', async () => {
+      await setup(of({ response: { ...list([]).response, unreachable_total: 0 } }));
+      expect(q('arp-card-unreachable')!.getAttribute('data-state')).toBe('ok');
+      expect(q('arp-card-unreachable')!.className).not.toContain('--pr-color-yellow-50');
+    });
+
+    it('U = 4: warning state', async () => {
+      await setup(of({ response: { ...list([]).response, unreachable_total: 4 } }));
+      expect(q('arp-card-unreachable')!.getAttribute('data-state')).toBe('warning');
+      expect(q('arp-card-unreachable')!.className).toContain('--pr-color-yellow-50');
+    });
+
+    it('the unreachable link emits fixFocalPoints once', async () => {
+      await setup(of(list([])));
+      const spy = jest.fn();
+      component.fixFocalPoints.subscribe(spy);
+      click('arp-fix-focal-btn');
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('card 3 shows the earliest open campaign by scheduled_at with its allowed actions', async () => {
+      await setup(
+        of(
+          list([
+            campaign({ id: 1, kind: 'Q4_NOTICE', scheduled_at: '2099-03-01T12:00:00.000Z' }),
+            campaign({ id: 2, kind: 'FINAL_REMINDER', scheduled_at: '2099-02-01T12:00:00.000Z' }),
+            campaign({ id: 3, kind: 'FINAL_REMINDER', status: 'SENT', scheduled_at: '2090-01-01T12:00:00.000Z' })
+          ])
+        )
+      );
+      const card = q('arp-card-next')!;
+      expect(card.textContent).toContain('Final reminder');
+      const ids = Array.from(card.querySelectorAll('[data-testid$="-btn"]')).map(e => e.getAttribute('data-testid'));
+      expect(ids).toContain('arp-next-send-btn');
+      expect(ids).toContain('arp-next-more-btn');
+    });
+
+    it('no open campaign: card 3 says none is scheduled and has no action testid', async () => {
+      await setup(of(list([campaign({ status: 'SENT' })])));
+      const card = q('arp-card-next')!;
+      expect(card.textContent).toContain('No reminder scheduled');
+      expect(card.querySelectorAll('[data-testid$="-btn"]')).toHaveLength(0);
+    });
+
+    it('while loading the cards are skeletons and show no number', async () => {
+      await setup(new Subject());
+      expect(q('rir-loading')).not.toBeNull();
+      expect(q('arp-card-pending')).toBeNull();
+    });
+
+    it('on a load error no card shows a number', async () => {
+      await setup(throwError(() => ({ error: { message: 'boom' } })));
+      expect(q('rir-load-error')).not.toBeNull();
+      expect(q('arp-card-pending')).toBeNull();
+      expect(q('arp-card-unreachable')).toBeNull();
+    });
   });
 
   it('enables the actions on a PENDING row', async () => {
@@ -178,19 +304,58 @@ describe('ReplicatedInnovationRemindersComponent', () => {
 
   it('only blocks a kind while an open campaign exists (PENDING); CANCELLED does not count', async () => {
     await setup(of(list([campaign({ kind: 'Q4_NOTICE' }), campaign({ id: 2, kind: 'FINAL_REMINDER', status: 'CANCELLED' })])));
-    expect(q('rir-schedule-Q4_NOTICE')).toBeNull();
-    expect(q('rir-schedule-FINAL_REMINDER')).not.toBeNull();
+    expect(kindOptions()).toEqual(['FINAL_REMINDER']);
+    expect(kindSelect()!.value).toBe('FINAL_REMINDER');
+    expect(q('rir-draft-Q4_NOTICE')).toBeNull();
+    expect(q('rir-draft-FINAL_REMINDER')).not.toBeNull();
+  });
+
+  it('shows a note instead of the form when both kinds have an open campaign', async () => {
+    await setup(of(list([campaign({ id: 1, kind: 'Q4_NOTICE' }), campaign({ id: 2, kind: 'FINAL_REMINDER', status: 'FAILED' })])));
+    expect(q('rir-schedule')).toBeNull();
+    expect(q('arp-schedule-kind')).toBeNull();
+    expect(q('arp-schedule-full')!.textContent).toContain('Both reminders already have an open campaign');
+  });
+
+  it('selecting the other kind rebinds the input and the submit to it and POSTs that kind', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-01T00:00:00Z'));
+    try {
+      await setup(of(list([])));
+      pickKind('FINAL_REMINDER');
+      expect(q('rir-draft-Q4_NOTICE')).toBeNull();
+      type('rir-draft-FINAL_REMINDER', '2026-11-15T08:00');
+      click('rir-submit-FINAL_REMINDER');
+      expect(api['POST_reminderCampaign']).toHaveBeenCalledTimes(1);
+      expect(api['POST_reminderCampaign']).toHaveBeenCalledWith({ kind: 'FINAL_REMINDER', scheduled_at: '2026-11-15T13:00:00.000Z' });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('resets the selected kind to the free one once the selected kind becomes open', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-01T00:00:00Z'));
+    try {
+      await setup(of(list([])));
+      expect(kindSelect()!.value).toBe('Q4_NOTICE');
+      api['GET_reminderCampaigns'].mockReturnValue(of(list([campaign({ kind: 'Q4_NOTICE' })])));
+      type('rir-draft-Q4_NOTICE', '2026-11-15T08:00');
+      click('rir-submit-Q4_NOTICE');
+      expect(component.scheduleKind()).toBe('FINAL_REMINDER');
+      expect(kindOptions()).toEqual(['FINAL_REMINDER']);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it.each([['PENDING'], ['SENDING'], ['FAILED']] as const)('hides the schedule form of a kind with an open %s campaign', async status => {
     await setup(of(list([campaign({ kind: 'Q4_NOTICE', status })])));
-    expect(q('rir-schedule-Q4_NOTICE')).toBeNull();
+    expect(kindOptions()).toEqual(['FINAL_REMINDER']);
   });
 
-  it('a SENT campaign does not block its kind: the schedule form stays and the row is kept as history', async () => {
+  it('a SENT campaign does not block its kind: the select keeps it and the row is kept as history', async () => {
     await setup(of(list([campaign({ id: 5, kind: 'Q4_NOTICE', status: 'SENT', sent_at: '2026-10-01T10:00:00.000Z' })])));
     expect(q('rir-row-5')).not.toBeNull();
-    expect(q('rir-schedule-Q4_NOTICE')).not.toBeNull();
+    expect(kindOptions()).toEqual(['Q4_NOTICE', 'FINAL_REMINDER']);
   });
 
   it('Send again shows only on SENT rows', async () => {
@@ -225,11 +390,17 @@ describe('ReplicatedInnovationRemindersComponent', () => {
     expect(component.sendAgainKind()).toBeNull();
   });
 
-  it('Send again opens the create flow preset to that kind, with the helper text, and POSTs like a normal create', async () => {
+  it('Send again selects that kind, shows the helper text, creates nothing until submit, then POSTs like a normal create', async () => {
     await setup(of(list([campaign({ id: 1, kind: 'Q4_NOTICE', status: 'SENT' })])));
     expect(q('rir-send-again-hint-Q4_NOTICE')).toBeNull();
+    // a valid Q4 draft already typed: if Send again submitted, it would POST
+    type('rir-draft-Q4_NOTICE', '2099-11-15T08:00');
+    pickKind('FINAL_REMINDER');
+    expect(kindSelect()!.value).toBe('FINAL_REMINDER');
     click('rir-send-again-btn');
     expect(component.sendAgainKind()).toBe('Q4_NOTICE');
+    expect(kindSelect()!.value).toBe('Q4_NOTICE');
+    expect(api['POST_reminderCampaign']).not.toHaveBeenCalled();
     expect(q('rir-send-again-hint-Q4_NOTICE')!.textContent).toContain('emailed again');
     type('rir-draft-Q4_NOTICE', '2099-11-15T08:00');
     click('rir-submit-Q4_NOTICE');
@@ -252,6 +423,18 @@ describe('ReplicatedInnovationRemindersComponent', () => {
   it('labels the time zone next to the schedule form', async () => {
     await setup(of(list([])));
     expect(q('rir-tz-hint-Q4_NOTICE')?.textContent).toContain('UTC-05:00');
+    expect(q('arp-utc-hint')).toBeNull();
+  });
+
+  it('hints the UTC send time of the entered date: 2026-12-02T09:00 at UTC-5 sends at 14:00 UTC', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-01T00:00:00Z'));
+    try {
+      await setup(of(list([])));
+      type('rir-draft-Q4_NOTICE', '2026-12-02T09:00');
+      expect(q('arp-utc-hint')?.textContent).toContain('Sends at 14:00 UTC');
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('rejects a past date without calling the API', async () => {
@@ -271,7 +454,6 @@ describe('ReplicatedInnovationRemindersComponent', () => {
       type('rir-draft-Q4_NOTICE', '2026-11-15T08:00');
       click('rir-submit-Q4_NOTICE');
       expect(isDisabled('rir-submit-Q4_NOTICE')).toBe(true);
-      expect(isDisabled('rir-submit-FINAL_REMINDER')).toBe(true);
       component.schedule('Q4_NOTICE');
       expect(api['POST_reminderCampaign']).toHaveBeenCalledTimes(1);
       inflight.next({ response: campaign() });
@@ -442,8 +624,10 @@ describe('ReplicatedInnovationRemindersComponent', () => {
       await setup(of(list([campaign({ id: 5, kind: 'FINAL_REMINDER', scheduled_at: '2026-11-15T08:00:00.000Z' })])), rome);
       type('rir-draft-Q4_NOTICE', '2026-11-15T09:00');
       expect(q('rir-tz-hint-Q4_NOTICE')?.textContent).toContain('UTC+01:00');
+      expect(q('arp-utc-hint')?.textContent).toContain('Sends at 08:00 UTC');
       type('rir-draft-Q4_NOTICE', '2026-10-19T09:00');
       expect(q('rir-tz-hint-Q4_NOTICE')?.textContent).toContain('UTC+02:00');
+      expect(q('arp-utc-hint')?.textContent).toContain('Sends at 07:00 UTC');
       type('rir-draft-Q4_NOTICE', '2026-11-15T09:00');
       click('rir-submit-Q4_NOTICE');
       expect(api['POST_reminderCampaign']).toHaveBeenCalledWith({ kind: 'Q4_NOTICE', scheduled_at: '2026-11-15T08:00:00.000Z' });

@@ -1,0 +1,218 @@
+<section
+  class="border-border bg-card text-card-foreground mt-8 flex flex-col gap-4 rounded-lg border p-4"
+  data-testid="cfp-section"
+  aria-labelledby="cfp-heading">
+  <header>
+    <h2 id="cfp-heading" class="text-foreground text-base font-semibold">{{ copy.title }}</h2>
+    <p class="text-muted-foreground text-sm">{{ copy.description }}</p>
+  </header>
+
+  @if (loading()) {
+    <div class="flex flex-col gap-2" role="status" [attr.aria-label]="copy.loading" data-testid="cfp-loading">
+      <hlm-skeleton class="h-8 w-full" />
+      <hlm-skeleton class="h-8 w-full" />
+    </div>
+  } @else if (loadError(); as err) {
+    <div class="flex items-center gap-3" data-testid="cfp-load-error">
+      <p role="alert" class="text-destructive text-sm">{{ err }}</p>
+      <button hlmBtn variant="outline" size="sm" type="button" (click)="load()">{{ commonCopy.retry }}</button>
+    </div>
+  } @else if (centers().length === 0) {
+    <p class="text-muted-foreground text-sm" data-testid="cfp-empty">{{ copy.empty }}</p>
+  } @else {
+    <div class="flex flex-wrap items-center gap-3" data-testid="arp-fp-toolbar">
+      <div class="relative min-w-[16rem] flex-1">
+        <span class="material-icons-round text-muted-foreground pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[18px] leading-none" aria-hidden="true">search</span>
+        <input
+          hlmInput
+          type="search"
+          class="ps-9"
+          [value]="query()"
+          [attr.aria-label]="copy.searchLabel"
+          [placeholder]="copy.searchPlaceholder"
+          (input)="query.set($any($event.target).value)"
+          data-testid="arp-fp-search" />
+      </div>
+      <div class="flex flex-wrap items-center gap-2" role="group" [attr.aria-label]="copy.filtersLabel">
+        @for (chip of chips; track chip.key) {
+          <button
+            type="button"
+            class="focus-visible:ring-ring inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[12px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            [class]="
+              filter() === chip.key
+                ? 'border-[var(--pr-color-primary-100)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]'
+                : 'border-border bg-card text-[var(--pr-color-accents-5)] hover:bg-[var(--pr-color-accents-1)]'
+            "
+            [attr.aria-pressed]="filter() === chip.key"
+            (click)="filter.set(chip.key)"
+            [attr.data-testid]="'arp-fp-chip-' + chip.testKey">
+            <span>{{ chip.label }}</span>
+            <span class="font-mono tabular-nums" [attr.data-testid]="'arp-fp-count-' + chip.testKey">{{ counts()[chip.key] }}</span>
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (visibleCenters().length === 0) {
+      <p class="text-muted-foreground text-sm" data-testid="arp-fp-no-match">{{ copy.noMatch }}</p>
+    } @else {
+      <div hlmTableContainer>
+        <table hlmTable data-testid="cfp-table">
+          <thead hlmTHead>
+            <tr hlmTr>
+              <th hlmTh>{{ copy.columns.center }}</th>
+              <th hlmTh>{{ copy.columns.optIn }}</th>
+              <th hlmTh>{{ copy.columns.contacts }}</th>
+              <th hlmTh>{{ copy.columns.actions }}</th>
+            </tr>
+          </thead>
+          <tbody hlmTBody>
+            @for (c of visibleCenters(); track c.code) {
+              <tr hlmTr [attr.data-testid]="'cfp-row-' + c.code">
+                <td hlmTd class="min-w-[14rem] whitespace-normal!">
+                  <span class="font-medium break-words">{{ centerLabel(c) }}</span>
+                  @if (c.acronym && c.name) {
+                    <span class="text-muted-foreground block text-[12px] break-words">{{ c.name }}</span>
+                  }
+                </td>
+                <td hlmTd>
+                  <div class="flex items-center gap-2 text-sm">
+                    <button
+                      type="button"
+                      role="switch"
+                      class="focus-visible:ring-ring relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                      [class]="c.route_all_to_center ? 'bg-[var(--pr-color-primary-400)]' : 'bg-[var(--pr-color-accents-2)]'"
+                      [attr.aria-checked]="c.route_all_to_center"
+                      [attr.aria-label]="copy.optInLabel(centerLabel(c))"
+                      [disabled]="busy()"
+                      (click)="toggleRouting(c, !c.route_all_to_center)"
+                      [attr.data-testid]="'cfp-optin-' + c.code">
+                      <span
+                        class="bg-card pointer-events-none inline-block size-4 rounded-full shadow-sm transition-transform"
+                        [class]="c.route_all_to_center ? 'translate-x-[18px]' : 'translate-x-0.5'"
+                        aria-hidden="true"></span>
+                    </button>
+                    <span class="font-medium" [attr.data-testid]="'arp-fp-switch-text-' + c.code">{{ c.route_all_to_center ? copy.switchOn : copy.switchOff }}</span>
+                  </div>
+                  @if (warnings()[c.code]; as w) {
+                    <p role="status" class="mt-1 text-[12px] text-[var(--pr-color-yellow-700)]" [attr.data-testid]="'cfp-warning-' + c.code">{{ w }}</p>
+                  }
+                  @if (rowError()[c.code]; as re) {
+                    <p role="alert" class="text-destructive mt-1 text-[12px]" [attr.data-testid]="'cfp-row-error-' + c.code">{{ re }}</p>
+                  }
+                </td>
+                <td hlmTd>
+                  <div class="flex flex-wrap items-center gap-1" [attr.data-testid]="'cfp-contacts-' + c.code">
+                    @for (x of activeContacts(c); track x.id) {
+                      <span class="border-border bg-card inline-flex items-center gap-1 rounded-full border py-0.5 ps-0.5 pe-2 text-[12px]" [attr.data-testid]="'arp-fp-contact-' + x.id">
+                        <span
+                          class="inline-flex size-5 items-center justify-center rounded-full bg-[var(--pr-color-primary-50)] text-[10px] font-semibold text-[var(--pr-color-primary-400)]"
+                          aria-hidden="true"
+                          [attr.data-testid]="'arp-fp-initials-' + x.id"
+                          >{{ initials(x) }}</span
+                        >
+                        <span>{{ x.name || x.email }}</span>
+                      </span>
+                    } @empty {
+                      <span hlmBadge variant="outline" class="!bg-[var(--pr-color-yellow-50)] !text-[var(--pr-color-yellow-800)]" [attr.data-testid]="'arp-fp-missing-' + c.code">{{ copy.noFocalPoint }}</span>
+                      <button
+                        hlmBtn
+                        variant="link"
+                        size="sm"
+                        type="button"
+                        [disabled]="busy()"
+                        [attr.aria-label]="copy.addContactLabel(centerLabel(c))"
+                        (click)="openDialog(c)"
+                        [attr.data-testid]="'arp-fp-add-' + c.code">
+                        {{ copy.addContact }}
+                      </button>
+                    }
+                  </div>
+                </td>
+                <td hlmTd>
+                  <button
+                    hlmBtn
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    [disabled]="busy()"
+                    (click)="openDialog(c)"
+                    [attr.data-testid]="'cfp-edit-' + c.code">
+                    {{ copy.editContacts }}
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <p class="sr-only" aria-live="polite" data-testid="arp-fp-live">{{ liveMessage() }}</p>
+
+  <hlm-dialog [state]="dialogCenter() ? 'open' : 'closed'" (closed)="closeDialog()">
+    <hlm-dialog-content *hlmDialogPortal="let ctx" [showCloseButton]="false" data-testid="cfp-dialog">
+      @if (dialogCenter(); as dc) {
+        <hlm-dialog-header>
+          <h2 hlmDialogTitle>{{ copy.dialog.title(centerLabel(dc)) }}</h2>
+          <p hlmDialogDescription>{{ copy.dialog.description }}</p>
+        </hlm-dialog-header>
+
+        <ul class="flex flex-col gap-2" data-testid="cfp-contact-list">
+          @for (x of dc.contacts; track x.id) {
+            <li class="border-border flex flex-wrap items-center justify-between gap-2 rounded-md border p-2" [attr.data-testid]="'cfp-contact-' + x.id">
+              <span class="text-sm">
+                {{ contactLabel(x) }}
+                <span hlmBadge [variant]="x.is_active ? 'default' : 'outline'" class="ms-2">{{ x.is_active ? copy.dialog.active : copy.dialog.inactive }}</span>
+              </span>
+              <span class="flex gap-2">
+                <button hlmBtn variant="outline" size="sm" type="button" [disabled]="busy()" (click)="startEdit(x)" [attr.data-testid]="'cfp-contact-edit-' + x.id">
+                  {{ copy.dialog.edit }}
+                </button>
+                <button hlmBtn variant="outline" size="sm" type="button" [disabled]="busy()" (click)="toggleActive(x)" [attr.data-testid]="'cfp-contact-toggle-' + x.id">
+                  {{ x.is_active ? copy.dialog.deactivate : copy.dialog.activate }}
+                </button>
+              </span>
+            </li>
+          } @empty {
+            <li class="text-muted-foreground text-sm" data-testid="cfp-contacts-empty">{{ copy.dialog.empty }}</li>
+          }
+        </ul>
+
+        <form class="flex flex-col gap-3" (submit)="$event.preventDefault(); submitForm()" data-testid="cfp-form">
+          <h3 class="text-foreground text-sm font-semibold">{{ editingId() === null ? copy.dialog.addHeading : copy.dialog.editHeading }}</h3>
+          <label class="flex flex-col gap-1 text-sm">
+            <span>{{ copy.dialog.name }}</span>
+            <input hlmInput type="text" [value]="formName()" (input)="formName.set($any($event.target).value)" data-testid="cfp-form-name" />
+          </label>
+          <label class="flex flex-col gap-1 text-sm">
+            <span>{{ copy.dialog.email }}</span>
+            <input hlmInput type="email" [value]="formEmail()" (input)="formEmail.set($any($event.target).value)" data-testid="cfp-form-email" />
+          </label>
+          @if (formError(); as fe) {
+            <p role="alert" class="text-destructive text-[12px]" data-testid="cfp-form-error">{{ fe }}</p>
+          }
+          <div class="flex gap-2">
+            <button hlmBtn type="submit" [disabled]="busy()" data-testid="cfp-form-submit">
+              @if (editingId() === null) {
+                {{ busy() ? copy.dialog.adding : copy.dialog.add }}
+              } @else {
+                {{ busy() ? copy.dialog.saving : copy.dialog.saveChanges }}
+              }
+            </button>
+            @if (editingId() !== null) {
+              <button hlmBtn variant="outline" type="button" [disabled]="busy()" (click)="cancelEdit()" data-testid="cfp-form-cancel">
+                {{ copy.dialog.cancelEdit }}
+              </button>
+            }
+          </div>
+        </form>
+
+        <hlm-dialog-footer>
+          <button hlmBtn variant="outline" type="button" [disabled]="busy()" (click)="closeDialog()" data-testid="cfp-dialog-close">{{ copy.dialog.close }}</button>
+        </hlm-dialog-footer>
+      }
+    </hlm-dialog-content>
+  </hlm-dialog>
+</section>

@@ -1,10 +1,13 @@
 // @akili-spec changes/replicated-innovation-reminders (RIR-T-6)
-import { ChangeDetectionStrategy, Component, DestroyRef, InjectionToken, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, InjectionToken, OnInit, computed, inject, linkedSignal, output, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HlmButtonImports } from '@spartan/button';
 import { HlmBadge } from '@spartan/badge';
 import { HlmDialogImports } from '@spartan/dialog';
 import { HlmInputImports } from '@spartan/input';
+import { HlmNativeSelectImports } from '@spartan/native-select';
+import { HlmPopover, HlmPopoverContent, HlmPopoverPortal } from '@spartan/popover';
 import { HlmSkeleton } from '@spartan/skeleton';
 import { HlmTableImports } from '@spartan/table';
 import { REPLICATED_INNOVATION_REMINDERS_COPY } from '../../../../../../internationalization/replicated-innovation-reminders.copy';
@@ -18,9 +21,9 @@ import {
   ReminderStatus
 } from '../../../../../../shared/interfaces/replicated-innovation-reminders.interface';
 import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
-import { OffsetAt, localInputToUtcIso, offsetLabel, utcIsoToLocalInput } from './reminder-time.util';
+import { OffsetAt, localInputToUtcIso, offsetLabel, utcClock, utcIsoToLocalInput } from './reminder-time.util';
 import { ReminderPreviewDrawerComponent } from './reminder-preview-drawer.component';
-import { CenterFocalPointsComponent } from './center-focal-points/center-focal-points.component';
+import { DeliveryBarComponent } from './delivery-bar/delivery-bar.component';
 
 /** Override point: the admin's UTC offset AT a given instant (`Date#getTimezoneOffset` semantics, DST aware). Tests pin it; production reads the platform. */
 export const REMINDER_TZ_OFFSET_MINUTES = new InjectionToken<OffsetAt>('REMINDER_TZ_OFFSET_MINUTES');
@@ -41,7 +44,21 @@ interface PendingConfirm {
  */
 @Component({
   selector: 'app-replicated-innovation-reminders',
-  imports: [HlmButtonImports, HlmBadge, HlmDialogImports, HlmInputImports, HlmSkeleton, HlmTableImports, ReminderPreviewDrawerComponent, CenterFocalPointsComponent],
+  imports: [
+    NgTemplateOutlet,
+    HlmButtonImports,
+    HlmBadge,
+    HlmDialogImports,
+    HlmInputImports,
+    HlmNativeSelectImports,
+    HlmPopover,
+    HlmPopoverContent,
+    HlmPopoverPortal,
+    HlmSkeleton,
+    HlmTableImports,
+    ReminderPreviewDrawerComponent,
+    DeliveryBarComponent
+  ],
   templateUrl: './replicated-innovation-reminders.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -51,6 +68,9 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
   private readonly tzResolver = inject(REMINDER_TZ_OFFSET_MINUTES, { optional: true });
 
   protected readonly copy = REPLICATED_INNOVATION_REMINDERS_COPY;
+
+  /** Asks the page to open the Center focal points tab (the unreachable card link). */
+  readonly fixFocalPoints = output<void>();
 
   readonly loading = signal(true);
   readonly loadError = signal<string | null>(null);
@@ -78,12 +98,21 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
    * FAILED (retryable via Send now). SENT and CANCELLED stay as history rows and do not block.
    */
   readonly missingKinds = computed(() => KINDS.filter(k => !this.campaigns().some(c => c.kind === k && OPEN_STATUSES.includes(c.status))));
+  /** Kind selected in the single scheduler (ARP-DD-5): the first missing kind, reset when the selected one stops being missing. */
+  readonly scheduleKind = linkedSignal<ReminderKind[], ReminderKind | null>({
+    source: this.missingKinds,
+    computation: (kinds, prev) => (prev?.value && kinds.includes(prev.value) ? prev.value : (kinds[0] ?? null))
+  });
   /** Kind the admin chose with "Send again": highlights its create form and shows the helper text. */
   readonly sendAgainKind = signal<ReminderKind | null>(null);
-  readonly subtitle = computed(() => {
-    const l = this.list();
-    return l ? this.copy.subtitle(l.phase.phase_name, l.pending_total, l.unreachable_total) : '';
+  /** Earliest open campaign by `scheduled_at` (card 3); view-only, no API. */
+  readonly nextCampaign = computed<ReminderCampaignView | null>(() => {
+    const open = this.campaigns().filter(c => OPEN_STATUSES.includes(c.status));
+    if (!open.length) return null;
+    return open.reduce((a, b) => (Date.parse(b.scheduled_at) < Date.parse(a.scheduled_at) ? b : a));
   });
+  /** Which row-actions overflow menu is open (`<prefix>-<campaign id>`); one at a time. */
+  readonly menuFor = signal<string | null>(null);
 
   /** Offset in force at `at`, so a date past a DST change uses its own offset, not today's. */
   protected readonly offsetAt: OffsetAt = at => (this.tzResolver ? this.tzResolver(at) : at.getTimezoneOffset());
@@ -99,6 +128,12 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
     const iso = local ? localInputToUtcIso(local, this.offsetAt) : null;
     const at = iso ? new Date(iso) : new Date();
     return this.copy.schedule.timeZoneHint(this.zoneName, offsetLabel(this.offsetAt(at)));
+  }
+
+  /** "Sends at HH:MM UTC" for the entered date (that date's own offset); empty until the input is a valid date-time. */
+  utcHintFor(local: string | undefined): string {
+    const iso = local ? localInputToUtcIso(local, this.offsetAt) : null;
+    return iso ? this.copy.schedule.sendsAtUtc(utcClock(iso)) : '';
   }
 
   ngOnInit(): void {
@@ -140,17 +175,39 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
   statusLabel(status: ReminderStatus): string {
     return this.copy.statuses[status] ?? status;
   }
-  statusVariant(status: ReminderStatus): 'default' | 'secondary' | 'destructive' | 'outline' {
+  /** Status badge colours from the design §6.4 token pairs; the badge TEXT carries the status (ARP-NFR-1). */
+  statusClass(status: ReminderStatus): string {
     switch (status) {
       case 'SENT':
-        return 'default';
+        return '!bg-[var(--pr-color-green-50)] !text-[var(--pr-color-green-700)]';
       case 'FAILED':
-        return 'destructive';
+        return '!bg-[var(--pr-color-red-50)] !text-[var(--pr-color-red-300)]';
       case 'PENDING':
-        return 'secondary';
+        return '!bg-[var(--pr-color-blue-50)] !text-[var(--pr-color-blue-700)]';
+      case 'SENDING':
+        return '!bg-[var(--pr-color-yellow-50)] !text-[var(--pr-color-yellow-800)] animate-pulse';
       default:
-        return 'outline';
+        return '!bg-[var(--pr-color-accents-1)] !text-[var(--pr-color-accents-5)]';
     }
+  }
+  /** Zone line above the history table: the admin's zone and its UTC offset today. */
+  protected zoneLine(): string {
+    return this.copy.history.zoneLine(this.zoneName, offsetLabel(this.offsetAt(new Date())));
+  }
+  /** "in 3 days" / "2 hours ago" for the next-send card. */
+  relativeTime(iso: string): string {
+    const diffMs = Date.parse(iso) - Date.now();
+    if (Number.isNaN(diffMs)) return '';
+    const fmt = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+    const abs = Math.abs(diffMs);
+    if (abs >= 86_400_000) return fmt.format(Math.round(diffMs / 86_400_000), 'day');
+    if (abs >= 3_600_000) return fmt.format(Math.round(diffMs / 3_600_000), 'hour');
+    return fmt.format(Math.round(diffMs / 60_000), 'minute');
+  }
+  /** SENT campaign dispatched before its schedule (strictly earlier): an admin used Send now. */
+  sentBeforeSchedule(c: ReminderCampaignView): boolean {
+    if (c.status !== 'SENT' || !c.sent_at) return false;
+    return Date.parse(c.sent_at) < Date.parse(c.scheduled_at);
   }
   /** Scheduled instant in the admin's local time. */
   displayDate(iso: string): string {
@@ -159,6 +216,26 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
   }
 
   // Row state ---------------------------------------------------------------------------------
+  // `show*` = which actions a status allows (rendered or not, ARP-R-5); `can*` adds the in-flight lock
+  // that guards the handlers and disables the visible buttons.
+  showEditOrCancel(c: ReminderCampaignView): boolean {
+    return c.status === 'PENDING';
+  }
+  showPreviewOrSend(c: ReminderCampaignView): boolean {
+    return c.status === 'PENDING' || c.status === 'FAILED';
+  }
+  showSendAgain(c: ReminderCampaignView): boolean {
+    return c.status === 'SENT' && this.missingKinds().includes(c.kind);
+  }
+  toggleMenu(key: string): void {
+    this.menuFor.update(k => (k === key ? null : key));
+  }
+  onMenuState(key: string, state: 'open' | 'closed'): void {
+    if (state === 'closed') this.menuFor.update(k => (k === key ? null : k));
+  }
+  closeMenu(): void {
+    this.menuFor.set(null);
+  }
   canEditOrCancel(c: ReminderCampaignView): boolean {
     return c.status === 'PENDING' && !this.busy();
   }
@@ -174,6 +251,7 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
   sendAgain(c: ReminderCampaignView): void {
     if (!this.canSendAgain(c)) return;
     this.sendAgainKind.set(c.kind);
+    this.scheduleKind.set(c.kind);
     setTimeout(() => (document.querySelector(`[data-testid="rir-draft-${c.kind}"]`) as HTMLElement | null)?.focus());
   }
 
@@ -183,6 +261,11 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
   }
   draftOf(kind: ReminderKind): string {
     return this.drafts()[kind] ?? '';
+  }
+
+  onKindChange(value: string | null | undefined): void {
+    const kind = this.missingKinds().find(k => k === value);
+    if (kind) this.scheduleKind.set(kind);
   }
 
   schedule(kind: ReminderKind): void {
