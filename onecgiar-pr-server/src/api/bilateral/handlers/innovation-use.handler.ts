@@ -169,9 +169,17 @@ export class InnovationUseBilateralHandler
    * without a trace — the caller got a 200 with no mention of the missing row.
    *
    * @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-3, BIF-DD-1, BIF-DD-3). `count_unit`
-   * and `use_nature` are no longer forced to null: the rules keep them on Farmers rows and drop
-   * them elsewhere. The youth check runs on the normalised row, after the households step, so a
-   * households row never trips it. The warnings were already returned by `collectOutcomeWarnings`.
+   * and `use_nature` are no longer forced to null: the rules keep `count_unit` on Farmers rows
+   * only, and `use_nature` on every type. The youth check runs on the normalised row, after the
+   * households step, so a households row never trips it. The warnings were already returned by
+   * `collectOutcomeWarnings`.
+   *
+   * @akili-spec changes/innovation-use-nature-all-actors (INA-T-2, INA-R-5, INA-DD-3 amended):
+   * every returned row carries `use_nature` as an own property (`null` when the payload omits
+   * it). The v2 writer adds the nature to its row match only when `'use_nature' in row`; without
+   * the property a same-type pair where only one row carries it would merge silently there while
+   * the step-9 rule saw two rows. Safe because a bilateral write lands on a result with no active
+   * actors (P-23). `count_unit` is not normalised: Farmers already have an always-on key.
    */
   private async prepareActors(actors?: any[]): Promise<any[]> {
     if (!Array.isArray(actors) || !actors.length) {
@@ -185,7 +193,11 @@ export class InnovationUseBilateralHandler
     normalised.forEach((actor, position) => {
       const index = typeIds[position].index;
       this.validateYouthWithinGender(actor, index);
-      prepared.push({ ...actor, actor_type_id: typeIds[position].actorTypeId });
+      prepared.push({
+        ...actor,
+        use_nature: actor.use_nature ?? null,
+        actor_type_id: typeIds[position].actorTypeId,
+      });
     });
 
     return prepared;

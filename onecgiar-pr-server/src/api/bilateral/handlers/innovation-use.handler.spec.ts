@@ -1,6 +1,8 @@
 import { BadRequestException } from '@nestjs/common';
 import { InnovationUseBilateralHandler } from './innovation-use.handler';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
+import { FindOperator } from 'typeorm';
+import { InnovationUseService } from '../../results-framework-reporting/innovation-use/innovation-use.service';
 
 describe('InnovationUseBilateralHandler', () => {
   const baseDto: any = {
@@ -389,7 +391,7 @@ describe('InnovationUseBilateralHandler', () => {
       ]);
     });
 
-    it('a type-3 row with both codes reaches the writer with both null (BIF-R-7)', async () => {
+    it('a type-3 row with both codes reaches the writer with count_unit null and use_nature kept (BIF-R-7, INA-R-1)', async () => {
       await handler.afterCreate(
         withActors([
           {
@@ -406,7 +408,7 @@ describe('InnovationUseBilateralHandler', () => {
         expect.objectContaining({
           actor_type_id: 3,
           count_unit: null,
-          use_nature: null,
+          use_nature: 'innovation_applied',
         }),
       ]);
     });
@@ -445,14 +447,14 @@ describe('InnovationUseBilateralHandler', () => {
       const warnings = await handler.collectOutcomeWarnings({
         bilateralDto: withActors([
           { actor_type_id: 1, how_many: 5 },
-          { actor_type_id: 3, use_nature: 'innovation_applied', how_many: 5 },
+          { actor_type_id: 3, how_many: 5 },
         ]).bilateralDto,
       });
 
       expect(warnings.map((w) => [w.index, w.code])).toEqual([
         [0, 'actor_count_unit_missing'],
         [0, 'actor_use_nature_missing'],
-        [1, 'actor_use_nature_not_applicable'],
+        [1, 'actor_use_nature_missing'],
       ]);
       expect(innovationUseServiceStub.saveInnovationUse).not.toHaveBeenCalled();
     });
@@ -642,6 +644,152 @@ describe('InnovationUseBilateralHandler', () => {
           innovationUseServiceStub.saveInnovationUse.mock.calls.at(-1);
         expect(dto.innovation_use_level_id).toBe(level);
         expect(dto.innovation_use_level_id).not.toBe(id);
+      },
+    );
+  });
+
+  // @akili-spec changes/innovation-use-nature-all-actors (INA-T-2, INA-R-5, INA-R-1, INA-DD-2, INA-DD-3 amended)
+  // `prepareActors` always carries `use_nature`, so the v2 writer (which adds it to the row match
+  // only when `'use_nature' in row`) merges exactly what the step-9 rule warns about. The writer
+  // here is the REAL `saveAnticipatedInnoUser` over an in-memory `result_actors` table.
+  describe('prepareActors + the real writer (use_nature always carried)', () => {
+    const MERGED_MESSAGE =
+      'Another actor of the same type with the same count_unit and use_nature was sent; the rows are stored as one and the later one wins.';
+    const RESEARCHERS = 2;
+    const OTHER = 5;
+
+    const matches = (stored: any, where: any) =>
+      Object.entries(where).every(([key, expected]) => {
+        if (expected instanceof FindOperator) {
+          return stored[key] === null || stored[key] === undefined;
+        }
+        return stored[key] === expected;
+      });
+
+    const dtoWith = (actors: any[]) => ({
+      ...baseContext,
+      bilateralDto: {
+        ...baseDto,
+        innovation_use: {
+          current_innovation_use_numbers: {
+            innov_use_to_be_determined: false,
+            actors,
+          },
+        },
+      },
+    });
+
+    /** Routes the handler's `saveInnovationUse` stub into the real writer. */
+    const wireRealWriter = () => {
+      const table: any[] = [];
+      let nextId = 1;
+      const writer: any = Object.create(InnovationUseService.prototype);
+      writer._resultActorRepository = {
+        findOne: jest.fn(
+          async ({ where }: any) =>
+            table.find((r) => matches(r, where)) ?? null,
+        ),
+        save: jest.fn(async (payload: any) => {
+          table.push({ ...payload, result_actors_id: nextId++ });
+        }),
+        update: jest.fn(async (id: number, payload: any) => {
+          Object.assign(
+            table.find((r) => r.result_actors_id === id),
+            payload,
+          );
+        }),
+      };
+      innovationUseServiceStub.saveInnovationUse.mockImplementation(
+        async (dto: any, resultId: number, user: any) =>
+          writer.saveAnticipatedInnoUser(
+            resultId,
+            user.id,
+            { actors: dto.actors, organization: [], measures: [] },
+            1,
+            false,
+          ),
+      );
+      return table;
+    };
+
+    const researchers = (over: Record<string, unknown> = {}) => ({
+      actor_type_id: RESEARCHERS,
+      sex_and_age_disaggregation: true,
+      how_many: 5,
+      ...over,
+    });
+
+    it('sets use_nature on every row it returns, null when the payload omits it', async () => {
+      await handler.afterCreate(
+        dtoWith([
+          researchers({ use_nature: 'information_received' }),
+          researchers(),
+          { actor_type_id: 1, how_many: 5, sex_and_age_disaggregation: true },
+        ]),
+      );
+
+      const sent = actorsSentToService();
+      expect(sent.map((a: any) => 'use_nature' in a)).toEqual([
+        true,
+        true,
+        true,
+      ]);
+      expect(sent.map((a: any) => a.use_nature)).toEqual([
+        'information_received',
+        null,
+        null,
+      ]);
+    });
+
+    it('Researchers received + Researchers with no nature: two stored rows and no duplicate warning', async () => {
+      const table = wireRealWriter();
+      const context = dtoWith([
+        researchers({ use_nature: 'information_received', how_many: 5 }),
+        researchers({ how_many: 7 }),
+      ]);
+
+      const warnings = await handler.collectOutcomeWarnings(context);
+      await handler.afterCreate(context);
+
+      expect(warnings.map((w) => w.code)).not.toContain(
+        'actor_duplicate_merged',
+      );
+      expect(table.map((r) => [r.use_nature, r.how_many])).toEqual([
+        ['information_received', 5],
+        [null, 7],
+      ]);
+    });
+
+    it.each([
+      ['Researchers', RESEARCHERS, undefined],
+      ['Other with the same other_actor_type', OTHER, 'Bees'],
+    ])(
+      '%s, both without nature: one stored row (later wins) and one duplicate warning',
+      async (_label, typeId, other) => {
+        const table = wireRealWriter();
+        const context = dtoWith([
+          researchers({
+            actor_type_id: typeId,
+            other_actor_type: other,
+            how_many: 5,
+          }),
+          researchers({
+            actor_type_id: typeId,
+            other_actor_type: other,
+            how_many: 9,
+          }),
+        ]);
+
+        const warnings = await handler.collectOutcomeWarnings(context);
+        await handler.afterCreate(context);
+
+        const dups = warnings.filter(
+          (w) => w.code === 'actor_duplicate_merged',
+        );
+        expect(dups).toHaveLength(1);
+        expect(dups[0].index).toBe(1);
+        expect(dups[0].message).toBe(MERGED_MESSAGE);
+        expect(table.map((r) => r.how_many)).toEqual([9]);
       },
     );
   });
