@@ -197,6 +197,97 @@ describe('InnoDevService.saveAnticipatedInnoUser — age fallback flags (P2-3785
 });
 
 /**
+ * @akili-spec changes/innovation-use-nature-all-actors (INA-T-4, INA-R-21, INA-DD-9)
+ *
+ * The legacy writer persists `count_unit` / `use_nature` through the whitelist helpers, and only
+ * when the key travels: the bilateral editor round-trips the loaded values, while Result Review
+ * (`summary.service.ts:898`) and pre-P25 callers omit them and must not clear a stored answer.
+ */
+describe('InnoDevService.saveAnticipatedInnoUser — unit and nature (INA-T-4)', () => {
+  const buildService = (stored: any = null) => {
+    const actorRepository = {
+      findOne: jest.fn().mockResolvedValue(stored),
+      save: jest.fn().mockResolvedValue({}),
+      update: jest.fn().mockResolvedValue({}),
+    };
+    const service = new InnoDevService(
+      {} as any,
+      actorRepository as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    return { service, actorRepository };
+  };
+
+  /** Runs one actor through the writer and returns what the writer handed to the repository. */
+  const write = async (branch: 'save' | 'update', actor: any) => {
+    const { service, actorRepository } = buildService(
+      branch === 'update' ? { result_actors_id: 77 } : null,
+    );
+    await service.saveAnticipatedInnoUser(9545, 90, {
+      innovatonUse: { actors: [actor] },
+    } as any);
+    return branch === 'update'
+      ? actorRepository.update.mock.calls[0][1]
+      : actorRepository.save.mock.calls[0][0];
+  };
+
+  const branches = [['save'], ['update']] as const;
+
+  it.each(branches)(
+    'the %s branch writes both codes when the keys travel',
+    async (branch) => {
+      const written = await write(branch, {
+        actor_type_id: 1,
+        count_unit: 'households',
+        use_nature: 'innovation_applied',
+      });
+
+      expect(written).toMatchObject({
+        count_unit: 'households',
+        use_nature: 'innovation_applied',
+      });
+    },
+  );
+
+  it.each(branches)(
+    'the %s branch stores an unusable or empty value as NULL',
+    async (branch) => {
+      const written = await write(branch, {
+        actor_type_id: 2,
+        count_unit: 'hectares',
+        use_nature: null,
+      });
+
+      expect(written.count_unit).toBeNull();
+      expect(written.use_nature).toBeNull();
+      const invalid = await write(branch, {
+        actor_type_id: 2,
+        use_nature: 'applied',
+      });
+      expect(invalid.use_nature).toBeNull();
+    },
+  );
+
+  it.each(branches)(
+    'the %s branch leaves both columns out when the keys do not travel',
+    async (branch) => {
+      const written = await write(branch, { actor_type_id: 1, women: 3 });
+
+      expect(written).not.toHaveProperty('count_unit');
+      expect(written).not.toHaveProperty('use_nature');
+    },
+  );
+});
+
+/**
  * P2-3428 — the same writer serves the 2030 Use Projection with `section = 2`. Current-use saves must
  * never match a 2030 row, and 2030 saves must stamp and match `section_id = 2` only.
  */

@@ -2962,7 +2962,9 @@ export class BilateralService {
       sex_and_age_disaggregation: sexAndAgeDisaggregation,
       addressing_demands: a.addressing_demands ?? null,
       // @akili-spec bilateral/innovation-use-actor-follow-up (BIF-T-4, BIF-R-8, P-10): additive.
-      // Only a Farmers row has them stored (the writer's whitelist), the rest read `null`.
+      // @akili-spec changes/innovation-use-nature-all-actors (INA-T-4): `use_nature` is stored for
+      // any actor type, `count_unit` for Farmers only (the writers' whitelist); an unanswered or
+      // unsupported value reads `null`.
       count_unit: a.count_unit ?? null,
       use_nature: a.use_nature ?? null,
     };

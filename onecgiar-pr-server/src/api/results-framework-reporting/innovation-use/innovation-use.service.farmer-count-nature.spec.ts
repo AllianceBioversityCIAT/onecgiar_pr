@@ -46,30 +46,30 @@ describe('InnovationUseService — Farmers count unit / use nature (IFC-R-7)', (
       expect(data.use_nature).toBe('innovation_applied');
     });
 
-    it.each([
-      undefined,
-      null,
-      '',
-      'people',
-      'Households',
-      'households ',
-      5,
-      {},
-    ])('saves an unusable count_unit (%p) as NULL', (value) => {
-      expect(build({ count_unit: value }).count_unit).toBeNull();
-    });
+    it.each([null, '', 'people', 'Households', 'households ', 5, {}])(
+      'saves an unusable count_unit (%p) as NULL',
+      (value) => {
+        expect(build({ count_unit: value }).count_unit).toBeNull();
+      },
+    );
 
-    it.each([undefined, null, '', 'reach', 'INNOVATION_APPLIED', 0, []])(
+    it.each([null, '', 'reach', 'INNOVATION_APPLIED', 0, []])(
       'saves an unusable use_nature (%p) as NULL',
       (value) => {
         expect(build({ use_nature: value }).use_nature).toBeNull();
       },
     );
 
-    it('saves NULL for both when the element is missing', () => {
-      const data = build(undefined);
-      expect(data.count_unit).toBeNull();
-      expect(data.use_nature).toBeNull();
+    // @akili-spec changes/innovation-use-nature-all-actors (INA-T-4, INA-DD-9 amendment):
+    // a key the caller did not send is left out of the payload, so an update keeps the stored
+    // answer; a new row then takes the column default (NULL).
+    it.each([
+      ['the element is missing', undefined],
+      ['the keys are absent', { actor_type_id: 2 }],
+    ])('leaves both columns out when %s', (_label, element) => {
+      const data = build(element);
+      expect(data).not.toHaveProperty('count_unit');
+      expect(data).not.toHaveProperty('use_nature');
     });
 
     it('does not change the other actor fields', () => {
