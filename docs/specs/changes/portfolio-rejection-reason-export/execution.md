@@ -402,3 +402,43 @@ PRE-T-4 is **not** marked `[x]`. Its Disqualifier says "P-10 stays UNVERIFIED an
   - IME and paste guards;
   - a fixture `versionId` ≠ 7 in the repository spec;
   - leader persona `primary-instructions` OUTDATED (fix on `staging`).
+
+### PRE-T-6 — Client: filtering never moves the page scroll — PASS (2026-11-18)
+
+- **Origin:** owner report, in their words: "cuando filtro, hace un salto hasta arriba de la página. Eso debe de solucionarse y no puede haber un salto." Added to `tasks.md` as PRE-T-6 at the moment of the report. Skills `systematic-debugging`, `angular-developer`, `spartan`; effort `xhigh`.
+- **Root cause** (proven in a real browser by wrapping `window.scrollTo`, which logged `{args:[0,0]}` from the router-events subscriber):
+  - `shared/components/external-tools/external-tools.component.ts` calls `window.scrollTo(0, 0)` on every `NavigationStart`.
+  - The page's URL mirror (`portfolio-overview.component.ts`, `router.navigate([], { queryParams, queryParamsHandling: 'merge', replaceUrl: true })`) fires on every selection change, so every tick, from the table panel or the top bar, scrolled to the top.
+  - Candidates (a) to (d) were rejected with measurements: without the shell mounted, a tick moved scrollY 3621 → 3660 with the detail top unchanged.
+- **Fix (opt-in, +41/−5, 6 files):**
+  - New `shared/constants/router-navigation.constants.ts` (`KEEP_SCROLL_NAVIGATION_INFO = { keepScroll: true }`, `keepsScroll()`).
+  - The shell skips the reset only when `router.currentNavigation()?.extras?.info` carries it.
+  - The page's URL mirror passes that `info`. Specs updated for both. Page `CLAUDE.md` re-stamped, with the gotcha added.
+  - Pusher, gtag and every other page are unchanged. `info` is transient and never written to `history.state`. Back/forward still resets.
+- **CT (throwaway; real shell, Router and Brain; 150-row fixtures; 1280×720).** Red on unfixed code:
+  ```
+  AssertionError: scrollY after (A after tick funding) vs before 3621: expected 0 to be above 3221
+  AssertionError: scrollY after (C after Space) vs before 3623: expected 0 to be above 3223
+  AssertionError: D after: expected 0 to be at least 106
+  AssertionError: E after: expected 0 to be at least 106
+  ```
+  Green with the fix (`5 passing`):
+
+  | Case | scrollY before → after |
+  |---|---|
+  | Detail tick (detail top −27 → −27) | 3621 → 3660 |
+  | Space | 3623 → 3662 |
+  | Top-bar Funding | 156 → 156 |
+  | Top-bar Typology | 156 → 156 |
+
+  Falsifier: a plain `scrollTo(0,0)` gives `5 failing`; restored, `5 passing`.
+- Verification: Jest `25 passed / 663 passed`; `tsc` exit 0; lint clean; build exit 0.
+- Evidence re-run (Leader inline): identical → **VERIFIED**.
+- Reviewer (akili-reviewer, T3, high): **PASS**.
+  - The fix is at the root cause and opt-in. `currentNavigation` is the public Angular 21 signal (`getCurrentNavigation()` is deprecated since 20.2), and `extras.info` is the public transient carrier.
+  - Popstate navigations carry no `info`, so they still reset. Only `portfolio-overview` opts in, and `keepsScroll` is a strict guard.
+  - `detail-filters` and the 0-results mount rule are untouched. No advisory (diff under 50 LOC).
+- **Recorded for the owner (not done; not in this task):**
+  1. **0-row case:** the block unmounts by design (§8.5), the document shrinks (5353 → 2496 px) and the browser clamps scrollY to the new bottom (3662 → 1776). It is not a jump to the top, but the no-match panel ends up above the viewport. A `scrollIntoView` to the no-match panel is available if the owner wants it.
+  2. **Other pages with the same reset:** `bilateral-results-list`, `bilateral-review`, `dashboard-lab`, `outcome-indicator` and `bilateral-overview` mirror state with `router.navigate([], …)` and very likely have the same jump. Opting them in is one line each.
+- runtime events: none. spawns: implementer 118 calls, 310,421 tokens, ended complete; reviewer 5 calls, 37,180 tokens, ended complete.

@@ -10,6 +10,7 @@ import { HlmSeparatorImports } from '@spartan/separator';
 import { HlmTooltip } from '@spartan/tooltip';
 import { PORTFOLIO_OVERVIEW_COPY } from '../../../../internationalization/portfolio-overview.copy';
 import { STATUS_GUIDE_URL } from '../../../../shared/constants/portfolio-links.constants';
+import { KEEP_SCROLL_NAVIGATION_INFO } from '../../../../shared/constants/router-navigation.constants';
 import { PortfolioCentersBlockComponent } from './components/centers-block/centers-block.component';
 import { FilterBarComponent } from './components/filter-bar/filter-bar.component';
 import { PortfolioResultsDetailComponent } from './components/results-detail/results-detail.component';
@@ -168,14 +169,15 @@ export class PortfolioOverviewComponent {
     });
 
     // Mirror the selection to the URL: replaceUrl (no history entry), other query params kept by `merge`,
-    // an emptied dimension removed with `null`.
+    // an emptied dimension removed with `null`. `info` marks it a same-page
+    // mirror: without it the shell resets the scroll to the top on every tick (PRE-T-6).
     effect(() => {
       if (!this.urlReady()) return;
       const params = toQueryParams(this.data.selection());
       const queryParams: Record<string, string | null> = {};
       for (const dimension of FILTER_DIMENSIONS) queryParams[dimension] = params[dimension] ?? null;
       untracked(() => {
-        void this.router.navigate([], { queryParams, queryParamsHandling: 'merge', replaceUrl: true });
+        void this.router.navigate([], { queryParams, queryParamsHandling: 'merge', replaceUrl: true, info: KEEP_SCROLL_NAVIGATION_INFO });
       });
     });
   }

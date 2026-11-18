@@ -7,6 +7,7 @@ import { ApiService } from '../../services/api/api.service';
 
 class MockRouter {
   public events = new Subject<any>();
+  public currentNavigation = jest.fn(() => null as any);
 }
 
 class MockPusherService {
@@ -76,6 +77,25 @@ describe('ExternalToolsComponent', () => {
     expect(pusher.firstUser).toBe(false);
     expect(pusher.secondUser).toBeNull();
     expect(gtagMock).toHaveBeenCalled();
+  });
+
+  it('PRE-T-6: a navigation that opts out with keepScroll does not reset the scroll, a plain one does', () => {
+    const scrollSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => undefined as any);
+    scrollSpy.mockClear();
+    (global as any).gtag = jest.fn();
+
+    router.currentNavigation.mockReturnValue({ extras: { info: { keepScroll: true } } });
+    (router.events as Subject<any>).next(new NavigationStart(1, '/portfolio-overview?status=editing'));
+    expect(scrollSpy).not.toHaveBeenCalled();
+    // everything else on the NavigationStart still runs
+    expect(pusher.start).toHaveBeenCalled();
+
+    router.currentNavigation.mockReturnValue({ extras: { info: { somethingElse: true } } });
+    (router.events as Subject<any>).next(new NavigationStart(2, '/portfolio-overview'));
+    router.currentNavigation.mockReturnValue(null);
+    (router.events as Subject<any>).next(new NavigationStart(3, '/home'));
+    expect(scrollSpy).toHaveBeenCalledTimes(2);
+    expect(scrollSpy).toHaveBeenCalledWith(0, 0);
   });
 
   it('should catch error when gtag throws', () => {

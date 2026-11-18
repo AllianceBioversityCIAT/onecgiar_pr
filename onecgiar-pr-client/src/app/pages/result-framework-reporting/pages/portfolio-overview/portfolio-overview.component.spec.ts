@@ -875,6 +875,8 @@ describe('PortfolioOverviewComponent', () => {
       const [, extras] = navigate.mock.calls[navigate.mock.calls.length - 1];
       expect(extras.replaceUrl).toBe(true);
       expect(extras.queryParams['status']).toBe('rejected');
+      // PRE-T-6: the shell resets the scroll on every NavigationStart unless the navigation says it is a same-page mirror.
+      expect(extras.info).toEqual({ keepScroll: true });
     });
 
     it('S-10.1: no match shows the panel with Clear all, keeps the ToC KPI block, and never the phase-empty text', () => {
