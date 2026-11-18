@@ -1933,5 +1933,102 @@ describe('TypeInnovationUseComponent', () => {
       }
       expect(block).not.toMatch(/required|REQUIRED/);
     });
+
+    /**
+     * @akili-spec changes/innovation-use-nature-all-actors (INA-T-8 households lock) — HITL on prtest (result 10122): a
+     * Farmers card answered Households still showed the Women/Men grid, because the "does not apply" tick was set once and
+     * stayed editable. While the unit is Households the tick is locked ON; a loaded row that disagrees is normalised.
+     */
+    describe('households lock (INA-T-8 reopened)', () => {
+      const householdsRow = (over: Record<string, unknown> = {}) => ({
+        actor_type_id: FARMERS,
+        count_unit: 'households',
+        sex_and_age_disaggregation: false,
+        women: 5,
+        men: 0,
+        is_active: true,
+        ...over
+      });
+
+      it.each([[false], [0], [null]])('(b) loads a Households row with the tick %p: ticked, grid cleared, the women/men sum becomes how_many', untick => {
+        loadActors([householdsRow({ sex_and_age_disaggregation: untick })]);
+        expect(component.visibleActors[0]).toMatchObject({
+          sex_and_age_disaggregation: true,
+          women: null,
+          men: null,
+          women_youth: null,
+          men_youth: null,
+          how_many: 5,
+          age_disaggregation_not_available: null,
+          youth_split_applied_by_system: null
+        });
+      });
+
+      it('(b) does not wipe a total the reporter already typed on the loaded Households row', () => {
+        loadActors([householdsRow({ women: 5, men: 6, how_many: 40 })]);
+        expect(component.visibleActors[0]).toMatchObject({ sex_and_age_disaggregation: true, women: null, men: null, how_many: 40 });
+      });
+
+      it('(b) a stored 0 beside a Women/Men grid is an unset total: the grid sum is kept as how_many', () => {
+        loadActors([householdsRow({ women: 5, men: 6, how_many: 0 })]);
+        expect(component.visibleActors[0]).toMatchObject({ sex_and_age_disaggregation: true, women: null, men: null, how_many: 11 });
+      });
+
+      it('(b) normalises on load without saving: the next user save carries it', () => {
+        loadActors([householdsRow()]);
+        expect(autoSave.schedulePayload).not.toHaveBeenCalled();
+        component.onFieldChange();
+        expect(lastPayload().innovatonUse.actors[0]).toMatchObject({ count_unit: 'households', sex_and_age_disaggregation: true, how_many: 5, women: null });
+      });
+
+      it.each([
+        ['an Individuals row', { count_unit: 'individuals', women: 5, men: 6, how_many: 11 }],
+        ['a Researchers row with no unit', { actor_type_id: RESEARCHERS, count_unit: null, women: 5, men: 6, how_many: 11 }],
+        ['a Farmers row not yet answered', { count_unit: null, women: 5, men: 6, how_many: 11 }]
+      ])('(d) leaves %s as loaded: grid kept, tick still off', (_label, over) => {
+        loadActors([householdsRow(over)]);
+        expect(component.visibleActors[0]).toMatchObject({ sex_and_age_disaggregation: false, women: over.women, men: over.men, how_many: over.how_many });
+      });
+
+      it('(a) picking Households locks the tick ON: it is a Households row, ticked, the grid stays out', () => {
+        loadActors([{ actor_type_id: FARMERS, women: 5, men: 6, how_many: 11, sex_and_age_disaggregation: false, is_active: true }]);
+        const actor = component.visibleActors[0];
+        expect(component.isHouseholdsRow(actor)).toBe(false);
+        component.selectCountUnit(actor, 'households');
+        expect(component.isHouseholdsRow(actor)).toBe(true);
+        expect(actor.sex_and_age_disaggregation).toBe(true);
+      });
+
+      it('(c) Individuals unlocks the tick without un-ticking it; unticking then brings the grid back', () => {
+        loadActors([householdsRow()]);
+        const actor = component.visibleActors[0];
+        expect(component.isHouseholdsRow(actor)).toBe(true);
+        component.selectCountUnit(actor, 'individuals');
+        expect(component.isHouseholdsRow(actor)).toBe(false);
+        expect(actor.sex_and_age_disaggregation).toBe(true);
+        actor.sex_and_age_disaggregation = false;
+        component.onDisaggregationChange(actor);
+        expect(lastPayload().innovatonUse.actors[0]).toMatchObject({ count_unit: 'individuals', sex_and_age_disaggregation: false });
+      });
+
+      it('leaving Farmers clears the unit, which unlocks the tick and leaves it ticked (INA-DD-10)', () => {
+        loadActors([householdsRow()]);
+        const actor = component.visibleActors[0];
+        actor.actor_type_id = RESEARCHERS;
+        component.onActorTypeChange(actor);
+        expect(component.isHouseholdsRow(actor)).toBe(false);
+        expect(actor.sex_and_age_disaggregation).toBe(true);
+      });
+
+      it('(a) markup: the tick is bound read-only to the Households row and is not hidden', () => {
+        const template = html();
+        const card = template.slice(template.indexOf('<ng-template #actorCard'), template.indexOf('<ng-template #organizationCard'));
+        const start = card.indexOf('label="Sex and age disaggregation does not apply"');
+        const tick = card.slice(card.lastIndexOf('<app-pr-checkbox', start), card.indexOf('</app-pr-checkbox>', start));
+        expect(tick).toContain('[readOnly]="isHouseholdsRow(actor)"');
+        expect(tick).toContain('[(ngModel)]="actor.sex_and_age_disaggregation"');
+        expect(card).not.toContain('@if (!isHouseholdsRow');
+      });
+    });
   });
 });

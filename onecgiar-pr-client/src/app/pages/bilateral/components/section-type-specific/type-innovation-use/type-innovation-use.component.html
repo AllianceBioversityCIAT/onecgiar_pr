@@ -426,9 +426,12 @@
          checkbox, which is also what every reader of `sex_and_age_disaggregation` expects —
          ticked (`true`) means the breakdown does NOT apply and only "How many" is reported.
          The Yes/No it replaces saved "Yes, available" as that same `true`, the opposite. -->
+    <!-- @akili-spec changes/innovation-use-nature-all-actors (INA-T-8 households lock): Households is a single-total unit,
+         so the tick shows ON and is disabled (`readOnly`) while it is the answer; Individuals / leaving Farmers unlocks it. -->
     <app-pr-checkbox
       label="Sex and age disaggregation does not apply"
       [required]="false"
+      [readOnly]="isHouseholdsRow(actor)"
       [(ngModel)]="actor.sex_and_age_disaggregation"
       (ngModelChange)="onDisaggregationChange(actor)">
     </app-pr-checkbox>

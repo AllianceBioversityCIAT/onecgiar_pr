@@ -486,3 +486,173 @@ All paths are under `onecgiar-pr-server/`.
 
 Remaining: T-7 (SQL, needs `SHOW CREATE FUNCTION` from Santiago), T-10 (fetcher docs + prod promotion), T-11 (TEST E2E by Daniel, prod).
 
+### INA-T-7 — Green check: `use_nature` on every type (SQL) — SQL authored, PASS; **awaiting HITL apply on prtest**
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-18 |
+| Covers | INA-R-10 · INA-AC-7 (pending run) · DD-7 |
+| Skills / effort | `systematic-debugging` · `high` |
+
+- **Step 1 (Leader, inline)**
+  - Santiago pasted the `SHOW CREATE FUNCTION` output from prtest (DEFINER `prdbusertst`). It is saved verbatim as `sql/validation_innovation_use_P25.before.sql`.
+  - The live body was compared with the archived IUY `after.sql`. The comparison ignored whitespace and the DEFINER (`diff -w` on `sed`-normalised bodies). Result: **IDENTICAL**. **P-16 is settled (verified 2026-11-18).**
+- **Attempt 1 (Implementer)**
+  - Files created:
+    - `sql/validation_innovation_use_P25.after.sql`
+    - `sql/validation_innovation_use_P25.after.body-only.sql`
+    - `sql/checks.sql` (V0, S1a/b, S2, S3a/b, S4, S5)
+  - The §12.1 impact query was corrected:
+    - `COALESCE(source)`
+    - `NOT (actor_type_id <=> 1)`
+    - invalid codes
+    - `section_id IN (1,2)`
+    - the to-be-determined gate per section
+    - a split by status
+    - a "green today" condition
+- **Evidence re-run (Leader inline): VERIFIED.** `diff -w before after` shows only:
+  - the header;
+  - the IFC-R-6 comment wording;
+  - in each section, the `OR use_nature …` lines replaced by closing check (a) and adding the INA-R-10 check (b) on the same `section_id`.
+- **Reviewer, lens function: PASS.**
+  - Check (b) has no actor-type filter and handles NULL correctly.
+  - Check (a) is still Farmers-only.
+  - Both checks sit inside the 2026 W1/W2 gate and the `actors EXISTS` gate.
+  - Nesting is correct (IF 29 → 31).
+  - The DEFINER note is present.
+  - The `body-only` body matches `after`.
+- **Reviewer, lens `checks.sql`: PASS.**
+  - Strictly read-only.
+  - Names match the entities.
+  - MySQL 5.7/8 syntax.
+  - S5 applies the same gates as the function.
+  - S3 and S4 prove their claims.
+  - Every function call is bounded by `result_type_id = 2` and phase ≥ 2026.
+- runtime events: none
+- spawns (none reported by the host):
+
+  | Spawn | Calls | Tokens | Ended |
+  |---|---|---|---|
+  | Implementer | 22 | ~105k | complete |
+  | Reviewer, lens function | 8 | ~42k | complete |
+  | Reviewer, lens `checks.sql` | 4 | ~47k | complete |
+
+**ADVISORY (recorded, not tasks):**
+- RELIABILITY: more than one active `results_innovations_use` row would overcount the `actor_rows` columns.
+- READABILITY: the S5 status CASE names only statuses 1–3.
+- READABILITY: S2 deliberately includes Farmers.
+- RISK: on prod, uncomment the id filter in S2 before running.
+
+**Status: `[~]`.** The DoD needs the before/after counts from prtest. Santiago runs `checks.sql`, applies `after.sql` once cut 2 is live on TEST, then re-runs `checks.sql`.
+
+### Release of cut 2 to TEST (part of INA-T-11) — 2026-11-18, user go-ahead "si, sube la entrega 2 a TEST"
+
+- **Push:** `qa-development-2026-ss` pushed (`1fe11a266..6b49e3af3`). It was merged into `performance-refactor` in a separate worktree. The merge was clean, no conflicts. Pushed `3ec1b5f2c..a111f7af3`.
+- **CI run 44360904023, attempt 1:** `backend checks` FAILED.
+  - Result: `Tests: 7383 passed, 7383 total · Test Suites: 2 failed, 397 passed`.
+  - The 2 failed suites (`qa-catalog.module.spec`, `app.module.spec`) "failed to run". Each jest worker was killed (SIGKILL / SIGTERM) at about 2 GB heap: an out-of-memory on the CI runner, not a test failure.
+  - Cut 2 changes only client files and spec docs. The frontend checks passed.
+- **Fix:** re-ran only the failed jobs (`gh run rerun --failed`).
+- **Attempt 2:** all green.
+  - Backend checks ✓
+  - Publish images ✓
+  - Jenkins `prms-reporting-tool-dev-cd` triggered ✓
+- **Follow-up (not done, needs owner OK):** CI jest has no memory bound, so the OOM can recur. Proposed fix: `npm run test:cov -- --ci --maxWorkers=2 --workerIdleMemoryLimit=1G` in `.github/workflows/reporting-tool-dev-cicd.yml`. This file is a shared pipeline.
+
+**INA-T-7 — prtest BEFORE run of `checks.sql`** (Santiago, 2026-11-18, from screenshots plus the CSV `sql/evidence/prtest-before-S3b.csv`)
+
+| Check | Result |
+|---|---|
+| V0 | `DEFINER prdbusertst@%`, `LAST_ALTERED 2026-11-12 11:44:14`, `has_ina_r_10 = 0` (the IUY version is live) |
+| S1a | `results_affected 3 · actor_rows 4 · green_now 1` |
+| S1b | 11026 (status 1, validation **1**); 11464 (status 1, validation 0); 12100 (status 1, validation 0) |
+| S2 | 6 rows, listed below |
+| S3a | W3/API: `42 results · 47 rows` |
+| S3b | 42 ids saved as CSV: 31 with validation 1, 11 with validation 0. They must be identical AFTER |
+| S4 | Not run before |
+| S5 | Not run. S1a already gives the OQ-1 impact: **1 result (11026, Editing) goes from green to not green**; the other 2 were already not green |
+
+S2 rows:
+
+| Result | Section | Actor row (type) | Validation |
+|---|---|---|---|
+| 11026 | 2 | 1052 (type 2) | 1 |
+| 11026 | 2 | 1054 (type 3) | 1 |
+| 11357 | 1 | 1060 (Farmers) | 0 |
+| 11464 | 1 | 1080 (type 2) | 0 |
+| 11619 | 2 | 1099 (Farmers) | 0 |
+| 12100 | 1 | 1170 (type 5) | 0 |
+
+**INA-T-7: prtest AFTER run of `checks.sql`.** Santiago applied `after.sql` on prtest on 2026-11-18. Source: his screenshots, plus the S3b ids transcribed into `sql/evidence/prtest-after-S3b.csv`.
+
+| Check | Result | Expected | OK |
+|---|---|---|---|
+| V0 | `has_ina_r_10 = 1`, `LAST_ALTERED 2026-11-18 18:27:21`, DEFINER `prdbusertst@%` | 1 | ✅ |
+| S1a | `results_affected 3 · actor_rows 4 · green_now 0` | green_now 0 (was 1) | ✅ |
+| S1b | 11026 → 0 (was **1**); 11464 → 0; 12100 → 0 | all 0 | ✅ |
+| S2 | same 6 rows, all validation 0 | answering the rows makes the result green | ✅ (manual step pending on the form) |
+| S3a | `42 · 47` | unchanged | ✅ |
+| S3b | `diff` before/after over 42 ids: **IDENTICAL** (31 × 1, 11 × 0) | W3 unaffected | ✅ |
+| S4 | `results_with_null_count_unit 2 · farmer_rows 2 · green_now 0` | green_now 0 | ✅ |
+| S5 | Editing: `results_with_missing_nature 3 · green_today_will_turn_not_green 0 · actor_rows 4` | 0 after | ✅ |
+
+- **OQ-1 impact on prtest:** exactly **1** result (11026, Editing, two non-Farmers rows in the 2030 block) went from green to not green.
+- **INA-AC-7:** met on prtest.
+- **Remaining:** apply on prod at the prod release. Use the prod DEFINER, and run `checks.sql` before and after.
+
+### INA-T-7: PASS (prtest)
+
+- **Closing records:**
+  - Reviewer function lens: PASS.
+  - Reviewer `checks.sql` lens: PASS.
+  - Leader re-runs: VERIFIED (inline `diff -w` and the scripted S3b comparison).
+  - HITL before/after run on prtest: as tabled above.
+- **Prod application:** deferred to INA-T-11, the prod window.
+
+### INA-T-8: REOPENED (HITL finding on prtest, 2026-11-18)
+
+**Finding.** Angel, result 10122, bilateral editor:
+- A Farmers row answered **Households** still showed the Women/Men grid.
+- "Sex and age disaggregation does not apply" was unticked, and Women had 5 entered.
+
+**Root cause** (`type-innovation-use.component.ts:806-813`):
+- `selectCountUnit` ticks the box once when Households is picked.
+- The box stays editable, so unticking it brings back the grid on a Households row.
+- A row loaded with households and no tick is never normalised.
+
+This contradicts "Households = total only". The shared form already enforces it through `isHouseholdsRow`.
+
+**Not a defect.** The Youth value 3 for Women 5 is the pre-existing 50/50 fallback of "Age disaggregation not available".
+
+**Decision (user, "corrije pronto").** Fix inside INA-T-8, as attempt 3. The design is amended (see `design.md`, amendment of 2026-11-18 on households).
+
+**INA-T-8 attempt 3 (households lock): PASS**
+
+- **Implementer** (effort `xhigh`). Files changed in `…/type-innovation-use/`: `.ts`, `.html`, `.spec.ts`, `CLAUDE.md`.
+  - `isHouseholdsRow` checks `count_unit === 'households'`.
+  - `normalizeHouseholdsActors()` runs once in `loadData`, after `hydrateStoredAnswers`.
+  - `clearBreakdown` was extracted from `onDisaggregationChange` with no behaviour change.
+  - On load, the total is the typed `how_many` when it is non-zero, otherwise women + men.
+  - The `.html` adds `[readOnly]="isHouseholdsRow(actor)"` on `app-pr-checkbox`. Its native input binds `[disabled]` to that value.
+- **Red run:** 6 assertion failures (5 load-normalisation, 1 markup) and 3 "not a function" failures. **Green:** folder 180/180, eslint clean.
+- **Reviewer (full): PASS.**
+  - `pr-checkbox.component.html:6` really disables the native input, so the tick cannot be removed.
+  - Falsifier rows (a) to (d) hold.
+  - No data is destroyed.
+  - The 2030 block is not rendered, so leaving it out is safe.
+  - The `CLAUDE.md` text matches the code.
+- **Evidence re-run (Leader): VERIFIED.**
+  - `npx jest src/app/pages/bilateral src/app/shared/components/innovation-use-form`: 70 suites, 3049/3049.
+  - `npx tsc --noEmit -p tsconfig.app.json`: exit 0.
+  - `npx ng lint --quiet`: "All files pass linting", exit 0.
+- **ADVISORY:**
+  - No component test covers the `readOnly` input on its own. The risk is low, because it shares one expression with a path the contract tests already cover.
+  - The normalised row reaches the DB only on the next user save. Until then, a row like 10122 stays stored unticked.
+  - Inactive rows are also visited by the normaliser. This is harmless.
+- **spawns:**
+
+  | Role | Calls | Tokens | Ended | Reported by host |
+  |---|---|---|---|---|
+  | Implementer | 34 | ~183k | complete | no |
+  | Reviewer | 14 | ~96k | complete | no |
+

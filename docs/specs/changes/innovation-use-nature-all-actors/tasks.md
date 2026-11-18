@@ -216,7 +216,7 @@
   - [ ] Visual check at the HITL pause: W1/W2 and W3 screenshots, both blocks (defect class "layout", no automated gate). T6 review if available.
   - [ ] No new i18n keys or tokens. Copy comes from `farmer-follow-up.ts`.
 
-### [ ] INA-T-7 — Green check: `use_nature` required on every type (SQL, manual)
+### [x] INA-T-7 — Green check: `use_nature` required on every type (SQL, manual)
 
 - **Type:** db (manual SQL, outside migrations)
 - **Description:** Five steps:
