@@ -243,3 +243,87 @@
 - Decisions: `LINK_CELL` derived from `EXPORT_COLUMNS` (necessary consequence of DD-6). Effort bumped medium → high for attempt 2.
 - Running totals vs budget: tasks 3/4 · LOC ≈ 860 (204 + 465 + 191) vs 530 (overrun approved by the owner on 2026-11-18) · review rounds 5/6.
 - Final verification: green.
+
+### PRE-T-4 — Verification on PRTest and in a real browser — in progress (local portion)
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-18 |
+| Effort | high |
+| Scope run | Local only. PRTest deploy is out of reach for the Leader (`docs/infrastructure.md` §6 boundary rule: cloud is governed, never deployed by agents). No local backend (`onecgiar-pr-server/.env` absent). |
+
+**Spawn 1 (local verification)**
+
+- Production build `cd onecgiar-pr-client && npm run build` → **PASS** ("Output location: …\dist\onecgiar-pr-client"). This is the only gate that type-checks Angular templates (`src/CLAUDE.md` §21.7); no error in the PRE-T-2/T-3 templates. Warnings, pre-existing: initial bundle 2.56 MB over the 2.00 MB budget; Sass `@import` deprecation; non-ESM `url` (`@mlc-ai/web-llm`) and `pdfjs-dist`.
+- Excel file probe (throwaway script in the session scratchpad; repo `exceljs`, same widths and link cell as `ExportTablesService.exportExcel`, written then read back) → **PASS**: `columns 16 order_ok true`, `reason_len 32767` (40,000-char comment cut with `slice(0, 32767)`), `link_hyperlink true header16 Link`. This proves the file shape, not real data.
+- Cypress CT: **blocked**, because the Cypress 14.5.1 binary was not installed (`Cypress executable not found at: …\Cypress\Cache\14.5.1\Cypress\Cypress.exe`).
+- Leader environment fix (local, outside the repo): `npx cypress install` downloaded the binary, but its Node unzip stalled at 0 % under Node 26 (`cypress:cli:unzip unzipping with node.js (slow)` with no progress). The downloaded `%LOCALAPPDATA%\Temp\cypress-14004.zip` was extracted with `tar -xf` into `%LOCALAPPDATA%\Cypress\Cache\14.5.1`, and `npx cypress verify` reported "Verified Cypress!". No repo or config change.
+
+**Spawn 2 (continuation: real-browser checks, throwaway CT harness; harness and Cypress output deleted afterwards)**
+
+The harness mounted `app-portfolio-results-detail` with `app-portfolio-detail-filters` projected (page bindings, 2 funding + 6 status options, real global styles; `cypress-real-events`). Result: 8/8 harness assertions passed. A first run's raw-`top` tolerance on Search (40 px tall vs 27 px buttons) was the harness's own check and was changed to a centre-y check.
+
+| Check | 1280×800 | 768×1024 | Result |
+|---|---|---|---|
+| Toolbar on one row | Search `[777.2, 38.8, 260×40]`, Filters `[1049.2, 45.3, 94.2×27]`, Export `[1155.4, 45.3, 87.6×27]` | Search `[261.1, 38.8, 260×40]`, Filters `[533.1, 45.3, 95.8×27]`, Export `[640.9, 45.3, 90.1×27]` (still one row; no wrap needed; no rect intersects) | PASS |
+| No page horizontal scroll | `scrollWidth` 1280 = `innerWidth` 1280 | 768 = 768 | PASS |
+| Popover inside viewport | panel `[868.8, 84.5 → 1137.9, 393.0]` | `[355.9, 86.5 → 621.9, 401.2]` (list scrolls inside `max-h-[280px]`) | PASS |
+| Filters looks like Export | height 27 px, border-top 1 px, radius 6 px, font 10.5 px, all equal | same | PASS |
+| Enter opens, focus moves in | `aria-expanded` false → true; focus on the hidden `brnCommandInput` (`aria-label` "Filters") | — | PASS |
+| Enter toggles | `toggled` `{"dimension":"status","value":"2"}` (exactly those keys) | — | PASS |
+| **Space toggles** | real Space emitted **nothing**; it was typed as " " into the hidden command input, which filtered the list by " ", moved the active item, and made the next Enter toggle `status/2` instead of the ArrowDown-selected `funding-bil` | — | **FAIL** |
+| Escape closes, focus returns | `aria-expanded` → false, panel gone, `document.activeElement` = `detail-filters-trigger` | — | PASS |
+| Disabled does not open | trigger disabled; a forced click left `aria-expanded` false, no panel | — | PASS |
+
+- Screenshots (kept): `docs/specs/changes/portfolio-rejection-reason-export/evidence/filters-open-1280.png`, `evidence/filters-open-768.png`.
+- spawns: worker 1: 17 calls, 143,825 tokens, ended partial (Cypress blocked); worker 2: 15 calls, 149,867 tokens, ended complete.
+
+### Defect found by PRE-T-4: Space does not toggle and pollutes the hidden filter (PRE-R-6)
+
+- **Evidence:** the table above, "Space toggles" row (real browser, real Brain Command).
+- **Rule violated:** `requirements.md` PRE-R-6 *Scenario: Keyboard* ("Tab and Space toggle the options") and `design.md` §8.1 Keyboard ("arrows move, Enter/Space toggle"). Reading of the clause: design §8.1 is the concrete statement (arrows move, Enter/Space toggle). Tab moves focus, as in any listbox; the requirement's "Tab and Space" is read as "focus can reach the options and Space toggles them".
+- **Root cause:** `detail-filters.component.html:37` keeps the visually hidden `<input brnCommandInput>` as the keyboard target (copied from the top-bar `filter-multi-select`, html line 7: "The search input is always rendered so the keyboard has a target"). Brain Command treats Space as a typed character: it filters the list by " " and does not activate the item. Jest could not see it because Brain is mocked there (PRE-T-3 Disqualifier).
+- **Why the gate missed it:** PRE-T-3's Escape and focus cases ran against the Brain mock; the Reviewer flagged real overlay keyboard behavior as a PRE-T-4 browser check (ADVISORY), and PRE-T-4 found it.
+- **Leader decision (owner delegation):** reopen **PRE-T-3 as `[~]`** and run its rework **attempt 3** (one attempt left of 3), at effort `xhigh`: Space on the active item toggles it and is never typed into the hidden input, and the hidden input does not filter this non-searchable list. Real-browser proof is required (a Cypress CT check). Jest cannot prove it.
+- **Same-pattern note (not this spec's scope, recorded only):** the top-bar `filter-multi-select` uses the same hidden-input pattern for its non-searchable dimensions and very likely has the same Space behavior. Not fixed here (it is not on any approved task); the owner should decide whether it earns a separate change.
+
+### Scope addition: PRE-T-5 (owner-approved, 2026-11-18)
+
+- The owner asked, in their words, "arregla también el dropdown de la barra superior". That approves the same Space fix for the top-bar `filter-multi-select`, previously recorded above as out of scope.
+- Added to `tasks.md` as **PRE-T-5**, which depends on PRE-T-3 attempt 3 so it reuses the same mechanism. It runs after PRE-T-3 closes, not in parallel (same Jest folder, same Brain pattern). Searchable dimensions keep typing into their visible search box; only non-searchable dimensions gain Space-toggle and a non-filtering hidden input.
+
+### PRE-T-3 — reopened, attempt 3 — PASS (2026-11-18)
+
+- Trigger: PRE-T-4 real-browser defect (Space; see *Defect found by PRE-T-4*). Effort `xhigh` (bump after the reopening; T2 ceiling, held). Skills `angular-developer`, `spartan`.
+- Files changed (on top of `36c3421a5`; 4 files, +53/−7): `components/detail-filters/detail-filters.component.{html,ts,spec.ts}`, page `CLAUDE.md` (Verified stamp in place, 120 lines).
+- Mechanism:
+  - `(keydown)="onInputKey($event)"` on the hidden `brnCommandInput`. It lets arrows, Enter, Escape, Tab, Backspace and ctrl/meta/alt combos through, and calls `preventDefault()` on every printable key.
+  - For Space it also runs `keyManager.activeItem?.selected.emit()`. That is the body of Brain's `selectActiveItem()`, which Enter runs through the host `keydown.enter` (`spartan-ng-brain-command.mjs:88-90`, `:116`). `selectActiveItem` itself is `protected`, so it cannot be called.
+  - `[filter]="matchAll"` (`() => true`, a public signal input, `d.ts:31`) on `brnCommand`, so no character can hide options.
+- Red (throwaway Cypress CT, real events, unfixed code): `AssertionError: Timed out retrying after 10000ms: expected toggled to have been called exactly once with arguments "{\"dimension\":\"funding\",\"value\":\"bil\"}", but it was never called`.
+- Green (same harness, final code, `1 passing`):
+  - Enter opens and lists 8 options.
+  - ArrowDown reaches `funding-bil`, and Space emits `{"dimension":"funding","value":"bil"}` once.
+  - All 8 options remain, the active item is unchanged, and the input value is `''`.
+  - ArrowDown then Enter emits `{"dimension":"status","value":"1"}`.
+  - Typing `a` or Backspace leaves the options and the active item unchanged.
+  - Escape closes, and focus returns to the trigger.
+  - The harness and the Cypress output folders were deleted.
+- Verification: Jest `23 passed / 655 passed` (2 new cases); `tsc` clean; lint clean; `npm run build` exit 0.
+- Evidence re-run (Leader inline): Jest `23 passed / 655 passed`, `tsc` exit 0, "All files pass linting.", `ng build` exit 0 ("Output location: …dist\onecgiar-pr-client") → **VERIFIED**.
+  - A first concurrent build attempt reported `-1` while the Implementer's own background job was still running. The Leader stopped that Implementer (its report was already delivered) and re-ran the build alone, which passed.
+- Reviewer (akili-reviewer, T3, high): **PASS**.
+  - Same selection path as Enter; `[filter]` is public API.
+  - The key manager has no typeahead, so it ignores printable keys.
+  - Tab, Shift+Tab, Home/End, Escape and Backspace pass through.
+  - `viewChild(BrnCommand)` resolves through the portal, which the CT run proves.
+  - Every PRE-R-6 clause is covered, and `open` is still the only signal.
+  - The PRE-R-5/§8.5 amendment is untouched.
+- **ADVISORY (non-gating, recorded only):**
+  - `keyManager` is `/** @internal */` in the Brain d.ts (`^1.1.0`). A rename is caught by `tsc`/build; a behavior change is not, because Jest mocks Brain. Re-run a real-browser keyboard check on any Brain upgrade (noted in the folder `CLAUDE.md`).
+  - The new Jest cases test the stub (wiring and `preventDefault`), not Brain behavior. Keeping a colocated `detail-filters.cy.ts` would make the Space/Enter check repeatable under `npm run test:ct`. It is not done here: no approved task names it (advisory, recorded).
+  - Paste, IME composition (`Process`) and dead-key (`Dead`, common on Spanish layouts) input can still reach the hidden input. `matchAll` keeps all options visible, but a later Backspace that empties the search moves the active item to the first option. This is minor; a `(paste)`/`(compositionend)` reset would close it.
+  - One over-long comment line in `onInputKey`.
+- runtime events: none. Attempts used: 3 of 3 (FAIL, PASS, reopened → PASS).
+- spawns: implementer attempt 3: 33 calls, 175,212 tokens, ended complete (stopped by the Leader after delivering, because it still held a background job); reviewer: ended complete (host gave no counts).
+- Running totals: tasks 3/5 closed (PRE-T-4 in progress; PRE-T-5 added) · LOC ≈ 920 · review rounds 6 (budget 6; the overrun was owner-approved).

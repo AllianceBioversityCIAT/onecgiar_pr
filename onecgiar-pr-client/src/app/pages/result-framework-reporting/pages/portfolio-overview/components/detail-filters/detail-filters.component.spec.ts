@@ -1,5 +1,6 @@
 // @akili-spec changes/portfolio-rejection-reason-export (PRE-T-3, PRE-R-1, R-3, R-6)
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { BrnCommand } from '@spartan-ng/brain/command';
 import { PortfolioDetailFiltersComponent } from './detail-filters.component';
 import { PORTFOLIO_OVERVIEW_COPY } from '../../../../../../internationalization/portfolio-overview.copy';
 
@@ -140,5 +141,34 @@ describe('PortfolioDetailFiltersComponent (PRE-T-3)', () => {
     expect(trigger().getAttribute('aria-expanded')).toBe('false');
     expect(document.activeElement).toBe(trigger());
     root().remove();
+  });
+
+  it('Space on the command input selects the active item through Brain and is never typed (PRE-R-6)', () => {
+    create();
+    open();
+    const command = fixture.debugElement.query(sel => sel.injector.get(BrnCommand, null) !== null).injector.get(BrnCommand) as any;
+    const emit = jest.fn();
+    command.keyManager.activeItem = { selected: { emit } };
+    const input = q<HTMLInputElement>('input')!;
+    const space = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+    input.dispatchEvent(space);
+    expect(emit).toHaveBeenCalledTimes(1);
+    expect(space.defaultPrevented).toBe(true);
+
+    const letter = new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true });
+    input.dispatchEvent(letter);
+    expect(letter.defaultPrevented).toBe(true);
+    expect(emit).toHaveBeenCalledTimes(1);
+
+    const arrow = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true });
+    input.dispatchEvent(arrow);
+    expect(arrow.defaultPrevented).toBe(false);
+  });
+
+  it('the command never filters: its filter accepts every option (PRE-R-6)', () => {
+    create();
+    open();
+    const command = fixture.debugElement.query(sel => sel.injector.get(BrnCommand, null) !== null).injector.get(BrnCommand) as any;
+    expect(command.filter('Editing', 'zzz')).toBe(true);
   });
 });

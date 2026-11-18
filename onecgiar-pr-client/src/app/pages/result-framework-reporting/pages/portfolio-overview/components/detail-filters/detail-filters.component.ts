@@ -1,8 +1,8 @@
 // @akili-spec changes/portfolio-rejection-reason-export (PRE-T-3, design 8.1, DD-4)
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal, viewChild } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideCheck, lucideChevronDown } from '@ng-icons/lucide';
-import { BrnCommandImports } from '@spartan-ng/brain/command';
+import { BrnCommand, BrnCommandImports } from '@spartan-ng/brain/command';
 import { HlmButtonImports } from '@spartan/button';
 import { HlmPopover, HlmPopoverContent, HlmPopoverPortal } from '@spartan/popover';
 import { PORTFOLIO_OVERVIEW_COPY } from '../../../../../../internationalization/portfolio-overview.copy';
@@ -48,6 +48,10 @@ export class PortfolioDetailFiltersComponent {
   readonly cleared = output<void>();
 
   protected readonly open = signal(false);
+  private readonly command = viewChild(BrnCommand);
+
+  /** Non-searchable list: Brain's default filter would hide options by whatever reaches the hidden input. */
+  protected readonly matchAll = (): boolean => true;
 
   protected readonly listId = 'pr-detail-filters-list';
   protected readonly count = computed(() => this.fundingSelected().size + this.statusSelected().size);
@@ -70,6 +74,17 @@ export class PortfolioDetailFiltersComponent {
   protected closeAndRestore(trigger: HTMLElement): void {
     this.open.set(false);
     trigger.focus();
+  }
+
+  /**
+   * The command input is only the keyboard target (arrows and Enter are Brain's own). Space is the Enter equivalent:
+   * it emits `selected` on the key manager's active item, which is exactly Brain's `selectActiveItem()` (protected) that Enter runs. No printable key may reach the input: typing would
+   * change the search, and clearing it makes Brain jump back to the first item.
+   */
+  protected onInputKey(event: KeyboardEvent): void {
+    if (event.ctrlKey || event.metaKey || event.altKey || event.key.length !== 1) return;
+    event.preventDefault();
+    if (event.key === ' ') this.command()?.keyManager.activeItem?.selected.emit();
   }
 
   protected pick(dimension: DetailFilterDimension, value: string): void {

@@ -1,7 +1,8 @@
 <!--
   Same Popover + Command structure as the top-bar `filter-multi-select` (see the caveats in its html): the trigger is a plain
   button, `[attachTo]` takes the trigger element, `*hlmPopoverPortal` is STRUCTURAL (the attribute form throws NG0201).
-  The command input is always rendered so the keyboard has a target; it is visually hidden (two short lists, no search).
+  The command input is always rendered so the keyboard has a target; it is visually hidden (two short lists, no search):
+  it types nothing (`onInputKey`), Space toggles the active item like Enter, and `matchAll` keeps every option visible.
   Two sections, Funding and Status. No selection lives here: it comes in and toggles go out (PRE-R-2).
 -->
 <hlm-popover align="end" sideOffset="6" [attachTo]="trigger" [state]="open() ? 'open' : 'closed'" (stateChanged)="onState($event)">
@@ -32,9 +33,9 @@
   </button>
 
   <hlm-popover-content *hlmPopoverPortal class="!w-[280px] !max-w-[calc(100vw-32px)] gap-0 p-0">
-    <div brnCommand class="flex w-full flex-col overflow-hidden" (keydown.escape)="closeAndRestore(trigger)">
+    <div brnCommand class="flex w-full flex-col overflow-hidden" [filter]="matchAll" (keydown.escape)="closeAndRestore(trigger)">
       <div class="sr-only">
-        <input brnCommandInput [attr.aria-label]="copy.label" [attr.aria-controls]="listId" aria-expanded="true" />
+        <input brnCommandInput [attr.aria-label]="copy.label" [attr.aria-controls]="listId" aria-expanded="true" (keydown)="onInputKey($event)" />
       </div>
 
       <div brnCommandList [id]="listId" class="light-scroll max-h-[280px] overflow-y-auto overflow-x-hidden p-[4px] outline-none" aria-multiselectable="true">

@@ -119,6 +119,23 @@
   - [ ] Screenshots and the measurements recorded in `execution.md`
   - [ ] Ticket reply drafted for the user, mentioning the column-position change (DD-6)
 
+### PRE-T-5 — Client: Space toggles in the top-bar multi-select (added 2026-11-18, owner-approved)
+
+- **Type:** client · **Origin:** PRE-T-4 found that Space does not toggle in the detail Filters panel (hidden `brnCommandInput` takes the keystroke). The top-bar `filter-multi-select` uses the same pattern. The owner asked on 2026-11-18 to fix it too ("arregla también el dropdown de la barra superior"). Recorded in `execution.md`.
+- **Description:** In `components/filter-bar/filter-multi-select.component.{ts,html,spec.ts}`, for a **non-searchable** dimension (hidden command input), Space on the active item toggles it exactly like Enter. It is never typed into the hidden input, and the hidden input never filters the list. A **searchable** dimension keeps typing into its visible search box (Space types a space there); Enter still toggles. Reuse the mechanism chosen for PRE-T-3 attempt 3.
+- **Implements:** PRE-R-6's reference level ("the same level as the top-bar multi-selects"), design §8.1 Keyboard (arrows move, Enter/Space toggle).
+- **Files:** `…/portfolio-overview/components/filter-bar/filter-multi-select.component.{ts,html,spec.ts}`, page `CLAUDE.md` (Verified stamp in place)
+- **Depends on:** PRE-T-3 (attempt 3 mechanism) · **Blocks:** —
+- **Review:** `full` (shared top-bar control that writes the global selection)
+- **Skills:** `angular-developer`, `spartan`
+- **Verification:**
+  - Command: `cd onecgiar-pr-client && npx jest src/app/pages/result-framework-reporting/pages/portfolio-overview --silent --reporters=summary --no-coverage` + `npx tsc --noEmit -p tsconfig.app.json` + `npx ng lint --quiet` + `npm run build`
+  - Real browser (throwaway Cypress CT harness, deleted afterwards): non-searchable dimension, Enter opens → ArrowDown → Space emits that item and nothing is filtered; searchable dimension, typing (including a space) filters as before and Enter toggles; Escape closes and returns focus.
+  - **Falsifier:** remove the Space handling; the non-searchable CT case goes red. Make Space toggle in a searchable dimension too; the searchable "space types into search" case goes red.
+  - **Red run:** CT harness against the unfixed code, quoted.
+  - **Disqualifier:** a Jest-only green proves nothing (Brain is mocked).
+  - **Consumers:** `filter-bar.component.{html,spec.ts}`, `filter-multi-select.component.spec.ts`, the page spec.
+
 ## 4. Dependency graph
 
 ```text
