@@ -442,3 +442,10 @@ PRE-T-4 is **not** marked `[x]`. Its Disqualifier says "P-10 stays UNVERIFIED an
   1. **0-row case:** the block unmounts by design (§8.5), the document shrinks (5353 → 2496 px) and the browser clamps scrollY to the new bottom (3662 → 1776). It is not a jump to the top, but the no-match panel ends up above the viewport. A `scrollIntoView` to the no-match panel is available if the owner wants it.
   2. **Other pages with the same reset:** `bilateral-results-list`, `bilateral-review`, `dashboard-lab`, `outcome-indicator` and `bilateral-overview` mirror state with `router.navigate([], …)` and very likely have the same jump. Opting them in is one line each.
 - runtime events: none. spawns: implementer 118 calls, 310,421 tokens, ended complete; reviewer 5 calls, 37,180 tokens, ended complete.
+
+### PRE-T-4 — PRTest verification by the owner — closed (2026-11-18)
+
+- **Deployed build:** `performance-refactor` `63c58e8a9` (contains `93ebf5f3b`), reporting-tool-dev-cicd attempt 2 green, Jenkins `prms-reporting-tool-dev-cd` triggered.
+- **Owner verification on PRTest, in their words:** "Ya probé y funciona bien". Recorded as the owner's acceptance of the PRTest checks: the export rejection columns, the Filters panel, and filtering without a page jump. P-10 is settled by that acceptance (rejected rows reach the page).
+- **Not measured:** the `result-dimensions` latency before/after (checklist item 6). It is recorded as not measured, not as passed. The owner accepted the release without it.
+- **Next:** merge PR #803 to `master`; deploy to PROD with the `QA_SP_ACCESS_API_*` env vars (P2-3911) and the `RCF-CenterRouting` migration (SR-167303) that ride in the same release; answer SR-168253 (reply below, sent by the owner in chat); `/akili-archive`.
