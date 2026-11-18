@@ -32,6 +32,40 @@ export class PortfolioResultDimensionsCenterDto {
   name: string;
 }
 
+/** Newest rejection record of one result at status Rejected (changes/portfolio-rejection-reason-export, PRE-T-1). */
+export class PortfolioRejectionDto {
+  @ApiProperty({ description: 'Result id (joins the page rows id).' })
+  resultId: number;
+
+  @ApiProperty({
+    description: 'Trimmed rejection comment, or null when empty.',
+    nullable: true,
+    type: String,
+  })
+  comment: string | null;
+
+  @ApiProperty({
+    description:
+      'Official code of the deciding Science Program; null when the record has no initiative.',
+    nullable: true,
+    type: String,
+  })
+  programCode: string | null;
+
+  @ApiProperty({
+    description: 'Name of the deciding Science Program.',
+    nullable: true,
+    type: String,
+  })
+  programName: string | null;
+
+  @ApiProperty({
+    description: 'Date of the rejection record, YYYY-MM-DD.',
+    example: '2026-11-10',
+  })
+  rejectedAt: string;
+}
+
 export class PortfolioResultDimensionsResponseDto {
   @ApiProperty({ description: 'Resolved reporting version id.' })
   versionId: number;
@@ -82,4 +116,11 @@ export class PortfolioResultDimensionsResponseDto {
     type: [Number],
   })
   w3ProjectIds: number[];
+
+  @ApiProperty({
+    description:
+      'One entry per active, in-scope result of the version at status Rejected that has a rejection record (newest record).',
+    type: [PortfolioRejectionDto],
+  })
+  rejections: PortfolioRejectionDto[];
 }

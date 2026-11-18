@@ -1423,6 +1423,19 @@ export class ResultsFrameworkReportingService {
         }
       }
 
+      // Never log the comment text (security NFR).
+      const rejections = (raw.rejections ?? []).map((row) => {
+        const comment =
+          typeof row.comment === 'string' ? row.comment.trim() : '';
+        return {
+          resultId: Number(row.result_id),
+          comment: comment === '' ? null : comment,
+          programCode: row.initiative_code ?? null,
+          programName: row.initiative_name ?? null,
+          rejectedAt: String(row.rejected_at),
+        };
+      });
+
       const response: PortfolioResultDimensionsResponseDto = {
         versionId: resolvedVersionId,
         phaseName: version.phase_name ?? null,
@@ -1431,6 +1444,7 @@ export class ResultsFrameworkReportingService {
         projects,
         centers: [...centers.values()],
         w3ProjectIds,
+        rejections,
       };
 
       return {

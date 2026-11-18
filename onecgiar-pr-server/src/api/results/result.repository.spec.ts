@@ -1854,10 +1854,10 @@ describe('ResultRepository — getPortfolioResultDimensions (GLF-T-1)', () => {
       ),
     );
 
-  it('runs exactly four statements, each bound to [versionId] only', async () => {
+  it('runs exactly five statements, each bound to [versionId] only', async () => {
     await repo.getPortfolioResultDimensions(7);
 
-    expect(queryMock).toHaveBeenCalledTimes(4);
+    expect(queryMock).toHaveBeenCalledTimes(5);
     for (const { params } of statements()) {
       expect(params).toEqual([7]);
     }
@@ -1929,6 +1929,16 @@ describe('ResultRepository — getPortfolioResultDimensions (GLF-T-1)', () => {
         return [{ result_id: 1, center_id: 'CENTER-03' }];
       if (s.includes('clarisa_projects'))
         return [{ id: 5, short_name: 'P5', full_name: 'Project 5', is_w3: 1 }];
+      if (s.includes('result_review_history'))
+        return [
+          {
+            result_id: 1,
+            comment: 'No evidence',
+            initiative_code: 'SP03',
+            initiative_name: 'Program',
+            rejected_at: '2026-11-10',
+          },
+        ];
       return [{ code: 'CENTER-03', acronym: 'CIAT', name: 'Alliance' }];
     });
 
@@ -1939,7 +1949,36 @@ describe('ResultRepository — getPortfolioResultDimensions (GLF-T-1)', () => {
       centerLinks: [{ result_id: 1, center_id: 'CENTER-03' }],
       projects: [{ id: 5, short_name: 'P5', full_name: 'Project 5', is_w3: 1 }],
       centers: [{ code: 'CENTER-03', acronym: 'CIAT', name: 'Alliance' }],
+      rejections: [
+        {
+          result_id: 1,
+          comment: 'No evidence',
+          initiative_code: 'SP03',
+          initiative_name: 'Program',
+          rejected_at: '2026-11-10',
+        },
+      ],
     });
+  });
+
+  // @akili-spec changes/portfolio-rejection-reason-export (PRE-T-1, PRE-R-7, PRE-R-8)
+  it('rejections statement: status 7, both reject spellings, the newest record, same scope', async () => {
+    await repo.getPortfolioResultDimensions(7);
+
+    const rej = statements().find((s) =>
+      s.sql.includes('result_review_history'),
+    );
+    expect(rej).toBeDefined();
+    expect(rej!.params).toEqual([7]);
+    expect(rej!.sql).toContain('r.status_id = 7');
+    expect(rej!.sql).toContain("IN ('REJECT', 'REJECTED')");
+    expect(rej!.sql).toContain('r.result_type_id NOT IN (10, 11)');
+    expect(rej!.sql).toContain('r.is_active = 1');
+    expect(rej!.sql).toContain('r.version_id = ?');
+    expect(rej!.sql).toContain('ORDER BY h2.created_at DESC, h2.id DESC');
+    expect(rej!.sql).toContain('LIMIT 1');
+    expect(rej!.sql).toContain('LEFT JOIN clarisa_initiatives');
+    expect(rej!.sql).toContain("'%Y-%m-%d'");
   });
 
   it('wraps a database failure through the repository error handler', async () => {

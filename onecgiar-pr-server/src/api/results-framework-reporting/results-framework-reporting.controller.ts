@@ -434,7 +434,7 @@ export class ResultsFrameworkReportingController {
   @ApiOperation({
     summary: 'Portfolio result dimensions map (projects and Centers)',
     description:
-      'Returns, for one reporting version, the active results paired with each project of an active link and with each Center of an active Center link (lead or contributing), as positional pairs [resultId, projectId] and [resultId, centerCode], each pair once. It also returns the labels of those projects and Centers and the ids of the projects linked to at least one W3 (bilateral) result. W1/W2 and W3 results are included; result types 10 and 11 are excluded, as on the page rows. A Center code with no catalogue row is kept and labelled by its code. Restricted to the Admin application role.',
+      'Returns, for one reporting version, the active results paired with each project of an active link and with each Center of an active Center link (lead or contributing), as positional pairs [resultId, projectId] and [resultId, centerCode], each pair once. It also returns the labels of those projects and Centers and the ids of the projects linked to at least one W3 (bilateral) result. W1/W2 and W3 results are included; result types 10 and 11 are excluded, as on the page rows. A Center code with no catalogue row is kept and labelled by its code. It also returns `rejections`: for each active in-scope result at status Rejected, its newest rejection record (comment, deciding Science Program, date). Restricted to the Admin application role.',
   })
   @ApiQuery({
     name: 'versionId',
