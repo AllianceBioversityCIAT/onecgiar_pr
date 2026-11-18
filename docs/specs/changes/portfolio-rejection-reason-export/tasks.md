@@ -136,6 +136,20 @@
   - **Disqualifier:** a Jest-only green proves nothing (Brain is mocked).
   - **Consumers:** `filter-bar.component.{html,spec.ts}`, `filter-multi-select.component.spec.ts`, the page spec.
 
+### [x] PRE-T-6 — Client: filtering never moves the page scroll (owner-reported defect, 2026-11-18)
+
+- **Type:** client · bugfix · **Origin:** the owner reported on 2026-11-18, in their words: "cuando filtro, hace un salto hasta arriba de la página. Eso debe de solucionarse y no puede haber un salto."
+- **Requirement:** ticking or clearing a value in the Results detail **Filters** panel (and, with the same cause, in the top-bar filters) must leave the viewport where it is. No jump to the top, and no jump elsewhere caused by the filter itself. Content above may change height, but the Results detail block stays in view. Extends PRE-R-2 ("the KPI deck, the blocks and the table update together") with a no-jump constraint.
+- **Files:** to be found by root-cause investigation (likely `portfolio-overview.component.{html,ts}`, `components/detail-filters/*`, `components/results-detail/*`).
+- **Skills:** `systematic-debugging`, `angular-developer`, `spartan`
+- **Review:** `full`
+- **Verification:**
+  - Real-browser reproduction **first**: Cypress CT mounting the real page with fixture data, scrolled to Results detail; tick a value; measure `window.scrollY` and the Results detail block's `getBoundingClientRect().top` before and after. Red on the current code.
+  - Fix at the root cause, then green. The same check from the top bar must also not jump.
+  - Jest portfolio-overview folder + `tsc -p tsconfig.app.json` + `ng lint --quiet` + `npm run build`.
+  - **Falsifier:** revert the fix, and the CT scroll assertion goes red.
+  - **Disqualifier:** jsdom cannot measure scroll or layout; a Jest-only green proves nothing.
+
 ## 4. Dependency graph
 
 ```text

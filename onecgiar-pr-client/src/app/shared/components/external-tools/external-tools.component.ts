@@ -3,6 +3,7 @@ import { NavigationStart, Router, Event as NavigationEvent } from '@angular/rout
 import { environment } from '../../../../environments/environment';
 import { PusherService } from '../../services/pusher.service';
 import { ApiService } from '../../services/api/api.service';
+import { keepsScroll } from '../../constants/router-navigation.constants';
 declare let gtag: (property: string, value: any, configs: any) => {};
 
 /**
@@ -33,7 +34,8 @@ export class ExternalToolsComponent implements OnInit {
     this.router.events.subscribe((event: NavigationEvent) => {
       if (event instanceof NavigationStart) {
         this.api.dataControlSE.inNotifications = event.url.indexOf('results-notifications') > 0;
-        window.scrollTo(0, 0);
+        // A page change starts at the top; a screen that only mirrors its own state in the URL opts out (PRE-T-6).
+        if (!keepsScroll(this.router.currentNavigation?.()?.extras?.info)) window.scrollTo(0, 0);
         this.pusherSE.start(event.url, resultIdFromUrl(event.url));
         this.pusherSE.membersList = [];
         this.pusherSE.continueEditing = false;
