@@ -95,7 +95,7 @@
   - [ ] Design route evidence: a screenshot at 1280 px and 768 px with the panel open, attached in `execution.md` (taken in T-4)
   - [ ] `tsc`, Jest, and lint green
 
-### PRE-T-4 — Verification on PRTest and in a real browser
+### [~] PRE-T-4 — Verification on PRTest and in a real browser
 
 - **Type:** rollout
 - **Description:** Deploy PR 1 (and PR 2) to PRTest. Settle P-10 and the SQL correctness, check the layout, keyboard behavior and latency, and record everything in `execution.md`.

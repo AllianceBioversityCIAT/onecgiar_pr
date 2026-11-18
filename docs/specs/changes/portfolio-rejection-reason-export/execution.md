@@ -355,3 +355,50 @@ The harness mounted `app-portfolio-results-detail` with `app-portfolio-detail-fi
 - runtime events: the Implementer re-sent its completion report six times while holding a background job; the Leader stopped it after the report was received (no work lost).
 - spawns: implementer 61 calls, ≈140,000 tokens, ended complete (stopped by the Leader); reviewer ended complete.
 - Running totals: tasks PRE-T-1/2/3/5 closed, PRE-T-4 local portion done · LOC ≈ 990 · review rounds 8 (budget overrun approved by the owner on 2026-11-18).
+
+### PRE-T-4 — close-out of the local portion (2026-11-18) — stays `[~]`, waiting on PRTest
+
+The local portion is complete: build, Excel file shape, real-browser layout, popover, look, keyboard and disabled state, plus screenshots. The real-browser keyboard defect it found was fixed by PRE-T-3 attempt 3 and extended to the top bar by PRE-T-5, both proven in a real browser.
+
+PRE-T-4 is **not** marked `[x]`. Its Disqualifier says "P-10 stays UNVERIFIED and is reported, not passed", and the PRTest checks below cannot be run by the Leader, because agents never deploy to cloud environments (`docs/infrastructure.md` §6). They are handed to the owner:
+
+| # | Check on PRTest (after deploying PR 1 = T-1 + T-2, and PR 2 = T-3 + T-5) | Status |
+|---|---|---|
+| 1 | P-10: export with Status = Rejected and confirm W3/Bilateral rejected results reach the rows | UNVERIFIED — needs PRTest |
+| 2 | ≥ 2 known rejected results (one rejected twice if available): the 3 export cells equal each result's rejection notice (reason, `SP - name`, date). Mind the time-zone advisory of PRE-T-1 on the date | UNVERIFIED — needs PRTest |
+| 3 | A resubmitted result shows `—` ×3 | UNVERIFIED — needs PRTest |
+| 4 | Tick W3/Bilateral + Rejected in the table panel: the top bar shows both; the table count equals the KPI total; single-source blocks show the same "Not affected by" note as a top-bar tick | UNVERIFIED — needs PRTest (proven in Jest with the real service, not with live data) |
+| 5 | Clear in the panel keeps a Program selection | UNVERIFIED on live data (proven in the page spec with the real service) |
+| 6 | Latency of `result-dimensions`: 3 runs before, 3 after; increase p95 < 150 ms; report the spread | UNVERIFIED — needs PRTest |
+| 7 | Keyboard walk on the real page, in both the table panel and the top bar | Proven in Cypress CT (real browser, real Brain); a 1-minute manual walk on PRTest is recommended |
+
+**Ticket reply draft (SR-168253), for the owner to send once in PROD:**
+
+> Hello, the Portfolio Overview now gives you the rejection reasons you asked for.
+> - **Excel export of the Results detail table:** three new columns right after **Status**: **Rejection reason**, **Rejected by** (the Science Program or Accelerator that rejected it) and **Rejected on** (date). They are filled for results that are currently Rejected and show the latest rejection. Other rows show "—".
+> - **Note:** because the three columns sit after Status, the columns from **Origin** onward move three places to the right. Please update any spreadsheet or macro that reads the export by column letter.
+> - **New Filters button** next to Search in the Results detail table: filter by **Funding** (W1/W2, W3/Bilateral) and **Status** without scrolling back to the top. It is the same filter as the bar at the top of the page, so both stay in sync.
+> Thank you for the request.
+
+## 3. Summary (2026-11-18)
+
+| Task | Result | Commit |
+|---|---|---|
+| PRE-T-1 Server `rejections[]` | PASS, attempt 1 | `f17c3c237` |
+| PRE-T-2 16-column export | PASS, attempt 2 | `4123fddf0` |
+| PRE-T-3 Filters dropdown | PASS, attempt 2; reopened by PRE-T-4 and PASS on attempt 3 (Space key) | `36c3421a5`, `a383b1323` |
+| PRE-T-5 Top-bar Space key (owner-added) | PASS, attempt 1 | `dfb846da4` |
+| PRE-T-4 Verification | Local portion done; PRTest checks 1–6 handed to the owner | this commit (evidence) |
+
+- **Decisions made under the owner's delegation:** PRE-R-5 read as the table's own empty state, with the mount rule kept; PRE-T-3 reopened for the Space defect; Cypress binary installed locally to run real-browser checks.
+- **Owner approvals:** continue past the budget tripwire (≈ 990 LOC against ≈ 530); add PRE-T-5.
+- **Nothing pushed, no PR opened, nothing deployed.** All commits are local on `qa-development-2026-ss`.
+- **Environment notes for the owner:**
+  - Node v26 breaks 3 server suites at load (`buffer.SlowBuffer` removed) and the Cypress unzip; the repo contract expects Node 20.x.
+  - Local env changes outside git: `onecgiar-pr-client/node_modules` installed, `node_modules/canvas` renamed to `.canvas.disabled`, stub gitignored `src/environments/environment{,.prod}.ts`, Cypress 14.5.1 binary in `%LOCALAPPDATA%\Cypress\Cache`.
+- **Recorded advisories (not done, no approved task):**
+  - a permanent `detail-filters.cy.ts` / `filter-multi-select.cy.ts` so the keyboard check is repeatable;
+  - surrogate-safe truncation;
+  - IME and paste guards;
+  - a fixture `versionId` ≠ 7 in the repository spec;
+  - leader persona `primary-instructions` OUTDATED (fix on `staging`).
