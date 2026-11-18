@@ -486,3 +486,62 @@ All paths are under `onecgiar-pr-server/`.
 
 Remaining: T-7 (SQL, needs `SHOW CREATE FUNCTION` from Santiago), T-10 (fetcher docs + prod promotion), T-11 (TEST E2E by Daniel, prod).
 
+### INA-T-7 — Green check: `use_nature` on every type (SQL) — SQL authored, PASS; **awaiting HITL apply on prtest**
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-18 |
+| Covers | INA-R-10 · INA-AC-7 (pending run) · DD-7 |
+| Skills / effort | `systematic-debugging` · `high` |
+
+- **Step 1 (Leader, inline)**
+  - Santiago pasted the `SHOW CREATE FUNCTION` output from prtest (DEFINER `prdbusertst`). It is saved verbatim as `sql/validation_innovation_use_P25.before.sql`.
+  - The live body was compared with the archived IUY `after.sql`. The comparison ignored whitespace and the DEFINER (`diff -w` on `sed`-normalised bodies). Result: **IDENTICAL**. **P-16 is settled (verified 2026-11-18).**
+- **Attempt 1 (Implementer)**
+  - Files created:
+    - `sql/validation_innovation_use_P25.after.sql`
+    - `sql/validation_innovation_use_P25.after.body-only.sql`
+    - `sql/checks.sql` (V0, S1a/b, S2, S3a/b, S4, S5)
+  - The §12.1 impact query was corrected:
+    - `COALESCE(source)`
+    - `NOT (actor_type_id <=> 1)`
+    - invalid codes
+    - `section_id IN (1,2)`
+    - the to-be-determined gate per section
+    - a split by status
+    - a "green today" condition
+- **Evidence re-run (Leader inline): VERIFIED.** `diff -w before after` shows only:
+  - the header;
+  - the IFC-R-6 comment wording;
+  - in each section, the `OR use_nature …` lines replaced by closing check (a) and adding the INA-R-10 check (b) on the same `section_id`.
+- **Reviewer, lens function: PASS.**
+  - Check (b) has no actor-type filter and handles NULL correctly.
+  - Check (a) is still Farmers-only.
+  - Both checks sit inside the 2026 W1/W2 gate and the `actors EXISTS` gate.
+  - Nesting is correct (IF 29 → 31).
+  - The DEFINER note is present.
+  - The `body-only` body matches `after`.
+- **Reviewer, lens `checks.sql`: PASS.**
+  - Strictly read-only.
+  - Names match the entities.
+  - MySQL 5.7/8 syntax.
+  - S5 applies the same gates as the function.
+  - S3 and S4 prove their claims.
+  - Every function call is bounded by `result_type_id = 2` and phase ≥ 2026.
+- runtime events: none
+- spawns (none reported by the host):
+
+  | Spawn | Calls | Tokens | Ended |
+  |---|---|---|---|
+  | Implementer | 22 | ~105k | complete |
+  | Reviewer, lens function | 8 | ~42k | complete |
+  | Reviewer, lens `checks.sql` | 4 | ~47k | complete |
+
+**ADVISORY (recorded, not tasks):**
+- RELIABILITY: more than one active `results_innovations_use` row would overcount the `actor_rows` columns.
+- READABILITY: the S5 status CASE names only statuses 1–3.
+- READABILITY: S2 deliberately includes Farmers.
+- RISK: on prod, uncomment the id filter in S2 before running.
+
+**Status: `[~]`.** The DoD needs the before/after counts from prtest. Santiago runs `checks.sql`, applies `after.sql` once cut 2 is live on TEST, then re-runs `checks.sql`.
+
