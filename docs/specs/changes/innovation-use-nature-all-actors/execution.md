@@ -656,3 +656,49 @@ This contradicts "Households = total only". The shared form already enforces it 
   | Implementer | 34 | ~183k | complete | no |
   | Reviewer | 14 | ~96k | complete | no |
 
+### INA-T-11 (TEST E2E) — validated by Daniel Lozano, 2026-11-18 21:42 (email "Re: Change for innov use")
+
+Daniel re-tested on PRMS TEST through the uploader and the TEST `/ingest`, using results **10123–10127**:
+
+| Check | Result |
+|---|---|
+| `use_nature` stored for every actor type | Extension agents (10127), Other (10125) and Researchers (10126) keep it |
+| Two Researchers rows with different natures | Both stored, 25 received + 12 applied (10126) |
+| Two identical rows | Stored as one, keeping the last (10124) |
+| Farmers | Behave as before (10123) |
+
+This settles **P-21** (the behaviour on the real path) and **P-22** (the TEST route `performance-refactor` → PRTest). Daniel has released the new uploader to production and asks for PRMS production **today**: Nicoleta presents to the Centres on 2026-11-19.
+
+### INA-T-10 — PASS (docs); production promotion pending its owner
+
+- **Worktree:** branch `docs/inc-168062-use-nature-all-actors`, cut from `origin/dev-fetcher` (`7a27c43`). Commit `94bcd61`.
+- **Files changed** (under `services/fetcher/src`):
+  - `docs/guides/08-innovation-use.md`
+  - `docs/guides/02-changelog.md`
+  - `docs/guides/14-responses.md`
+  - `docs/openapi.json`
+  - `validator/schemas/innovation_use.json` (`description` only)
+- **Leader checks:**
+  - the schema diff is the `description` line only;
+  - both JSON files parse;
+  - `actor_type_id` 2 is Researchers in the guide.
+- **Reviewer: PASS.** The text matches the PRMS contract, steps 1–9 and the messages. No `use_nature`-Farmers wording remains, `openapi.json` is in sync, and the extra `14-responses.md` edit is legitimate.
+- **PR:** https://github.com/AllianceBioversityCIAT/onecgiar_result_functions/pull/44, `docs/inc-168062-use-nature-all-actors` → `main`. Besides this change it carries `7a27c43` (schema + test) and 3 docs commits by Juan D. Guzmán. Merging it is for the repo owner, in the same window as PRMS production.
+- **ADVISORY:**
+  - The sentence "Both answers are also returned on every actor" could be clearer.
+  - The inactive-row exemption is not documented. It was already missing before this change.
+
+### PRMS PR #803 (staging → master)
+
+- Title updated to lead with INC-168062.
+- Body updated with:
+  - the staging head `150a0f0c3`;
+  - `0ab1c49a8` (the households lock);
+  - Daniel's validation;
+  - a same-day release note covering the fetcher and the prod SQL with the prod DEFINER.
+
+### Green check for prod
+
+- `sql/validation_innovation_use_P25.after.prod.sql` was generated from `after.sql` with DEFINER `prmsadmin`@`%`, as given by Santiago from prod. Its body is identical to the prtest `after.sql` (diff checked).
+- **Pending:** the prod `SHOW CREATE FUNCTION` body, to confirm that the prod `before` equals the prtest `before` before applying.
+
