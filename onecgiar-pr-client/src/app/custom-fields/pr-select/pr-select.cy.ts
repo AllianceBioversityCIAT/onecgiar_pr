@@ -282,3 +282,121 @@ describe('PrSelectComponent (CT)', () => {
     });
   });
 });
+
+// TKR-T-1 (spec: changes/toc-kpi-option-readability). Opt-in `wrapOptions`: long labels wrap onto at
+// most two lines in a fixed 50px row — no sideways scroll. Layout assertions, so jsdom cannot cover it.
+const LONG_SENTENCE = 'Increase in income and resilience of smallholder farmers across the targeted value chains and regions ';
+const longText = (tag: string, extra = '') => `${tag} ${LONG_SENTENCE.repeat(16)}${extra}`.trim();
+const WRAP_TEMPLATE = `
+  <app-pr-select
+    [options]="options"
+    optionValue="code"
+    optionLabel="full_name"
+    placeholder="Select option"
+    label="Option"
+    [wrapOptions]="wrap"
+    [disableOptionsText]="disableText"
+    [(ngModel)]="model">
+  </app-pr-select>
+`;
+
+function mountWrapSelect(options: any[], wrap = true, disableText = '') {
+  return cy
+    .mount(WRAP_TEMPLATE, {
+      imports: [CustomFieldsModule, HttpClientTestingModule, NoopAnimationsModule],
+      providers: [provideRouter([])],
+      componentProperties: { options, wrap, disableText, model: null }
+    })
+    .then(wrapper => {
+      const roles = wrapper.fixture.debugElement.injector.get(RolesService);
+      roles.readOnly = false;
+      wrapper.fixture.detectChanges();
+      return cy.wrap(wrapper);
+    });
+}
+
+const norm = (t: string) => t.replace(/\s+/g, ' ').trim();
+
+[1280, 900].forEach(width => {
+  describe(`wrapOptions at ${width}px (TKR-R-1)`, () => {
+    beforeEach(() => cy.viewport(width, 800));
+
+    const SHORT = { code: 'S', full_name: 'Short option' };
+    const LONGS = [1, 2, 3].map(i => ({ code: `L${i}`, full_name: longText(`Long ${i}`) }));
+
+    it('S-1.1/S-1.2: long labels wrap in 50px rows with no sideways overflow; the short label shows whole', () => {
+      mountWrapSelect([...LONGS, SHORT]);
+      openDropdown();
+      cy.get('.options .option').should('have.length.at.least', 4);
+      cy.get('.options .option').each($o => expect($o[0].getBoundingClientRect().height).to.be.closeTo(50, 0.5));
+      cy.get('.options .option .label').each($l => {
+        const el = $l[0] as HTMLElement;
+        expect(el.scrollWidth, 'label scrollWidth').to.be.at.most(el.clientWidth + 1);
+        expect(el.clientWidth, 'label fits its row').to.be.at.most((el.closest('.option') as HTMLElement).clientWidth);
+      });
+      cy.get('.options .virtual_scroll').then($v => {
+        const el = $v[0] as HTMLElement;
+        expect(el.scrollWidth, 'viewport scrollWidth').to.be.at.most(el.clientWidth + 1);
+      });
+      cy.get('.options .virtual_scroll').should('have.css', 'overflow-x', 'hidden');
+      cy.contains('.options .option .label', 'Long 1').then($l => {
+        expect(($l[0] as HTMLElement).clientHeight, 'long label height').to.be.at.most(2 * 18 + 1);
+      });
+      cy.contains('.options .option .label', 'Short option').then($l => {
+        const el = $l[0] as HTMLElement;
+        expect(norm(el.innerText)).to.equal('Short option');
+        expect(el.scrollWidth).to.be.at.most(el.clientWidth + 1);
+      });
+    });
+
+    it('keeps the last option reachable and clickable with 40 long options', () => {
+      const many = Array.from({ length: 40 }, (_, i) => ({ code: `N${i + 1}`, full_name: longText(`Option${i + 1}`) }));
+      mountWrapSelect(many).then(wrapper => {
+        openDropdown();
+        // The viewport height must be items x 50px: a stale 30px item size under-sizes it (last rows unreachable).
+        cy.get('.options .virtual_scroll').then($v => expect(($v[0] as HTMLElement).scrollHeight).to.be.at.least(40 * 50 - 1));
+        cy.get('.options .virtual_scroll').scrollTo('bottom', { ensureScrollable: false });
+        cy.contains('.options .option', 'Option40 ').should('be.visible').click();
+        cy.wrap(null).then(() => expect((wrapper.component as any).model).to.equal('N40'));
+      });
+    });
+
+    it('P-12: the clamped label keeps the full source string in innerText', () => {
+      const source = longText('Long 1');
+      mountWrapSelect([{ code: 'L1', full_name: source }, SHORT]);
+      openDropdown();
+      cy.contains('.options .option .label', 'Long 1').then($l => {
+        expect(norm(($l[0] as HTMLElement).innerText)).to.equal(norm(source));
+      });
+    });
+
+    it('S-1.3: search matches a word that sits past char 1000 of a label', () => {
+      const hidden = { code: 'H', full_name: longText('Hidden', ' zebracorn') };
+      const opts = [hidden, { code: 'A', full_name: 'Alpha' }, { code: 'B', full_name: 'Beta' }, { code: 'C', full_name: 'Gamma' }, { code: 'D', full_name: 'Delta' }, { code: 'E', full_name: 'Epsilon' }];
+      mountWrapSelect(opts);
+      openDropdown();
+      cy.get('.search_input_container input').type('zebracorn');
+      cy.get('.options .option').should('have.length', 1);
+      cy.contains('.options .option .label', 'Hidden').should('exist');
+    });
+
+    it('S-1.4: a disabled option shows the disable prefix and is not selectable', () => {
+      mountWrapSelect([{ code: 'D1', full_name: longText('Locked'), disabledd: true }, SHORT], true, '(Unavailable) ').then(wrapper => {
+        openDropdown();
+        cy.contains('.options .option .label', 'Locked').then($l => {
+          expect(norm(($l[0] as HTMLElement).innerText)).to.match(/^\(Unavailable\) Locked/);
+        });
+        cy.contains('.options .option', 'Locked').click({ force: true });
+        cy.wrap(null).then(() => expect((wrapper.component as any).model).to.not.equal('D1'));
+      });
+    });
+
+    it('S-3.1: without wrapOptions the defaults are unchanged (30px row, nowrap, scroll-x)', () => {
+      mountWrapSelect([...LONGS, SHORT], false);
+      openDropdown();
+      cy.get('.options .option').first().then($o => expect($o[0].getBoundingClientRect().height).to.be.closeTo(30, 0.5));
+      cy.get('.options .option .label').first().should('have.css', 'white-space', 'nowrap');
+      cy.get('.options .virtual_scroll').should('have.css', 'overflow-x', 'scroll');
+    });
+  });
+});

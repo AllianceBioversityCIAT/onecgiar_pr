@@ -199,6 +199,25 @@ input::placeholder,
           }
         }
       }
+
+      // TKR-R-1 (opt-in `wrapOptions`): long labels wrap onto at most two lines inside the fixed
+      // 50px row (same height as `extraInformation`) instead of forcing a sideways scroll.
+      &.options_wrap .virtual_scroll {
+        overflow-x: hidden;
+
+        .option .label {
+          flex: 1 1 auto;
+          min-width: 0;
+          white-space: normal;
+          overflow-wrap: anywhere;
+          line-height: 18px;
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+          line-clamp: 2;
+          overflow: hidden;
+        }
+      }
     }
 
     i {

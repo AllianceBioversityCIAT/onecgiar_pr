@@ -58,7 +58,7 @@
         <i class="pi pi-chevron-down icon_dropdown"></i>
 
         <div class="remove_focus" (click)="removeFocus()"></div>
-        <div class="options" style="min-width: 200px" [style]="overlayToBody() ? overlayStyles() : optionsInlineStyles()">
+        <div class="options" [class.options_wrap]="wrapOptions()" style="min-width: 200px" [style]="overlayToBody() ? overlayStyles() : optionsInlineStyles()">
           @if (showSearchInput()) {
             <div class="search_input_container">
               <span class="material-icons-round search_icon">search</span>
@@ -70,7 +70,7 @@
             <div
               *cdkVirtualFor="let option of optionsIntance() | listFilterByTextAndAttr: optionLabel() : (showSearchInput() ? this.searchText : '')"
               class="option pr-body-2"
-              [style]="extraInformation() ? 'height: 50px;' : ''"
+              [style]="extraInformation() || wrapOptions() ? 'height: 50px;' : ''"
               [ngClass]="{
                 disabled: (option?.disabled || option?.disabledd) === true,
                 selected: option?.selected === true,

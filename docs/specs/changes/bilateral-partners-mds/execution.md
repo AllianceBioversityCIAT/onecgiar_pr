@@ -205,6 +205,22 @@
   - the guide is 357 lines, against a 120-line cap (it was already over before this change)
   - the test counts (157 / 45) were not recounted
 
+### HITL — prtest manual check (BPX-TEST-6), partial
+
+- **Date:** 2026-11-18. Reported by the user in this session after the `performance-refactor` deploy (`f0004039d`, CI run 44426469381 green)
+- **User observations:**
+  - **Policy change and Innovation Use:** External partners shows as required. The field is visible without expanding anything. → BPX-R-1 and BPX-R-2 (affordance) OK
+  - **Knowledge Product:** no mandatory alert. → BPX-R-4 OK, as intended
+- **Second report:**
+  - Innovation Use shows no toggle → DD-3 OK
+  - selecting a partner, or ticking "no external partners", clears the missing item → BPX-R-2 scenario 2 OK
+  - Submit is blocked without an answer → BPX-R-2 scenario 1 OK
+  - KP is not mandatory → BPX-R-4 OK; the user asked whether that is a rule, and the Leader answered yes (BPX-R-4, DD-1)
+  - KP in Pending Review: External partners is not listed as missing → BPX-R-3/R-4 OK. The user clarified that the field is "not listed as missing", not that the block is absent
+- **Third report:** Policy change in Pending Review: External partners is not listed as missing → BPX-R-3 OK, after the same clarification. The user: "de resto todo esta bien ya probe"
+- **Verdict:** BPX-TEST-6 passed on prtest per the user. Not run: the direct server 400 call (BPX-R-5). It is covered by the T-1 unit tests and by the UI Submit block
+- **Next:** the user asked for a direct merge to `staging` (no PR) of `qa-development-2026-ss` (6 commits: the 4 from this spec, plus 2 INC-168062 docs/SQL)
+
 ## Pending items
 
 - **Shared file (apply on `staging`):** `onecgiar-pr-server/src/api/bilateral/CLAUDE.md` §4. Proposed line: "Partners gate (`changes/bilateral-partners-mds`, 2026-11-18, mandatory per Angel Jarrin): a non-KP result cannot be submitted without at least one active partner row or the 'no external partners' tick; the check sits in `assertSubmittable` (`bilateral-center.service.ts`); KP stays optional (BPX-R-4); `POST /api/bilateral/create` still accepts payloads without `contributing_partners` (BPX-R-10)."
