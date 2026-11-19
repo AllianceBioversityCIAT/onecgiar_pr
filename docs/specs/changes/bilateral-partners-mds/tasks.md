@@ -76,7 +76,7 @@
   - [x] Cases pass: item present, editable non-KP · absent, KP · absent, read-only · filled only when hydrated and answered · re-published on the readOnly flip · `hiddenFieldsWithValues` ignores partners · `hasFullMetadataFields` false for 2 and 7 and true otherwise
   - [x] Mutations (a)–(c) each go red (quoted)
   - [ ] `npx jest --silent --reporters=summary --no-coverage` green; — **open:** folder 252/252, ng build clean; full suite 92 failures in 6 unrelated suites; `ng lint` clean (All files pass linting); `npx ng build` clean; `npx ng lint --quiet` clean
-  - [ ] Manual check on prtest (HITL), the T6-class layout gap:
+  - [x] Manual check on prtest (HITL, user 2026-11-18 — see execution.md), the T6-class layout gap:
     - the block is visible with Full metadata collapsed, for a Policy and an Innovation Use result;
     - the hint and the asterisk show on an editable non-KP result;
     - there is no toggle on Innovation Use;
@@ -155,7 +155,7 @@ BPX-R-10 (ingest unchanged) is covered by the absence of any edit to `bilateral.
 
 - [ ] PR 1 (`onecgiar_pr`): T-1, T-2, T-4 → `staging`
 - [ ] PR 2 (`alliance-ibd-pdf-viewer`): T-3
-- [ ] Manual QA on prtest per BPX-TEST-6
+- [x] Manual QA on prtest per BPX-TEST-6 (user, 2026-11-18)
 - [ ] Reply to Nicoleta once it is in production
 
 ## 7. Roll-back
