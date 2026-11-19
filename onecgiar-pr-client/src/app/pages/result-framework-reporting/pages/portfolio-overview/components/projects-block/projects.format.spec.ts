@@ -35,11 +35,28 @@ describe('projects.format (WPS-R-8 S-8.1)', () => {
       const rows = toProgramRows(input);
       expect(rows.map(r => r.code)).toEqual(['SP01', 'SP02']);
       expect(input[0].code).toBe('SP02');
-      expect(rows[0]).toEqual(expect.objectContaining({ label: 'SP01', name: 'Name SP01', mapped: 99 }));
+      expect(rows[0]).toEqual(expect.objectContaining({ label: 'SP01 · SP01', name: 'Name SP01', mapped: 99 }));
+    });
+    // @akili-spec bugfix/inc-168459-portfolio-overview-data (POD-T-2, Scenario 1.1)
+    it('label is `code · shortName`, fullLabel is `code · name`; empty shortName falls back to the code', () => {
+      const rows = toProgramRows([
+        { ...prog('SP10'), shortName: '', name: 'Ten Program' },
+        { ...prog('SP09'), shortName: 'Scaling for Impact', name: 'Scaling for Impact Program of the portfolio' }
+      ]);
+      expect(rows.map(r => r.label)).toEqual(['SP09 · Scaling for Impact', 'SP10']);
+      expect(rows.map(r => r.fullLabel)).toEqual(['SP09 · Scaling for Impact Program of the portfolio', 'SP10 · Ten Program']);
+    });
+    it('fullLabel falls back to label when the name is empty', () => {
+      const rows = toProgramRows([{ ...prog('SP11'), shortName: 'Eleven', name: '' }]);
+      expect(rows[0].fullLabel).toBe('SP11 · Eleven');
     });
   });
 
   describe('toCenterRows', () => {
+    it('fullLabel equals label for Centers', () => {
+      const rows = toCenterRows([center('CENTER-02', 'IRRI'), center(null, null)], () => undefined);
+      expect(rows.map(r => r.fullLabel)).toEqual(rows.map(r => r.label));
+    });
     const labelFor = (code: string) => ({ 'CENTER-01': 'CIAT (Alliance)', 'CENTER-02': 'Bioversity' } as Record<string, string>)[code];
     it('labels by catalogue acronym, then institution acronym, then code; sorted A-Z, Unassigned last', () => {
       const rows = toCenterRows(

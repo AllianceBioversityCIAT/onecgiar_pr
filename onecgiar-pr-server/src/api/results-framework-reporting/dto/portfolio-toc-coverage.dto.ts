@@ -65,7 +65,7 @@ export class PortfolioTocCoverageResponseDto {
 
   @ApiProperty({
     description:
-      'Every active Program and Accelerator of the open portfolio, including those with zero KPIs. Unordered.',
+      'Every active Program and Accelerator of the open portfolio, except those switched off for the phase, including those with zero KPIs. Unordered.',
     type: () => [PortfolioTocCoverageProgramDto],
   })
   programs: PortfolioTocCoverageProgramDto[];

@@ -87,7 +87,7 @@ export class PortfolioBilateralProjectsResponseDto {
 
   @ApiProperty({
     description:
-      'Every active Program and Accelerator of the open portfolio, zeros included. A project mapped to several appears under each. Unordered.',
+      'Every active Program and Accelerator of the open portfolio, except those switched off for the phase, zeros included. A project mapped to several appears under each. Unordered.',
     type: () => [BilateralProjectsByProgramDto],
   })
   byProgram: BilateralProjectsByProgramDto[];

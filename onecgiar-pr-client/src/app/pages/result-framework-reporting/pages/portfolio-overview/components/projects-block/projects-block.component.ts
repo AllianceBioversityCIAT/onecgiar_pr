@@ -10,7 +10,7 @@ import { PortfolioBilateralProjects } from '../../../../../../shared/interfaces/
 import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { resolveChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
-import { buildProjectsOption, buildProjectsTable, ProjectsChartLabels } from './projects.charts';
+import { buildProjectsOption, buildProjectsTable, ProjectsChartLabels, projectsChartHeight } from './projects.charts';
 import { FilterDimension } from '../../services/portfolio-filters';
 import { filterProjectRows, ProjectsViewRow, shareOfMapped, toCenterRows, toProgramRows } from './projects.format';
 
@@ -94,6 +94,8 @@ export class PortfolioProjectsBlockComponent {
   }));
 
   readonly chartOption = computed(() => buildProjectsOption(this.rows(), resolveChartTokens(), this.chartLabels()));
+  /** Grows with the row count so 13 horizontal groups stay readable (POD-R-1). */
+  readonly chartHeight = computed(() => `${projectsChartHeight(this.rows().length)}px`);
   readonly chartTable = computed(() => buildProjectsTable(this.rows(), this.totals(), this.chartLabels()));
 
   private readonly load$ = new Subject<number | null>();

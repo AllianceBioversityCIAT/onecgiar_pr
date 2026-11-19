@@ -1,4 +1,5 @@
 // @akili-spec changes/portfolio-overview-revamp/w3-projects-section (WPS-T-3, WPS-DD-6, WPS-DD-8)
+// @akili-spec bugfix/inc-168459-portfolio-overview-data (POD-T-2, POD-DD-3)
 import {
   ProjectCounts,
   ProjectsByCenter,
@@ -10,7 +11,10 @@ import { naturalCodeCompare } from '../toc-kpi-block/toc-kpi.format';
 export interface ProjectsViewRow extends ProjectCounts {
   /** Official code; `null` for the Unassigned Center bucket. */
   code: string | null;
+  /** Axis label: P/A `code · shortName` (fallback `code`); Center catalogue label. */
   label: string;
+  /** Tooltip and table text: P/A `code · name` (fallback `label`); Center = `label`. */
+  fullLabel: string;
   name: string;
 }
 
@@ -32,14 +36,18 @@ export function shareOfMapped(count: number, mapped: number): string | null {
 export function toProgramRows(rows: readonly ProjectsByProgram[]): ProjectsViewRow[] {
   return [...rows]
     .sort((a, b) => naturalCodeCompare(a.code, b.code))
-    .map(r => ({
-      code: r.code,
-      label: r.code,
-      name: r.name,
-      mapped: r.mapped,
-      withBilateralResults: r.withBilateralResults,
-      w1w2Contributors: r.w1w2Contributors
-    }));
+    .map(r => {
+      const label = r.shortName ? `${r.code} · ${r.shortName}` : r.code;
+      return {
+        code: r.code,
+        label,
+        fullLabel: r.name ? `${r.code} · ${r.name}` : label,
+        name: r.name,
+        mapped: r.mapped,
+        withBilateralResults: r.withBilateralResults,
+        w1w2Contributors: r.w1w2Contributors
+      };
+    });
 }
 
 /**
@@ -57,6 +65,7 @@ export function toCenterRows(
     return {
       code: r.code,
       label,
+      fullLabel: label,
       name: r.name || label,
       mapped: r.mapped,
       withBilateralResults: r.withBilateralResults,

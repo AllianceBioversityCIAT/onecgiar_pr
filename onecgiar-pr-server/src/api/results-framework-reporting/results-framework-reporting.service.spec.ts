@@ -36,6 +36,7 @@ import { ExistingResultContributorsLoaderService } from './application/queries/g
 import { ContributorsRoleResolverService } from './application/queries/get-existing-result-contributors/contributors-role-resolver.service';
 import { TocResultsRepository } from '../../toc/toc-results/toc-results.repository';
 import { VersioningService } from '../versioning/versioning.service';
+import { PhaseInitiativeReportingAccess } from '../results/admin-panel/entities/phase-initiative-reporting-access.entity';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 
 const mockClarisaInitiativesRepository = {
@@ -174,6 +175,21 @@ const mockVersionRepository = {
   findOne: jest.fn(),
 };
 
+// @akili-spec bugfix/inc-168459-portfolio-overview-data (POD-T-1)
+// In-memory stand-in for the per-phase switch table: `find` honours the
+// plain-value `where` it receives, so a wrong version / flag filter changes
+// the result instead of being swallowed by a canned mock.
+let switchRows: any[] = [];
+const mockPhaseAccessRepository = {
+  find: jest.fn(({ where }: any) =>
+    Promise.resolve(
+      switchRows.filter((r) =>
+        Object.entries(where ?? {}).every(([k, v]) => r[k] === v),
+      ),
+    ),
+  ),
+};
+
 const mockDataSource = {
   query: jest.fn(),
   getRepository: jest.fn(() => mockVersionRepository),
@@ -204,6 +220,7 @@ describe('ResultsFrameworkReportingService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    switchRows = [];
 
     mockTocResultsRepository.getIndicatorContributions.mockResolvedValue(
       new Map(),
@@ -234,6 +251,10 @@ describe('ResultsFrameworkReportingService', () => {
         {
           provide: getRepositoryToken(ClarisaCenter),
           useValue: mockClarisaCenterRepository,
+        },
+        {
+          provide: getRepositoryToken(PhaseInitiativeReportingAccess),
+          useValue: mockPhaseAccessRepository,
         },
         {
           provide: ClarisaProjectsRepository,
@@ -2392,6 +2413,171 @@ describe('ResultsFrameworkReportingService', () => {
       expect(logged).not.toContain('select');
       expect(logged).toContain('ER_X');
       errorSpy.mockRestore();
+    });
+  });
+
+  describe('Portfolio P/A seed honours the per-phase switch (POD-T-1)', () => {
+    const SWITCHED_OFF = 41;
+    const seed = () => [
+      { id: 1, official_code: 'SP01', short_name: 'One', name: 'Program One' },
+      {
+        id: '41',
+        official_code: 'SGP-02',
+        short_name: 'SGP02',
+        name: 'Science Program Two',
+      },
+    ];
+    const offRow = (version_id: number, reporting_enabled = false) => ({
+      version_id,
+      initiative_id: SWITCHED_OFF,
+      reporting_enabled,
+    });
+    const codesOf = (list: any[]) => list.map((i) => i.code);
+    const phaseV = {
+      id: '42',
+      phase_name: 'R',
+      phase_year: 2026,
+      status: true,
+    };
+    const projectFact = (id: number, approvedProgramCodes: string[]) => ({
+      id,
+      organizationCode: null,
+      sourceCenterAcronym: null,
+      approvedProgramCodes,
+      hasBilateral: true,
+      hasW1w2: false,
+    });
+    const tocRow = (official_code: string, total: number, covered: number) => ({
+      official_code,
+      category: 'OUTPUT',
+      total,
+      covered,
+      noTarget: 0,
+    });
+
+    beforeEach(() => {
+      mockVersionRepository.findOne.mockReset();
+      mockVersionRepository.findOne.mockResolvedValue(phaseV);
+      mockClarisaInitiativesRepository.find.mockReset();
+      mockClarisaInitiativesRepository.find.mockResolvedValue(seed());
+      mockClarisaCenterRepository.find.mockReset();
+      mockClarisaCenterRepository.find.mockResolvedValue([]);
+      // SGP-02 carries non-zero facts in every block.
+      mockClarisaProjectsRepository.getPortfolioProjectFacts.mockReset();
+      mockClarisaProjectsRepository.getPortfolioProjectFacts.mockResolvedValue([
+        projectFact(1, ['SP01', 'SGP-02']),
+        projectFact(2, ['SGP-02']),
+      ]);
+      mockShareResultRequestRepository.getPortfolioContributionRequestFacts.mockReset();
+      mockShareResultRequestRepository.getPortfolioContributionRequestFacts.mockResolvedValue(
+        [
+          {
+            requestId: 1,
+            resultId: 1,
+            resultCode: 101,
+            resultTitle: 't',
+            requesterInitiativeId: 1,
+            requesterCode: 'SP01',
+            approvingInitiativeId: 41,
+            approvingCode: 'SGP-02',
+            statusId: 1,
+            requestedDate: null,
+          },
+        ],
+      );
+      mockReportingTocContextService.resolve.mockReset();
+      mockReportingTocContextService.resolveByVersionId.mockReset();
+      mockReportingTocContextService.resolve.mockResolvedValue({
+        reportingYear: 2026,
+        phaseUuid: 'P',
+        versionId: 42,
+        phaseName: 'R',
+      });
+      mockTocResultsRepository.getPortfolioTocCoverage.mockReset();
+      mockTocResultsRepository.getPortfolioTocCoverage.mockResolvedValue([
+        tocRow('SP01', 3, 1),
+        tocRow('SGP-02', 5, 5),
+      ]);
+    });
+
+    const run = {
+      projects: async () =>
+        ((await service.getPortfolioBilateralProjects()) as any).response,
+      requests: async () =>
+        ((await service.getPortfolioContributionRequests()) as any).response,
+      toc: async () =>
+        ((await service.getPortfolioTocCoverage()) as any).response,
+    };
+
+    it('reads only off-rows of the resolved version (call arguments)', async () => {
+      switchRows = [offRow(42)];
+      await run.projects();
+      await run.requests();
+      await run.toc();
+      expect(mockPhaseAccessRepository.find).toHaveBeenCalledTimes(3);
+      for (const call of mockPhaseAccessRepository.find.mock.calls) {
+        expect(call[0].where).toEqual({
+          version_id: 42,
+          reporting_enabled: false,
+        });
+      }
+    });
+
+    describe('switched off for the phase (2.1, 2.2)', () => {
+      beforeEach(() => {
+        switchRows = [offRow(42)];
+      });
+
+      it('projects: SGP-02 leaves byProgram, totals still count its projects', async () => {
+        const r = await run.projects();
+        expect(codesOf(r.byProgram)).toEqual(['SP01']);
+        expect(r.totals.mapped).toBe(2);
+      });
+
+      it('requests: SGP-02 leaves byProgram, totals still count the request', async () => {
+        const r = await run.requests();
+        expect(codesOf(r.byProgram)).toEqual(['SP01']);
+        expect(r.totals.pending).toBe(1);
+        expect(r.byProgram[0].sent.pending).toBe(1);
+      });
+
+      it('ToC: SGP-02 leaves programs and the portfolio sum', async () => {
+        const r = await run.toc();
+        expect(codesOf(r.programs)).toEqual(['SP01']);
+        expect(r.portfolio.total).toBe(3);
+        expect(r.portfolio.covered).toBe(1);
+      });
+    });
+
+    describe('still listed (2.3)', () => {
+      const expectAllListed = async () => {
+        expect(codesOf((await run.projects()).byProgram)).toEqual([
+          'SP01',
+          'SGP-02',
+        ]);
+        expect(codesOf((await run.requests()).byProgram)).toEqual([
+          'SP01',
+          'SGP-02',
+        ]);
+        const toc = await run.toc();
+        expect(codesOf(toc.programs)).toEqual(['SP01', 'SGP-02']);
+        expect(toc.portfolio.total).toBe(8);
+      };
+
+      it('no switch row at all (absent = enabled)', async () => {
+        switchRows = [];
+        await expectAllListed();
+      });
+
+      it('an explicit enabled row', async () => {
+        switchRows = [offRow(42, true)];
+        await expectAllListed();
+      });
+
+      it('an off-row that belongs to another version', async () => {
+        switchRows = [offRow(41)];
+        await expectAllListed();
+      });
     });
   });
 
