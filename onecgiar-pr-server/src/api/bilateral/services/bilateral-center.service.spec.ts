@@ -304,6 +304,10 @@ describe('BilateralCenterService', () => {
             find: jest.fn().mockResolvedValue([]),
             save: jest.fn().mockResolvedValue({}),
             update: jest.fn().mockResolvedValue({}),
+            // changes/bilateral-partners-mds (BPX-T-1): `assertSubmittable` counts the active
+            // partner rows. Default = one active partner, so every case that reaches the gate keeps
+            // testing what it tested before; the "partner answer" cases override it.
+            count: jest.fn().mockResolvedValue(1),
           },
         },
         {
@@ -3809,6 +3813,121 @@ describe('BilateralCenterService', () => {
         ResultStatusData.PendingReview.value,
       );
       expect(resultRepository.manager.transaction).toHaveBeenCalled();
+    });
+
+    // @akili-spec changes/bilateral-partners-mds (BPX-T-1; BPX-R-4, BPX-R-5)
+    describe('partner answer (BPX-R-5 server gate)', () => {
+      let partners: any;
+      let history: jest.Mock;
+
+      beforeEach(() => {
+        partners = module.get<ResultByIntitutionsRepository>(
+          ResultByIntitutionsRepository,
+        );
+        partners.count.mockResolvedValue(0);
+        history = jest.fn().mockResolvedValue({});
+        (resultRepository.manager.transaction as jest.Mock).mockImplementation(
+          async (cb: any) =>
+            cb({
+              findOne: jest.fn().mockResolvedValue({ id: 77 }),
+              update: jest.fn().mockResolvedValue({}),
+              create: jest.fn((_entity, payload) => payload),
+              save: history,
+              query: jest.fn().mockResolvedValue({}),
+            }),
+        );
+      });
+
+      const stub = (patch: Record<string, unknown>) =>
+        (resultRepository.findOne as jest.Mock).mockResolvedValue({
+          ...editingResult,
+          no_applicable_partner: false,
+          result_type_id: ResultTypeEnum.CAPACITY_CHANGE,
+          ...patch,
+        });
+
+      it('refuses with 400 naming External partners when there is no answer, and writes no history', async () => {
+        stub({});
+
+        const call = service.submitForReview(user, 77, decisionDto);
+
+        await expect(call).rejects.toBeInstanceOf(BadRequestException);
+        await expect(call).rejects.toThrow(/External partners/);
+        expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
+        expect(history).not.toHaveBeenCalled();
+      });
+
+      it('passes when no_applicable_partner is true, without counting rows', async () => {
+        stub({ no_applicable_partner: true });
+
+        await service.submitForReview(user, 77, decisionDto);
+
+        expect(resultRepository.manager.transaction).toHaveBeenCalled();
+      });
+
+      it('passes with one active role-2 (partner) row', async () => {
+        stub({});
+        partners.count.mockImplementation(async (opts: any) =>
+          opts.where.institution_roles_id._value.includes(
+            InstitutionRoleEnum.PARTNER,
+          ) && opts.where.is_active === true
+            ? 1
+            : 0,
+        );
+
+        await service.submitForReview(user, 77, decisionDto);
+
+        expect(resultRepository.manager.transaction).toHaveBeenCalled();
+      });
+
+      it('passes with one active role-8 (KP additional contributor) row', async () => {
+        stub({});
+        partners.count.mockImplementation(async (opts: any) =>
+          opts.where.institution_roles_id._value.includes(
+            InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
+          ) && opts.where.is_active === true
+            ? 1
+            : 0,
+        );
+
+        await service.submitForReview(user, 77, decisionDto);
+
+        expect(resultRepository.manager.transaction).toHaveBeenCalled();
+      });
+
+      it('refuses when the only partner rows are inactive', async () => {
+        stub({});
+        partners.count.mockImplementation(async (opts: any) =>
+          opts.where.is_active === true ? 0 : 3,
+        );
+
+        await expect(
+          service.submitForReview(user, 77, decisionDto),
+        ).rejects.toThrow(/External partners/);
+        expect(history).not.toHaveBeenCalled();
+      });
+
+      it('skips the check for a Knowledge Product with nothing (BPX-R-4)', async () => {
+        stub({ result_type_id: ResultTypeEnum.KNOWLEDGE_PRODUCT });
+
+        await service.submitForReview(user, 77, decisionDto);
+
+        expect(partners.count).not.toHaveBeenCalled();
+        expect(resultRepository.manager.transaction).toHaveBeenCalled();
+      });
+
+      it('fires before the Innovation Use MDS validator', async () => {
+        stub({ result_type_id: ResultTypeEnum.INNOVATION_USE });
+        const validator = module.get<InnovationUseMdsValidator>(
+          InnovationUseMdsValidator,
+        ) as any;
+
+        await expect(
+          service.submitForReview(user, 77, decisionDto),
+        ).rejects.toThrow(/External partners/);
+        expect(validator.assertPersistedMds).not.toHaveBeenCalled();
+        expect(history).not.toHaveBeenCalled();
+      });
     });
 
     it('refuses the old empty submit request before changing status', async () => {

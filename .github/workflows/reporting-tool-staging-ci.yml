@@ -55,8 +55,15 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Lint (the `lint` script without --fix)
         run: ./node_modules/.bin/eslint "{src,apps,libs,test}/**/*.ts"
+      # CI-only memory settings (no change to the application test config): the module-wiring specs (app.module,
+      # main.routes, qa-catalog.module) boot large Nest modules, and with --coverage a Jest worker can exceed the default
+      # Node heap ("JavaScript heap out of memory", SIGKILL/SIGTERM). Two workers with a 4 GB heap each fit the runner.
+      # No --workerIdleMemoryLimit: almost every worker exceeds 1 GB after one file, so Jest restarted a worker per test
+      # file and the step went from about 5 minutes to the 30-minute timeout.
       - name: Unit tests with coverage
-        run: npm run test:cov -- --ci
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: npm run test:cov -- --ci --maxWorkers=2
 
   frontend-checks:
     name: frontend checks (lint, tests)

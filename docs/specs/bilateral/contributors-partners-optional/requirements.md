@@ -59,16 +59,19 @@ Cross-references:
 ### Required (MUST)
 
 - **`BIL-R-1` Placement.** The External partners block (the "This result has no external partners" checkbox, the partners multi-select, and the selected-partner chips) MUST render only while Full metadata is expanded. It MUST render there for **every** result type, Innovation Use and Innovation Development included.
+  _Superseded by `changes/bilateral-partners-mds` (2026-11-18): BIL-R-1 (partners only in Full metadata) is replaced by BPX-R-1: partners render above the gate, in Block 1 (the MDS). Mandatory field confirmed by Angel Jarrin, 2026-11-18 (relayed by the user); see that spec §1 Decision._
 - **`BIL-R-2` Optional.** External partners MUST NOT be a required answer:
   - no required marker on the multi-select;
   - no "Add at least one external partner…" hint;
   - no "External partners" entry in the section's missing-fields list;
   - no effect on the section's completion or on the Submit gate.
+  _Superseded by `changes/bilateral-partners-mds` (2026-11-18): BIL-R-2 (optional) is replaced by BPX-R-2 (a partner, or the no-partners tick, is required for editable non-KP results), with BPX-R-4 (Knowledge Products stay optional) and BPX-R-5 (server gate on submit). Mandatory field confirmed by Angel Jarrin, 2026-11-18 (relayed by the user); see that spec §1 Decision._
 - **`BIL-R-3` Persistence unchanged.** Selecting or removing partners, and ticking or unticking the checkbox, MUST keep saving and reloading exactly as today. That includes:
   - ticking the box clears any selected partners;
   - the partner keys travel only once the stored partner block has loaded;
   - "led by a partner = false" is still sent alongside them.
 - **`BIL-R-4` Hidden-fields note.** With Full metadata collapsed, the "N hidden field(s) have values and will be saved." note MUST count the partner block as one field when it holds an answer: at least one partner selected, or the checkbox ticked. It MUST NOT count the block before the stored partners have loaded.
+  _Superseded by `changes/bilateral-partners-mds` (2026-11-18): BIL-R-4 (hidden-fields count) is replaced by BPX-R-7: the partner block is never hidden, so the note no longer counts it. Mandatory field confirmed by Angel Jarrin, 2026-11-18 (relayed by the user); see that spec §1 Decision._
 - **`BIL-R-5` Load-error banners.**
   - The centres-catalogue load error and its Retry button MUST stay visible in the minimum-data block without expanding Full metadata.
   - The partners load error and its Retry button MUST render together with the partner block.

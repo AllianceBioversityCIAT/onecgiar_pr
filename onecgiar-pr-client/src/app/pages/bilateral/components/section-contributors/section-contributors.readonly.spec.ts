@@ -92,6 +92,8 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
     creation = {
       // P2-3520 gate. `readOnly()` in the component is the negation of this.
       isEditableByCenterUser: () => editable(),
+      // BPX-R-4: Knowledge Products keep External partners optional.
+      isKnowledgeProduct: () => Number(creation.resultTypeId()) === 6,
       selectedPrimarySp: signal<any>({ programId: 1, programCode: 'SP01', name: 'Primary', allocation: '50' }),
       selectedProject: signal<any>({
         id: 501,
@@ -166,8 +168,8 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
     beforeEach(() => {
       editable.set(true);
       build();
-      // P2-3821: "External partners" moved into Full metadata (BIL-R-1) — expand it so this
-      // describe's shared `it.each` over all four pickers can still find the picker by label.
+      // Expand Full metadata so this describe's shared `it.each` also reaches the Full-metadata-only
+      // pickers; "External partners" renders in Block 1 regardless (BPX-R-1).
       component.showAllFields.set(true);
       fixture.detectChanges();
     });
@@ -218,8 +220,8 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
     beforeEach(() => {
       editable.set(false);
       build();
-      // P2-3821: "External partners" moved into Full metadata (BIL-R-1) — expand it so this
-      // describe's shared `it.each` over all four pickers can still find the picker by label.
+      // Expand Full metadata so this describe's shared `it.each` also reaches the Full-metadata-only
+      // pickers; "External partners" renders in Block 1 regardless (BPX-R-1).
       component.showAllFields.set(true);
       fixture.detectChanges();
     });
@@ -307,7 +309,7 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
     // visible while Full metadata is collapsed. `build()` leaves `showAllFields` at its default
     // (false); asserting that here on purpose is what BIL-AC-8 requires.
     it('renders the centers-load-error banner while Full metadata is collapsed', () => {
-      expect(component.showFullMetadata()).toBe(false);
+      expect(component.showAllFields()).toBe(false);
       component.centersLoadFailed.set(true);
       fixture.detectChanges();
 
@@ -315,67 +317,117 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
     });
   });
 
-  // ── P2-3821: External partners moved into Full metadata (BIL-R-1, BIL-AC-3, BIL-AC-4, BIL-AC-9) ──
+  // ── changes/bilateral-partners-mds BPX-R-1..R-4 (decision 2026-11-18, supersedes P2-3821) ──
   //
-  // These specs render the REAL template — `overrideTemplate` is not evidence for a placement gate
-  // (only a static read of the shipped `.html`, or a rendered measurement like this one, can prove
-  // it). Every case here must expand/collapse `showAllFields` through the component's own signal
-  // and re-render; `pickerFor` throws "is not rendered at all" only when that IS the assertion.
-  describe('External partners lives in Full metadata (P2-3821)', () => {
+  // External partners lives in Block 1 for every type and is required for editable non-KP results.
+  // These render the REAL template; the placement itself (before the MDS banner, outside the Full
+  // metadata container) is locked by the static read in `section-contributors.component.spec.ts`,
+  // because jsdom cannot prove layout.
+  describe('External partners in Block 1 (BPX-R-1..R-4)', () => {
     const EXTERNAL_PARTNERS_LABEL = 'External partners';
+    const HINT = 'Add at least one external partner';
+    const countPickers = () =>
+      (Array.from(fixture.nativeElement.querySelectorAll('app-pr-multi-select')) as HTMLElement[]).filter(h =>
+        (h.textContent ?? '').includes(EXTERNAL_PARTNERS_LABEL)
+      ).length;
 
-    it('is absent for type 1 (Policy) while Full metadata is collapsed', () => {
+    it.each([
+      ['Policy', 1],
+      ['Innovation Use', 2],
+      ['Knowledge Product', 6]
+    ])('is visible with Full metadata collapsed for %s (type %d)', (_label, typeId) => {
       editable.set(true);
-      creation.resultTypeId.set(1);
+      creation.resultTypeId.set(typeId);
       build();
       component.showAllFields.set(false);
-      fixture.detectChanges();
-
-      expect(() => pickerFor(EXTERNAL_PARTNERS_LABEL)).toThrow();
-    });
-
-    it('is absent for type 2 (Innovation Use) while Full metadata is collapsed', () => {
-      editable.set(true);
-      creation.resultTypeId.set(2);
-      build();
-      component.showAllFields.set(false);
-      fixture.detectChanges();
-
-      expect(() => pickerFor(EXTERNAL_PARTNERS_LABEL)).toThrow();
-    });
-
-    it('is present for type 1 (Policy) once Full metadata is expanded', () => {
-      editable.set(true);
-      creation.resultTypeId.set(1);
-      build();
-      component.showAllFields.set(true);
       fixture.detectChanges();
 
       expect(pickerFor(EXTERNAL_PARTNERS_LABEL)).toBeTruthy();
     });
 
-    it('is present for type 2 (Innovation Use) once Full metadata is expanded, but the linked question is absent (BIL-AC-4, BIL-R-6)', () => {
+    it.each([
+      ['Policy', 1],
+      ['Innovation Use', 2]
+    ])('renders once, not twice, once Full metadata is expanded for %s (type %d)', (_label, typeId) => {
+      editable.set(true);
+      creation.resultTypeId.set(typeId);
+      build();
+      component.showAllFields.set(true);
+      fixture.detectChanges();
+
+      expect(countPickers()).toBe(1);
+    });
+
+    it('keeps the linked question out of type 2 while partners stay visible (BPX-R-1)', () => {
       editable.set(true);
       creation.resultTypeId.set(2);
       build();
       component.showAllFields.set(true);
       fixture.detectChanges();
 
-      expect(pickerFor(EXTERNAL_PARTNERS_LABEL)).toBeTruthy();
       expect(fixture.nativeElement.textContent).not.toContain('Is this result linked or bundled');
     });
 
-    it('carries no required marker on the multi-select and shows no red hint (BIL-AC-9, BIL-R-2)', () => {
+    it('carries the required marker and the red hint for an editable non-KP result with no answer (BPX-R-2)', () => {
       editable.set(true);
+      creation.resultTypeId.set(1);
       build();
-      component.showAllFields.set(true);
       component.noExternalPartners.set(false);
       component.selectedPartnerInstitutionIds.set([]);
       fixture.detectChanges();
 
-      const host = pickerFor(EXTERNAL_PARTNERS_LABEL);
-      expect(host.querySelector('.fch_required')).toBeNull();
-      expect(fixture.nativeElement.textContent).not.toContain('Add at least one external partner');
+      expect(pickerFor(EXTERNAL_PARTNERS_LABEL).querySelector('.fch_required, .required')).toBeTruthy();
+      expect(fixture.nativeElement.textContent).toContain(HINT);
+    });
+
+    it('drops the hint once a partner is selected (BPX-R-2 scenario 2)', () => {
+      editable.set(true);
+      creation.resultTypeId.set(1);
+      build();
+      component.selectedPartnerInstitutionIds.set([100]);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).not.toContain(HINT);
+    });
+
+    it('shows no required marker and no hint on a read-only result with no answer (BPX-R-3)', () => {
+      editable.set(false);
+      creation.resultTypeId.set(1);
+      build();
+      component.noExternalPartners.set(false);
+      component.selectedPartnerInstitutionIds.set([]);
+      fixture.detectChanges();
+
+      expect(pickerFor(EXTERNAL_PARTNERS_LABEL).querySelector('.fch_required, .required')).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain(HINT);
+    });
+
+    it('stays optional for a Knowledge Product: no marker, no hint (BPX-R-4)', () => {
+      editable.set(true);
+      creation.resultTypeId.set(6);
+      build();
+      component.noExternalPartners.set(false);
+      component.selectedPartnerInstitutionIds.set([]);
+      fixture.detectChanges();
+
+      expect(pickerFor(EXTERNAL_PARTNERS_LABEL).querySelector('.fch_required, .required')).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain(HINT);
+    });
+
+    it('hides the Full metadata toggle for types 2 and 7, which have nothing behind it (BPX-DD-3)', () => {
+      editable.set(true);
+      creation.resultTypeId.set(2);
+      build();
+
+      expect(fixture.nativeElement.textContent).not.toContain('Complete full metadata');
+    });
+
+    it('keeps the Full metadata toggle for a type that has the linked question', () => {
+      editable.set(true);
+      creation.resultTypeId.set(1);
+      build();
+
+      expect(fixture.nativeElement.textContent).toContain('Complete full metadata');
     });
   });
 
