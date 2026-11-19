@@ -55,8 +55,12 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Lint (the `lint` script without --fix)
         run: ./node_modules/.bin/eslint "{src,apps,libs,test}/**/*.ts"
+      # CI-only memory limits (no change to the application test config): the module-wiring specs (app.module,
+      # main.routes, qa-catalog.module) boot large Nest modules, and with --coverage the Jest workers grow until Node
+      # runs out of heap on the runner (SIGKILL/SIGTERM, "JavaScript heap out of memory"). Two workers, each recycled
+      # when it exceeds 1 GB after a test file, keep the run inside the runner memory.
       - name: Unit tests with coverage
-        run: npm run test:cov -- --ci
+        run: npm run test:cov -- --ci --maxWorkers=2 --workerIdleMemoryLimit=1024MB
 
   frontend-checks:
     name: frontend checks (lint, tests)
