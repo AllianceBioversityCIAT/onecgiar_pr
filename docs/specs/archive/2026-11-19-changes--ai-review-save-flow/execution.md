@@ -66,3 +66,11 @@
 ## 3. Summary
 
 `AIR-T-1` complete (2 attempts). Remaining: `AIR-T-2`, `AIR-T-3`, `AIR-T-4`.
+
+---
+
+## 4. Archive note — 2026-11-19
+
+`AIR-T-1`..`AIR-T-3` all shipped together in commit `c8465baa1` (Camila Giraldo, 2026-09-21; message: "Tests: 30/30 green, ng lint clean"), which is on `master`, `staging` and `performance-refactor`. This log was never updated after attempt 2 of `AIR-T-1`; code verified on 2026-11-19: no Validate button, unsaved-proposal reminder at `ai-review.component.html`, `onApplyProposal` re-enables Save changes only on failure, `(ngModelChange)` dirty tracking on both inputs. `AIR-T-4` (manual browser check) has no recorded evidence; the feature has been live in PROD since the September release.
+
+Follow-up: Marc Schut feedback batch 1, item 9 usability note (2026-10-30), said the "Applied" badge next to the unsaved warning reads as done. Fixed by `quick/ai-review-applied-badge` (2026-11-19): the badge shows "Copied to Result version — not saved yet" while unsaved and "Saved" after a save.
