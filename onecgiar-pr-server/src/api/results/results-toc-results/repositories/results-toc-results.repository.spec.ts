@@ -1555,3 +1555,65 @@ describe('ResultsTocResultRepository.saveInditicatorsContributing — CTA (bugfi
     expect(targetRows[0].toc_indicator_target_id).toBeNull();
   });
 });
+
+/**
+ * A save of Contributors and partners whose payload carried no `changePrimaryInit` reached
+ * `getRTRPrimary(resultId, [undefined], true)`: `[undefined].toString()` is `''`, so the query went out
+ * as `rtr.initiative_id in ()` and MySQL answered ER_PARSE_ERROR — a 500 on a save that had already
+ * persisted everything (prtest, unmapped Innovation Development result, 2026-11-19).
+ */
+describe('ResultsTocResultRepository.getRTRPrimary — no usable initiative id', () => {
+  const buildRepository = () => {
+    const repo = new ResultsTocResultRepository(
+      { createEntityManager: jest.fn().mockReturnValue({}) } as any,
+      { returnErrorRepository: jest.fn((e) => e) } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    const query = jest.fn().mockResolvedValue([]);
+    (repo as any).query = query;
+    return { repo, query };
+  };
+
+  const emptyInList = /\bin\s*\(\s*\)/i;
+
+  it.each([
+    ['[undefined]', [undefined]],
+    ['[null]', [null]],
+    ['[]', []],
+    ['undefined', undefined],
+  ])(
+    'never emits an empty IN list for the primary filter (%s)',
+    async (_label, ids) => {
+      const { repo, query } = buildRepository();
+
+      await repo.getRTRPrimary(1, ids as any, true);
+
+      const sql: string = query.mock.calls[0][0];
+      expect(sql).not.toMatch(emptyInList);
+      expect(sql).toMatch(/rtr\.initiative_id\s+in\s*\(\s*null\s*\)/i);
+    },
+  );
+
+  it('never emits an empty IN list for the contributor filter either', async () => {
+    const { repo, query } = buildRepository();
+
+    await repo.getRTRPrimary(1, [undefined] as any, false, [undefined] as any);
+
+    expect(query.mock.calls[0][0]).not.toMatch(emptyInList);
+  });
+
+  it('keeps the ids it was given', async () => {
+    const { repo, query } = buildRepository();
+
+    await repo.getRTRPrimary(1, [58], false, [50, 51]);
+
+    const sql: string = query.mock.calls[0][0];
+    expect(sql).toMatch(/rtr\.initiative_id\s+not\s+in\s*\(\s*58\s*\)/i);
+    expect(sql).toMatch(/rtr\.initiative_id\s+in\s*\(\s*50,51\s*\)/i);
+  });
+});

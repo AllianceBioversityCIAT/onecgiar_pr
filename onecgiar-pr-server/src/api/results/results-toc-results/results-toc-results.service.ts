@@ -2126,9 +2126,15 @@ export class ResultsTocResultsService {
         ),
       ]);
 
+      // The primary Program the response is built around. `changePrimaryInit` wins when the client sent
+      // it (it is the Submitter picker); a payload without it falls back to the same chain the write
+      // path above already used, instead of asking for `initiative_id in ()` (a 500 after a full save).
+      const responsePrimaryInit =
+        normalizeInitiativeId(changePrimaryInit) ?? primaryInitiativeId;
+
       const primaryList = (await this._resultsTocResultRepository.getRTRPrimary(
         result_id,
-        [changePrimaryInit],
+        [responsePrimaryInit],
         true,
       )) as ResultTocResultWithInitiativeInfo[];
       const primaryBox: ResultTocResultWithInitiativeInfo[] =
@@ -2140,7 +2146,7 @@ export class ResultsTocResultsService {
                 toc_result_id: null,
                 planned_result: result_toc_result?.planned_result ?? null,
                 result_id,
-                initiative_id: changePrimaryInit,
+                initiative_id: responsePrimaryInit,
                 short_name: conAndPriInit?.[0]?.short_name ?? null,
                 official_code: conAndPriInit?.[0]?.official_code ?? null,
               },
@@ -2150,7 +2156,7 @@ export class ResultsTocResultsService {
       for (const c of conInit) {
         const items = (await this._resultsTocResultRepository.getRTRPrimary(
           result_id,
-          [changePrimaryInit],
+          [responsePrimaryInit],
           false,
           [c.id],
         )) as ResultTocResultWithInitiativeInfo[];
