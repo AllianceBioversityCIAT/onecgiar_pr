@@ -179,7 +179,12 @@
     - `quality-assurance.component.spec.ts`: suite failed to run
   - These are judged unrelated to this spec, but not proven pre-existing (no baseline run at `548d9bf29`)
   - the folder suite after the comment follow-up: `252 passed, 252 total`
-  - server full suite and `ng lint`: not yet run
+  - server full suite and `ng lint`: not run in the first pass
+  - Leader validation pass ("valida tu mismo", 2026-11-18). A background run of all gates was killed for low memory, so the gates were re-run in the foreground one at a time:
+    - server `npx eslint "{src,apps,libs,test}/**/*.ts" --quiet`: exit 0
+    - client `npx ng lint --quiet`: "All files pass linting.", exit 0
+    - server `npx jest src/api/bilateral --forceExit --maxWorkers=2`: `Test Suites: 47 passed, 47 total · Tests: 1665 passed, 1665 total`
+    - full server suite: not run. It does not fit the 10-min foreground limit, and background runs are reaped under memory pressure. The T-1 diff is confined to the private `assertSubmittable` in `bilateral-center.service.ts`, which has no importers outside `src/api/bilateral`
 
 ### BPX-T-2 follow-up — folder guide `section-contributors/CLAUDE.md` — PASS
 

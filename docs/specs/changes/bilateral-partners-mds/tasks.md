@@ -40,7 +40,7 @@
 - **Definition of done:**
   - [x] Cases pass: no answer → 400 · flag → pass · active role 2 → pass · active role 8 → pass · inactive only → 400 · KP with nothing → pass · the 400 fires before the IU validator
   - [x] The three mutations each turn a case red (quoted in `execution.md`)
-  - [ ] `npx jest --silent --reporters=summary --forceExit` green; — **open:** spec file 253/253, tsc clean, scoped eslint clean; full server suite not run (CI); `npx tsc --noEmit -p tsconfig.json` clean; `npx eslint "{src,apps,libs,test}/**/*.ts" --quiet` clean
+  - [ ] `npx jest --silent --reporters=summary --forceExit` green; — **open:** spec file 253/253, tsc clean, scoped eslint clean; full server suite not run (memory; bilateral module 1665/1665, full eslint exit 0); `npx tsc --noEmit -p tsconfig.json` clean; `npx eslint "{src,apps,libs,test}/**/*.ts" --quiet` clean
   - [ ] Commit `🔧 fix(bilateral.service) [TBD]: …` with `[SPEC:changes/bilateral-partners-mds]`
 
 ### BPX-T-2 — Client: partners block in Block 1, required for editable non-KP
@@ -75,7 +75,7 @@
 - **Definition of done:**
   - [x] Cases pass: item present, editable non-KP · absent, KP · absent, read-only · filled only when hydrated and answered · re-published on the readOnly flip · `hiddenFieldsWithValues` ignores partners · `hasFullMetadataFields` false for 2 and 7 and true otherwise
   - [x] Mutations (a)–(c) each go red (quoted)
-  - [ ] `npx jest --silent --reporters=summary --no-coverage` green; — **open:** folder 252/252, ng build clean; full suite 92 failures in 6 unrelated suites; `ng lint` not run (CI); `npx ng build` clean; `npx ng lint --quiet` clean
+  - [ ] `npx jest --silent --reporters=summary --no-coverage` green; — **open:** folder 252/252, ng build clean; full suite 92 failures in 6 unrelated suites; `ng lint` clean (All files pass linting); `npx ng build` clean; `npx ng lint --quiet` clean
   - [ ] Manual check on prtest (HITL), the T6-class layout gap:
     - the block is visible with Full metadata collapsed, for a Policy and an Innovation Use result;
     - the hint and the asterisk show on an editable non-KP result;
