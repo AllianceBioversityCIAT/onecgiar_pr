@@ -42,6 +42,7 @@ import { TocResultsModule } from '../../toc/toc-results/toc-results.module';
 import { NotificationModule } from '../notification/notification.module';
 import { VersioningModule } from '../versioning/versioning.module';
 import { ProgressTrackerModule } from '../progress-tracker/progress-tracker.module';
+import { PhaseInitiativeReportingAccess } from '../results/admin-panel/entities/phase-initiative-reporting-access.entity';
 import { ImpactLevelModule } from './impact-level/impact-level.module';
 
 @Module({
@@ -50,6 +51,7 @@ import { ImpactLevelModule } from './impact-level/impact-level.module';
       ClarisaProject,
       ClarisaCenter,
       ClarisaInitiative,
+      PhaseInitiativeReportingAccess,
     ]),
     ResultsModule,
     VersioningModule,

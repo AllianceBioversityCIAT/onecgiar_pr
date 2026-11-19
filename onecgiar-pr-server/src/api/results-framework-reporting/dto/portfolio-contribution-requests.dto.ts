@@ -92,7 +92,7 @@ export class PortfolioContributionRequestsResponseDto {
 
   @ApiProperty({
     description:
-      'Every active Program and Accelerator of the open portfolio, zeros included. Unordered.',
+      'Every active Program and Accelerator of the open portfolio, except those switched off for the phase, zeros included. Unordered.',
     type: () => [ContributionRequestsByProgramDto],
   })
   byProgram: ContributionRequestsByProgramDto[];

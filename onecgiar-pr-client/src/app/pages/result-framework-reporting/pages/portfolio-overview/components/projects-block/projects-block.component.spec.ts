@@ -2,6 +2,8 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { PrVizChartComponent } from '../../../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@angular/common/http/testing';
 import { PortfolioProjectsBlockComponent } from './projects-block.component';
@@ -157,6 +159,20 @@ describe('PortfolioProjectsBlockComponent (WPS-T-4)', () => {
       expect(q(f, '[data-testid="projects-tab-center"]')).not.toBeNull();
     });
 
+    // @akili-spec bugfix/inc-168459-portfolio-overview-data (POD-T-2)
+    it('binds the chart height to the row count (2 rows -> 320px floor; 13 rows -> taller)', async () => {
+      const f = create();
+      await answer(f, pending()[0]);
+      const chart = f.debugElement.query(By.directive(PrVizChartComponent)).componentInstance as PrVizChartComponent;
+      expect(chart.height()).toBe('320px');
+      const many = Array.from({ length: 13 }, (_, i) => ({ code: `SP${String(i + 1).padStart(2, '0')}`, shortName: `S${i}`, name: `N${i}`, ...counts(1, 0, 0) }));
+      f.componentRef.setInput('versionId', 37);
+      f.detectChanges();
+      await answer(f, pending()[0], payload({ byProgram: many }));
+      const chart2 = f.debugElement.query(By.directive(PrVizChartComponent)).componentInstance as PrVizChartComponent;
+      expect(chart2.height()).toBe(`${13 * 44 + 80}px`);
+    });
+
     it('view switch uses aria-pressed; Table replaces the chart', async () => {
       const f = create();
       await answer(f, pending()[0]);
@@ -177,7 +193,7 @@ describe('PortfolioProjectsBlockComponent (WPS-T-4)', () => {
       await answer(f, pending()[0]);
       click(f, 'projects-view-table');
       const rows = tableRows(f);
-      expect(rows.map(r => r[0])).toEqual(['SP01', 'SP02', copy.totalLabel]);
+      expect(rows.map(r => r[0])).toEqual(['SP01 · Program One', 'SP02 · Program Two', copy.totalLabel]);
       expect(rows[0].slice(1)).toEqual(['2', '1', '1']);
       expect(rows[2].slice(1)).toEqual(['2', '1', '1']);
       expect(rows[2][1]).not.toBe('3');
@@ -342,7 +358,7 @@ describe('PortfolioProjectsBlockComponent (WPS-T-4)', () => {
       f.componentRef.setInput('programs', new Set(['SP01']));
       f.detectChanges();
       click(f, 'projects-view-table');
-      expect(labels(f)).toEqual(['SP01']);
+      expect(labels(f)).toEqual(['SP01 · Program One']);
       expect(kpiValues(f)).toEqual(['7', '4', '3']);
       expect(text(q(f, '[data-testid="projects-total-row"]'))).toContain('7');
     });

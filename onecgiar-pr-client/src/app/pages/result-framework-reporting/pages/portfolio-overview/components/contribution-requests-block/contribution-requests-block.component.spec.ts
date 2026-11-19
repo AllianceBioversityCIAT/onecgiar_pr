@@ -161,6 +161,14 @@ describe('PortfolioContributionRequestsBlockComponent (CRP-T-3)', () => {
       expect(Array.from(chip?.querySelectorAll('span') ?? []).map(el => text(el))).toEqual([copy.phaseLabel, '2026']);
     });
 
+    it('subtitle explains who sends and answers requests (POD-R-3)', async () => {
+      const f = create();
+      await answer(f, pending()[0]);
+      expect(text(q(f, '[data-testid="contributions-subtitle"]'))).toBe(
+        'Requests between Programs/Accelerators to contribute to a result. Only Programs/Accelerators send and answer them; W3/Bilateral projects and Centers do not receive requests and need no action. Pending = not answered yet.'
+      );
+    });
+
     it('table has a caption and header cells with scope', async () => {
       const f = create();
       await answer(f, pending()[0]);
