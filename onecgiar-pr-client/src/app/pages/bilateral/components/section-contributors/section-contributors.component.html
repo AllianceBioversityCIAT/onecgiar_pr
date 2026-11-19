@@ -269,23 +269,110 @@
     }
   </div>
 
-  <!-- P2-3368 · Minimum-data banner + Full Metadata toggle, below Block 1. -->
-  <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
-    <app-alert-status
-      class="flex-1"
-      status="info"
-      [collapsible]="false"
-      description="The fields above are the minimum data standards required to report a bilateral result. Add the full metadata if you need to report more.">
-    </app-alert-status>
-    <button
-      type="button"
-      class="shrink-0 rounded-[6px] border border-[var(--pr-color-primary-300)] bg-white px-[14px] py-[7px] text-[12px] font-semibold text-[var(--pr-color-primary-300)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
-      (click)="toggleShowAll()">
-      {{ fullMetadataButtonLabel() }}
-    </button>
+  <!--
+    @akili-spec changes/bilateral-partners-mds BPX-R-1 (decision 2026-11-18, supersedes P2-3821):
+    External partners sits in Block 1 for every result type, whatever the Full metadata toggle says,
+    and must render only here. It is REQUIRED for an editable non-KP result (`isPartnerRequired()`)
+    and optional for Knowledge Products and read-only results (BPX-R-3, BPX-R-4). No partner-type /
+    nature attributes: the story puts them explicitly OUT of scope for bilateral results (AC6).
+  -->
+  <div class="sc-block sc-block--partners">
+    <!--
+      ── Failed read of the stored partner block ──────────────────────────────────────────
+      The hydrate effect fires once and never re-runs on its own, so without this the section
+      became a silent black hole: every PATCH dropped the partner keys while the block still
+      looked complete. The banner says it in plain words and the button is the only way back.
+    -->
+    @if (partnersLoadFailed()) {
+      <div class="flex flex-col items-start gap-[8px]" data-testid="partners-load-error">
+        <app-alert-status
+          status="error"
+          description="We could not load the partners already saved for this result, so nothing you choose here can be saved right now. Please retry.">
+        </app-alert-status>
+        <button
+          type="button"
+          class="inline-flex items-center gap-[6px] rounded-[6px] border border-[var(--pr-color-red-300)] bg-white px-[14px] py-[7px] text-[12px] font-semibold text-[var(--pr-color-red-300)] transition-colors hover:bg-[var(--pr-color-red-50)]"
+          data-testid="partners-load-retry"
+          (click)="retryLoadExternalPartners()">
+          <i class="material-icons-round text-[14px]">refresh</i>
+          Retry loading partners
+        </button>
+      </div>
+    }
+
+    <!-- P2-3520: same `isStatic` trap as the four pickers above — pr-checkbox only honours
+         `readOnly` when `isStatic` is false (pr-checkbox.component.html:6), so a submitted
+         result kept this box clickable. -->
+    <app-pr-checkbox
+      [readOnly]="readOnly()"
+      label="This result has no external partners"
+      [isStatic]="!readOnly()"
+      [required]="false"
+      [ngModel]="noExternalPartners()"
+      (ngModelChange)="noExternalPartners.set($event)"
+      (selectOptionEvent)="onNoExternalPartnersChange()">
+    </app-pr-checkbox>
+
+    @if (!noExternalPartners()) {
+      <app-pr-multi-select
+        [readOnly]="readOnly()"
+        label="External partners"
+        [options]="availablePartners()"
+        [ngModel]="selectedPartnerInstitutionIds()"
+        (ngModelChange)="onPartnersModelChange($event)"
+        optionLabel="full_name"
+        optionValue="institutions_id"
+        selectedOptionLabel="institutions_name"
+        placeholder="Select the partners that contributed to this result"
+        [required]="isPartnerRequired()"
+        [isStatic]="!readOnly()">
+      </app-pr-multi-select>
+
+      @if (selectedPartnerInstitutionIds().length) {
+        <div class="sc-selected-chips">
+          @for (id of selectedPartnerInstitutionIds(); track id) {
+            <span class="sc-chip">
+              {{ getPartnerDisplayName(id) }}
+              <button type="button" class="sc-chip-remove" [disabled]="readOnly()" (click)="removePartner(id)">×</button>
+            </span>
+          }
+        </div>
+      } @else if (isPartnerRequired()) {
+        <span class="text-[12px] font-normal text-[var(--pr-color-red-300)]">
+          Add at least one external partner, or tick “This result has no external partners”.
+        </span>
+      }
+    }
   </div>
 
-  @if (showHiddenFieldsNote()) {
+  <!-- P2-3368 · Minimum-data banner + Full Metadata toggle, below Block 1. -->
+  @if (hasFullMetadataFields()) {
+    <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
+      <app-alert-status
+        class="flex-1"
+        status="info"
+        [collapsible]="false"
+        description="The fields above are the minimum data standards required to report a bilateral result. Add the full metadata if you need to report more.">
+      </app-alert-status>
+      <button
+        type="button"
+        class="shrink-0 rounded-[6px] border border-[var(--pr-color-primary-300)] bg-white px-[14px] py-[7px] text-[12px] font-semibold text-[var(--pr-color-primary-300)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+        (click)="toggleShowAll()">
+        {{ fullMetadataButtonLabel() }}
+      </button>
+    </div>
+  } @else {
+    <!-- BPX-DD-3: nothing sits behind Full metadata for this type, so no toggle and a shorter banner. -->
+    <div class="border-t border-[#ECEFF1] pt-3">
+      <app-alert-status
+        status="info"
+        [collapsible]="false"
+        description="The fields above are the minimum data standards required to report a bilateral result.">
+      </app-alert-status>
+    </div>
+  }
+
+  @if (hasFullMetadataFields() && showHiddenFieldsNote()) {
     <span class="text-[12px] font-normal text-[var(--pr-text-secondary)]">
       <span class="font-mono font-medium">{{ hiddenFieldsWithValues() }}</span>
       {{ hiddenFieldsWithValues() === 1 ? 'hidden field has values and will be saved.' : 'hidden fields have values and will be saved.' }}
@@ -293,86 +380,14 @@
   }
 
   <!--
-    ── Full metadata (P2-3821, BIL-DD-2) ──────────────────────────────────────────────────
-    Its own gate — `showFullMetadata()` = `showAllFields()` — so it no longer shares the linked
-    question's type exclusion (`showLinkedResultQuestion()` was `false` for Innovation Use / Innovation
-    Development, which would have hidden External partners for those two types, violating BIL-R-1).
-    Holds, in order: the intro line, the External partners block (every type), then the linked
-    question nested under its OWN gate (unchanged type rule, BIL-R-6).
+    ── Full metadata (BPX-DD-1/DD-3) ───────────────────────────────────────────────────────
+    External partners moved out to Block 1 (BPX-R-1), so this container holds only the intro line
+    and the linked question. Types 2 and 7 have neither field here, so the container is not
+    rendered for them at all (`hasFullMetadataFields()`).
   -->
-  @if (showFullMetadata()) {
+  @if (hasFullMetadataFields() && showAllFields()) {
     <div class="sc-block flex flex-col gap-[18px]">
         <span class="text-[12px] font-normal text-[var(--pr-text-secondary)]">You are completing the full metadata for this section. These fields are optional.</span>
-
-        <!--
-          P2-3821 (supersedes P2-3368 AC5/AC7): External partners is now OPTIONAL, satisfied by
-          EITHER a selected partner or the "no partners" checkbox — see BIL-DD-1. No partner-type /
-          nature attributes: the story puts them explicitly OUT of scope for bilateral results (AC6).
-        -->
-        <div class="sc-block sc-block--partners">
-          <!--
-            ── Failed read of the stored partner block ──────────────────────────────────────────
-            The hydrate effect fires once and never re-runs on its own, so without this the section
-            became a silent black hole: every PATCH dropped the partner keys while the block still
-            looked complete. The banner says it in plain words and the button is the only way back.
-          -->
-          @if (partnersLoadFailed()) {
-            <div class="flex flex-col items-start gap-[8px]" data-testid="partners-load-error">
-              <app-alert-status
-                status="error"
-                description="We could not load the partners already saved for this result, so nothing you choose here can be saved right now. Please retry.">
-              </app-alert-status>
-              <button
-                type="button"
-                class="inline-flex items-center gap-[6px] rounded-[6px] border border-[var(--pr-color-red-300)] bg-white px-[14px] py-[7px] text-[12px] font-semibold text-[var(--pr-color-red-300)] transition-colors hover:bg-[var(--pr-color-red-50)]"
-                data-testid="partners-load-retry"
-                (click)="retryLoadExternalPartners()">
-                <i class="material-icons-round text-[14px]">refresh</i>
-                Retry loading partners
-              </button>
-            </div>
-          }
-
-          <!-- P2-3520: same `isStatic` trap as the four pickers above — pr-checkbox only honours
-               `readOnly` when `isStatic` is false (pr-checkbox.component.html:6), so a submitted
-               result kept this box clickable. -->
-          <app-pr-checkbox
-            [readOnly]="readOnly()"
-            label="This result has no external partners"
-            [isStatic]="!readOnly()"
-            [required]="false"
-            [ngModel]="noExternalPartners()"
-            (ngModelChange)="noExternalPartners.set($event)"
-            (selectOptionEvent)="onNoExternalPartnersChange()">
-          </app-pr-checkbox>
-
-          @if (!noExternalPartners()) {
-            <app-pr-multi-select
-              [readOnly]="readOnly()"
-              label="External partners"
-              [options]="availablePartners()"
-              [ngModel]="selectedPartnerInstitutionIds()"
-              (ngModelChange)="onPartnersModelChange($event)"
-              optionLabel="full_name"
-              optionValue="institutions_id"
-              selectedOptionLabel="institutions_name"
-              placeholder="Select the partners that contributed to this result"
-              [required]="false"
-              [isStatic]="!readOnly()">
-            </app-pr-multi-select>
-
-            @if (selectedPartnerInstitutionIds().length) {
-              <div class="sc-selected-chips">
-                @for (id of selectedPartnerInstitutionIds(); track id) {
-                  <span class="sc-chip">
-                    {{ getPartnerDisplayName(id) }}
-                    <button type="button" class="sc-chip-remove" [disabled]="readOnly()" (click)="removePartner(id)">×</button>
-                  </span>
-                }
-              </div>
-            }
-          }
-        </div>
 
         @if (showLinkedResultQuestion()) {
           <!--
@@ -382,7 +397,7 @@
             `linked_results` on SaveBilateralContributorsDto) and comes back with the detail, so the
             `Coming soon` marker this block used to carry is gone.
             🛑 `showLinkedResultQuestion()` hides only THIS question for Innovation Use and Innovation
-            Development (P2-3821: it no longer gates the whole Full metadata container, see above):
+            Development (BPX-DD-3: the container itself is hidden for them, see above):
             for those two types the same stored answer has another owner (the Innovation Use section /
             the `results_innovations_dev` mirror), and two editing surfaces over one answer is the
             defect P2-3199 removed.

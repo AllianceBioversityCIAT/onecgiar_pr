@@ -2768,6 +2768,32 @@ export class BilateralCenterService {
       }
     }
 
+    // @akili-spec changes/bilateral-partners-mds (BPX-T-1; BPX-R-5, BPX-DD-4) — External partners
+    // are required for a non-KP result: either the "no external partners" flag, or at least one
+    // active role 2/8 row (what the form's PATCH writes, `syncExternalPartners`). This supersedes
+    // the "optional" rule of P2-3821 (BIL-R-1/2/4). KP stays optional (BPX-R-4). It sits here, not
+    // in `submitForReview`, so the AI quality check and the field-revision audit refuse the same
+    // result submit would refuse; the throw precedes every write.
+    if (result.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT) {
+      const hasPartnerAnswer =
+        result.no_applicable_partner === true ||
+        (await this.resultByIntitutionsRepository.count({
+          where: {
+            result_id: parsedResultId,
+            is_active: true,
+            institution_roles_id: In([
+              InstitutionRoleEnum.PARTNER,
+              InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
+            ]),
+          },
+        })) > 0;
+      if (!hasPartnerAnswer) {
+        throw new BadRequestException(
+          'External partners: select at least one external partner, or tick "This result has no external partners".',
+        );
+      }
+    }
+
     if (result.result_type_id === ResultTypeEnum.INNOVATION_USE) {
       await this.innovationUseMdsValidator.assertPersistedMds(parsedResultId);
     }

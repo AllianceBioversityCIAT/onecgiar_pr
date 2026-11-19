@@ -62,7 +62,7 @@ Put the reporting form's rule for **External partners** in line with the Fetcher
 | Centre reporters (Editing) | Partners become optional, behind the Full metadata toggle |
 | Reviewers / read-only viewers | Partners sit behind the toggle; the hidden-fields note signals when data exists |
 | Ingested results (bulk upload / Fetcher) | No longer stuck with an unanswerable missing field |
-| P2-3368 spec | AC5 superseded; the "Yes\*" row for External partners becomes "No / Full metadata" |
+| P2-3368 spec | AC5 superseded; the "Yes\*" row for External partners becomes "No / Full metadata". Superseded again by `changes/bilateral-partners-mds` (2026-11-18, BPX-R-1/R-2/R-4/R-8): mandatory field confirmed by Angel Jarrin (relayed by the user). |
 | Server | Untouched |
 
 ## Visual Reference

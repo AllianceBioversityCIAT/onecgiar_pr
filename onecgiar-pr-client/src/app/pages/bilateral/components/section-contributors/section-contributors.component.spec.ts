@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { signal, WritableSignal } from '@angular/core';
 import { EventEmitter } from '@angular/core';
 import { of, throwError } from 'rxjs';
 
@@ -34,6 +34,7 @@ describe('SectionContributorsComponent', () => {
   let innovationUseResults: any;
   let api: any;
   let bilateralApi: any;
+  let statusEditable: WritableSignal<boolean>;
 
   const build = () => {
     fixture = TestBed.createComponent(SectionContributorsComponent);
@@ -54,8 +55,12 @@ describe('SectionContributorsComponent', () => {
       resultLevelId: signal<number | null>(null),
       // P2-3368: the linked/bundled question is hidden for result types 2 and 7.
       resultTypeId: signal<number | null>(null),
-      isLoadingResult: signal(false)
+      isLoadingResult: signal(false),
+      // BPX-R-2/R-3/R-4: the partner requirement follows editability and the Knowledge Product type.
+      isEditableByCenterUser: () => statusEditable(),
+      isKnowledgeProduct: () => Number(creation.resultTypeId()) === 6
     };
+    statusEditable = signal(true);
 
     autoSave = {
       saveContributors: jest.fn(),
@@ -1094,9 +1099,8 @@ describe('SectionContributorsComponent', () => {
       const [section, items, group] = tracker.setSectionFields.mock.calls.at(-1);
       expect(section).toBe('contributors');
       expect(group).toBe('partners');
-      // P2-3821: External partners is no longer a tracked MDS item — it moved into Full metadata
-      // and became optional, so it can never block Submit or count toward completion.
-      expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'lead-project']);
+      // BPX-R-2 (supersedes P2-3821): an editable non-KP result tracks External partners again.
+      expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'lead-project', 'external-partners']);
     });
 
     it('does not require a lead project when the loaded result has none', () => {
@@ -1108,8 +1112,8 @@ describe('SectionContributorsComponent', () => {
       component.updateContributorsMds();
 
       const items = tracker.setSectionFields.mock.calls.at(-1)[1];
-      // P2-3821: no `external-partners` item, in any state.
-      expect(items.map((i: any) => i.key)).toEqual(['lead-center']);
+      // BPX-R-2: editable non-KP, so `external-partners` is tracked (and unanswered).
+      expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'external-partners']);
       expect(items.every((i: any) => i.filled === false)).toBe(true);
     });
 
@@ -1204,32 +1208,73 @@ describe('SectionContributorsComponent', () => {
       expect(component.externalPartnersSatisfied()).toBe(true);
     });
 
-    // P2-3821 (supersedes P2-3368 AC5/AC7 — the Fetcher never required partners, so the form no
-    // longer does either): External partners never reaches the MDS tracker, hydrated or not, box
-    // ticked or not. It cannot block Submit or the section's completion.
-    it('never publishes external-partners to the MDS tracker, hydrated and satisfied (P2-3821)', () => {
-      build();
-      const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
+    // @akili-spec changes/bilateral-partners-mds BPX-R-2/R-3/R-4 (decision 2026-11-18, supersedes
+    // P2-3821): the tracker item exists only while `isPartnerRequired()` - editable and not a KP.
+    describe('external-partners tracker item (BPX-R-2/R-3/R-4)', () => {
+      const lastItems = () => (TestBed.inject(BilateralMdsTrackerService) as any).setSectionFields.mock.calls.at(-1)?.[1] ?? [];
+      const partnersItem = () => lastItems().find((i: any) => i.key === 'external-partners');
 
-      component.partnersHydrated.set(true);
-      component.noExternalPartners.set(true);
-      component.onNoExternalPartnersChange();
+      it('publishes external-partners for an editable non-KP result', () => {
+        creation.resultTypeId.set(1);
+        build();
+        fixture.detectChanges();
 
-      const [section, items, group] = tracker.setSectionFields.mock.calls.at(-1);
-      expect(section).toBe('contributors');
-      expect(group).toBe('partners');
-      expect(items.map((i: any) => i.key)).toEqual(['lead-center']);
-      expect(items.find((i: any) => i.key === 'external-partners')).toBeUndefined();
-    });
+        expect(partnersItem()).toEqual({ key: 'external-partners', label: 'External partners', filled: false });
+      });
 
-    it('never publishes external-partners to the MDS tracker while nothing is selected and the box is unticked (P2-3821)', () => {
-      build();
-      const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
+      it('publishes no external-partners for a Knowledge Product, editable (BPX-R-4)', () => {
+        creation.resultTypeId.set(6);
+        build();
+        fixture.detectChanges();
 
-      component.updateContributorsMds();
+        expect(partnersItem()).toBeUndefined();
+      });
 
-      const items = tracker.setSectionFields.mock.calls.at(-1)[1];
-      expect(items.find((i: any) => i.key === 'external-partners')).toBeUndefined();
+      it('publishes no external-partners for a read-only result (BPX-R-3, #9503)', () => {
+        statusEditable.set(false);
+        creation.resultTypeId.set(1);
+        build();
+        fixture.detectChanges();
+
+        expect(partnersItem()).toBeUndefined();
+      });
+
+      it('is filled only when hydrated AND answered (BPX-R-2 scenarios 2 and 3)', () => {
+        creation.resultTypeId.set(1);
+        build();
+        fixture.detectChanges();
+
+        // Answered on screen but never hydrated: the payload drops the keys, so it must stay unfilled.
+        component.onPartnersModelChange([{ institutions_id: 100 }]);
+        expect(component.partnersHydrated()).toBe(false);
+        expect(partnersItem().filled).toBe(false);
+
+        component.partnersHydrated.set(true);
+        component.updateContributorsMds();
+        expect(partnersItem().filled).toBe(true);
+
+        component.removePartner(100);
+        expect(partnersItem().filled).toBe(false);
+
+        component.noExternalPartners.set(true);
+        component.onNoExternalPartnersChange();
+        expect(partnersItem().filled).toBe(true);
+      });
+
+      it('re-publishes when readOnly flips after load (BPX-R-3 scenario 2, DD-2 effect)', () => {
+        creation.resultTypeId.set(1);
+        build();
+        fixture.detectChanges();
+        expect(partnersItem()).toBeDefined();
+
+        autoSave.isReadOnly.set(true);
+        fixture.detectChanges();
+        expect(partnersItem()).toBeUndefined();
+
+        autoSave.isReadOnly.set(false);
+        fixture.detectChanges();
+        expect(partnersItem()).toBeDefined();
+      });
     });
   });
 
@@ -1363,9 +1408,10 @@ describe('SectionContributorsComponent', () => {
 
     // ── the failed read must be VISIBLE, never silent ──────────────────────────────────────
     // 🛑 THE INVARIANT: a field is never reported as satisfied while the payload is discarding its
-    // keys. P2-3821: External partners is no longer tracked at all, so there is no entry to lie —
-    // but the payload guard (`partnersHydrated`) still must not leak unhydrated keys, and the
-    // `partners-load-error` banner is what tells the user, not a tracker item.
+    // keys. External partners is tracked again while `isPartnerRequired()` (P2-3443 invariant), so
+    // its item must stay unfilled until the stored block is hydrated; the payload guard
+    // (`partnersHydrated`) must not leak unhydrated keys, and the `partners-load-error` banner
+    // tells the user. @akili-spec changes/bilateral-partners-mds (BPX-R-2 scenario 3)
     describe('when the stored partner block cannot be read', () => {
       const buildWithFailedRead = () => {
         creation.currentResultId.set(4242);
@@ -1373,7 +1419,7 @@ describe('SectionContributorsComponent', () => {
         buildWithCenters();
       };
 
-      it('drops no partner key into the payload AND publishes no external-partners tracker entry', () => {
+      it('drops no partner key into the payload AND keeps the external-partners tracker entry unfilled', () => {
         buildWithFailedRead();
         const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
 
@@ -1386,12 +1432,12 @@ describe('SectionContributorsComponent', () => {
         expect(payload.no_external_partners).toBeUndefined();
         expect(payload.is_lead_by_partner).toBeUndefined();
 
-        // ...and the very same selection must not appear in the tracker at all.
+        // ...and the very same selection must not read as answered in the tracker (P2-3443 invariant).
         const items = tracker.setSectionFields.mock.calls.at(-1)[1];
-        expect(items.find((i: any) => i.key === 'external-partners')).toBeUndefined();
+        expect(items.find((i: any) => i.key === 'external-partners')).toEqual({ key: 'external-partners', label: 'External partners', filled: false });
       });
 
-      it('publishes no external-partners tracker entry even when the "no partners" box is ticked', () => {
+      it('keeps external-partners unfilled even when the "no partners" box is ticked', () => {
         buildWithFailedRead();
         const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
 
@@ -1400,16 +1446,16 @@ describe('SectionContributorsComponent', () => {
 
         expect(component.externalPartnersSatisfied()).toBe(true); // the answer is given...
         const items = tracker.setSectionFields.mock.calls.at(-1)[1];
-        expect(items.find((i: any) => i.key === 'external-partners')).toBeUndefined(); // ...and untracked either way
+        expect(items.find((i: any) => i.key === 'external-partners').filled).toBe(false); // ...but never saved
       });
 
-      it('raises the error flag the block renders, and publishes no external-partners entry on failure', () => {
+      it('raises the error flag the block renders, and the external-partners entry stays unfilled on failure', () => {
         buildWithFailedRead();
         const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
 
         expect(component.partnersLoadFailed()).toBe(true);
         const items = tracker.setSectionFields.mock.calls.at(-1)[1];
-        expect(items.find((i: any) => i.key === 'external-partners')).toBeUndefined();
+        expect(items.find((i: any) => i.key === 'external-partners').filled).toBe(false);
       });
 
       it('retries on demand and clears the error once the read succeeds', () => {
@@ -1551,34 +1597,44 @@ describe('SectionContributorsComponent', () => {
       expect(component.fullMetadataButtonLabel()).toBe('Complete full metadata');
     });
 
-    // BIL-DD-2 — the partner block gets its OWN gate, `showFullMetadata`, so it renders for every
-    // type (including 2/7) while the linked question keeps its separate, narrower gate.
-    describe('showFullMetadata (P2-3821 — the partner block gets its own gate)', () => {
+    // BPX-DD-3 - after the partners block moved to Block 1, types 2 and 7 have nothing behind the
+    // Full metadata toggle, so the toggle, the note and the container hide for them.
+    describe('hasFullMetadataFields (BPX-R-1, BPX-DD-3)', () => {
       it.each([
-        ['a type that also asks the linked question', 1],
         ['Innovation Use', 2],
         ['Innovation Development', 7]
-      ])('follows showAllFields for %s (type %d)', (_label, typeId) => {
+      ])('is false for %s (type %d)', (_label, typeId) => {
         creation.resultTypeId.set(typeId);
         build();
 
-        expect(component.showFullMetadata()).toBe(false);
-        component.toggleShowAll();
-        expect(component.showFullMetadata()).toBe(true);
-        component.toggleShowAll();
-        expect(component.showFullMetadata()).toBe(false);
+        expect(component.hasFullMetadataFields()).toBe(false);
       });
 
       it.each([
-        ['Innovation Use', 2],
-        ['Innovation Development', 7]
-      ])('keeps showLinkedResultQuestion false for %s even though showFullMetadata is true', (_label, typeId) => {
-        creation.resultTypeId.set(typeId);
+        ['Policy', 1],
+        ['Knowledge Product', 6],
+        ['an unknown type', null]
+      ])('is true for %s', (_label, typeId) => {
+        creation.resultTypeId.set(typeId as any);
         build();
-        component.toggleShowAll();
 
-        expect(component.showFullMetadata()).toBe(true);
-        expect(component.showLinkedResultQuestion()).toBe(false);
+        expect(component.hasFullMetadataFields()).toBe(true);
+      });
+
+      // Layout is not provable in jsdom; this is a static read of the shipped template (BPX-R-1).
+      it('renders the partner block once, in Block 1, before the MDS banner and outside the Full metadata container', () => {
+        const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+        const block = html.indexOf('sc-block--partners');
+        const banner = html.indexOf('The fields above are the minimum data standards');
+        const container = html.indexOf('@if (hasFullMetadataFields() && showAllFields()) {');
+
+        expect(html.split('sc-block--partners').length - 1).toBe(1);
+        expect(html.split('label="External partners"').length - 1).toBe(1);
+        expect(html.split('data-testid="partners-load-error"').length - 1).toBe(1);
+        expect(block).toBeGreaterThan(-1);
+        expect(container).toBeGreaterThan(-1);
+        expect(block).toBeLessThan(banner);
+        expect(block).toBeLessThan(container);
       });
     });
 
@@ -1867,45 +1923,27 @@ describe('SectionContributorsComponent', () => {
       });
     });
 
-    // BIL-R-4 / BIL-AC-7 (P2-3821) — the hidden-fields note now also counts the partner answer:
-    // linked count (unchanged) + 1 when `partnersHydrated() && externalPartnersSatisfied()`.
-    describe('hiddenFieldsWithValues · counts the partner answer too (P2-3821)', () => {
-      it('counts 1 when partners are hydrated and satisfied by a selection, with no linked answer', () => {
+    // BPX-R-7 - External partners lives in Block 1, so the hidden-fields note counts the linked
+    // question only (reverts P2-3821's partner term).
+    describe('hiddenFieldsWithValues - ignores the partner answer (BPX-R-7)', () => {
+      it('stays 0 with partners hydrated and answered by a selection', () => {
         build();
         component.partnersHydrated.set(true);
         component.onPartnersModelChange([{ institutions_id: 100 }]);
 
-        expect(component.hiddenFieldsWithValues()).toBe(1);
+        expect(component.hiddenFieldsWithValues()).toBe(0);
       });
 
-      it('counts 1 when partners are hydrated and satisfied by the "no partners" box', () => {
+      it('stays 0 with partners hydrated and the "no partners" box ticked', () => {
         build();
         component.partnersHydrated.set(true);
         component.noExternalPartners.set(true);
         component.onNoExternalPartnersChange();
 
-        expect(component.hiddenFieldsWithValues()).toBe(1);
-      });
-
-      it('counts 0 when a partner is selected but the stored block has not hydrated', () => {
-        build();
-        component.onPartnersModelChange([{ institutions_id: 100 }]);
-
-        expect(component.partnersHydrated()).toBe(false);
         expect(component.hiddenFieldsWithValues()).toBe(0);
       });
 
-      it('counts 1 for Innovation Use (type 2, linked question owned elsewhere) once partners are satisfied', () => {
-        creation.resultTypeId.set(2);
-        build();
-        component.partnersHydrated.set(true);
-        component.onPartnersModelChange([{ institutions_id: 100 }]);
-
-        expect(component.linkedQuestionOwnedElsewhere()).toBe(true);
-        expect(component.hiddenFieldsWithValues()).toBe(1);
-      });
-
-      it('counts 2 when both the partner answer and the linked answer hold a value (type 1)', () => {
+      it('counts 1 with the linked answer even when partners are answered too (type 1)', () => {
         build();
         component.partnersHydrated.set(true);
         component.onPartnersModelChange([{ institutions_id: 100 }]);
@@ -1913,7 +1951,7 @@ describe('SectionContributorsComponent', () => {
         component.contributorsHydrated.set(true);
         component.onHasLinkedResultChange(true);
 
-        expect(component.hiddenFieldsWithValues()).toBe(2);
+        expect(component.hiddenFieldsWithValues()).toBe(1);
       });
     });
 
@@ -2317,7 +2355,7 @@ describe('SectionContributorsComponent', () => {
       expect(autoSave.saveContributors).toHaveBeenCalled();
       const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
       const keys = tracker.setSectionFields.mock.calls.flatMap((c: any[]) => c[1].map((f: any) => f.key));
-      expect(keys.every((k: string) => ['lead-center', 'lead-project'].includes(k))).toBe(true);
+      expect(keys.every((k: string) => ['lead-center', 'lead-project', 'external-partners'].includes(k))).toBe(true);
     });
   });
 
