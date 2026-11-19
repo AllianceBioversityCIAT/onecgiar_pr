@@ -10,6 +10,8 @@ import { TocInitiativeOutcomeListsService } from '../../../../../rd-theory-of-ch
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { RdTheoryOfChangesServicesService } from '../../../../../rd-theory-of-change/rd-theory-of-changes-services.service';
 import { MappedResultsModalServiceService } from '../mapped-results-modal/mapped-results-modal-service.service';
+import { ClampedTextComponent } from '../../../../../../../../../../shared/components/clamped-text/clamped-text.component';
+import { CLAMPED_TEXT_COPY } from '../../../../../../../../../../internationalization/clamped-text.copy';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -66,7 +68,7 @@ describe('CPMultipleWPsContentComponent', () => {
   // element through without declaring the whole custom-fields module; property/event bindings on
   // an unrecognized element are set directly as plain DOM properties, which is exactly what we
   // read back below.
-  const buildRenderedComponent = (isCP2026: boolean = true) => {
+  const buildRenderedComponent = (isCP2026: boolean = true, tocResultList: any[] = []) => {
     fieldsManagerMock = {
       isContributorsPartners2026: jest.fn().mockReturnValue(isCP2026),
       isP25: jest.fn().mockReturnValue(false),
@@ -76,7 +78,7 @@ describe('CPMultipleWPsContentComponent', () => {
 
     TestBed.configureTestingModule({
       declarations: [CPMultipleWPsContentComponent],
-      imports: [CommonModule],
+      imports: [CommonModule, ClampedTextComponent],
       schemas: [NO_ERRORS_SCHEMA],
       providers: [
         { provide: ResultLevelService, useValue: { currentResultLevelIdSignal: signal(undefined) } },
@@ -91,7 +93,7 @@ describe('CPMultipleWPsContentComponent', () => {
             partnersBody: {}
           }
         },
-        { provide: TocInitiativeOutcomeListsService, useValue: { tocResultList: signal([]) } },
+        { provide: TocInitiativeOutcomeListsService, useValue: { tocResultList: signal(tocResultList) } },
         { provide: ApiService, useValue: {} },
         { provide: RdTheoryOfChangesServicesService, useValue: {} },
         { provide: MappedResultsModalServiceService, useValue: {} }
@@ -449,6 +451,88 @@ describe('CPMultipleWPsContentComponent', () => {
       const levelSelect = fixture.debugElement.query(By.css('[data-testid="cp-toc-level-select"]'));
       expect(levelSelect).toBeTruthy();
       expect(levelSelect.nativeElement.disabled).toBeTruthy();
+    });
+  });
+
+  // changes/toc-kpi-option-readability TKR-T-3: the KPI select wraps its options and the chosen KPI is shown in full.
+  describe('TKR-T-3 — selected KPI statement (clamped) + wrapOptions on the KPI select', () => {
+    const kpiA = { related_node_id: 'k1', indicator_description: 'KPI A long statement', unit_messurament: 'ha', targets: [{ target_value: 5 }] };
+    const kpiB = { related_node_id: 'k2', indicator_description: 'KPI B another statement', unit_messurament: 'kg', targets: [{ target_value: 9 }] };
+    const tocList = [{ toc_level_id: 2, name: 'Outcome' }];
+
+    const setup = (isCP2026 = true) => {
+      const built = buildRenderedComponent(isCP2026, tocList);
+      const c = built.component;
+      c.editable = true;
+      c.isUnplanned = false;
+      c.activeTab = { toc_level_id: 2, toc_result_id: 'toc-1', planned_result: true, indicators: [{ related_node_id: 'k1', toc_results_indicator_id: 'k1', targets: [{}] }] };
+      c.activeTabSignal.set({ toc_level_id: 2, toc_result_id: 'toc-1' });
+      c.outcomeList.set([{ toc_result_id: 'toc-1', indicators: [kpiA, kpiB] }]);
+      c.indicatorsList.set([kpiA, kpiB]);
+      c.showIndicators.set(true);
+      c.updateSelectedIndicatorData();
+      return built;
+    };
+
+    // The load effect (getIndicatorsList) hides the KPI block for 100 ms; let it settle before asserting.
+    const settle = (fixture: any) => {
+      fixture.detectChanges();
+      jest.advanceTimersByTime(150);
+      fixture.detectChanges();
+    };
+
+    it('(a) 2026 + selected KPI: app-clamped-text carries the KPI text and sits before the Unit row', () => {
+      const { fixture } = setup(true);
+      settle(fixture);
+      const el: HTMLElement = fixture.nativeElement;
+      const clamped = el.querySelector('app-clamped-text');
+      expect(clamped).toBeTruthy();
+      expect(fixture.debugElement.query(By.css('app-clamped-text')).componentInstance.text()).toBe('KPI A long statement');
+      expect(el.textContent).toContain(CLAMPED_TEXT_COPY.kpiStatementLabel + ':');
+      const unitP = Array.from(el.querySelectorAll('p')).find(p => p.textContent?.includes('Unit of measurement'));
+      expect(unitP).toBeTruthy();
+      expect(clamped!.compareDocumentPosition(unitP!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('(b) not 2026: app-clamped-text is absent (S-2.4)', () => {
+      const { fixture } = setup(false);
+      settle(fixture);
+      expect(fixture.nativeElement.querySelector('app-clamped-text')).toBeNull();
+    });
+
+    it('(c) switching the selected KPI changes the bound text (S-2.3)', () => {
+      const { fixture, component: c } = setup(true);
+      settle(fixture);
+      c.activeTab.indicators[0].related_node_id = 'k2';
+      c.mapTocResultsIndicatorId();
+      fixture.detectChanges();
+      expect(fixture.debugElement.query(By.css('app-clamped-text')).componentInstance.text()).toBe('KPI B another statement');
+    });
+
+    it('(d) rendering and expanding the KPI text leaves partnersBody and activeTab as the load effect left them (S-2.1)', () => {
+      const { fixture, component: c } = setup(true);
+      const body = TestBed.inject(RdContributorsAndPartnersService).partnersBody;
+      const bodyBefore = JSON.parse(JSON.stringify(body));
+      // The only thing the load effect (getIndicatorsList) adds to the tab is the empty progressive narrative.
+      const tabExpected = { ...JSON.parse(JSON.stringify(c.activeTab)), toc_progressive_narrative: '' };
+      settle(fixture);
+      expect(JSON.parse(JSON.stringify(c.activeTab))).toEqual(tabExpected);
+      fixture.debugElement.query(By.css('app-clamped-text')).componentInstance.expanded.set(true);
+      fixture.detectChanges();
+      expect(JSON.parse(JSON.stringify(body))).toEqual(bodyBefore);
+      expect(JSON.parse(JSON.stringify(c.activeTab))).toEqual(tabExpected);
+    });
+
+    it('(e) only the KPI select receives wrapOptions=true; Level/HLO selects do not', () => {
+      const { fixture } = setup(true);
+      settle(fixture);
+      const selects = fixture.debugElement.queryAll(By.css('app-pr-select'));
+      const kpi = selects.filter(s => s.nativeElement.getAttribute('optionLabel') === 'indicator_description');
+      expect(kpi.length).toBe(1);
+      expect(kpi[0].nativeElement.wrapOptions).toBe(true);
+      const others = selects.filter(s => s.nativeElement.getAttribute('optionLabel') !== 'indicator_description');
+      expect(others.length).toBeGreaterThan(0);
+      others.forEach(s => expect(s.nativeElement.wrapOptions).toBeFalsy());
     });
   });
 });
