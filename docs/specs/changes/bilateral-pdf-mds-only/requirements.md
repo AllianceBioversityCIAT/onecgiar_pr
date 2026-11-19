@@ -42,7 +42,7 @@ Current behavior (cited at the moment of writing):
 | Result details | **Impact Areas targeted** (DAC scores + OECD criteria) | General-info below gate `section-general-info.html:97-108` | **Remove** |
 | Result details | Description, phase, lead contact, submitter | General-info above gate / system | Keep |
 | Contributors | ToC, SPs, centers, W3/bilateral projects | Above gate (`section-contributors.html:29-199`), ToC MDS (`section-toc`) | Keep |
-| Contributors | **Partners** — `non_kp_partner_data` | Below gate `section-contributors.html:352` (P2-3821) | **Remove** |
+| Contributors | **Partners** — `non_kp_partner_data` | Below gate `section-contributors.html:352` (P2-3821) | **Remove**<br>Superseded by `changes/bilateral-partners-mds` (2026-11-18, BPX-R-8): the MDS-only PDF prints the non-KP Partners table (`non_kp_partner_data`) again; mandatory per Angel Jarrin. |
 | Contributors | Partners — `kp_partner_data` (KP results) | KP partners come from the repository record, not the form | Keep (see BPM-R-4) |
 | Contributors | **Bundled innovations** (linked results) | Below gate `section-contributors.html:393-409` | **Remove** |
 | Geographic | focus, regions, countries, subnational | Above gate `section-geography.html:26-90` | Keep |
