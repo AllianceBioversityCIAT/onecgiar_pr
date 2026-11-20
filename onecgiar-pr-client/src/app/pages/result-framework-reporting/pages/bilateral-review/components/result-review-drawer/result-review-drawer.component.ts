@@ -37,6 +37,7 @@ import { CentersService } from '../../../../../../shared/services/global/centers
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { Router } from '@angular/router';
 import { RdContributorsAndPartnersModule } from '../../../../../../pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module';
+import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
 import { resultStatusLabel, resultStatusToken } from '../../../../../../shared/constants/result-status-tokens';
 
 @Component({
@@ -56,6 +57,7 @@ import { resultStatusLabel, resultStatusToken } from '../../../../../../shared/c
     CustomFieldsModule,
     RdContributorsAndPartnersModule,
     BilateralReviewSourceChipComponent,
+    PrTooltipDirectiveModule,
   ],
   templateUrl: './result-review-drawer.component.html',
   styleUrl: './result-review-drawer.component.scss',
@@ -220,6 +222,11 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   saveChangesJustification: string = '';
   saveChangesType: 'toc' | 'dataStandard' | null = null;
   evidenceLinkInput: string = '';
+
+  /** EVP-R-9: explanation carried by the Private tag on an evidence row. */
+  readonly evidencePrivateTooltip =
+    'Private evidence: handle as confidential and do not share. If you cannot open it, contact the Centre that reported the result.';
+  readonly evidencePrivateAriaLabel = `Private. ${this.evidencePrivateTooltip}`;
 
   showConfirmApproveDialog = signal<boolean>(false);
   showConfirmRejectDialog = signal<boolean>(false);

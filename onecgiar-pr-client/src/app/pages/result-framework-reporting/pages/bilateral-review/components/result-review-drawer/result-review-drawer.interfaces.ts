@@ -257,7 +257,12 @@ export interface BilateralContributingInitiativesObject {
 }
 
 export interface BilateralEvidence {
+  id?: number | string;
   link: string;
+  is_sharepoint?: number | boolean | null;
+  description?: string | null;
+  /** true = public, false = private, null/absent = untagged (EVP-R-7). */
+  is_public?: boolean | null;
 }
 
 export interface BilateralInnovationUseResponse {

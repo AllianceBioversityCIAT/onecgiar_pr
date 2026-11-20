@@ -325,3 +325,24 @@
 - **Reviewer (attempt 2):** `STATUS: PASS`.
 - **Requirements covered:** EVP-R-13.
 - **Running totals:** tasks 9/11 (T-9 in flight) · review rounds 13 / ~15.
+
+### EVP-T-9 — Review drawer: Private tag + description · PASS (attempt 1) · 2026-11-20
+
+- **Attempts:** 1. Implementer T2 (medium); Reviewer T3 (checklist).
+- **Files:** in `result-review-drawer.component.{html,ts,spec.ts}` and `result-review-drawer.interfaces.ts`:
+  - Line 1 of the row: a Private pill under `@if (evidence.is_public === false)`. It uses the tokens `--pr-border-strong`, `--pr-surface-sunken` and `--pr-text-secondary`, and has the EVP-R-9 tooltip via `prTooltip`, an `aria-label`, and `data-testid="evidence-private-tag"`.
+  - Line 2 of the row: the description, when it is non-blank.
+  - The anchor and the admin add-link input are unchanged.
+- **Red:** `Expected: 1 Received: 0` at `expect(tags.length).toBe(1)` — `Tests: 1 failed, 238 skipped, 1 passed, 240 total`.
+- **Mutation `!evidence.is_public`:** `Expected: 1 Received: 2`. Reverted.
+- **Evidence re-run (Leader inline):** `npx jest …/result-review-drawer.component.spec.ts --no-coverage -w 2` → `Tests: 240 passed` → **VERIFIED**. The spec diff removes 0 lines. The Implementer reports `ng build` development exit 0.
+- **Reviewer:** `STATUS: PASS`.
+  - The markup conforms to §6.3, and the R-9 text is exact.
+  - **Save-path probe (Leader-requested):** the drawer's `PATCH review-update/data-standard` → `updateEvidencesPartial` never rewrites rows the body names by id. It only deactivates rows that are missing from the body and inserts rows that have no id. So a drawer save can't reset `is_public` or the description. Admin-added links are stored untagged, per §6.3.
+  - Future risk: if `updateEvidencesPartial` ever starts updating rows by id from this partial body, it would wipe the tag.
+- **Design route:** playbook `refine`, polish `light` with a clean result; finish review: not run (AKILI execute).
+- **OPEN GAP D9 → `/akili-validate` HITL**, at desktop and at ≤640px. Check:
+  - a long URL truncates and the pill stays visible and unclipped;
+  - a long description wraps;
+  - the pill's contrast, `--pr-text-secondary` on `--pr-surface-sunken`, estimated at about 6:1 but not measured.
+- **Requirements covered:** EVP-R-7, EVP-R-8, EVP-R-9, NFR Accessibility (presence).

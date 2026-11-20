@@ -269,9 +269,9 @@
   - **Disqualifier:** jsdom can't prove the pill is visible or unclipped. That is a **presence** assertion only. Layout (D9) is a gap routed to the `/akili-validate` HITL visual check at desktop and ≤640px. Never report it as covered by this test.
   - **Consumers:** `onecgiar-pr-client/src/app/pages/result-framework-reporting/pages/bilateral-review/components/result-review-drawer/result-review-drawer.component.spec.ts`. Grep `fields.evidence\|Evidence Links` over client specs and cypress → 0 other pins. New `data-testid`s have no existing readers.
 - **Definition of done:**
-  - [ ] Tests green; mutation red observed; quoted.
-  - [ ] Client build green.
-  - [ ] The completion report names the playbook (`refine`), polish `light` and its result, and `finish review: not run (AKILI execute)`. The D9 gap is carried to validate.
+  - [x] Tests green; mutation red observed; quoted.
+  - [x] Client build green.
+  - [x] The completion report names the playbook (`refine`), polish `light` and its result, and `finish review: not run (AKILI execute)`. The D9 gap is carried to validate.
 
 ### EVP-T-10 — Contract doc + change log
 
