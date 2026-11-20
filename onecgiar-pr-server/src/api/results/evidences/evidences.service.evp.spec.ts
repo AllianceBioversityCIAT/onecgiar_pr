@@ -136,6 +136,62 @@ describe('EvidencesService — evidence is_public persistence (EVP-T-3)', () => 
     expect(saved.is_public).toBeNull();
   });
 
+  it('(e) bilateral re-save without is_public keeps a stored private tag (EVP-R-11)', async () => {
+    mockEvidencesRepository.getEvidencesByResultIdAndLink.mockResolvedValue({
+      id: 7,
+      link: 'https://example.org/doc',
+      is_public: false,
+    });
+    mockResultRepository.findOne.mockResolvedValue({ id: 1, source: 'API' });
+    await service.create(
+      {
+        result_id: 1,
+        evidences: [{ id: '7', link: 'https://example.org/doc' }],
+        supplementary: [],
+      } as any,
+      user,
+    );
+    const written = [
+      ...mockEvidencesRepository.save.mock.calls,
+      ...mockEvidencesRepository.update.mock.calls,
+      ...mockEvidencesRepository.updateEvidences.mock.calls,
+    ]
+      .flat()
+      .flat()
+      .filter((e: any) => e && typeof e === 'object' && 'is_public' in e);
+    expect(written.length).toBeGreaterThan(0);
+    written.forEach((e: any) => expect(e.is_public).toBe(false));
+  });
+
+  it('(f) bilateral re-save with is_public true replaces a stored private tag', async () => {
+    mockEvidencesRepository.getEvidencesByResultIdAndLink.mockResolvedValue({
+      id: 7,
+      link: 'https://example.org/doc',
+      is_public: false,
+    });
+    mockResultRepository.findOne.mockResolvedValue({ id: 1, source: 'API' });
+    await service.create(
+      {
+        result_id: 1,
+        evidences: [
+          { id: '7', link: 'https://example.org/doc', is_public: true },
+        ],
+        supplementary: [],
+      } as any,
+      user,
+    );
+    const written = [
+      ...mockEvidencesRepository.save.mock.calls,
+      ...mockEvidencesRepository.update.mock.calls,
+      ...mockEvidencesRepository.updateEvidences.mock.calls,
+    ]
+      .flat()
+      .flat()
+      .filter((e: any) => e && typeof e === 'object' && 'is_public' in e);
+    expect(written.length).toBeGreaterThan(0);
+    written.forEach((e: any) => expect(e.is_public).toBe(true));
+  });
+
   describe('findAll normalization', () => {
     it('maps raw 0/1/null to false/true/null (never Boolean(null))', async () => {
       mockResultRepository.findOne.mockResolvedValue({ id: 1 });
