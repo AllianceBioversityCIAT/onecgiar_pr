@@ -50,3 +50,39 @@
 - **Requirements covered:** EVP-R-1 (derivation rule), EVP-DD-2.
 - **Running totals vs budget:** tasks 1/11 · LOC ~140 / ~780 · review rounds 1 / ~15.
 - **Gate:** auto-approved (pre-approved mode).
+
+### EVP-T-1 — Migration + entity column `evidence.is_public` · PASS (attempt 3) · 2026-11-20
+
+- **Attempts:** 3. Implementer `akili-implementer` (T2): effort high → xhigh → xhigh. At the T2 ceiling it was held at xhigh as a fresh spawn carrying the full attempt history. Reviewer `akili-reviewer` (T3, high). Effort ceiling: held xhigh.
+- **Attempt 1:**
+  - Files: `src/migrations/1793500000000-EVP-AddEvidenceIsPublic.ts` (new), `evidence.entity.ts`, `qa-catalog/definitions/not-for-qa.ts`.
+  - Red, quoted: `uncatalogued column evidence.is_public: bind it to a field, or list it in NOT_FOR_QA or PENDING_CATALOG with a reason` — `Tests: 1 failed, 29 passed, 30 total`. With the entry: 30/30.
+  - The Implementer reported `tsc` exit 0. **Evidence re-run (Leader inline): MISMATCH** — `tsc` exit 1, two errors `TS2345 … Property 'is_public' is missing … but required in type 'Evidence'` at `ipsr/innovation-pathway/innovation-pathway-step-four.service.spec.ts(507,64)` and `(613,64)`. Implicit FAIL.
+- **Attempt 2:**
+  - Files: `evidence.entity.ts`. Changed `is_public!:` to `is_public?: boolean | null`, because the pool spec must stay unedited (AC 10).
+  - `tsc` exit 0, completeness 30/30, IPSR step-four 6/6.
+  - The `src/api/results/evidences` run was killed by an OS low-memory reap before it produced a result. Runtime event: worker verification reaped. The Leader killed the orphaned jest/tsc trees and serialized all workers from then on.
+  - **Leader re-run:** `evidences.repository.spec.ts` failed on G1, G2 and G6 (`EvidencesRepository.createQueries (entity parity guard) › G1 names every replicable entity column in the INSERT column list`, and the same for G2 and G6). `Tests: 3 failed, 111 passed, 114 total`. Implicit FAIL.
+- **Attempt 3:**
+  - Files: `evidences.repository.ts`. Added `is_public` to the `createQueries` phase-copy `findQuery`, the INSERT column list and the INSERT SELECT half.
+  - Before: `3 failed, 15 passed, 18 total`. After: 18/18.
+  - `npx jest src/api/results/evidences src/api/qa-catalog/qa-catalog.completeness.spec.ts src/api/versioning` → `12 passed / 177 passed`. `tsc` exit 0.
+- **Evidence re-run (Leader inline):** `npx jest src/api/results/evidences src/api/qa-catalog/qa-catalog.completeness.spec.ts src/api/versioning src/api/ipsr/innovation-pathway/innovation-pathway-step-four.service.spec.ts --silent --reporters=summary --coverage=false -w 2` → `Test Suites: 13 passed, 13 total · Tests: 183 passed, 183 total`. `tsc` exit 0 (re-run after attempt 2) → **VERIFIED**.
+- **Reviewer:** `STATUS: PASS`. The migration meets §3.2 (idempotent `up` guarded by `information_schema` with bound params, TINYINT NULL with no default, guarded `down`, four futures). The entity meets §3.1. The not-for-qa reason text is exact. The `createQueries` edit meets EVP-R-11: without it, a phase rollover would make a private link read public (D10). It is pool-neutral, since NULL stays NULL.
+- **ADVISORY (4R, not gating):**
+  - DoD gaps must stay open (see below).
+  - Kaizen candidate: the Consumers sweep for a new column should grep the `createQueries` / replicable copy SQL.
+  - MySQL ≥ 8.0.12 uses ALGORITHM=INSTANT for a trailing nullable ADD COLUMN; P-17 is still required.
+  - `down` loses the tags, as documented.
+  - Run the full qa-catalog suite on a clean tree or in CI: the `qa-catalog.snapshot.spec.ts` (CRLF) and `qa-catalog.module.spec.ts` (Node v26 `buffer-equal-constant-time`) failures are inferred to be environmental, not measured.
+  - Cosmetic: use a local alias for the TABLE constant.
+- **Decisions:**
+  - The property is optional in TS: the column metadata is unchanged and no pool spec is edited.
+  - `createQueries` was outside the expected-files list. The parity guard forced it and EVP-R-11 backs it. It doesn't overlap T-3's region (`:420-450`).
+- **OPEN GAPS (not passed, owned by CI / `/akili-validate`):** migration up/down/up on a real DB; `npm run migration:check` / `migration:check:ci`; P-17 `evidence` row count on TEST. Probe: no `.env`, `docker info` fails, no `mysql` client (Leader pre-flight, 2026-11-19).
+- **Not Done / Assumptions (verbatim gist):** "DB gates (migration run and `migration:check`) remain the approved gap. I created no `.env`." No owed item → not a continuation.
+- **runtime events:** verification reaped by low memory ×2 (attempt 2, plus T-7 in parallel) → the Leader killed orphaned processes and serialized workers. No attempt consumed.
+- **spawns:** implementer#1 39 calls ~143.8k tokens ended complete (MISMATCH); implementer#2 14 calls ~117.7k ended partial (reaped run); implementer#3 9 calls ~116.7k ended complete; reviewer not reported by host.
+- **Requirements covered:** EVP-R-1 (storage), NFR Data, EVP-R-11 (phase copy).
+- **Running totals vs budget:** tasks 2/11 · LOC ~275 / ~780 · review rounds 2 / ~15.
+- **Gate:** auto-approved (pre-approved mode).

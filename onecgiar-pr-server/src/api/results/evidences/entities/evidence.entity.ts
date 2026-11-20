@@ -161,6 +161,18 @@ export class Evidence {
   })
   innov_dev_user_demand!: boolean;
 
+  /**
+   * Bilateral link items only (EVP-R-1): true = public, false = private, null = untagged
+   * (reads as public). Never written for pool rows or file items; files keep
+   * `evidence_sharepoint.is_public_file`.
+   */
+  @Column({
+    name: 'is_public',
+    type: 'boolean',
+    nullable: true,
+  })
+  is_public?: boolean | null;
+
   // relations
 
   @Column({

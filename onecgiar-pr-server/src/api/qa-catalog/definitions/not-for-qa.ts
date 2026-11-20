@@ -282,6 +282,11 @@ export const NOT_FOR_QA: NotForQaEntry[] = [
     'belongs to the innovation development user-demand flow, hidden in 2026',
     'innov_dev_user_demand',
   ),
+  ...nfq(
+    'evidence',
+    'bilateral link visibility (P2-4110); written only for bilateral link items, never by the W1/W2 (P25) form',
+    'is_public',
+  ),
 
   // evidence_sharepoint
   ...nfq(
