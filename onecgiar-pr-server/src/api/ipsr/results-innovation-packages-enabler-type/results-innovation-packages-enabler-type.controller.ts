@@ -9,6 +9,10 @@ import {
 import { ResultsInnovationPackagesEnablerTypeService } from './results-innovation-packages-enabler-type.service';
 import { CreateResultsInnovationPackagesEnablerTypeDto } from './dto/create-results-innovation-packages-enabler-type.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
+import {
+  LockedWhileInQa,
+  QA_REVIEW_LOCK_LOOKUPS,
+} from '../../../shared/guards/qa-review-lock.guard';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -17,6 +21,10 @@ export class ResultsInnovationPackagesEnablerTypeController {
     private readonly resultsInnovationPackagesEnablerTypeService: ResultsInnovationPackagesEnablerTypeService,
   ) {}
 
+  @LockedWhileInQa({
+    bodyArrayKey: 'result_by_innovation_package_id',
+    lookup: QA_REVIEW_LOCK_LOOKUPS.resultByInnovationPackage,
+  })
   @Post('createInnovationEnablers')
   create(
     @Body()

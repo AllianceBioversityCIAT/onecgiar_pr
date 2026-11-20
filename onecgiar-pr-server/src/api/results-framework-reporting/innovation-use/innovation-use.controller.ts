@@ -13,6 +13,7 @@ import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { ApiTags } from '@nestjs/swagger';
+import { LockedWhileInQa } from '../../../shared/guards/qa-review-lock.guard';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -21,6 +22,7 @@ export class InnovationUseController {
   constructor(private readonly innovationUseService: InnovationUseService) {}
 
   @Version('2')
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('/create/result/:resultId')
   saveInnovationUse(
     @Param('resultId') resultId: number,

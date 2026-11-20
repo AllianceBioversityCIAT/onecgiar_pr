@@ -423,6 +423,46 @@ describe('ApiService', () => {
       expect(rolesServiceSpy.readOnly).toBe(true);
     });
 
+    it('QA review lock: an admin gets the Innovation Package read-only while QA holds it', () => {
+      rolesServiceSpy.isAdmin = true;
+      rolesServiceSpy.readOnly = false;
+      resultsApiServiceSpy.GETInnovationPackageDetail.mockReturnValue(
+        of({
+          response: {
+            is_phase_open: 1,
+            status_id: '3',
+            inQA: 1,
+            inititiative_id: 1,
+            initiative_official_code: 'SP05'
+          }
+        })
+      );
+
+      service.GETInnovationPackageDetail();
+
+      expect(rolesServiceSpy.readOnly).toBe(true);
+    });
+
+    it('QA review lock: an admin keeps a submitted Innovation Package editable once QA released it', () => {
+      rolesServiceSpy.isAdmin = true;
+      rolesServiceSpy.readOnly = false;
+      resultsApiServiceSpy.GETInnovationPackageDetail.mockReturnValue(
+        of({
+          response: {
+            is_phase_open: 1,
+            status_id: '3',
+            inQA: 0,
+            inititiative_id: 1,
+            initiative_official_code: 'SP05'
+          }
+        })
+      );
+
+      service.GETInnovationPackageDetail();
+
+      expect(rolesServiceSpy.readOnly).toBe(false);
+    });
+
     it('should set readOnly to false when is_phase_open is 0 and user is admin', () => {
       rolesServiceSpy.isAdmin = true;
       resultsApiServiceSpy.GETInnovationPackageDetail.mockReturnValue(

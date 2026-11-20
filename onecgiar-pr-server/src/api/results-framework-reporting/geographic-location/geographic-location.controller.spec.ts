@@ -2,6 +2,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { GeographicLocationController } from './geographic-location.controller';
 import { GeographicLocationService } from './geographic-location.service';
+import { QaReviewLockGuard } from '../../../shared/guards/qa-review-lock.guard';
 
 // BIL-RTE-T-2 (Reviewer FAIL #2, attempt 1) — design.md §5.1: the Center-write guard must run
 // BEFORE `saveGeoScopeV2`, and a denial must stop the write. Mirrors
@@ -22,7 +23,10 @@ describe('GeographicLocationController', () => {
       providers: [
         { provide: GeographicLocationService, useValue: mockService },
       ],
-    }).compile();
+    })
+      .overrideGuard(QaReviewLockGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<GeographicLocationController>(
       GeographicLocationController,

@@ -10,6 +10,7 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultsKnowledgeProductDto } from './dto/results-knowledge-product.dto';
 import { ResultsKnowledgeProductSaveDto } from './dto/results-knowledge-product-save.dto';
 import { FilterDto } from './dto/filter.dto';
+import { QaReviewLockGuard } from '../../../shared/guards/qa-review-lock.guard';
 
 describe('ResultsKnowledgeProductsController', () => {
   let controller: ResultsKnowledgeProductsController;
@@ -97,7 +98,10 @@ describe('ResultsKnowledgeProductsController', () => {
           useValue: mockCgspaceDiscoveryService,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(QaReviewLockGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<ResultsKnowledgeProductsController>(
       ResultsKnowledgeProductsController,
@@ -175,7 +179,10 @@ describe('ResultsKnowledgeProductsController', () => {
               useValue: mockCgspaceDiscoveryService,
             },
           ],
-        }).compile();
+        })
+          .overrideGuard(QaReviewLockGuard)
+          .useValue({ canActivate: () => true })
+          .compile();
 
         app = moduleRef.createNestApplication();
         await app.init();

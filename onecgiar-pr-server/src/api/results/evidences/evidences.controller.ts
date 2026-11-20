@@ -15,6 +15,7 @@ import { UserToken } from 'src/shared/decorators/user-token.decorator';
 import { CreateUploadSessionDto } from './dto/create-upload-session.dto';
 import { SharePointService } from '../../../shared/services/share-point/share-point.service';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
+import { LockedWhileInQa } from '../../../shared/guards/qa-review-lock.guard';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -24,6 +25,7 @@ export class EvidencesController {
     private readonly sharePointService: SharePointService,
   ) {}
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Post('create/:resultId')
   @UseInterceptors(ResponseInterceptor, FilesInterceptor('files'))
   create(

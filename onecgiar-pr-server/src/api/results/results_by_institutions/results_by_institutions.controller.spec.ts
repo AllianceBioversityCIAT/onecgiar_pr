@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ResultsByInstitutionsController } from './results_by_institutions.controller';
 import { ResultsByInstitutionsService } from './results_by_institutions.service';
+import { QaReviewLockGuard } from '../../../shared/guards/qa-review-lock.guard';
 
 describe('ResultsByInstitutionsController', () => {
   let controller: ResultsByInstitutionsController;
@@ -22,7 +23,10 @@ describe('ResultsByInstitutionsController', () => {
           useValue: mockService,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(QaReviewLockGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<ResultsByInstitutionsController>(
       ResultsByInstitutionsController,

@@ -4,6 +4,7 @@ import { InnovationPathwayStepOneService } from './innovation-pathway-step-one.s
 import { InnovationPathwayStepTwoService } from './innovation-pathway-step-two.service';
 import { InnovationPathwayStepThreeService } from './innovation-pathway-step-three.service';
 import { InnovationPathwayStepFourService } from './innovation-pathway-step-four.service';
+import { QaReviewLockGuard } from '../../../shared/guards/qa-review-lock.guard';
 
 describe('InnovationPathwayController', () => {
   let controller: InnovationPathwayController;
@@ -58,7 +59,10 @@ describe('InnovationPathwayController', () => {
         { provide: InnovationPathwayStepThreeService, useValue: mockStepThree },
         { provide: InnovationPathwayStepFourService, useValue: mockStepFour },
       ],
-    }).compile();
+    })
+      .overrideGuard(QaReviewLockGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get(InnovationPathwayController);
     jest.clearAllMocks();

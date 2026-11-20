@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SummaryController } from './summary.controller';
 import { SummaryService } from './summary.service';
+import { QaReviewLockGuard } from '../../../shared/guards/qa-review-lock.guard';
 
 describe('SummaryController', () => {
   let controller: SummaryController;
@@ -23,7 +24,10 @@ describe('SummaryController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SummaryController],
       providers: [{ provide: SummaryService, useValue: mockSummaryService }],
-    }).compile();
+    })
+      .overrideGuard(QaReviewLockGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get(SummaryController);
     jest.clearAllMocks();

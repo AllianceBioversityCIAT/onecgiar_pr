@@ -17,6 +17,7 @@ import { IpsrPathwayStepFourService } from './ipsr-pathway-step-four.service';
 import { IpsrPathwayStepOneService } from './ipsr-pathway-step-one.service';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { ApiTags } from '@nestjs/swagger/dist/decorators/api-use-tags.decorator';
+import { LockedWhileInQa } from '../../../shared/guards/qa-review-lock.guard';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -28,6 +29,7 @@ export class PathwayController {
   ) {}
 
   @Version('2')
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('save/step-four/:resultId')
   updateStepFour(
     @Param('resultId') resultId: string,
@@ -54,6 +56,7 @@ export class PathwayController {
   }
 
   @Version('2')
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('save/step-four/bilaterals/:resultId')
   saveFourBilaterals(
     @Param('resultId') resultId: string,
