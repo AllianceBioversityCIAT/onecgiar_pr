@@ -11,7 +11,8 @@ import { countsForRow, indexLinks } from './kpi-status-counts.util';
  * services); the row behaviour is rendered through the real chip + the real matcher.
  * @akili-spec result-framework-reporting/kpi-row-status-counts (KRC-T-3)
  */
-const HTML = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf-8');
+// Normalised to LF so the multi-line markers also match a Windows (autocrlf) checkout.
+const HTML = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf-8').replace(/\r\n/g, '\n');
 const CHIP = /<app-kpi-status-chip \[editing\]="counts\.editing" \[submitted\]="counts\.submitted" \[approved\]="counts\.approved" \[pendingReview\]="counts\.pendingReview" \(open\)="onKpiChipOpen\([^"]*\)" \/>/g;
 
 describe('dashboard-lab KPI status chip placement (KRC-T-3)', () => {
