@@ -14,6 +14,7 @@ import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UpdateContributorsPartnersDto } from './dto/update-contributors-partners.dto';
 import { UpdatePlannedResultDto } from './dto/update-planned-result.dto';
+import { LockedWhileInQa } from '../../../shared/guards/qa-review-lock.guard';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -31,6 +32,7 @@ export class ContributorsPartnersController {
     );
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('update/unplanned/result/:resultId')
   updateUnplannedResult(
     @Param('resultId') resultId: number,
@@ -45,6 +47,7 @@ export class ContributorsPartnersController {
   }
 
   @Version('2')
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch(':resultId')
   updateContributorsPartners(
     @Param('resultId') resultId: number,

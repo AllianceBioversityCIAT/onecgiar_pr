@@ -15,6 +15,7 @@ import { ApiBody, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
+import { LockedWhileInQa } from '../../../shared/guards/qa-review-lock.guard';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -25,6 +26,7 @@ export class GeographicLocationController {
   ) {}
 
   @Version('2')
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('update/geographic/:resultId')
   @ApiOperation({
     summary: 'Save geographic scope',

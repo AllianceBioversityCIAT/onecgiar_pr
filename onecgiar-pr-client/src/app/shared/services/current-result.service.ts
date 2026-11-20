@@ -5,6 +5,7 @@ import { RolesService } from './global/roles.service';
 import { DataControlService } from './data-control.service';
 import { Router } from '@angular/router';
 import { isAvisaInitiative } from '../utils/avisa-initiative.util';
+import { isResultLockedByQaReview } from '../utils/qa-review-lock.util';
 
 @Injectable({
   providedIn: 'root'
@@ -106,6 +107,12 @@ export class CurrentResultService {
         }
         break;
       }
+    }
+
+    // QA review lock: while QA holds the result nothing may be saved, admins included. The
+    // server refuses the save in this state (409), so the form must not offer it.
+    if (isResultLockedByQaReview(response)) {
+      this.api.rolesSE.readOnly = true;
     }
 
     if (

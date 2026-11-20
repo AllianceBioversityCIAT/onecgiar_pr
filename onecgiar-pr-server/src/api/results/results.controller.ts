@@ -38,6 +38,7 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+import { LockedWhileInQa } from '../../shared/guards/qa-review-lock.guard';
 
 @Controller()
 @ApiTags('Results Module')
@@ -510,6 +511,7 @@ export class ResultsController {
     return this.resultsService.deleteResult(id, user, justification);
   }
 
+  @LockedWhileInQa({ param: 'resiltId' })
   @Patch('update/geographic/:resiltId')
   @ApiOperation({
     summary: 'Save geographic scope',
@@ -990,6 +992,7 @@ export class ResultsController {
     return this.resultsService.getBilateralResultById(resultId, versionId);
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('bilateral/review-update/data-standard/:resultId')
   @ApiOperation({
     summary: 'Update bilateral result from review screen',
@@ -1019,6 +1022,7 @@ export class ResultsController {
     );
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('bilateral/review-update/toc-metadata/:resultId')
   @ApiOperation({
     summary: 'Update bilateral result ToC metadata from review screen',
@@ -1095,6 +1099,7 @@ export class ResultsController {
     return this.resultsService.getBilateralReviewHistory(resultId);
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('bilateral/:resultId/title')
   @ApiOperation({
     summary: 'Update bilateral result title',
@@ -1126,6 +1131,7 @@ export class ResultsController {
     );
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('bilateral/general-info/:resultId')
   @ApiOperation({
     summary: 'Update bilateral result general info',

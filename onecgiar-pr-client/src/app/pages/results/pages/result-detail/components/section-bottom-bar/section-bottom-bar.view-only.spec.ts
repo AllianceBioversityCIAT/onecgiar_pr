@@ -26,6 +26,15 @@ describe('SectionBottomBarComponent — View only chip for read-only users', () 
       const c = build({ readOnly: true, isAdmin: false, validateInitiative: () => false }, { initiative_id: 5 });
       expect(c.viewOnlyReason()).toMatch(/not a member/);
     });
+    it('QA review lock: no save even through the `editable` escape hatch', () => {
+      const c = build({ readOnly: false }, { inQA: 1, is_phase_open: 1 });
+      expect(c.canSave).toBe(false);
+      c.editable = true;
+      expect(c.canSave).toBe(false);
+    });
+    it('reason: under QA review', () => {
+      expect(build({ readOnly: true }, { inQA: 1, is_phase_open: 1 }).viewOnlyReason()).toMatch(/under QA review/);
+    });
     it('reason unknown: generic sentence', () => {
       expect(build({ readOnly: true }).viewOnlyReason()).toBe('You can view this result but not edit it.');
     });

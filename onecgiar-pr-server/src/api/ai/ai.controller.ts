@@ -37,6 +37,10 @@ import { UpdateDacScoreDto } from './dto/update-dac-score.dto';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
+import {
+  LockedWhileInQa,
+  QA_REVIEW_LOCK_LOOKUPS,
+} from '../../shared/guards/qa-review-lock.guard';
 
 @ApiTags('AI Review')
 @Controller()
@@ -96,6 +100,7 @@ export class AiController {
     return await this.aiService.getDacScores(resultId);
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('dac-scores/:resultId')
   @ApiOperation({
     summary: 'Update a DAC score selection',
@@ -324,6 +329,10 @@ export class AiController {
     return await this.aiService.createEvent(createEventDto, user);
   }
 
+  @LockedWhileInQa({
+    param: 'sessionId',
+    lookup: QA_REVIEW_LOCK_LOOKUPS.aiReviewSession,
+  })
   @Post('sessions/:sessionId/save')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

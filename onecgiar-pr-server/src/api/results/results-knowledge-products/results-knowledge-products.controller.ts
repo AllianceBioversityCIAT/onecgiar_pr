@@ -20,6 +20,7 @@ import { FilterDto } from './dto/filter.dto';
 import { CgspaceDiscoveryService } from './cgspace-discovery/cgspace-discovery.service';
 import { CgspaceSearchQueryDto } from './cgspace-discovery/dto/cgspace-search-query.dto';
 import { CgspaceFacetQueryDto } from './cgspace-discovery/dto/cgspace-facet-query.dto';
+import { LockedWhileInQa } from '../../../shared/guards/qa-review-lock.guard';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -124,6 +125,7 @@ export class ResultsKnowledgeProductsController {
     return this._resultsKnowledgeProductsService.syncAgain(id, user);
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('upsert/:resultId')
   remove(
     @Param('resultId') id: number,

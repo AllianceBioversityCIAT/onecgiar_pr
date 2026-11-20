@@ -13,6 +13,7 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { LockedWhileInQa } from '../../../shared/guards/qa-review-lock.guard';
 
 @ApiTags('Results Toc Results')
 @Controller()
@@ -23,6 +24,7 @@ export class ResultsTocResultsController {
   ) {}
 
   @ApiOperation({ summary: 'Create a new result toc' })
+  @LockedWhileInQa({ param: 'resultId' })
   @Post('create/toc/result/:resultId')
   create(
     @Body() createResultsTocResultDto: CreateResultsTocResultDto,

@@ -4,6 +4,7 @@ import { BilateralCenterService } from './services/bilateral-center.service';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ResultFieldRevisionFieldName } from '../ai/entities/result-field-revision.entity';
 import { CreateBilateralFieldRevisionDto } from './dto/create-bilateral-field-revision.dto';
+import { QaReviewLockGuard } from '../../shared/guards/qa-review-lock.guard';
 
 describe('BilateralCenterController', () => {
   let controller: BilateralCenterController;
@@ -67,7 +68,10 @@ describe('BilateralCenterController', () => {
           },
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(QaReviewLockGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<BilateralCenterController>(
       BilateralCenterController,

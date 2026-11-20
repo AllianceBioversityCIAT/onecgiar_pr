@@ -11,6 +11,7 @@ import { CreateResultsPackageTocResultDto } from './dto/create-results-package-t
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
+import { LockedWhileInQa } from '../../../shared/guards/qa-review-lock.guard';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -19,6 +20,7 @@ export class ResultsPackageTocResultController {
     private readonly resultsPackageTocResultService: ResultsPackageTocResultService,
   ) {}
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('save/:resultId')
   create(
     @Body() createResultsPackageTocResultDto: CreateResultsPackageTocResultDto,

@@ -3,6 +3,7 @@ import { IpsrContributorsPartnersController } from './ipsr_contributors-partners
 import { IpsrContributorsPartnersService } from './ipsr_contributors-partners.service';
 import { UpdateContributorsPartnersDto } from './dto/update-contributors-partners.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { QaReviewLockGuard } from '../../../shared/guards/qa-review-lock.guard';
 
 describe('IpsrContributorsPartnersController', () => {
   let controller: IpsrContributorsPartnersController;
@@ -22,7 +23,10 @@ describe('IpsrContributorsPartnersController', () => {
           useValue: serviceMock,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(QaReviewLockGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get(IpsrContributorsPartnersController);
     service = module.get(

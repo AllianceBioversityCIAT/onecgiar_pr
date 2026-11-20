@@ -21,6 +21,7 @@ import { ChangeCenterResultTypeDto } from './dto/change-center-result-type.dto';
 import { UpdateBilateralPrimaryAssignmentDto } from './dto/update-bilateral-primary-assignment.dto';
 import { SubmitForReviewDto } from './dto/submit-for-review.dto';
 import { CreateBilateralFieldRevisionDto } from './dto/create-bilateral-field-revision.dto';
+import { LockedWhileInQa } from '../../shared/guards/qa-review-lock.guard';
 
 @Controller('center')
 @ApiTags('Bilateral Center')
@@ -76,6 +77,7 @@ export class BilateralCenterController {
     return this.bilateralCenterService.createResultHeader(user, dto);
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('change-type/:resultId')
   @ApiOperation({
     summary: 'Change the type of a promoted bilateral AI draft',
@@ -90,6 +92,7 @@ export class BilateralCenterController {
     return this.bilateralCenterService.changeResultType(user, resultId, dto);
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('primary-assignment/:resultId')
   @ApiOperation({
     summary:
@@ -197,6 +200,7 @@ export class BilateralCenterController {
     return this.bilateralCenterService.getTocState(resultId);
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('planned-result/:resultId')
   @ApiOperation({
     summary: 'Update planned_result flag for a bilateral result',
@@ -213,6 +217,7 @@ export class BilateralCenterController {
     );
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('toc-mapping/:resultId')
   @ApiOperation({
     summary:
@@ -226,6 +231,7 @@ export class BilateralCenterController {
     return this.bilateralCenterService.saveTocMapping(resultId, dto, user);
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('contributors/:resultId')
   @ApiOperation({
     summary: 'Save contributing centers and projects for a bilateral result',

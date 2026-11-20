@@ -5,6 +5,7 @@ import {
   AiReviewEventFieldName,
   AiReviewEventType,
 } from './entities/ai-review-event.entity';
+import { QaReviewLockGuard } from '../../shared/guards/qa-review-lock.guard';
 
 describe('AiController', () => {
   let controller: AiController;
@@ -49,7 +50,10 @@ describe('AiController', () => {
           useValue: service,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(QaReviewLockGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<AiController>(AiController);
   });
