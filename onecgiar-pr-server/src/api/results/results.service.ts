@@ -16,6 +16,10 @@ import {
   BasicReportFiltersNormalized,
 } from './dto/basic-report-filters.dto';
 import { ResultRepository } from './result.repository';
+import {
+  RESULT_UNDER_QA_REVIEW_EDIT_MESSAGE,
+  isResultUnderQaReview,
+} from '../../shared/constants/qa-review-lock.constant';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
@@ -789,6 +793,15 @@ export class ResultsService {
           response: {},
           message: 'The result does not exist',
           status: HttpStatus.NOT_FOUND,
+        };
+      }
+      // QA review lock: while QA holds the result, nothing in it may change (same predicate as
+      // the unsubmit guard). Checked before any lookup or write.
+      if (isResultUnderQaReview(result)) {
+        throw {
+          response: {},
+          message: RESULT_UNDER_QA_REVIEW_EDIT_MESSAGE,
+          status: HttpStatus.CONFLICT,
         };
       }
       const resultType = await this._resultTypesService.findOneResultType(
