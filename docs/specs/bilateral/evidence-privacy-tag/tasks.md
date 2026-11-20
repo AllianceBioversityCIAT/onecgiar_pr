@@ -138,9 +138,9 @@
   - **Disqualifier:** any of the 13 B-1 tests needs editing to pass. Today's refusal semantics moved beyond EVP-R-4. Stop.
   - **Consumers:** `onecgiar-pr-server/src/api/bilateral/dto/evidence.dto.spec.ts` (pins the storage-link message), `api/bilateral/bilateral.service.spec.ts` (pins `handleEvidence`). Grep: `grep -rl "handleEvidence\|file storage platforms" onecgiar-pr-server/src --include=*.spec.ts`. Fetcher (T-11) forwards the field.
 - **Definition of done:**
-  - [ ] 6 hosts × 4 states asserted. B-2/B-3 cases now green. B-1 still 13/13 with no edits.
-  - [ ] Mutation observed red and quoted.
-  - [ ] Swagger text updated. Server type-check green.
+  - [x] 6 hosts × 4 states asserted. B-2/B-3 cases now green. B-1 still 13/13 with no edits.
+  - [x] Mutation observed red and quoted.
+  - [x] Swagger text updated. Server type-check green.
 
 ### EVP-T-5 — Bilateral reads expose `is_public` per item (+ AI context flag)
 

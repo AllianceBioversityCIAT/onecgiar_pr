@@ -26,7 +26,7 @@ import {
   COUNT_UNIT_CODES,
   USE_NATURE_CODES,
 } from '../../results/result-actors/farmer-follow-up.constant';
-import { IsNotCloudStorageLink } from '../../../shared/validators/is-not-cloud-storage-link.validator';
+import { IsNotCloudStorageLinkUnlessPrivate } from '../../../shared/validators/is-not-cloud-storage-link.validator';
 
 /* -------------------------------------------------------------------------- */
 /*                               SUB-OBJECTS                                   */
@@ -951,7 +951,8 @@ export class EvidenceDto {
   // check. `result-28808-Document-202607042143-8310.pdf` was accepted and stored as an
   // evidence link on that basis.
   @IsUrl({ require_protocol: true })
-  @IsNotCloudStorageLink()
+  // @akili-spec bilateral/evidence-privacy-tag — refusal lifted only when is_public === false (EVP-DD-4)
+  @IsNotCloudStorageLinkUnlessPrivate()
   @IsNotEmpty()
   link: string;
 
@@ -961,6 +962,18 @@ export class EvidenceDto {
   })
   @IsString()
   description: string;
+
+  // @akili-spec bilateral/evidence-privacy-tag (EVP-R-4)
+  @ApiPropertyOptional({
+    description:
+      'Whether this evidence can be shared publicly. `false` marks it private; omitted or null = not stated, treated as public.',
+    example: false,
+    nullable: true,
+    type: Boolean,
+  })
+  @IsOptional()
+  @IsBoolean()
+  is_public?: boolean | null;
 }
 
 export class BilateralProjectDto {

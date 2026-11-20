@@ -6279,6 +6279,8 @@ export class BilateralService {
         this.validEvidenceTypeId(evidence?.evidence_type_id) ??
         EvidenceTypeEnum.MAIN;
       newEvidence.is_supplementary = false;
+      // @akili-spec bilateral/evidence-privacy-tag (EVP-R-5, EVP-DD-9): payload-truth, absent = null
+      newEvidence.is_public = evidence?.is_public ?? null;
 
       const hasQuery = (evidence.link ?? '').indexOf('?');
       const linkSplit = (evidence.link ?? '')
