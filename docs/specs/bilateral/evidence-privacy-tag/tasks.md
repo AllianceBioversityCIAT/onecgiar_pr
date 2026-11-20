@@ -109,8 +109,8 @@
   - **Disqualifier:** the existing pool suites listed under Consumers need an assertion **changed** (not just a fixture field added) to stay green. That means pool behaviour moved, which violates AC 10. Stop and escalate.
   - **Consumers:** `onecgiar-pr-server/src/api/results/evidences/evidences.service.spec.ts`, `evidences.service.confidentiality.spec.ts`, `evidences.service.p2-3601.spec.ts`, `evidences.service.p2-3692.spec.ts`, `api/versioning/versioning.service.spec.ts` (all pin `getEvidencesByResultId`). Grep: `grep -rl "getEvidencesByResultId" onecgiar-pr-server/src onecgiar-pr-server/test --include=*.spec.ts --include=*.e2e-spec.ts`. `_applyEvidenceInputFields` has 0 spec pins (same grep). Pool UI readers of `is_public_file` stay unchanged: `rd-evidences`, `evidence-item`, `user-evidence`, `ipsr-step3-evidence-list`.
 - **Definition of done:**
-  - [ ] (a)(b)(c) green; both mutations observed red; reds quoted.
-  - [ ] All five consumer suites green, with no assertion edited.
+  - [x] (a)(b)(c) green; both mutations observed red; reds quoted.
+  - [x] All five consumer suites green, with no assertion edited.
   - [ ] Server type-check green.
 
 ### EVP-T-4 — Bilateral API input: `is_public` + conditional storage-link rule + writer
