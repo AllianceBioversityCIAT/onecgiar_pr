@@ -219,3 +219,37 @@
 - Remaining: T-5 (bilateral reads), T-8 (centre form), T-9 (review drawer), T-10 (contract doc), T-11 (Fetcher).
 
 **Question for the user:** accept the overrun and continue the remaining 5 tasks (projected ~1.75× LOC, mostly tests), or re-scope.
+
+**User decision (2026-11-20):** "Si acepto el sobrecosto". The overrun is accepted, and the run continues with T-5, T-8, T-9, T-10 and T-11, then the pushes per the delivery mandate. New ceiling: about 1,400 LOC and about 15 review rounds. Going past either one re-fires the tripwire.
+
+### EVP-T-5 — Bilateral reads expose is_public per item (+ AI context flag) · PASS (attempt 1) · 2026-11-20
+
+- **Attempts:** 1. Implementer T2 (medium); Reviewer T3 (high).
+- **Files:**
+  - `evidence-visibility.ts`: new helper `exposedEvidenceIsPublic`. It uses active SP rows only, any 0 makes the item private (fail closed), and no SP row reads private.
+  - `bilateral.service.ts`: `filterActiveRelations` overwrites `e.is_public`; `evidenceSharepointArray` is untouched.
+  - `results.service.ts`: `getAIContext` items add `is_public`, and no link is withheld (EVP-DD-8).
+  - Specs: `bilateral.service.spec.ts` (+44) and `results.service.spec.ts` (+64).
+- **Red:** with the overwrite disabled, the five-row fixture read `[0, 1, null, null, null]` against the expected `[false, true, null, false, true]`. `Tests: 1 failed, 291 skipped, 292 total`.
+- **Mutations:**
+  - "Raw column" was red: the file rows read `null`.
+  - "`Boolean()`" was red: `- null, + false` on link/NULL.
+  - Both were reverted.
+- **Evidence re-run (Leader inline):** `npx jest src/api/bilateral/bilateral.service.spec.ts src/api/results/results.service.spec.ts --coverage=false -w 2` → `Test Suites: 2 passed · Tests: 324 passed` → **VERIFIED**. The Implementer reported `tsc --noEmit` exit 0.
+- **Reviewer:** `STATUS: PASS`.
+  - Behaviour matches §3.1.
+  - The change is additive: the key-superset assertion is present and the existing `filterActiveRelations` test is untouched.
+  - Both read paths load the SP relation.
+- **Leader decision, spec conflict raised by the Reviewer:**
+  - `GET /v2/api/results/ai/context` serves pool results too, so pool file items now carry `is_public: true/false`.
+  - EVP-R-12 ("no change in any pool response other than the new column appearing as null") vs design §4.5 / EVP-DD-8 (approved): the approved design governs.
+  - The key is additive, and its single consumer (`ai-review.service.ts`) forwards the context and ignores unknown keys.
+  - Recorded as an execute-time clarification: EVP-R-12 covers the W1/W2/IPSR form and the read endpoints, while the AI context flag is exempt by EVP-DD-8. Routed to `/akili-validate`.
+- **ADVISORY:**
+  - The helper and T-6's `MIN` differ only for active SP rows `[NULL, 1]`. The helper says private; that errs safe.
+  - Add a multi-SP-row test (`[1, 0]` → false, plus an inactive 0 that is ignored).
+  - `results.service.ts:162/166` has a duplicate import from `evidence-visibility`; merge it.
+  - T-10 must cover the per-item `is_public` on reads.
+- **spawns:** implementer#1 23 calls ~138.7k ended complete; reviewer#1 21 calls ~99.7k ended complete.
+- **Requirements covered:** EVP-R-6, EVP-R-1 (Mixed visibilities), EVP-DD-5, EVP-DD-8.
+- **Running totals:** tasks 7/11 · LOC ≈ 948 / ceiling ~1,400 · review rounds 8 / ~15.

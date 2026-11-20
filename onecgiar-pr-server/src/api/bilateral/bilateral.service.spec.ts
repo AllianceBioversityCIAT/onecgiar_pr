@@ -1,3 +1,4 @@
+import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
 import {
   BadRequestException,
   ConflictException,
@@ -584,6 +585,49 @@ describe('BilateralService (unit)', () => {
     expect(res.result_by_institution_array).toHaveLength(1);
     expect(res.obj_results_toc_result).toHaveLength(1);
     expect(res.result_knowledge_product_array).toHaveLength(1);
+  });
+
+  // @akili-spec bilateral/evidence-privacy-tag EVP-T-5 (EVP-R-6, EVP-R-1 mixed visibilities)
+  it('filterActiveRelations exposes is_public per evidence item (link 0/1/NULL, file SP 0/1) and stays additive', () => {
+    const { service } = makeService();
+    const sp = (v: any) => [{ is_active: true, is_public_file: v }];
+    const base = { is_active: true, evidence_type_id: EvidenceTypeEnum.MAIN };
+    const evidence_array = [
+      { ...base, id: 1, is_sharepoint: 0, is_public: 0 },
+      { ...base, id: 2, is_sharepoint: 0, is_public: 1 },
+      { ...base, id: 3, is_sharepoint: 0, is_public: null },
+      {
+        ...base,
+        id: 4,
+        is_sharepoint: 1,
+        is_public: null,
+        evidenceSharepointArray: sp(0),
+      },
+      {
+        ...base,
+        id: 5,
+        is_sharepoint: 1,
+        is_public: null,
+        evidenceSharepointArray: sp(1),
+      },
+    ];
+    const keysBefore = evidence_array.map((e) => Object.keys(e));
+
+    const res = service.filterActiveRelations({ evidence_array });
+
+    expect(res.evidence_array.map((e) => e.is_public)).toEqual([
+      false,
+      true,
+      null,
+      false,
+      true,
+    ]);
+    res.evidence_array.forEach((e, i) => {
+      expect(Object.keys(e)).toEqual(expect.arrayContaining(keysBefore[i]));
+      if (e.is_sharepoint) {
+        expect(e.evidenceSharepointArray).toHaveLength(1);
+      }
+    });
   });
 
   it('extractProgramIdFromTocMapping / extractProgramIdsFromContributing / collectScienceProgramIds', () => {

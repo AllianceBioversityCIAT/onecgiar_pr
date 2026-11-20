@@ -164,8 +164,8 @@
   - **Disqualifier:** an existing assertion on `evidence_array` row keys needs removing. The change is not additive. Stop.
   - **Consumers:** `onecgiar-pr-server/src/api/bilateral/bilateral.service.spec.ts` (pins `filterActiveRelations`). `getAIContext`/`ai/context`: 0 spec pins (grep `getAIContext\|ai/context` over specs). Client reader `onecgiar-pr-client/src/app/shared/services/api/ai-review.service.ts:193` ignores unknown keys. Fetcher `EvidencesMapper` (T-11).
 - **Definition of done:**
-  - [ ] Five-row fixture green; both mutations observed red; quoted.
-  - [ ] Server type-check green.
+  - [x] Five-row fixture green; both mutations observed red; quoted.
+  - [x] Server type-check green.
 
 ### EVP-T-6 — Review detail returns description + `is_public`
 
