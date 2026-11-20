@@ -9,7 +9,7 @@
 - **Module:** `changes` (client UI/behavior fix, not a domain module)
 - **Sub-feature:** `ai-review-save-flow` — AI Review modal save/validate flow
 - **Owner:** M.Giraldo@cgiar.org (requester)
-- **Status:** draft
+- **Status:** shipped (c8465baa1, on master; archived 2026-11-19)
 - **Ticket(s):** none
 
 ---

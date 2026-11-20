@@ -94,6 +94,7 @@
           [disabled]="!editable"
           [readOnly]="!editable"
           optionLabel="indicator_description"
+          [wrapOptions]="true"
           optionValue="related_node_id"
           placeholder="Select outcome level"
           [(ngModel)]="activeTab.indicators[0].related_node_id"
@@ -117,6 +118,9 @@
         <!-- P2-3036 (AC7): in 2026 group the read-only TOC "Unit of measurement" + "Target" directly below "Indicator Tipology". In 2025 they stay in their original position inside the contribution block below. -->
         @if (isCP2026() && selectedIndicatorData()) {
           <div style="margin: 8px 0">
+            <!-- TKR-R-2: the chosen KPI shown in full (clamped to 3 lines, "Show more" expands). View-only: no payload/dirty impact. -->
+            <p><strong>{{ kpiStatementLabel }}:</strong></p>
+            <app-clamped-text [text]="selectedIndicatorData()?.indicator_description" [lines]="3"></app-clamped-text>
             <p><strong>Unit of measurement:</strong> {{ selectedIndicatorData()?.unit_messurament || 'Not specified' }}</p>
             <p><strong>Target:</strong> {{ selectedIndicatorData()?.targets?.[0]?.target_value || 'Not specified' }}</p>
           </div>

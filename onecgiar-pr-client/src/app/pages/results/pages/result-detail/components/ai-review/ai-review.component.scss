@@ -82,6 +82,10 @@
       color: #47b556;
       font-size: 13px;
       font-weight: 400;
+
+      &--pending {
+        color: var(--pr-color-neutral-500);
+      }
     }
 
     .apply-proposal-button {

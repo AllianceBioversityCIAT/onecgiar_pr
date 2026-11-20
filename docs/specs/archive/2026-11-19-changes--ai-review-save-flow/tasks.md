@@ -10,7 +10,7 @@
 - **Linked spec:** `docs/specs/changes/ai-review-save-flow/requirements.md` + `design.md`
 - **Sprint / target phase:** none declared
 - **Owner / driver:** M.Giraldo@cgiar.org (requester)
-- **Status:** not-started
+- **Status:** shipped (c8465baa1)
 
 ---
 

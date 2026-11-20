@@ -1,0 +1,15 @@
+<p
+  #body
+  data-clamped-body
+  class="m-0 whitespace-pre-line break-words"
+  [class]="expanded() ? '' : 'line-clamp-(--clamp-lines)'"
+  [style.--clamp-lines]="lines()">{{ text() }}</p>
+@if (showToggle()) {
+  <button
+    type="button"
+    (click)="toggle()"
+    [attr.aria-expanded]="expanded()"
+    class="mt-1 inline-flex cursor-pointer items-center border-0 bg-transparent p-0 text-[12px] font-medium text-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)] hover:underline focus-visible:rounded-sm focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
+    {{ expanded() ? copy.showLess : copy.showMore }}
+  </button>
+}
