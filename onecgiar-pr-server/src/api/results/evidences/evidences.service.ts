@@ -156,10 +156,16 @@ export class EvidencesService {
     target.link = evidence.link;
     // @akili-spec bilateral/evidence-privacy-tag (EVP-DD-3): bilateral-only write; a pool
     // result never has the property touched. SharePoint files carry visibility on is_public_file.
+    // EVP-R-11: a save that does not carry `is_public` (W1/W2 evidences form, evidence_demand)
+    // keeps the stored visibility instead of erasing a private tag; a new row starts untagged.
     if (result?.source === SourceEnum.Bilateral) {
-      target.is_public = evidence.is_sharepoint
-        ? null
-        : (evidence.is_public ?? null);
+      if (evidence.is_sharepoint) {
+        target.is_public = null;
+      } else if (evidence.is_public !== undefined) {
+        target.is_public = evidence.is_public ?? null;
+      } else {
+        target.is_public = target.is_public ?? null;
+      }
     }
   }
 
