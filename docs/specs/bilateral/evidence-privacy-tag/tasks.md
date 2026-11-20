@@ -294,7 +294,7 @@
   - **Disqualifier:** a claim needs to describe behaviour no test asserts. Add the test in T-4/T-5 or drop the claim.
   - **Consumers:** external producers and readers of the contract; the Fetcher maintainers (T-11).
 - **Definition of done:**
-  - [ ] Entry dated, cites P2-4110 and the spec path, and is additive in wording.
+  - [x] Entry dated, cites P2-4110 and the spec path, and is additive in wording.
 
 ### EVP-T-11 — Fetcher: accept, forward and return `is_public` *(repo `onecgiar_result_functions`)*
 

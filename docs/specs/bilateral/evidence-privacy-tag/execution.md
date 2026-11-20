@@ -295,3 +295,33 @@
 - **spawns:** implementer#1 47+3 calls ~208k ended complete; reviewer#1 18 calls ~122k + re-review ended complete.
 - **Requirements covered:** EVP-R-2 (all), EVP-R-3, EVP-R-4 (form), EVP-DD-7.
 - **Running totals:** tasks 8/11 · LOC ≈ 1,196 / ceiling ~1,400 · review rounds 10 / ~15.
+
+### EVP-T-10 — Contract doc + change log · PASS (attempt 2) · 2026-11-20
+
+- **Attempts:** 2. Implementer T2 (medium → high); Reviewer T3 (checklist).
+- **Attempt 1:** `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` (+28/−2). It covered:
+  - the core-fields Evidence table, including the P-9 fix (the slim `evidences[]` list is the Fetcher's output) and an `evidence_array[]` row;
+  - a new subsection "Per-item visibility: `is_public` (P2-4110)" covering input, the storage-link exception, output and the rewrite rule EVP-R-11;
+  - a sentence on the resubmission replace row;
+  - a 2026-11-20 change-log row that cites P2-4110 and the spec path, states the partial reversal of the 2026-08-26 entry, and gives the PRMS-first deploy order.
+- **Claim → test map:**
+
+  | Claim | Test |
+  |---|---|
+  | Input / storage exception | `evidence-is-public.dto.spec.ts` |
+  | `?? null` | `bilateral.service.spec.ts` handleEvidence |
+  | Reads | `bilateral.service.spec.ts` "exposes is_public" |
+  | AI withholding | `bilateral-quality-payload.builder.spec.ts` EVP-R-10 |
+  | Phase copy | `evidences.repository.spec.ts` G1 parity guard |
+  | Centre-form preserve | `section-evidence.component.spec.ts` (iv) |
+
+- **Reviewer FAIL (attempt 1):**
+  - (1) The doc listed "Box and the like", but Box is not in `CLOUD_STORAGE_LINK_REGEX`.
+  - (2) The doc said fail-closed applies "of the result", but the code checks each item's own SP rows.
+- **Attempt 2:**
+  - The platform list now matches `CLOUD_STORAGE_LINK_MESSAGE` exactly (Google Drive, Dropbox, SharePoint, OneDrive).
+  - The file row is now per item, and also covers "no active SharePoint row → false".
+- **Evidence re-run:** n/a (docs, no test gate). The Leader grep confirms the only diff is in the doc file.
+- **Reviewer (attempt 2):** `STATUS: PASS`.
+- **Requirements covered:** EVP-R-13.
+- **Running totals:** tasks 9/11 (T-9 in flight) · review rounds 13 / ~15.
