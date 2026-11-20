@@ -322,8 +322,8 @@
   - **Disqualifier:** `npm ci` isn't possible in `services/fetcher` (deps absent locally today). Then the suite is not evidence: report inconclusive and rely on that repo's CI run on the PR, quoting it.
   - **Consumers:** `services/fetcher/test/openapi-docs.test.mjs` (pins `openapi.json`); `services/api-docs` (`types.ts:89`). Grep in that repo: `grep -rln "evidence" services/fetcher/test services/api-docs --include=*.mjs --include=*.ts`.
 - **Definition of done:**
-  - [ ] `npm test` in `services/fetcher` green, or the CI run is quoted; mutation red observed.
-  - [ ] PR description states the deploy order and links P2-4110 and this spec.
+  - [x] `npm test` in `services/fetcher` green, or the CI run is quoted; mutation red observed.
+  - [x] PR description states the deploy order and links P2-4110 and this spec.
 
 ## 4. Dependency graph
 
