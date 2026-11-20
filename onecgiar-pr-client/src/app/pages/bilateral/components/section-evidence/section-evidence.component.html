@@ -38,7 +38,7 @@
             <div class="ev_index">{{ $index + 1 }}</div>
             <div class="ev_type_row">
               <span class="ev_type">{{ evidenceTypeLabel(evidence) }}</span>
-              @if (isFileEvidence(evidence)) {
+              @if (showEvidenceLock(evidence)) {
                 <i
                   class="material-icons-round ev_lock"
                   [class.public]="evidence.is_public_file"
@@ -123,6 +123,19 @@
       </button>
     </div>
 
+    <!-- One question, one binding, both sources (EVP-DD-7). -->
+    <ng-template #publicQuestion>
+      <app-pr-radio-button
+        [readOnly]="readOnly()"
+        [options]="isPublicFileOptions"
+        optionLabel="name"
+        optionValue="id"
+        label="Can this evidence be shared publicly?"
+        [ngModel]="draftItem().is_public_file"
+        (ngModelChange)="setDraftPublic($event)">
+      </app-pr-radio-button>
+    </ng-template>
+
     @if (showDraft()) {
       <div class="evidence_fields">
         <app-pr-radio-button
@@ -153,25 +166,27 @@
               status="info"
               description="This CGSpace link will be automatically replaced by its permanent link once you save the changes in this section."></app-alert-status>
           }
-          @if (draftItem().link && isCloudLink(draftItem().link!)) {
+          @if (draftItem().link && isCloudLink(draftItem().link!) && draftItem().is_public_file !== false) {
             <app-alert-status
+              data-testid="storage-link-error"
               inlineStyles="width: 100%"
               status="warning"
               description="Links to file storage platforms are not accepted. If you do not have a CGSpace or other public link available, use the “Upload file” option to upload your evidence to the PRMS repository."></app-alert-status>
           }
+          @if (draftItem().link && isCloudLink(draftItem().link!) && draftItem().is_public_file !== false) {
+            <p data-testid="storage-link-hint" class="m-0 text-[12px] text-[var(--pr-text-secondary)]">A storage link is accepted only when the evidence is not public: answer No to the question below.</p>
+          }
           @if (draftLinkError && !isCloudLink(draftItem().link ?? '')) {
             <p class="sev-field-error">{{ draftLinkError }}</p>
           }
+          <ng-container *ngTemplateOutlet="publicQuestion"></ng-container>
+          @if (draftItem().is_public_file === false) {
+            <app-alert-status
+              data-testid="link-private-note"
+              description="Private: the Science Program reviewing this result will see it marked as private. PRMS does not change who can open the link."></app-alert-status>
+          }
         } @else {
-          <app-pr-radio-button
-            [readOnly]="readOnly()"
-            [options]="isPublicFileOptions"
-            optionLabel="name"
-            optionValue="id"
-            label="Can this evidence be shared publicly?"
-            [ngModel]="draftItem().is_public_file"
-            (ngModelChange)="setDraftPublic($event)">
-          </app-pr-radio-button>
+          <ng-container *ngTemplateOutlet="publicQuestion"></ng-container>
 
           @if (draftItem().is_public_file !== null && draftItem().is_public_file !== undefined) {
             <app-alert-status [description]="publicFileNote()"></app-alert-status>

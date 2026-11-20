@@ -147,7 +147,8 @@ export const PORTFOLIO_OVERVIEW_COPY = {
   // Contribution requests by P/A (spec changes/portfolio-overview-feedback-round/contribution-requests-by-pa, CRP-R-2..R-6)
   contributions: {
     title: 'Contribution requests by Program/Accelerator',
-    subtitle: 'Requests between Programs/Accelerators to contribute to a result. Pending = not answered yet.',
+    subtitle:
+      'Requests between Programs/Accelerators to contribute to a result. Only Programs/Accelerators send and answer them; W3/Bilateral projects and Centers do not receive requests and need no action. Pending = not answered yet.',
     kpiPending: 'Pending',
     kpiAccepted: 'Accepted',
     kpiDeclined: 'Declined',

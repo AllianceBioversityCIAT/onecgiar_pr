@@ -5,6 +5,7 @@ import { QaResultsQueryDto } from './qa-results-query.dto';
 import {
   QA_RESULTS_PAGE_MAX,
   QA_RESULTS_PAGE_SIZE_MAX,
+  QA_RESULTS_PROGRAM_CODE_MAX_LENGTH,
   QA_RESULTS_PROGRAM_ID_MAX,
 } from '../qa-results.constants';
 
@@ -144,6 +145,58 @@ describe('QaResultsQueryDto (QRF-R-2 / R-4 / R-5)', () => {
     ])('program_ids=%p -> 400', async (value) => {
       await expect(
         parse({ phase_year: '2026', program_ids: value }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+
+  describe('program_codes', () => {
+    it('absent or empty = no filter', async () => {
+      expect((await parse({ phase_year: '2026' })).program_codes).toEqual([]);
+      expect(
+        (await parse({ phase_year: '2026', program_codes: '' })).program_codes,
+      ).toEqual([]);
+    });
+
+    it('splits and trims a CSV of official codes, keeping them as strings', async () => {
+      const dto = await parse({
+        phase_year: '2026',
+        program_codes: 'SP01, SP06,,SP10',
+      });
+      expect(dto.program_codes).toEqual(['SP01', 'SP06', 'SP10']);
+    });
+
+    it('a repeated parameter is treated like a CSV', async () => {
+      const dto = await parse({
+        phase_year: '2026',
+        program_codes: ['SP01', 'SP06,SP10'],
+      });
+      expect(dto.program_codes).toEqual(['SP01', 'SP06', 'SP10']);
+    });
+
+    it('leaves program_ids untouched when both are sent', async () => {
+      const dto = await parse({
+        phase_year: '2026',
+        program_ids: '5',
+        program_codes: 'SP01',
+      });
+      expect(dto.program_ids).toEqual([5]);
+      expect(dto.program_codes).toEqual(['SP01']);
+    });
+
+    it(`accepts a code of exactly ${QA_RESULTS_PROGRAM_CODE_MAX_LENGTH} characters`, async () => {
+      const code = 'A'.repeat(QA_RESULTS_PROGRAM_CODE_MAX_LENGTH);
+      expect(
+        (await parse({ phase_year: '2026', program_codes: code }))
+          .program_codes,
+      ).toEqual([code]);
+    });
+
+    it.each([
+      'A'.repeat(QA_RESULTS_PROGRAM_CODE_MAX_LENGTH + 1),
+      `SP01,${'B'.repeat(QA_RESULTS_PROGRAM_CODE_MAX_LENGTH + 1)}`,
+    ])('a code longer than the limit -> 400 (%#)', async (value) => {
+      await expect(
+        parse({ phase_year: '2026', program_codes: value }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
   });

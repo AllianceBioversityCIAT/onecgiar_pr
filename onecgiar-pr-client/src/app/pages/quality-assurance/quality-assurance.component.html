@@ -34,13 +34,33 @@
   <br />
 
   @if (showIframe() && sanitizedUrl() && official_code) {
-    <div [ngClass]="{ expand: this.api.dataControlSE.show_qa_full_screen }" class="iframe_container">
-      <div class="expand_icon" (click)="this.api.dataControlSE.show_qa_full_screen = !this.api.dataControlSE.show_qa_full_screen">
-        <i class="material-icons-round">
-          {{ this.api.dataControlSE.show_qa_full_screen ? 'close_fullscreen' : 'open_in_full' }}
-        </i>
-        {{ this.api.dataControlSE.show_qa_full_screen ? 'Minimize ' : 'Open in full screen' }}
-      </div>
+    <div
+      [ngClass]="{ expand: this.api.dataControlSE.show_qa_full_screen, iframe_container_new: qaSpEmbed === 'new' }"
+      class="iframe_container">
+      @if (qaSpEmbed === 'new') {
+        <!-- P2-3911: in its own bar above the iframe, so it never covers the QA header. -->
+        <div class="qa_toolbar">
+          <button
+            type="button"
+            class="expand_icon expand_icon_bar"
+            [attr.aria-label]="this.api.dataControlSE.show_qa_full_screen ? 'Exit full screen' : 'Open Quality Assurance in full screen'"
+            [attr.title]="this.api.dataControlSE.show_qa_full_screen ? 'Exit full screen' : 'Open Quality Assurance in full screen'"
+            [attr.aria-pressed]="this.api.dataControlSE.show_qa_full_screen"
+            (click)="this.api.dataControlSE.show_qa_full_screen = !this.api.dataControlSE.show_qa_full_screen">
+            <i class="material-icons-round" aria-hidden="true">
+              {{ this.api.dataControlSE.show_qa_full_screen ? 'close_fullscreen' : 'open_in_full' }}
+            </i>
+            {{ this.api.dataControlSE.show_qa_full_screen ? 'Minimize ' : 'Open in full screen' }}
+          </button>
+        </div>
+      } @else {
+        <div class="expand_icon" (click)="this.api.dataControlSE.show_qa_full_screen = !this.api.dataControlSE.show_qa_full_screen">
+          <i class="material-icons-round">
+            {{ this.api.dataControlSE.show_qa_full_screen ? 'close_fullscreen' : 'open_in_full' }}
+          </i>
+          {{ this.api.dataControlSE.show_qa_full_screen ? 'Minimize ' : 'Open in full screen' }}
+        </div>
+      }
 
       <iframe title="Quality Assurance" class="embedded" [src]="sanitizedUrl()"></iframe>
     </div>

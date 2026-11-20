@@ -27,6 +27,7 @@ import {
   SaveStepFour,
 } from './dto/save-step-four.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
+import { LockedWhileInQa } from '../../../shared/guards/qa-review-lock.guard';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -44,6 +45,7 @@ export class InnovationPathwayController {
     return this._innovationPathwayStepOneServiceService.getStepOne(+resultId);
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('save/step-one/:resultId')
   updateStepOne(
     @Param('resultId') resultId: string,
@@ -57,6 +59,7 @@ export class InnovationPathwayController {
     );
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('retrieve/aa-outcomes/:resultId')
   updateStepOneInstitutions(
     @Param('resultId') resultId: string,
@@ -69,6 +72,7 @@ export class InnovationPathwayController {
   }
 
   // STEP TWO
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('save/step-two/:resultId')
   updateSteptwo(
     @Param('resultId') resultId: string,
@@ -82,6 +86,7 @@ export class InnovationPathwayController {
     );
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Post('save/complementary-innovation/:resultId')
   saveComplementaryInnovation(
     @Param('resultId') resultId: string,
@@ -104,6 +109,7 @@ export class InnovationPathwayController {
     );
   }
 
+  @LockedWhileInQa({ param: 'complementaryInnovationId' })
   @Patch('updated/complementary-innovation/:complementaryInnovationId')
   updateComplementaryInnovation(
     @Param('complementaryInnovationId') complementaryInnovationId: number,
@@ -117,6 +123,7 @@ export class InnovationPathwayController {
     );
   }
 
+  @LockedWhileInQa({ param: 'complementaryInnovationId' })
   @Delete('delete/complementary-innovation/:complementaryInnovationId')
   inactiveComplementaryInnovation(
     @Param('complementaryInnovationId') complementaryInnovationId: number,
@@ -144,6 +151,7 @@ export class InnovationPathwayController {
   }
 
   // STEP THREE
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('save/step-three/:resultId')
   updateStepthree(
     @Param('resultId') resultId: string,
@@ -168,6 +176,7 @@ export class InnovationPathwayController {
   }
 
   // STEP FOUR
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('save/step-four/:resultId')
   updateStepFour(
     @Param('resultId') resultId: string,
@@ -181,6 +190,7 @@ export class InnovationPathwayController {
     );
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('save/step-four/partners/:resultId')
   saveFourPartners(
     @Param('resultId') resultId: string,
@@ -194,6 +204,7 @@ export class InnovationPathwayController {
     );
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('save/step-four/bilaterals/:resultId')
   saveFourBilaterals(
     @Param('resultId') resultId: string,

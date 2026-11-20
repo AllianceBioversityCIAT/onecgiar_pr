@@ -25,6 +25,7 @@ import { FieldsManagerService } from '../../../../../../shared/services/fields-m
 import { FieldCompletionFlightService } from '../../../../../../shared/services/field-completion-flight.service';
 import { UnsavedNavigationIntentService } from '../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
 import { ScrollChromeService } from '../../../../../../shared/services/scroll-chrome.service';
+import { QA_REVIEW_LOCK_REASON, isResultLockedByQaReview } from '../../../../../../shared/utils/qa-review-lock.util';
 
 /**
  * Bottom bar of a result-detail section: section-to-section navigation, the position in the
@@ -234,6 +235,7 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
    * flags already exist in `RolesService`; anything else falls back to the generic sentence.
    */
   viewOnlyReason(): string {
+    if (isResultLockedByQaReview(this.dataControlSE.currentResult)) return QA_REVIEW_LOCK_REASON;
     if (this.rolesSE.platformIsClosed) return 'The reporting phase is closed, so this result can only be viewed.';
     const initiativeId = this.dataControlSE.currentResult?.initiative_id;
     if (initiativeId != null && this.rolesSE.validateInitiative?.(initiativeId) === false && !this.rolesSE.isAdmin) {
@@ -243,6 +245,8 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   }
 
   get canSave(): boolean {
+    // The QA review lock wins over the `editable` escape hatch: nobody saves while QA holds it.
+    if (isResultLockedByQaReview(this.dataControlSE.currentResult)) return false;
     return !this.rolesSE.readOnly || this.editable;
   }
 

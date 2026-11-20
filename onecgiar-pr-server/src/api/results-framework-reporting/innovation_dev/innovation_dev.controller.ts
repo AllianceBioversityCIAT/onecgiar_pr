@@ -20,6 +20,7 @@ import { FormDataJson } from '../../../shared/globalInterfaces/form-data-json.in
 import { CreateEvidenceDto } from '../../results/evidences/dto/create-evidence.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { EvidencesService } from '../../results/evidences/evidences.service';
+import { LockedWhileInQa } from '../../../shared/guards/qa-review-lock.guard';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -42,6 +43,7 @@ export class InnovationDevController {
   }
 
   @Version('2')
+  @LockedWhileInQa({ param: 'resultId' })
   @Post('evidence_demand/create/:resultId')
   @UseInterceptors(ResponseInterceptor, FilesInterceptor('files'))
   create(
@@ -64,6 +66,7 @@ export class InnovationDevController {
   }
 
   @Version('2')
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('innovation-dev/create/result/:resultId')
   saveInnovationDev(
     @Param('resultId') resultId: number,

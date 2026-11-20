@@ -1,6 +1,6 @@
 # portfolio-overview
 
-**Verified:** 2026-11-18 · changes/portfolio-rejection-reason-export PRE-T-6 (filtering never scrolls the page: URL mirror opts out of the shell scroll reset) + PRE-T-5 (Space toggles in the top-bar multi-select, non-searchable only) + PRE-T-3 attempt 3 (Space toggles in the Filters panel) + PRE-T-2 (16-column export, 2026-11-18) + PRE-T-3 (Filters dropdown, 2026-11-17) + quick/typology-bar-counts-key (2026-11-17) + spec changes/portfolio-typology-bar-chart (2026-11-10) + bugfix/centers-block-status-tiles (2026-11-05) + changes/portfolio-overview-feedback-round/contribution-requests-by-pa (2026-11-04) + funding-filter (Funding bar dimension) + cleanup-and-approved · prior: 2026-10-27
+**Verified:** 2026-11-19 · bugfix/inc-168459-portfolio-overview-data POD-T-2 (projects-block chart horizontal) + POD-T-3 (switched-off initiatives dropped from P/A rows) + 2026-11-18 · changes/portfolio-rejection-reason-export PRE-T-6 (filtering never scrolls the page: URL mirror opts out of the shell scroll reset) + PRE-T-5 (Space toggles in the top-bar multi-select, non-searchable only) + PRE-T-3 attempt 3 (Space toggles in the Filters panel) + PRE-T-2 (16-column export, 2026-11-18) + PRE-T-3 (Filters dropdown, 2026-11-17) + quick/typology-bar-counts-key (2026-11-17) + spec changes/portfolio-typology-bar-chart (2026-11-10) + bugfix/centers-block-status-tiles (2026-11-05) + changes/portfolio-overview-feedback-round/contribution-requests-by-pa (2026-11-04) + funding-filter (Funding bar dimension) + cleanup-and-approved · prior: 2026-10-27
 
 **What this owns:** the **admin-only** `/portfolio-overview` screen — figures for the WHOLE portfolio in the open
 phase: KPI deck, status, results by typology, progress against ToC KPIs, CGIAR Centers, W3/Bilateral projects, filtered results detail + Excel export. Ticket **P2-3304**;
@@ -67,6 +67,7 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 - `components/projects-block/` (`app-portfolio-projects-block`, input `versionId`), after Centers; followed only by Results detail (#9). Own data path: `GET_PortfolioBilateralProjects(versionId)` -> `GET api/results-framework-reporting/portfolio/bilateral-projects` (admin only, server-side). Copy group `projects` in `portfolio-overview.copy.ts`.
 - Center labels come from `CentersService.getData()` (`acronym || name || code`, same mapping as Centers); it fires HTTP on construction, so page specs must mock it.
 - 🛑 **Mount rule:** under `@if (!data.loading())` (`versionId` is resolved) but **outside** `hasFigures()` (WPS-DD-7): a phase with no result rows must still answer "0 reporting projects". **No page skeleton** (JD-10); the block has its own states.
+- Projects chart is horizontal: axis labels `code · short name`, full name in the tooltip and the table, height grows with the number of rows.
 - ⚠️ Gotchas: P/A bars can sum to more than the total (a project may map to several P/As; totals count it once). Projects with no Center count under **Unassigned** (last). On a closed phase the year is that phase's, so figures can differ from Center Overview, which reads the active year (WPS-P-7).
 
 ## Contribution requests by P/A (2026-11-04, spec `changes/portfolio-overview-feedback-round/contribution-requests-by-pa`)
@@ -78,6 +79,7 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 
 ## Gotchas
 
+- 🛑 **P/A rows of ToC coverage, W3/Bilateral projects and Contribution requests drop initiatives switched off for the phase** (`phase_initiative_reporting_access.reporting_enabled = false` for that version; an absent row = enabled; spec `bugfix/inc-168459-portfolio-overview-data`).
 - 🛑 **The payload carries EVERY phase** (6094 rows on prtest, 259 open). `apply()` narrows to `phase_status === 1` **before** counting; with none open it falls back to the newest `version_id` and flips `closedPhase()` (amber banner).
 - 🛑 **Status 2 is labelled "Quality Assessed", not "In QA"** (key stays `in-qa` for URLs and tests). Elsewhere in PRMS "In QA" is the separate in-review tag (`result.inQA`, `api.service.ts` `full_status_name_html`); the old "In QA" label made the tile and the Results Center chip disagree (27-oct-2026). Both label definitions: `services/portfolio-status-slot.ts` + `STATUS_SEGMENT_DEFINITIONS` in the service.
 - ⚠️ **Status dots resolve by `status_id`, never by `status_name`** (same map as `programme-results.component.ts:101`; unknown ids fall back to `not-started`). Payload names are labels only: colouring by name invents a sixth status colour (UI rule 9).
@@ -86,9 +88,7 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 - **`isPartial()`** (`meta.total` > what we asked for) only feeds the Results detail note (`detail-partial`). The orange header notice was **removed on request** 2026-10-22; do not re-add it without asking.
 - 🛑 **Two counts, two questions.** `total()` is the open-phase count (KPI tile); `fetchedCount()` is the raw server count captured in `load()` before `apply()`'s phase filter. Any partial note MUST bind to `fetchedCount()`.
 - ⚠️ **"Replicated" means `is_replicated`, not "innovation".** Card-3's "Innovations replicated from 2025" assumes replicated W3 rows are innovations only (P-3, prod 2026-10-14); if that stops holding, change the label.
-- 🛑 **`tests/mocks/spartanBrainMock.ts` must declare every input a Helm host directive re-exposes**, or NG0311:
-  `BrnSeparator` (`orientation`/`decorative`, deck), `BrnTooltip` (`brnTooltip`/`position`/`hideDelay`/
-  `showDelay`/`tooltipDisabled`, Rejected tile) and `BrnTabs` (`activationMode`, typology tabs).
+- 🛑 **`tests/mocks/spartanBrainMock.ts` must declare every input a Helm host directive re-exposes**, or NG0311: `BrnSeparator` (`orientation`/`decorative`, deck), `BrnTooltip` (`brnTooltip`/`position`/`hideDelay`/ `showDelay`/`tooltipDisabled`, Rejected tile) and `BrnTabs` (`activationMode`, typology tabs).
 
 ## Status section & removed rankings (2026-10-14, spec `…/remove-rankings-status-copy`)
 
@@ -112,8 +112,7 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
   server), one request per version and per Retry; a failure shows the block's error and leaves the page intact.
 - Rule: a KPI = distinct indicator, covered by >= 1 pooled W1/W2 result in QA or Submitted (W3 never covers).
   % half-up, 100% only if covered = total, 0% only if covered = 0; total = 0 reads "No ToC KPIs in this phase".
-- 🛑 **No ranking**: rows in natural code order (`naturalCodeCompare`), no sort control. Only the name is
-  interactive (`(programmeOpen)` -> `openProgramme`); counts, bars and the summary are not links (P2-3304).
+- 🛑 **No ranking**: rows in natural code order (`naturalCodeCompare`), no sort control. Only the name is interactive (`(programmeOpen)` -> `openProgramme`); counts, bars and the summary are not links (P2-3304).
 
 ## Pending
 

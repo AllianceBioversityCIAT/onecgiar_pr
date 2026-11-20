@@ -13,6 +13,7 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { ApiTags } from '@nestjs/swagger';
+import { LockedWhileInQa } from '../../../shared/guards/qa-review-lock.guard';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -23,6 +24,7 @@ export class IpsrGeneralInformationController {
   ) {}
 
   @Version('2')
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('general-information/:resultId')
   generalInformation(
     @Param('resultId') resultId: number,

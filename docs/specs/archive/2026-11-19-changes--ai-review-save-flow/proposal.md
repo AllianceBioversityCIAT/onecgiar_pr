@@ -10,7 +10,7 @@
 | Approval Mode | gated (default) |
 | Date | 2026-09-17 |
 | Requester | M.Giraldo@cgiar.org |
-| Status | Draft — pending approval |
+| Status | Shipped — c8465baa1 (archived 2026-11-19) |
 
 ## 2. Intent
 

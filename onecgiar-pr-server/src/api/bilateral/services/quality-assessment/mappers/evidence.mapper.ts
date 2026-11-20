@@ -1,12 +1,14 @@
 // @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-4)
 import { QualityPayloadEvidenceItem } from '../bilateral-quality-rules';
+import { resolveEvidenceVisibility } from '../../../../results/evidences/utils/evidence-visibility';
 
 /**
  * `sections.evidence` — one item per active evidence row, definitions-only
  * (BIL-QAI-R-3, design.md §5 "Payload builder" evidence mapper):
  *
  * - `source = is_sharepoint ? 'prms_repository' : 'url'`.
- * - `visibility = is_sharepoint ? (is_public_file ? 'public' : 'private') : 'public'`.
+ * - `visibility` comes from `resolveEvidenceVisibility`: file ⇒ `is_public_file`; link ⇒ `is_public`
+ *   (NULL = legacy = public).
  * - Private ⇒ `link: null`. `QualityPayloadEvidenceItem` has no SharePoint-specific field
  *   (document id, folder path, file name) to begin with, so a private item can never leak one
  *   regardless of what `evidence.entity.ts` / `evidence-sharepoint.entity.ts` carry.
@@ -55,12 +57,13 @@ export function mapEvidence(
     const sharepointRow = Array.isArray(row?.evidenceSharepointArray)
       ? row.evidenceSharepointArray[0]
       : null;
-    const isPublicFile = !!sharepointRow?.is_public_file;
-    const visibility: 'public' | 'private' = isSharepoint
-      ? isPublicFile
-        ? 'public'
-        : 'private'
-      : 'public';
+    // @akili-spec bilateral/evidence-privacy-tag (EVP-T-7, EVP-R-10): link visibility
+    // follows `is_public` (NULL = legacy = public); files keep following `is_public_file`.
+    const { visibility } = resolveEvidenceVisibility({
+      is_sharepoint: row?.is_sharepoint,
+      is_public: row?.is_public,
+      is_public_file: sharepointRow?.is_public_file,
+    });
 
     const tags = TAG_LABELS.filter(([key]) => !!row?.[key]).map(
       ([, label]) => label,

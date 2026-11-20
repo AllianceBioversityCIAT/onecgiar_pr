@@ -11,6 +11,7 @@ import { RolesService } from '../../../../../../shared/services/global/roles.ser
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { BilateralResultsService } from '../../services/bilateral-results.service';
+import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
 import { BILATERAL_REVIEW_COPY } from '../../bilateral-review.copy';
 
 
@@ -2819,6 +2820,94 @@ describe('ResultReviewDrawerComponent', () => {
         }
       }
       expect(foundWrappingBlock).toBe(true); // the narrowed check DOES catch the re-nesting, as intended
+    });
+  });
+
+  // @akili-spec bilateral/evidence-privacy-tag (EVP-T-9, EVP-R-7/8/9)
+  // RENDERED proof of the card-3 evidence rows. jsdom proves PRESENCE only; layout (D9) is a
+  // /akili-validate HITL gap at desktop and <=640px.
+  describe('evidence rows: Private tag + description (EVP-T-9)', () => {
+    const TEMPLATE_PATH = path.join(__dirname, 'result-review-drawer.component.html');
+
+    /** The exact shipped `@for` block over `fields.evidence`, brace-matched from the template. */
+    const extractEvidenceBlock = (): string => {
+      const html = fs.readFileSync(TEMPLATE_PATH, 'utf8');
+      const marker = '@for (evidence of fields.evidence; track $index) {';
+      const start = html.indexOf(marker);
+      expect(start).toBeGreaterThan(-1);
+      let depth = 1;
+      let cursor = start + marker.length;
+      for (; cursor < html.length && depth > 0; cursor++) {
+        if (html[cursor] === '{') depth++;
+        else if (html[cursor] === '}') depth--;
+      }
+      expect(depth).toBe(0);
+      return '@let fields = this.resultDetail();' + html.slice(start, cursor);
+    };
+
+    let evFixture: ComponentFixture<ResultReviewDrawerComponent>;
+
+    beforeEach(async () => {
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [ResultReviewDrawerComponent],
+        providers: [
+          { provide: ApiService, useValue: apiMock },
+          { provide: RolesService, useValue: rolesMock },
+          { provide: CentersService, useValue: centersMock },
+          { provide: InstitutionsService, useValue: institutionsMock },
+          { provide: Router, useValue: routerMock }
+        ]
+      })
+        .overrideComponent(ResultReviewDrawerComponent, {
+          set: { template: extractEvidenceBlock(), imports: [PrTooltipDirectiveModule], styles: [], changeDetection: ChangeDetectionStrategy.Default }
+        })
+        .compileComponents();
+      evFixture = TestBed.createComponent(ResultReviewDrawerComponent);
+    });
+
+    const render = (): HTMLElement => {
+      evFixture.componentInstance.resultDetail.set(
+        buildDetail({
+          evidence: [
+            { id: 1, link: 'https://a.example/private', is_sharepoint: 0, description: 'Signed contract with partner X', is_public: false },
+            { id: 2, link: 'https://b.example/public-file', is_sharepoint: 1, description: null, is_public: true },
+            { id: 3, link: 'https://c.example/untagged', is_sharepoint: 0, description: '   ', is_public: null }
+          ]
+        })
+      );
+      evFixture.detectChanges();
+      return evFixture.nativeElement as HTMLElement;
+    };
+
+    it('tags only the private row (not public, not untagged) and shows the description once', () => {
+      const host = render();
+      const rows = Array.from(host.querySelectorAll('.rounded-lg.border'));
+      expect(rows.length).toBe(3);
+
+      const tags = host.querySelectorAll('[data-testid="evidence-private-tag"]');
+      expect(tags.length).toBe(1);
+      expect(rows[0].contains(tags[0])).toBe(true);
+      expect(tags[0].textContent).toContain('Private');
+      expect(tags[0].getAttribute('aria-label')).toContain('Private');
+      expect(tags[0].getAttribute('aria-label')).toContain('contact the Centre that reported the result');
+
+      const descriptions = host.querySelectorAll('[data-testid="evidence-description"]');
+      expect(descriptions.length).toBe(1);
+      expect(rows[0].contains(descriptions[0])).toBe(true);
+      expect(descriptions[0].textContent?.trim()).toBe('Signed contract with partner X');
+    });
+
+    it('keeps every row URL anchor clickable exactly as before', () => {
+      const host = render();
+      const urls = ['https://a.example/private', 'https://b.example/public-file', 'https://c.example/untagged'];
+      const rows = Array.from(host.querySelectorAll('.rounded-lg.border'));
+      rows.forEach((row, i) => {
+        const a = row.querySelector('a[title]') as HTMLAnchorElement;
+        expect(a.getAttribute('href')).toBe(urls[i]);
+        expect(a.getAttribute('target')).toBe('_blank');
+        expect(a.getAttribute('rel')).toBe('noopener noreferrer');
+      });
     });
   });
 });

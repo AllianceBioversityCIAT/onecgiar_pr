@@ -11,12 +11,14 @@ import { CreateLinkedResultDto } from './dto/create-linked-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
+import { LockedWhileInQa } from '../../../shared/guards/qa-review-lock.guard';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
 export class LinkedResultsController {
   constructor(private readonly linkedResultsService: LinkedResultsService) {}
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Post('create/:resultId')
   create(
     @Body() createLinkedResultDto: CreateLinkedResultDto,

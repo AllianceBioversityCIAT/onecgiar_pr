@@ -16,6 +16,10 @@ import {
   BasicReportFiltersNormalized,
 } from './dto/basic-report-filters.dto';
 import { ResultRepository } from './result.repository';
+import {
+  RESULT_UNDER_QA_REVIEW_EDIT_MESSAGE,
+  isResultUnderQaReview,
+} from '../../shared/constants/qa-review-lock.constant';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
@@ -159,9 +163,11 @@ import {
 } from './share-result-request/entities/share-result-request.entity';
 import { BilateralAccessService } from './bilateral-access/bilateral-access.service';
 import { EvidencesService } from '../results/evidences/evidences.service';
+import { resolveEvidenceVisibility } from './evidences/utils/evidence-visibility';
 import { SavePartnersV2Dto } from './results_by_institutions/dto/save-partners-v2.dto';
 import { ResultDeletionAuditService } from './result-deletion-audit/result-deletion-audit.service';
 import { ResultDeletionAuditSource } from './result-deletion-audit/result-deletion-audit-source.enum';
+import { exposedEvidenceIsPublic } from './evidences/utils/evidence-visibility';
 
 /**
  * BIL-RAU-T-2 (design.md §5, DD-4): the W1/W2 status rule (originally inline at
@@ -787,6 +793,15 @@ export class ResultsService {
           response: {},
           message: 'The result does not exist',
           status: HttpStatus.NOT_FOUND,
+        };
+      }
+      // QA review lock: while QA holds the result, nothing in it may change (same predicate as
+      // the unsubmit guard). Checked before any lookup or write.
+      if (isResultUnderQaReview(result)) {
+        throw {
+          response: {},
+          message: RESULT_UNDER_QA_REVIEW_EDIT_MESSAGE,
+          status: HttpStatus.CONFLICT,
         };
       }
       const resultType = await this._resultTypesService.findOneResultType(
@@ -3699,17 +3714,25 @@ export class ResultsService {
 
       const activeEvidence =
         result.evidence_array?.filter((e) => e.is_active) || [];
+      const isBilateralResult = result.source === SourceEnum.Bilateral;
+      // The row filter looks at the stored link/description, so a withheld private link
+      // does not drop the row (same as the T-7 AI quality mapper, which keeps every row).
       const evidence = activeEvidence
-        .map((e) => ({
-          link: e.link,
-          description: e.description,
-          is_sharepoint: e.is_sharepoint,
-          is_public_file:
-            e.evidenceSharepointArray?.find(
-              (sp) => sp?.is_public_file !== undefined,
-            )?.is_public_file ?? null,
-        }))
-        .filter((e) => e.link || e.description);
+        .filter((e) => e.link || e.description)
+        .map((e) => {
+          const isPublic = exposedEvidenceIsPublic(e);
+          return {
+            // @akili-spec bilateral/evidence-privacy-tag (EVP-T-5 + validate F-3, NFR Security): bilateral private links withheld
+            link: isBilateralResult && isPublic === false ? null : e.link,
+            description: e.description,
+            is_sharepoint: e.is_sharepoint,
+            is_public_file:
+              e.evidenceSharepointArray?.find(
+                (sp) => sp?.is_public_file !== undefined,
+              )?.is_public_file ?? null,
+            is_public: isPublic,
+          };
+        });
 
       const tocMetadata = await this.getTocMetadata(
         result.obj_results_toc_result?.filter((toc) => toc.is_active) || [],
@@ -4249,7 +4272,20 @@ export class ResultsService {
       );
     }
 
-    return [contributingProjects, contributingInitiatives, evidence];
+    // @akili-spec bilateral/evidence-privacy-tag (EVP-T-6, EVP-R-7, EVP-R-8, EVP-DD-6)
+    const mappedEvidence = evidence?.map((e: any) => ({
+      id: e.id,
+      link: e.link,
+      is_sharepoint: e.is_sharepoint,
+      description: e.description,
+      is_public: resolveEvidenceVisibility({
+        is_sharepoint: e.is_sharepoint,
+        is_public: e.is_public,
+        is_public_file: e.is_public_file,
+      }).exposed,
+    }));
+
+    return [contributingProjects, contributingInitiatives, mappedEvidence];
   }
 
   private async _loadBilateralResultTypeData(

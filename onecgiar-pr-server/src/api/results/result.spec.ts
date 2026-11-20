@@ -2105,6 +2105,77 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect(res.response.linkedResults).toEqual([11164, 9600]);
   });
 
+  // @akili-spec bilateral/evidence-privacy-tag (EVP-T-6, EVP-R-7, EVP-R-8, EVP-DD-6)
+  it('getBilateralResultById maps evidence to {id, link, is_sharepoint, description, is_public} via the resolver', async () => {
+    (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+      id: 300,
+      result_type_id: 1,
+      source: SourceEnum.Bilateral,
+    });
+    (
+      mockResultByInitiativesRepository.getOwnerInitiativeByResult as jest.Mock
+    ).mockResolvedValueOnce({ id: 1 });
+    (
+      mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
+    ).mockResolvedValueOnce({ result_code: 3001 });
+    (
+      mockResultsTocResultsService.getTocByResultV2 as jest.Mock
+    ).mockResolvedValueOnce({ status: HttpStatus.OK, response: {} });
+    (
+      mockResultRepository.getEvidenceBilateralResult as jest.Mock
+    ).mockResolvedValueOnce([
+      {
+        id: 1,
+        link: 'https://example.com/private',
+        is_sharepoint: 0,
+        description: 'Signed contract',
+        is_public: 0,
+        is_public_file: null,
+      },
+      {
+        id: 2,
+        link: 'https://sp.example.com/file.pdf',
+        is_sharepoint: 1,
+        description: 'A file',
+        is_public: null,
+        is_public_file: 0,
+      },
+      {
+        id: 3,
+        link: 'https://example.com/untagged',
+        is_sharepoint: 0,
+        description: null,
+        is_public: null,
+        is_public_file: null,
+      },
+    ]);
+
+    const res = await resultService.getBilateralResultById(300);
+    expect(res.response.evidence).toEqual([
+      {
+        id: 1,
+        link: 'https://example.com/private',
+        is_sharepoint: 0,
+        description: 'Signed contract',
+        is_public: false,
+      },
+      {
+        id: 2,
+        link: 'https://sp.example.com/file.pdf',
+        is_sharepoint: 1,
+        description: 'A file',
+        is_public: false,
+      },
+      {
+        id: 3,
+        link: 'https://example.com/untagged',
+        is_sharepoint: 0,
+        description: null,
+        is_public: null,
+      },
+    ]);
+  });
+
   // BIL-RAU-T-5 (DD-8) — falsifier: a type-7 fixture with 2 active + 1 inactive reason rows
   // returns exactly the 2 active ones, and merge_split_targets comes from `findActiveByResult`.
   it('getBilateralResultById adds annualUpdating for a type-7 result with only the active reason rows', async () => {

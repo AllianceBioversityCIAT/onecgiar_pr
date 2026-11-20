@@ -110,7 +110,32 @@ These fields sit on the same object as the type-specific `*_summary` (when prese
 
 | Property | Technical | Plain language |
 |----------|-----------|----------------|
-| `evidences[]` | `{ link, description }` per main evidence row (slim export). | Proof or references attached to the result. *Some pipelines may still expose the richer `evidence_array` from the ORM before mapping to this slim list.* |
+| `evidences[]` | `{ link, description }` per main evidence row. This slim list is the **Fetcher's output**, not PRMS's: PRMS itself does not emit `evidences[]`. | Proof or references attached to the result. |
+| `evidence_array[]` | The richer per-row list PRMS returns on `/api/bilateral/*` reads. Each row carries `is_public` (see below). | What the Fetcher maps into the slim `evidences[]` above. |
+
+#### Per-item visibility: `is_public` (P2-4110)
+
+Each evidence item holds its own visibility, independent of the other items of the same result.
+
+**Input (`POST /create`, `evidence[]`)**
+
+| Rule | Behaviour |
+|------|-----------|
+| `is_public` | Optional boolean. `true` = public, `false` = private, absent or `null` = untagged. Untagged is read as public. |
+| Wrong type | A non-boolean value (for example `"no"`) is a 400 naming `is_public`. |
+| Never required | An item is not refused for lacking `is_public`. A payload with no `is_public` anywhere is accepted as before. |
+| Storage-link exception | A link on a file-storage platform (Google Drive, Dropbox, SharePoint, OneDrive) is accepted **only** when `is_public` is the JSON boolean `false`. With `true`, absent or `null` it is refused with the same 400 and the same message as before, before the first write. |
+
+**Output (`/api/bilateral/*` reads)**
+
+| Item | `is_public` |
+|------|-------------|
+| Link row (`evidence_array[]`) | `true`, `false`, or `null`. `null` means untagged and is to be treated as public. |
+| File (SharePoint) row | `true` or `false`, from the item's SharePoint file flag. It fails closed: `false` if any active SharePoint row of that item is private, or if the item has no active SharePoint row. |
+
+The change is additive: no key was removed or renamed, and `evidenceSharepointArray` is unchanged.
+
+**Rewrite rule.** The payload is the source of truth when evidence is rewritten, as in the replace rule of the resubmission table below. A resubmission that sends a link **without** `is_public` stores it **untagged**, even if the item was private before. Send `is_public` on every resubmission to keep a private item private. A phase copy of a result carries each item's `is_public` over unchanged, and a save from the centre form preserves it.
 
 ### Bilateral projects and who created the record
 
@@ -657,7 +682,7 @@ The payload is the new truth. A section you send replaces the previous one. A se
 | `submitted_by.submitted_date`, `submitted_by.comment` | Replaced. | **Cleared** (`NULL`). |
 | `external_reference` | Replaced. | Not specified here. |
 | `lead_contact_person` | Resolved as in a regular create. | **Stored value kept.** The columns are not sent. |
-| Evidence, contributing bilateral projects with their budgets, non-lead contributing centres, Theory of Change mapping with its indicators and targets, subnational areas | Previous rows deactivated, then the payload's rows written. | Previous rows stay deactivated: **none remains active**. |
+| Evidence, contributing bilateral projects with their budgets, non-lead contributing centres, Theory of Change mapping with its indicators and targets, subnational areas | Previous rows deactivated, then the payload's rows written. | Previous rows stay deactivated: **none remains active**. Evidence `is_public` follows the payload: an item sent without it is stored untagged (see "Per-item visibility"). |
 | Contributing partners | Replaced by the partners that resolve in CLARISA (`{A, B}` then `{C}` leaves exactly `{C}`). | **None remain active.** The same holds when you send partners but none resolves. |
 | Innovation Use actors, organisation types and measures (Innovation Use only) | Previous rows deactivated, then rewritten. | **None remain active.** |
 | Lead centre | The previous lead is demoted and the payload's lead is written. | The stored lead row is not reset. |
@@ -739,6 +764,7 @@ Every refusal above is raised **before the first write**. The other checks of "E
 
 | Date (approx.) | Change |
 |----------------|--------|
+| 2026-11-20 | **Evidence gains a per-item visibility, `is_public`, on `POST /create` and on read (P2-4110, spec `docs/specs/bilateral/evidence-privacy-tag`, EVP-T-10, `EVP-R-13`).** **Input (additive):** `evidence[].is_public` is an optional boolean; a non-boolean is a 400. **Partial reversal of the 2026-08-26 entry** ("Breaking — `POST /create`, `evidence[].link`"): that entry rejected every file-storage link and said confidential evidence had no route through this API. A file-storage link is now accepted **only** with `is_public: false`; with `true`, absent or `null` the refusal and its message are unchanged. The `http(s)` scheme rule from that entry is untouched. **Output (additive):** every `evidence_array[]` row on `/api/bilateral/*` reads carries `is_public` (`true`/`false`/`null` for links, null = untagged = public; `true`/`false` for file rows, fail-closed). No key removed or renamed; `evidenceSharepointArray` unchanged. Private links are withheld from the AI quality payload. **Rewrite rule (EVP-R-11):** a resubmission sending a link without `is_public` stores it untagged. **Core-fields row corrected:** `evidences[]` is the Fetcher's slim output; PRMS returns `evidence_array`. **Deploy order:** PRMS first, then the Fetcher. The new field is additive and ignored by an unchanged Fetcher, but a Fetcher that sends `is_public: false` for storage links needs PRMS already accepting them. |
 | 2026-11-18 | **`use_nature` now applies to every Innovation Use actor type (INC-168062, spec `changes/innovation-use-nature-all-actors`, INA-T-9, `INA-R-12`).** **Additive, no shape change:** no field added, removed or renamed; `use_nature` (`information_received` \| `innovation_applied`) was already accepted, and it is now stored and read back on every actor type, not only Farmers. `count_unit` stays Farmers only. **Behaviour:** a missing `use_nature` gives the warning `actor_use_nature_missing` on any type; a non-empty `use_nature` is no longer dropped on non-Farmers rows. Rows of the same type without `result_actors_id` are one row only when type, `other_actor_type` (type 5), `count_unit` and `use_nature` all match; rows with different `use_nature` are stored separately (example: Researchers 25 `information_received` + 12 `innovation_applied` give two rows). Same-identity duplicates are merged, later wins, with `actor_duplicate_merged`, whose text is now `Another actor of the same type with the same count_unit and use_nature was sent; the rows are stored as one and the later one wins.` **Retired code:** `actor_use_nature_not_applicable` is no longer emitted but is still declared in the warning code list, so consumers must keep tolerating it. **Read:** non-Farmers actors may now carry a `use_nature` string. Same rules on the resubmission path. See "Actor follow-up answers" and "Ingestion — actor follow-up". Nothing removed or renamed. |
 | 2026-11-11 | **Innovation Use actors gain `count_unit` and `use_nature` on `POST /create` and on read (P2-4106, spec `bilateral/innovation-use-actor-follow-up`, BIF-T-5, `BIF-R-10`).** **Input (additive, optional):** `innovation_use.current_innovation_use_numbers.actors[].count_unit` (`households` \| `individuals`) and `.use_nature` (`information_received` \| `innovation_applied`), exact case, asked of Farmers (`actor_type_id` 1). **Behaviour:** a code outside the list is a `400` on any actor type (`actors[<i>].count_unit must be one of: households, individuals; received "<v>".`, same form for `use_nature`); `households` without `how_many` is a `400` and discards any breakdown (single total, `sex_and_age_disaggregation` stored as `true`); a missing answer on a Farmers row, an answer on another type (ignored), and two Farmers rows with the same answer pair (merged, later wins) are **warnings**, never a failure. **Response (additive):** `response.outcomes[].warnings[]` may now hold `{ field: "innovation_use.actors", index, code, message }` with codes `actor_count_unit_missing`, `actor_use_nature_missing`, `actor_count_unit_not_applicable`, `actor_use_nature_not_applicable`, `actor_duplicate_merged`; partner warnings stay first. **Read (additive):** every Innovation Use actor object carries `count_unit` and `use_nature` (string or `null`). **Ordering:** actor-type and follow-up `400`s now fire before anything is written for the result (no orphan header), and before the youth-within-gender `400`s of the same payload. **Deferred:** the answers are not yet in the AI QA payload. Same rules on the resubmission path. See "Actor follow-up answers" and "Ingestion — actor follow-up". Nothing removed or renamed. |
 | 2026-11-05 | **`POST /create`: `contributing_partners[]` are no longer dropped silently or matched loosely (P2-4067).** A partner is linked only on its CLARISA `institution_id` or an **exact**, unique name/acronym match; the previous `LIKE %x%` + first-row match (which linked e.g. `CIAT` to any "Association…") is gone. A CGIAR center sent as a partner is not linked as a partner (centers belong in `lead_center` / `contributing_center`). Every entry that is not linked is reported on the new **`response.outcomes[].warnings`** array (`partner_unresolved`, `partner_ambiguous` + `candidate_institution_ids`, `partner_is_cgiar_center` + `resolved_institution_id`); the result is still written. **Additive:** `warnings` is always present (empty when every partner was linked); nothing removed or renamed. A partner that used to resolve only through partial matching now comes back as `partner_unresolved` — send its `institution_id`. Same rules on the resubmission path. See "Contributing partners on `POST /create`". |

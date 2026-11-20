@@ -953,6 +953,47 @@ describe('ResultRepository (unit)', () => {
     });
   });
 
+  // @akili-spec bilateral/evidence-privacy-tag (EVP-T-6, EVP-R-7, EVP-R-8, EVP-DD-6)
+  describe('getEvidenceBilateralResult — description + is_public, one row per evidence', () => {
+    const sqlOf = () =>
+      (queryMock.mock.calls[0][0] as string).replace(/\s+/g, ' ');
+
+    beforeEach(() => {
+      queryMock.mockResolvedValue([]);
+    });
+
+    it('selects description, is_public and the active SP is_public_file in ONE query', async () => {
+      await repo.getEvidenceBilateralResult(77);
+
+      const sql = sqlOf();
+      expect(queryMock).toHaveBeenCalledTimes(1);
+      expect(queryMock).toHaveBeenCalledWith(expect.any(String), [77]);
+      expect(sql).toContain('e.description');
+      expect(sql).toContain('e.is_public');
+      expect(sql).toContain('is_public_file');
+      expect(sql).toContain('GROUP BY e.id');
+      expect(sql).toContain('e.is_active = 1');
+    });
+
+    it('LEFT JOINs the active SharePoint row so link evidence is never dropped', async () => {
+      await repo.getEvidenceBilateralResult(77);
+
+      const sql = sqlOf();
+      expect(sql).toMatch(
+        /LEFT JOIN evidence_sharepoint esp ON esp\.evidence_id = e\.id AND esp\.is_active = 1/,
+      );
+      expect(sql).not.toMatch(/(?<!LEFT )(?<!OUTER )JOIN evidence_sharepoint/);
+    });
+
+    it('aggregates is_public_file with MIN, so any private active SP row fails closed', async () => {
+      await repo.getEvidenceBilateralResult(77);
+
+      const sql = sqlOf();
+      expect(sql).toContain('MIN(esp.is_public_file)');
+      expect(sql).not.toContain('MAX(esp.is_public_file)');
+    });
+  });
+
   /**
    * Form-defect sweep of 31-Aug-2026, LOTE 5 #3: a reviewer opening a bilateral Capacity Sharing
    * result saw "Length of training" — and in fact every field of the section — as unanswered, even

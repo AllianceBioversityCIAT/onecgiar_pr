@@ -13,6 +13,7 @@ import { SaveResultsByInstitutionDto } from './dto/save_results_by_institution.d
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
+import { LockedWhileInQa } from '../../../shared/guards/qa-review-lock.guard';
 
 @Controller('/')
 @UseInterceptors(ResponseInterceptor)
@@ -47,6 +48,7 @@ export class ResultsByInstitutionsController {
     );
   }
 
+  @LockedWhileInQa({ param: 'id' })
   @Patch('create/partners/:id')
   findOne(
     @Body() updatePartners: SaveResultsByInstitutionDto,

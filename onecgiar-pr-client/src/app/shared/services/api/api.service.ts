@@ -20,6 +20,7 @@ import { EndpointsService } from './endpoints/endpoints.service';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 import { CurrentResult } from '../../interfaces/current-result.interface';
 import { FieldsManagerService } from '../fields-manager.service';
+import { isResultLockedByQaReview } from '../../utils/qa-review-lock.util';
 
 /**
  * P2-3653. `ResultTypeEnum.KNOWLEDGE_PRODUCT` on the server
@@ -134,7 +135,7 @@ export class ApiService {
     this.resultsSE.GETInnovationPackageDetail().subscribe(({ response }) => {
       response.initiative_id = response?.inititiative_id;
       response.official_code = response?.initiative_official_code;
-      this.rolesSE.validateReadOnly(response);
+      const roleCheck = this.rolesSE.validateReadOnly(response);
       this.dataControlSE.currentResult = response;
       this.dataControlSE.currentResultSignal.set(response);
       const is_phase_open = response?.is_phase_open;
@@ -152,6 +153,19 @@ export class ApiService {
           }
           break;
         }
+      }
+
+      // QA review lock: Innovation Packages enter QA too (the QA feed counts the IPSR versions of the
+      // year), and the server refuses their saves while QA holds them. Admins included.
+      if (isResultLockedByQaReview(response)) {
+        this.rolesSE.readOnly = true;
+        // `validateReadOnly` is async (it re-reads the roles over HTTP) and, for an admin or a member,
+        // ends by writing `readOnly = false` AFTER this line, which would undo the lock. Re-apply it once
+        // the roles refresh settles, while this package is still the open one (same pattern as
+        // `CurrentResultService.applyResultLock` for W1/W2).
+        Promise.resolve(roleCheck).then(() => {
+          if (this.ipsrDataControlSE.detailData === response) this.rolesSE.readOnly = true;
+        });
       }
 
       this.ipsrDataControlSE.initiative_id = response?.inititiative_id;

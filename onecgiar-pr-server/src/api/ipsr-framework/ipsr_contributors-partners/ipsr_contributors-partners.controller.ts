@@ -13,6 +13,7 @@ import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.in
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UpdateContributorsPartnersDto } from './dto/update-contributors-partners.dto';
+import { LockedWhileInQa } from '../../../shared/guards/qa-review-lock.guard';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -31,6 +32,7 @@ export class IpsrContributorsPartnersController {
   }
 
   @Version('2')
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch(':resultId')
   updateContributorsPartners(
     @Param('resultId') resultId: number,

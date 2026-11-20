@@ -4,7 +4,14 @@ export interface BilateralEvidenceItem {
   description?: string;
   is_sharepoint?: boolean;
   file?: File;
+  /**
+   * The ONE public/private answer slot the form binds to, for both sources (EVP-DD-7). For a file it
+   * is the file's own flag; for a link it carries the link's `is_public` (null = untagged).
+   * The wire mapping lives in `SectionEvidenceComponent` (`fromWire` / `toWire`).
+   */
   is_public_file?: boolean | null;
+  /** Wire field of a LINK item (EVP-R-5): true public, false private, null untagged. */
+  is_public?: boolean | null;
   sp_document_id?: string;
   sp_file_name?: string;
   sp_folder_path?: string;

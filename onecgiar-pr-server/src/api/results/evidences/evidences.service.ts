@@ -13,7 +13,7 @@ import { VersionRepository } from '../../versioning/versioning.repository';
 import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';
 import { ResultsInnovationsDevRepository } from '../summary/repositories/results-innovations-dev.repository';
 import { Like } from 'typeorm';
-import { Result } from '../entities/result.entity';
+import { Result, SourceEnum } from '../entities/result.entity';
 import { GlobalParameterCacheService } from '../../../shared/services/cache/global-parameter-cache.service';
 import { SharePointService } from '../../../shared/services/share-point/share-point.service';
 import { EvidenceSharepointRepository } from './repositories/evidence-sharepoint.repository';
@@ -135,6 +135,7 @@ export class EvidencesService {
   private _applyEvidenceInputFields(
     target: Evidence,
     evidence: EvidencesCreateInterface,
+    result?: Result,
   ): void {
     target.description = evidence?.description ?? null;
     target.gender_related = evidence.gender_related;
@@ -153,6 +154,19 @@ export class EvidencesService {
     target.knowledge_product_metadata_related =
       evidence.knowledge_product_metadata_related;
     target.link = evidence.link;
+    // @akili-spec bilateral/evidence-privacy-tag (EVP-DD-3): bilateral-only write; a pool
+    // result never has the property touched. SharePoint files carry visibility on is_public_file.
+    // EVP-R-11: a save that does not carry `is_public` (W1/W2 evidences form, evidence_demand)
+    // keeps the stored visibility instead of erasing a private tag; a new row starts untagged.
+    if (result?.source === SourceEnum.Bilateral) {
+      if (evidence.is_sharepoint) {
+        target.is_public = null;
+      } else if (evidence.is_public !== undefined) {
+        target.is_public = evidence.is_public ?? null;
+      } else {
+        target.is_public = target.is_public ?? null;
+      }
+    }
   }
 
   private _handleIdFromEvidenceLink(link: string): string {
@@ -200,7 +214,7 @@ export class EvidencesService {
     const newEvidence = new Evidence();
     newEvidence.created_by = user.id;
     newEvidence.last_updated_by = user.id;
-    this._applyEvidenceInputFields(newEvidence, evidence);
+    this._applyEvidenceInputFields(newEvidence, evidence, result);
     newEvidence.is_supplementary = false;
     newEvidence.result_id = result.id;
     newEvidence.evidence_type_id = evidenceTypeId;
@@ -233,7 +247,7 @@ export class EvidencesService {
 
     let currentEvidence: Evidence;
     if (eExists) {
-      this._applyEvidenceInputFields(eExists, evidence);
+      this._applyEvidenceInputFields(eExists, evidence, result);
       await this._enrichExistingEvidenceKnowledgeProduct(
         eExists,
         evidence.link,
@@ -841,6 +855,8 @@ export class EvidencesService {
       evidences.forEach((e) => {
         e.is_sharepoint = Number(!!e?.is_sharepoint);
         e.is_public_file = Boolean(e.is_public_file);
+        // @akili-spec bilateral/evidence-privacy-tag: tri-state, never Boolean(null)
+        e.is_public = e.is_public == null ? null : Boolean(e.is_public);
       });
 
       this._normalizeEvidenceMarks(supplementary);
@@ -893,6 +909,7 @@ export class EvidencesService {
       evidences.forEach((e) => {
         e.is_sharepoint = Number(!!e?.is_sharepoint);
         e.is_public_file = Boolean(e.is_public_file);
+        e.is_public = e.is_public == null ? null : Boolean(e.is_public);
       });
 
       return {

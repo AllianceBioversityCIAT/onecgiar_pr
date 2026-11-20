@@ -2,6 +2,7 @@ import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import { env } from 'node:process';
+import { PhaseInitiativeReportingAccess } from '../results/admin-panel/entities/phase-initiative-reporting-access.entity';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { YearRepository } from '../results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
@@ -111,7 +112,32 @@ export class ResultsFrameworkReportingService {
     private readonly _clarisaCenterRepository: Repository<ClarisaCenter>,
     private readonly _clarisaProjectsRepository: ClarisaProjectsRepository,
     private readonly _shareResultRequestRepository: ShareResultRequestRepository,
+    @InjectRepository(PhaseInitiativeReportingAccess)
+    private readonly _phaseReportingAccessRepository: Repository<PhaseInitiativeReportingAccess>,
   ) {}
+
+  /**
+   * P/A seed of the three Portfolio Overview blocks: active portfolio-3
+   * Programs / Accelerators minus those explicitly switched off for the phase
+   * (`reporting_enabled = false` for `versionId`; no row = enabled).
+   * Deliberately not `AdminPanelService.isInitiativeReportingEnabled`: that
+   * returns false for closed phases and would empty past phases.
+   */
+  // @akili-spec bugfix/inc-168459-portfolio-overview-data (POD-T-1)
+  private async loadPortfolioProgramSeed(versionId: number) {
+    const seed = await this._clarisaInitiativesRepository.find({
+      where: {
+        portfolio_id: 3,
+        active: true,
+        cgiar_entity_type_id: In([22, 23, 24]),
+      },
+    });
+    const switchedOff = await this._phaseReportingAccessRepository.find({
+      where: { version_id: versionId, reporting_enabled: false },
+    });
+    const hidden = new Set(switchedOff.map((r) => Number(r.initiative_id)));
+    return seed.filter((initiative) => !hidden.has(Number(initiative.id)));
+  }
 
   async getGlobalUnitsByProgram(user: TokenDto, programId?: string) {
     try {
@@ -963,13 +989,7 @@ export class ResultsFrameworkReportingService {
       }
       const resolvedReportingYear = Number(tocContext.reportingYear);
 
-      const seed = await this._clarisaInitiativesRepository.find({
-        where: {
-          portfolio_id: 3,
-          active: true,
-          cgiar_entity_type_id: In([22, 23, 24]),
-        },
-      });
+      const seed = await this.loadPortfolioProgramSeed(resolvedVersionId);
 
       const rows = await this._tocResultsRepository.getPortfolioTocCoverage({
         ...tocContext,
@@ -1096,13 +1116,7 @@ export class ResultsFrameworkReportingService {
       }
       const phaseYear = Number(version.phase_year);
 
-      const seed = await this._clarisaInitiativesRepository.find({
-        where: {
-          portfolio_id: 3,
-          active: true,
-          cgiar_entity_type_id: In([22, 23, 24]),
-        },
-      });
+      const seed = await this.loadPortfolioProgramSeed(resolvedVersionId);
       const centerIndex = buildCenterIndex(
         await this._clarisaCenterRepository.find({
           relations: { clarisa_institution: true },
@@ -1261,13 +1275,7 @@ export class ResultsFrameworkReportingService {
       }
       const phaseYear = Number(version.phase_year);
 
-      const seed = await this._clarisaInitiativesRepository.find({
-        where: {
-          portfolio_id: 3,
-          active: true,
-          cgiar_entity_type_id: In([22, 23, 24]),
-        },
-      });
+      const seed = await this.loadPortfolioProgramSeed(resolvedVersionId);
 
       const facts =
         await this._shareResultRequestRepository.getPortfolioContributionRequestFacts(

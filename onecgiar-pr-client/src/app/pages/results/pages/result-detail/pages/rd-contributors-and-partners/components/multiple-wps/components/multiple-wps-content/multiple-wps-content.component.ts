@@ -5,6 +5,7 @@ import { TocInitiativeOutcomeListsService } from '../../../../../rd-theory-of-ch
 import { RdTheoryOfChangesServicesService } from '../../../../../rd-theory-of-change/rd-theory-of-changes-services.service';
 import { ResultLevelService } from '../../../../../../../../../../pages/results/pages/result-creator/services/result-level.service';
 import { FieldsManagerService } from '../../../../../../../../../../shared/services/fields-manager.service';
+import { CLAMPED_TEXT_COPY } from '../../../../../../../../../../internationalization/clamped-text.copy';
 import { RdContributorsAndPartnersService } from '../../../../rd-contributors-and-partners.service';
 
 interface TocResultItem {
@@ -15,6 +16,7 @@ interface TocResultItem {
 interface IndicatorItem {
   related_node_id: string;
   unit_messurament?: string;
+  indicator_description?: string;
   targets?: TargetItem[];
 }
 
@@ -67,6 +69,8 @@ export class CPMultipleWPsContentComponent implements OnChanges {
 
   // P2-3036: the 2026 redesign (labels/help/wording) applies only to phase 2026+. 2025 keeps the legacy copy.
   isCP2026 = computed(() => this.fieldsManagerSE.isContributorsPartners2026());
+
+  readonly kpiStatementLabel = CLAMPED_TEXT_COPY.kpiStatementLabel;
 
   indicatorLabel = computed(() => (this.isCP2026() ? 'KPI Statement/description' : 'Indicator'));
 
