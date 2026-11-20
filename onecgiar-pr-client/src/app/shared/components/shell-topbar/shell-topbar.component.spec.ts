@@ -36,6 +36,7 @@ describe('ShellTopbarComponent', () => {
   let routerMock: any;
   let notificationsMock: any;
   let bellRows: any;
+  let bellCountsOverride: any;
   let filterMock: any;
   let fontScaleMock: any;
   let reportingGuideMock: any;
