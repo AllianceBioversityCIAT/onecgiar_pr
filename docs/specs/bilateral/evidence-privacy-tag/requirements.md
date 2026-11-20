@@ -262,6 +262,8 @@ Pool-funding evidence MUST behave exactly as today on every screen and endpoint.
 - no change to their stored rows beyond the new column staying empty;
 - no change in any pool response other than the new column appearing as null.
 
+*Amended 2026-11-20 at `/akili-validate` (user approval): the additive `is_public` key on the items of `GET /v2/api/results/ai/context` (EVP-DD-8) is exempt for pool results. Pool link items carry `null`. Pool file items carry `true` or `false`, derived from their active SharePoint file flags (fail closed). Pool links and every other field of that response stay exactly as before.*
+
 #### Scenario: Pool link save
 
 - GIVEN a W1/W2 result's evidence section
@@ -296,7 +298,7 @@ The Fetcher MUST forward `is_public` on each `evidence[]` item to `POST /api/bil
 |---|---|
 | Backwards compatibility | Additive only on `/api/bilateral/*` (PRD AC-4). Every payload accepted on the current `staging` head is still accepted with the same status code. No key removed or renamed |
 | Data | One nullable column, no default value, no backfill. `npm run migration:check:ci` passes. Migration reversible (`down` drops the column) |
-| Security / privacy | A private item's link MUST NOT be added to any log line, AI payload, or new export introduced by this change. No secret or token is logged (`.cursorrules`) |
+| Security / privacy | A private item's link MUST NOT be added to any log line, AI payload (the bilateral AI quality payload and, for bilateral results, `GET /v2/api/results/ai/context`), or new export introduced by this change. No secret or token is logged (`.cursorrules`) |
 | Access | PRMS performs no access control on evidence URLs. Access remains the source platform's |
 | Performance | The review-detail query keeps one round-trip for evidence. No N+1 per item |
 | Accessibility | The Private tag has text, not colour or icon alone. It meets WCAG 2.1 AA contrast with design tokens from `docs/ux-ui/design.md` §7 |

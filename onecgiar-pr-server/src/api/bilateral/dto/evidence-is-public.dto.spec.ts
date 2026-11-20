@@ -30,21 +30,18 @@ const run = async (link: string, extra: Record<string, unknown>) => {
 
 describe('EvidenceDto.is_public x storage link', () => {
   describe.each(STORAGE_HOSTS)('host %s', (link) => {
-    it.each(PUBLIC_STATES)(
-      'is_public %s',
-      async (_label, extra, accepted) => {
-        const errors = await run(link, extra);
-        const linkError = errors.find((e) => e.property === 'link');
-        if (accepted) {
-          expect(errors).toEqual([]);
-        } else {
-          expect(linkError).toBeDefined();
-          expect(JSON.stringify(linkError?.constraints)).toContain(
-            'file storage platforms',
-          );
-        }
-      },
-    );
+    it.each(PUBLIC_STATES)('is_public %s', async (_label, extra, accepted) => {
+      const errors = await run(link, extra);
+      const linkError = errors.find((e) => e.property === 'link');
+      if (accepted) {
+        expect(errors).toEqual([]);
+      } else {
+        expect(linkError).toBeDefined();
+        expect(JSON.stringify(linkError?.constraints)).toContain(
+          'file storage platforms',
+        );
+      }
+    });
   });
 
   it('rejects a non-boolean is_public on property is_public', async () => {

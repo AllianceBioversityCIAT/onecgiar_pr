@@ -943,7 +943,7 @@ export class InstitutionDto {
 export class EvidenceDto {
   @ApiProperty({
     description:
-      'Publicly accessible URL linking to supporting evidence for the bilateral. Must include the http(s) scheme. Links to file storage platforms (SharePoint, OneDrive, Google Drive, Dropbox) are not accepted — PRMS stores the link and never copies the document, so a link behind tenant permissions cannot be rendered or reviewed.',
+      'Publicly accessible URL linking to supporting evidence for the bilateral. Must include the http(s) scheme. A link to a file storage platform (SharePoint, OneDrive, Google Drive, Dropbox) is accepted only when `is_public` is the JSON boolean `false` (a private item); otherwise it is refused. PRMS stores the link and never copies the document.',
     example: 'https://doi.org/10.1234/abcd.2025.01',
   })
   // `require_protocol` matters more than it looks: with the default options

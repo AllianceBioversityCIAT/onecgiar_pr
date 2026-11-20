@@ -3701,19 +3701,25 @@ export class ResultsService {
 
       const activeEvidence =
         result.evidence_array?.filter((e) => e.is_active) || [];
+      const isBilateralResult = result.source === SourceEnum.Bilateral;
+      // The row filter looks at the stored link/description, so a withheld private link
+      // does not drop the row (same as the T-7 AI quality mapper, which keeps every row).
       const evidence = activeEvidence
-        .map((e) => ({
-          link: e.link,
-          description: e.description,
-          is_sharepoint: e.is_sharepoint,
-          is_public_file:
-            e.evidenceSharepointArray?.find(
-              (sp) => sp?.is_public_file !== undefined,
-            )?.is_public_file ?? null,
-          // @akili-spec bilateral/evidence-privacy-tag (EVP-T-5, EVP-DD-8): flag only, never withheld
-          is_public: exposedEvidenceIsPublic(e),
-        }))
-        .filter((e) => e.link || e.description);
+        .filter((e) => e.link || e.description)
+        .map((e) => {
+          const isPublic = exposedEvidenceIsPublic(e);
+          return {
+            // @akili-spec bilateral/evidence-privacy-tag (EVP-T-5 + validate F-3, NFR Security): bilateral private links withheld
+            link: isBilateralResult && isPublic === false ? null : e.link,
+            description: e.description,
+            is_sharepoint: e.is_sharepoint,
+            is_public_file:
+              e.evidenceSharepointArray?.find(
+                (sp) => sp?.is_public_file !== undefined,
+              )?.is_public_file ?? null,
+            is_public: isPublic,
+          };
+        });
 
       const tocMetadata = await this.getTocMetadata(
         result.obj_results_toc_result?.filter((toc) => toc.is_active) || [],
