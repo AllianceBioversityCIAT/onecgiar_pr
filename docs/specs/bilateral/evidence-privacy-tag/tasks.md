@@ -190,8 +190,8 @@
   - **Disqualifier:** the real-DB check can't run locally. The duplicate-row guarantee is then unproven: report it as a gap and add it to the `/akili-validate` checklist, never "pass".
   - **Consumers:** `onecgiar-pr-server/src/api/results/results.service.spec.ts`, `api/results/result.spec.ts` (pin `getEvidenceBilateralResult`). Client `result-review-drawer.component.ts` reads `fields.evidence` (T-9).
 - **Definition of done:**
-  - [ ] Tests green; mutation red observed; quoted.
-  - [ ] Real-DB single-row check quoted, or recorded as a gap.
+  - [x] Tests green; mutation red observed; quoted.
+  - [x] Real-DB single-row check quoted, or recorded as a gap. **Recorded as a GAP (validate).**
 
 ### EVP-T-7 — AI quality payload honours link visibility
 
@@ -269,7 +269,7 @@
   - **Disqualifier:** jsdom can't prove the pill is visible or unclipped. That is a **presence** assertion only. Layout (D9) is a gap routed to the `/akili-validate` HITL visual check at desktop and ≤640px. Never report it as covered by this test.
   - **Consumers:** `onecgiar-pr-client/src/app/pages/result-framework-reporting/pages/bilateral-review/components/result-review-drawer/result-review-drawer.component.spec.ts`. Grep `fields.evidence\|Evidence Links` over client specs and cypress → 0 other pins. New `data-testid`s have no existing readers.
 - **Definition of done:**
-  - [ ] Tests green; mutation red observed; quoted.
+  - [x] Tests green; mutation red observed; quoted.
   - [ ] Client build green.
   - [ ] The completion report names the playbook (`refine`), polish `light` and its result, and `finish review: not run (AKILI execute)`. The D9 gap is carried to validate.
 

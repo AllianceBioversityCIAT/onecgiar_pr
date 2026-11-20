@@ -159,6 +159,7 @@ import {
 } from './share-result-request/entities/share-result-request.entity';
 import { BilateralAccessService } from './bilateral-access/bilateral-access.service';
 import { EvidencesService } from '../results/evidences/evidences.service';
+import { resolveEvidenceVisibility } from './evidences/utils/evidence-visibility';
 import { SavePartnersV2Dto } from './results_by_institutions/dto/save-partners-v2.dto';
 import { ResultDeletionAuditService } from './result-deletion-audit/result-deletion-audit.service';
 import { ResultDeletionAuditSource } from './result-deletion-audit/result-deletion-audit-source.enum';
@@ -4249,7 +4250,20 @@ export class ResultsService {
       );
     }
 
-    return [contributingProjects, contributingInitiatives, evidence];
+    // @akili-spec bilateral/evidence-privacy-tag (EVP-T-6, EVP-R-7, EVP-R-8, EVP-DD-6)
+    const mappedEvidence = evidence?.map((e: any) => ({
+      id: e.id,
+      link: e.link,
+      is_sharepoint: e.is_sharepoint,
+      description: e.description,
+      is_public: resolveEvidenceVisibility({
+        is_sharepoint: e.is_sharepoint,
+        is_public: e.is_public,
+        is_public_file: e.is_public_file,
+      }).exposed,
+    }));
+
+    return [contributingProjects, contributingInitiatives, mappedEvidence];
   }
 
   private async _loadBilateralResultTypeData(

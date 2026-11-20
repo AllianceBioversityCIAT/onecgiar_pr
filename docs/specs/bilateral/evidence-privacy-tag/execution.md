@@ -174,3 +174,48 @@
 - **Requirements covered:** EVP-R-4 (API), EVP-R-5, EVP-R-11, EVP-DD-4, EVP-DD-9.
 - **Running totals vs budget (measured, `git diff --numstat` from `cfc18d03e`):** tasks 5/11 · LOC ≈ 771 / ~780 (server prod ≈ 203, tests ≈ 568; this may include in-flight EVP-T-6 edits) · review rounds 5 / ~15. **Tripwire:** not exceeded yet, but close. Test volume is running ~40% over plan, so the next task is expected to cross ~780. When it does, the run stops and escalates per Step 2.4 (never auto-approved, even under pre-approved mode).
 - **Gate:** auto-approved (pre-approved mode). The tripwire has not fired yet.
+
+### EVP-T-6 — Review detail returns description + is_public · PASS (attempt 2) · 2026-11-20
+
+- **Attempts:** 2. Implementer T2 (medium → high); Reviewer T3 (high).
+- **Attempt 1:**
+  - Files: `onecgiar-pr-server/src/api/results/result.repository.ts` (`getEvidenceBilateralResult`: + `e.description`, `e.is_public`, LEFT JOIN on the active SP row, `GROUP BY e.id`, `MAX(esp.is_public_file)`), `results.service.ts` (`_loadBilateralRelatedData` maps through the resolver), `result.spec.ts` (+71), `result.repository.spec.ts` (+33).
+  - Red: `Expected substring: "e.description"  Received string: " SELECT e.id, e.link, e.is_sharepoint FROM result r JOIN evidence e ON r.id = e.result_id AND e.is_active = 1 WHERE r.id = ? AND r.is_active = 1; "`.
+  - Mutation LEFT→INNER JOIN went red, then was restored. 3 suites / 286 tests passed. Leader re-run VERIFIED.
+  - **Reviewer FAIL (verbatim gist):** "`MAX(esp.is_public_file)` … If an evidence has two active SP rows with values 1 and 0 … the review drawer shows the file as public … Violated Rule: design.md §3.1 resolver table; requirements.md EVP-R-7 'Private file item'. Remediation: Replace it with `MIN(esp.is_public_file)` … pin with `toContain('MIN(esp.is_public_file)')` / `not.toContain('MAX…')`."
+- **Attempt 2:**
+  - Change: MIN in place of MAX, with a fail-closed TS comment above `const query`. The `@akili-spec` comment was moved out of the SQL string, and the describe block was moved above the orphaned JSDoc (both advisories).
+  - Red against MAX: `Tests: 1 failed, 95 skipped, 96 total`. After the fix: 3 suites / 287 tests passed; `tsc` exit 0.
+- **Evidence re-run (Leader inline):** `npx jest src/api/results/results.service.spec.ts src/api/results/result.spec.ts src/api/results/result.repository.spec.ts` → `Test Suites: 3 passed · Tests: 287 passed` → **VERIFIED**.
+- **Reviewer (attempt 2):** `STATUS: PASS`. MIN fails closed, as §3.1 requires. One query, one row per evidence. ONLY_FULL_GROUP_BY is safe. The change is additive: `is_public_file` is not leaked.
+- **ADVISORY:**
+  - Add public file and public link rows to the mapping fixture.
+  - A NULL `is_public_file` plus a 1 would read public; the column is NOT NULL with default 0 (C1), so this shouldn't happen.
+- **OPEN GAP (task Disqualifier, not passed):** real-DB check that an evidence with two SP rows (one active, one inactive, and also 1 + 0 active) returns exactly one row with `is_public_file = 0`. No DB is available locally. Added to the `/akili-validate` checklist.
+- **spawns:** implementer#1 27 calls ~133.1k ended complete; implementer#2 14 calls ~123.2k ended complete; reviewers not reported by host.
+- **Requirements covered:** EVP-R-7 (data), EVP-R-8 (data), NFR Performance, EVP-DD-6.
+- **Running totals vs budget (measured from `cfc18d03e`):** tasks 6/11 · **LOC 808 / ~780** (server prod 232 vs ~190 planned; tests 576 vs ~400 planned) · review rounds 7 / ~15.
+
+## BUDGET TRIPWIRE — fired at the EVP-T-6 finalize (2026-11-20)
+
+> "No mandate widens pre-approval: an owner brief that says "never stop" or "treat every gate as approved" pre-approves routine gates only. The exceptions in `/akili-propose` Step 1 *Approval Mode* (HALT, Pivot, budget tripwire, `FATAL_FAIL`, `PRODUCT_BUG`, destructive actions) still stop, and the stop message quotes this sentence." — `/akili-execute` Step 2.4
+
+| Measure | Budget (design §11) | Actual after 6/11 tasks | Projected at 11/11 |
+|---|---|---|---|
+| Tasks | 11 | 6 done (T-1, T-2, T-3, T-4, T-6, T-7) | 11 |
+| LOC | ~780 (server prod ~190, client prod ~130, Fetcher ~20, tests ~400, docs ~40) | **808** (server prod 232, tests 576) | ≈ 1,350–1,400 (T-5 ~80, T-8 ~250, T-9 ~120, T-10 ~40, T-11 ~70) |
+| Review rounds | ~15 | 7 | ≈ 13 |
+
+**Cause:**
+1. Test volume. The falsifiers demand matrices: T-4's 6 hosts × 4 states = 30 cases, T-3's 5-case spec, T-6's SQL plus mapping specs. Tests are about 1.45× the plan.
+2. Two consumers the spec didn't list, both forced by guards and both reviewer-approved:
+   - `EvidencesRepository.createQueries` (phase copy, EVP-R-11), added in T-1;
+   - the `findAllV2` normalisation, added in T-3.
+3. Production code is ~1.2× plan. Review rounds are on budget.
+
+**State at the stop:**
+- 6 tasks committed on `qa-development-2026-ss`: `5b2092171`, `61b1b166f`, `4db9c7563`, `880da5d7f`, `6a1885972`, plus the EVP-T-6 commit.
+- **Nothing pushed.** EVP-T-3 changes the centre-form save path, and until EVP-T-8 ships, a centre-form save resets API-set tags to `null` (T-3 Reviewer advisory). The branch must not reach any shared or deployed environment before T-8.
+- Remaining: T-5 (bilateral reads), T-8 (centre form), T-9 (review drawer), T-10 (contract doc), T-11 (Fetcher).
+
+**Question for the user:** accept the overrun and continue the remaining 5 tasks (projected ~1.75× LOC, mostly tests), or re-scope.

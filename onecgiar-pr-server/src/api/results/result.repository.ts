@@ -3931,18 +3931,28 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
   }
 
   async getEvidenceBilateralResult(resultId: number): Promise<any[]> {
+    // @akili-spec bilateral/evidence-privacy-tag (EVP-T-6, EVP-DD-6): one row per evidence (GROUP BY e.id).
+    // MIN, not MAX, on purpose: MIN ignores NULLs and returns 0 if ANY active SP row is private,
+    // so conflicting active rows fail closed (private). No SP row yields NULL, which the resolver
+    // also reads as private.
     const query = `
       SELECT
-    	  e.id,
+        e.id,
         e.link,
-        e.is_sharepoint 
+        e.is_sharepoint,
+        e.description,
+        e.is_public,
+        MIN(esp.is_public_file) AS is_public_file
       FROM result r
-      JOIN evidence e 
+      JOIN evidence e
         ON r.id = e.result_id
         AND e.is_active = 1
+      LEFT JOIN evidence_sharepoint esp
+        ON esp.evidence_id = e.id AND esp.is_active = 1
       WHERE
         r.id = ?
-        AND r.is_active = 1;
+        AND r.is_active = 1
+      GROUP BY e.id;
     `;
 
     try {
