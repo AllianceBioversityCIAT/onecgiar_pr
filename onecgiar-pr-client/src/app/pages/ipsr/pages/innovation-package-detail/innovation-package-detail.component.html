@@ -24,12 +24,16 @@
           @if (statusId == 1) {
             <app-ipsr-submit-progress></app-ipsr-submit-progress>
           }
-          <app-pr-button
-            [text]="statusId == 1 ? 'Submit' : 'Un-submission'"
-            [verticalMargin]="0"
-            [ngClass]="{ globalDisabled: statusId == 3 ? false : !this.ipsrDataControlSE?.detailData?.validResult }"
-            (click)="statusId == 1 ? (this.ipsrDataControlSE.modals.submission = true) : (this.ipsrDataControlSE.modals.unsubmit = true)">
-          </app-pr-button>
+          <!-- P2-3912: the tooltip sits on a wrapper because `globalDisabled` turns off pointer
+               events on the button itself, hover included. -->
+          <div class="inline-block" [prTooltip]="submissionButtonTooltip">
+            <app-pr-button
+              [text]="statusId == 1 ? 'Submit' : 'Un-submission'"
+              [verticalMargin]="0"
+              [ngClass]="{ globalDisabled: statusId == 3 ? unsubmitLockedByQa : !this.ipsrDataControlSE?.detailData?.validResult }"
+              (click)="onSubmissionButtonClick()">
+            </app-pr-button>
+          </div>
         </div>
       }
     </div>
