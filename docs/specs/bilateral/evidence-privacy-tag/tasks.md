@@ -60,10 +60,10 @@
     - **`onecgiar-pr-server/src/api/qa-catalog/qa-catalog.completeness.spec.ts`**, which polices every own column of `evidence` (`definitions/completeness.ts`, `definitions/not-for-qa.ts:267-284`);
     - `qa-catalog/definitions/sections/evidence.ts`, which maps `evidence` columns explicitly and needs no binding for `is_public` (pool QA form, AC 10).
 - **Definition of done:**
-  - [ ] Migration up/down verified locally. `npm run migration:check` green.
-  - [ ] `qa-catalog.completeness.spec.ts` red without the `not-for-qa.ts` entry (quoted), green with it.
-  - [ ] P-17 row count quoted in `execution.md`.
-  - [ ] Server type-check `npx tsc --noEmit -p tsconfig.json` green.
+  - [ ] Migration up/down verified locally. `npm run migration:check` green. **OPEN GAP (amendment 2026-11-19): CI / validate.**
+  - [x] `qa-catalog.completeness.spec.ts` red without the `not-for-qa.ts` entry (quoted), green with it.
+  - [ ] P-17 row count quoted in `execution.md`. **OPEN GAP: no DB reachable; validate HITL.**
+  - [x] Server type-check `npx tsc --noEmit -p tsconfig.json` green.
 
 ### EVP-T-2 — Pure visibility resolver
 
