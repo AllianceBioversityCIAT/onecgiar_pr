@@ -137,3 +137,40 @@
 - **Requirements covered:** EVP-R-3 (persistence), EVP-R-12 (pool link save), EVP-DD-3.
 - **Running totals vs budget:** tasks 4/11 · LOC ~560 / ~780 (tests are the bulk) · review rounds 4 / ~15.
 - **Gate:** auto-approved (pre-approved mode).
+
+### EVP-T-4 — Bilateral API input: is_public + conditional storage-link rule + writer · PASS (attempt 1) · 2026-11-20
+
+- **Attempts:** 1. Implementer T2 (high); Reviewer T3 (high).
+- **Deviation:** the task's Review field says `lenses`, but the Leader ran one Reviewer covering all four lenses with explicit depth on Risk and Reliability. Reason: memory/context budget on a 16 GB host that had already been reaped twice.
+- **Files changed:**
+  - `onecgiar-pr-server/src/shared/validators/is-not-cloud-storage-link.validator.ts`: new `IsNotCloudStorageLinkUnlessPrivate`; the original is byte-identical.
+  - `src/api/bilateral/dto/create-bilateral.dto.ts`: `is_public` added; `link` uses the conditional decorator.
+  - `src/api/bilateral/bilateral.service.ts`: `handleEvidence` stores `is_public ?? null`.
+  - `src/api/bilateral/dto/evidence-is-public.dto.spec.ts` (new, 30 tests).
+  - `bilateral.service.spec.ts` (+1 resubmission test).
+- **Red vs the old code:** `Tests: 8 failed, 22 passed, 30 total`:
+  - 6 × `is_public:false` refused (`expect(errors).toEqual([])`, Received +14);
+  - `"no"` → `Received: undefined` for the `is_public` error (B-3);
+  - whitelist retention `Expected: false, Received: undefined`.
+- **Mutations:**
+  - Validator `!is_public` → `Tests: 12 failed, 18 passed` (null and absent × 6 hosts).
+  - Writer assignment removed → Expected `false,true,null,null`, Received `undefined`×4.
+  - Both restored. A first mutation `== false` stayed green, because `null == false` is false; it was discarded as a non-mutation.
+- **B-1:** `evidence.dto.spec.ts` 13/13, unedited. Disqualifier clear.
+- **Implementer verification:**
+  - dto + validators → 5 suites / 62 tests passed;
+  - `bilateral.service.spec.ts` → 291 passed;
+  - `tsc` exit 0.
+- **Evidence re-run (Leader inline):** `npx jest src/api/bilateral/dto src/shared/validators src/api/bilateral/bilateral.service.spec.ts` → `Test Suites: 6 passed · Tests: 353 passed` → **VERIFIED**.
+- **Reviewer:** `STATUS: PASS`. Ruling on the constraint key `isNotCloudStorageLinkUnlessPrivate`: **not a contract change**. The bilateral `ValidationPipe` has no `exceptionFactory`, and Nest's default flattens errors to message strings. `HttpExceptionFilter` (`shared/handlers/error.exception.ts:38-44`) passes them through, so consumers see the same message and envelope. Removing the old decorator from the DTO is correct.
+- **ADVISORY (4R, not gating):**
+  - `IsNotCloudStorageLink` now has no consumers.
+  - The two constraint classes duplicate logic; the conditional one could delegate to the original.
+  - A string `"false"` doesn't lift the refusal → T-10 should say "JSON boolean `false` only".
+  - Baseline note: B-2's "kept is_public: false" was the probe's `plainToInstance` output before the pipe's whitelist. In the real pipe, the old DTO stripped it (the retention red shows `Received undefined`).
+  - The new cases went into a new spec file instead of `evidence.dto.spec.ts`, which is safer for the disqualifier.
+- **Constitution Impact:** none. The public surface change is the documented `/api/bilateral/create` input (T-10 owns the doc).
+- **spawns:** implementer 28 calls ~147.7k ended complete; reviewer not reported by host.
+- **Requirements covered:** EVP-R-4 (API), EVP-R-5, EVP-R-11, EVP-DD-4, EVP-DD-9.
+- **Running totals vs budget (measured, `git diff --numstat` from `cfc18d03e`):** tasks 5/11 · LOC ≈ 771 / ~780 (server prod ≈ 203, tests ≈ 568; this may include in-flight EVP-T-6 edits) · review rounds 5 / ~15. **Tripwire:** not exceeded yet, but close. Test volume is running ~40% over plan, so the next task is expected to cross ~780. When it does, the run stops and escalates per Step 2.4 (never auto-approved, even under pre-approved mode).
+- **Gate:** auto-approved (pre-approved mode). The tripwire has not fired yet.

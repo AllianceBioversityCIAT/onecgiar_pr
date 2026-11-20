@@ -5665,6 +5665,51 @@ describe('BilateralService (unit)', () => {
         expect(activeLinks(db)).toEqual(['https://x.org/new']);
       });
 
+      // @akili-spec bilateral/evidence-privacy-tag (EVP-R-5, EVP-R-11, EVP-DD-9)
+      it('EVIDENCE is_public: false/true/absent are saved as false/true/null; a re-send without the field is null', async () => {
+        const saved: any[] = [];
+        const { service } = makeService({
+          _evidencesRepository: {
+            save: jest.fn(async (e: any) => {
+              saved.push(e);
+            }),
+          },
+          _evidencesService: {
+            getHandleFromRegularLink: jest.fn(async (l: string) => l),
+          },
+          _resultsKnowledgeProductsRepository: {
+            findOne: jest.fn().mockResolvedValue(null),
+          },
+        });
+        const svc: any = service;
+
+        await svc.handleEvidence(
+          RESULT,
+          [
+            { link: 'https://x.org/private', is_public: false },
+            { link: 'https://x.org/public', is_public: true },
+            { link: 'https://x.org/absent' },
+            { link: 'https://x.org/null', is_public: null },
+          ],
+          USER,
+        );
+        expect(saved.map((e) => [e.link, e.is_public])).toEqual([
+          ['https://x.org/private', false],
+          ['https://x.org/public', true],
+          ['https://x.org/absent', null],
+          ['https://x.org/null', null],
+        ]);
+
+        // Resubmission: the same link previously private, re-sent without the field.
+        saved.length = 0;
+        await svc.handleEvidence(
+          RESULT,
+          [{ link: 'https://x.org/private' }],
+          USER,
+        );
+        expect(saved[0].is_public).toBeNull();
+      });
+
       it('PROJECTS: two before, the payload names one -> exactly one active, and its budget row is the new one', async () => {
         const { db, resubmission } = arrangeDb([
           [

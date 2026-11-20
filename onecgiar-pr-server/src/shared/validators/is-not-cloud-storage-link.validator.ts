@@ -42,3 +42,45 @@ export function IsNotCloudStorageLink(validationOptions?: ValidationOptions) {
     });
   };
 }
+
+// @akili-spec bilateral/evidence-privacy-tag (EVP-DD-4)
+@ValidatorConstraint({
+  name: 'isNotCloudStorageLinkUnlessPrivate',
+  async: false,
+})
+export class IsNotCloudStorageLinkUnlessPrivateConstraint
+  implements ValidatorConstraintInterface
+{
+  validate(value: unknown, args: ValidationArguments): boolean {
+    // Only an explicit `false` on the same item lifts the refusal; null, true and absent keep it.
+    if ((args.object as { is_public?: unknown })?.is_public === false) {
+      return true;
+    }
+    if (typeof value !== 'string') {
+      return true;
+    }
+    return !isCloudStorageLink(value);
+  }
+
+  defaultMessage(_args: ValidationArguments): string {
+    return CLOUD_STORAGE_LINK_MESSAGE;
+  }
+}
+
+/**
+ * Same refusal as `IsNotCloudStorageLink`, skipped only when the sibling `is_public` is
+ * strictly `false` (a link the centre marks private is stored but never exposed).
+ */
+export function IsNotCloudStorageLinkUnlessPrivate(
+  validationOptions?: ValidationOptions,
+) {
+  return function (object: object, propertyName: string) {
+    registerDecorator({
+      target: object.constructor,
+      propertyName,
+      options: validationOptions,
+      constraints: [],
+      validator: IsNotCloudStorageLinkUnlessPrivateConstraint,
+    });
+  };
+}
