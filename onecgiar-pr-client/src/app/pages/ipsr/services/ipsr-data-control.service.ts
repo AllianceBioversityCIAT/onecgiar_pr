@@ -34,4 +34,7 @@ interface DetailData {
   status_id: number;
   validResult: string | number;
   portfolio: string;
+  /** `result.in_qa` and `version.status` from the detail endpoint (QA review lock, P2-3912). */
+  inQA?: number | boolean;
+  is_phase_open?: number;
 }

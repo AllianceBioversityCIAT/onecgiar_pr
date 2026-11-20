@@ -13,6 +13,7 @@ import { SubmissionModalService } from '../submission-modal/submission-modal.ser
 import { UnsubmitModalService } from '../unsubmit-modal/unsubmit-modal.service';
 import { resultStatusBg, resultStatusFg } from '../../../../../../shared/constants/result-status-tokens';
 import { resultTypeDisplayName } from '../../../../../../shared/utils/impact-result.util';
+import { QA_REVIEW_LOCK_REASON, isResultLockedByQaReview } from '../../../../../../shared/utils/qa-review-lock.util';
 
 export type RdSection = PrRoute & { validation?: number };
 
@@ -262,9 +263,16 @@ export class ResultSectionsService {
     return this.validateMember(list) !== 6 || this.rolesSE.isAdmin;
   }
 
-  /** True while the result is locked by a running QA process. Drives both the lock and its notice. */
+  /**
+   * True while the result is locked by a running QA process. Drives both the lock and its notice.
+   *
+   * P2-3912: the server's predicate (`in_qa = 1` in an open phase) is enough on its own — the server
+   * refuses unsubmit and every section save in that state whatever the `in_qa` global variable says.
+   * The global-variable branch is kept so nothing that was locked before stops being locked.
+   */
   private get lockedByQa(): boolean {
-    return !!(this.dataControlSE.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa);
+    const r = this.dataControlSE.currentResult;
+    return isResultLockedByQaReview(r) || !!(r?.inQA && this.api.globalVariablesSE.get?.in_qa);
   }
 
   get showSubmit(): boolean {
@@ -289,8 +297,8 @@ export class ResultSectionsService {
   }
 
   /**
-   * ⚠️ P2-3434 / P2-383: a result inside a QA process cannot be un-submitted, and the client is
-   * the ONLY place that enforces it — `submissions.service.ts` never looks at `inQA`.
+   * ⚠️ P2-3434 / P2-383: a result inside a QA process cannot be un-submitted. The server refuses it
+   * too (409, `unsubmitUnlessUnderQaReview`); this keeps the user from getting that far.
    */
   get unsubmitDisabled(): boolean {
     return this.lockedByQa;
@@ -302,7 +310,7 @@ export class ResultSectionsService {
   }
 
   get unsubmitTooltip(): string {
-    return this.unsubmitDisabled ? '' : UNSUBMIT_CLARIFICATION_TOOLTIP;
+    return this.unsubmitDisabled ? QA_REVIEW_LOCK_REASON : UNSUBMIT_CLARIFICATION_TOOLTIP;
   }
 
   /** Quality Assessed results cannot be un-submitted. */

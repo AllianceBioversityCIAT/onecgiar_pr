@@ -13,6 +13,8 @@ import { PrTextareaComponent } from '../../../../custom-fields/pr-textarea/pr-te
 import { PdfIconComponent } from '../../../../shared/icon-components/pdf-icon/pdf-icon.component';
 import { PrFieldHeaderComponent } from '../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { PrFieldValidationsComponent } from '../../../../custom-fields/pr-field-validations/pr-field-validations.component';
+import { PrTooltipDirective } from '../../../../shared/directives/pr-tooltip.directive';
+import { QA_REVIEW_LOCK_REASON } from '../../../../shared/utils/qa-review-lock.util';
 
 describe('InnovationPackageDetailComponent', () => {
   let component: InnovationPackageDetailComponent;
@@ -32,7 +34,8 @@ describe('InnovationPackageDetailComponent', () => {
         PartnersRequestComponent,
         PdfIconComponent,
         PrFieldHeaderComponent,
-        PrFieldValidationsComponent
+        PrFieldValidationsComponent,
+        PrTooltipDirective
       ],
       imports: [HttpClientTestingModule],
       providers: [
@@ -69,6 +72,45 @@ describe('InnovationPackageDetailComponent', () => {
   it('header Submitter renders the label from initiative_official_code + initiative_name, not blank (PF2 M5)', () => {
     component.ipsrDataControlSE.detailData = { initiative_official_code: 'SP05', initiative_name: 'Better Diets' } as any;
     expect(submitterText()).toBe('SP05 - Better Diets');
+  });
+
+  // P2-3912: Innovation Packages enter QA too. While QA holds a submitted package (in_qa = 1 in an
+  // open phase) the server refuses unsubmit, so Un-submission is disabled and says why.
+  describe('Un-submission and the QA review lock', () => {
+    const unsubmitButton = (): HTMLElement => {
+      fixture.detectChanges();
+      return (Array.from(fixture.nativeElement.querySelectorAll('app-pr-button')) as HTMLElement[]).find(el =>
+        el.textContent.includes('Un-submission')
+      );
+    };
+    const openPackage = (inQA: number) => {
+      component.api.rolesSE.isAdmin = true;
+      component.api.rolesSE.platformIsClosed = false;
+      component.ipsrDataControlSE.detailData = { status_id: 3, inQA, is_phase_open: 1, initiative_official_code: 'SP05' } as any;
+      component.ipsrDataControlSE.modals.unsubmit = false;
+    };
+
+    it('is disabled, explains the QA review and opens nothing while QA holds the package', () => {
+      openPackage(1);
+      const button = unsubmitButton();
+
+      expect(component.unsubmitLockedByQa).toBe(true);
+      expect(button.classList).toContain('globalDisabled');
+      component.onSubmissionButtonClick();
+      expect(component.ipsrDataControlSE.modals.unsubmit).toBe(false);
+      expect(component.submissionButtonTooltip).toBe(QA_REVIEW_LOCK_REASON);
+    });
+
+    it('stays enabled and opens the modal once QA released the package', () => {
+      openPackage(0);
+      const button = unsubmitButton();
+
+      expect(component.unsubmitLockedByQa).toBe(false);
+      expect(button.classList).not.toContain('globalDisabled');
+      component.onSubmissionButtonClick();
+      expect(component.ipsrDataControlSE.modals.unsubmit).toBe(true);
+      expect(component.submissionButtonTooltip).toBeNull();
+    });
   });
 
   it('header Submitter shows only the code for a locally created row (PF2 R-3)', () => {

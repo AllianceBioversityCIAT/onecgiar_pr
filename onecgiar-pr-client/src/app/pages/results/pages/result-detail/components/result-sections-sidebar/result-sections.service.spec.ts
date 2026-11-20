@@ -14,6 +14,7 @@ import { AiReviewService } from '../../../../../../shared/services/api/ai-review
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { SubmissionModalService } from '../submission-modal/submission-modal.service';
 import { UnsubmitModalService } from '../unsubmit-modal/unsubmit-modal.service';
+import { QA_REVIEW_LOCK_REASON } from '../../../../../../shared/utils/qa-review-lock.util';
 
 describe('ResultSectionsService', () => {
   let service: ResultSectionsService;
@@ -521,6 +522,34 @@ describe('ResultSectionsService', () => {
       expect(service.showInQaNotice).toBe(true);
     });
 
+    // P2-3912: same predicate as the server (in_qa = 1 and an open phase), independent of the
+    // `in_qa` global variable, which prtest leaves off: there the button stayed enabled and the
+    // server answered 409.
+    it('locks Unsubmit when the result is In QA in an open phase, even with the in_qa global off', () => {
+      dataControl.currentResult.status_id = 3;
+      dataControl.currentResult.inQA = 1;
+      dataControl.currentResult.is_phase_open = 1;
+      api.globalVariablesSE.get.in_qa = false;
+      build();
+
+      expect(service.showUnsubmit).toBe(true);
+      expect(service.unsubmitDisabled).toBe(true);
+      expect(service.unsubmitTooltip).toBe(QA_REVIEW_LOCK_REASON);
+      service.openUnsubmit();
+      expect(unsubmitModal.showModal).toBe(false);
+    });
+
+    it('keeps Unsubmit enabled, with its usual tooltip, once QA released the result', () => {
+      dataControl.currentResult.status_id = 3;
+      dataControl.currentResult.inQA = 0;
+      dataControl.currentResult.is_phase_open = 1;
+      build();
+
+      expect(service.unsubmitDisabled).toBe(false);
+      expect(service.unsubmitTooltip).not.toBe(QA_REVIEW_LOCK_REASON);
+      expect(service.unsubmitTooltip).not.toBe('');
+    });
+
     // The contradiction the ticket reported: an active button printed right above the notice
     // saying the action is impossible. Enabled button and QA notice must never coexist.
     it('never renders an enabled Unsubmit next to the QA notice', () => {
@@ -550,14 +579,15 @@ describe('ResultSectionsService', () => {
       expect(service.unsubmitTooltip).toBe(UNSUBMIT_CLARIFICATION_TOOLTIP);
     });
 
-    it('hides the clarification tooltip while Unsubmit is locked by QA', () => {
+    // P2-3912: the locked button now explains itself with the QA review reason (was: no tooltip).
+    it('swaps the clarification tooltip for the QA review reason while Unsubmit is locked by QA', () => {
       dataControl.currentResult.status_id = 3;
       dataControl.currentResult.inQA = true;
       api.globalVariablesSE.get.in_qa = true;
       build();
 
       expect(service.unsubmitDisabled).toBe(true);
-      expect(service.unsubmitTooltip).toBe('');
+      expect(service.unsubmitTooltip).toBe(QA_REVIEW_LOCK_REASON);
     });
 
     it('explains that a quality assessed result (status 2) cannot be un-submitted', () => {
