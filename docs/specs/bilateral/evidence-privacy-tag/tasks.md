@@ -210,7 +210,7 @@
   - **Disqualifier:** any existing builder-spec expectation for file rows changes.
   - **Consumers:** `onecgiar-pr-server/src/api/bilateral/services/quality-assessment/bilateral-quality-payload.builder.spec.ts` (pins `mapEvidence` and `evidence_array`). Grep: `grep -rl "mapEvidence\|evidence_array" onecgiar-pr-server/src --include=*.spec.ts` (also hits `ipsr/innovation-pathway/innovation-pathway-step-four.service.spec.ts`, which is unrelated: IPSR's own `evidence_array`, untouched).
 - **Definition of done:**
-  - [ ] B-4 case now private/null; builder spec green otherwise unchanged.
+  - [x] B-4 case now private/null; builder spec green otherwise unchanged.
 
 ### EVP-T-8 — Centre form: question for links, storage rule, mapping, lock
 
