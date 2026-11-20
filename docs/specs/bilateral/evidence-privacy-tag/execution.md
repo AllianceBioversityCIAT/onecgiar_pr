@@ -24,6 +24,10 @@
 | Date | File · section | Change | Reason / approval |
 |---|---|---|---|
 | 2026-11-19 | `tasks.md` EVP-T-1 · Verification | Added an "Execute-time amendment": `migration:check` doesn't detect entity drift. T-1 closes on the QA-catalog red→green, `tsc` and a static up/down review. Real-DB up/down/up, the P-17 row count and `migration:check:ci` become an open gap (CI / validate HITL) | The premise was probed (`scripts/check-pending-migrations.ts:66-80` compares files against the migrations table) and no DB is reachable. User picked "Proceed, mark DB gates gap" at the Leader's question. The requirement meaning (NFR Data) is unchanged |
+| 2026-11-20 | `requirements.md` EVP-R-12 | An amendment exempts the additive `is_public` key on `ai/context` items for pool results | Validate F-2. User picked "Ajustar el requisito". EVP-DD-8 had narrowed R-12 without an edit |
+| 2026-11-20 | `design.md` §4.5, EVP-DD-8 · `tasks.md` EVP-T-5 and §7 · `requirements.md` NFR Security | `getAIContext` withholds private links (`link: null`) on bilateral results; pool is unchanged. The follow-up is marked done | Validate F-3. User picked "Ocultarlos también". Code: `results.service.ts` `getAIContext` |
+| 2026-11-20 | `proposal.md` S9 | The Fetcher task id changed from EVP-T-10 to EVP-T-11 | Validate W-2, cross-document figure check |
+| 2026-11-20 | `tasks.md` T-2, T-3, §2 | DoD boxes ticked to match the recorded evidence | Validate W-3 |
 
 ## Task Execution History
 

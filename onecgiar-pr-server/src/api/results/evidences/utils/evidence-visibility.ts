@@ -30,9 +30,7 @@ export function exposedEvidenceIsPublic(evidence: any): boolean | null {
       ? evidence.evidenceSharepointArray
       : []
   ).filter((sp) => sp && sp.is_active !== false && sp.is_active !== 0);
-  const anyPrivate = activeSp.some(
-    (sp) => toFlag(sp.is_public_file) === false,
-  );
+  const anyPrivate = activeSp.some((sp) => toFlag(sp.is_public_file) === false);
   return resolveEvidenceVisibility({
     is_sharepoint: evidence?.is_sharepoint,
     is_public: evidence?.is_public,

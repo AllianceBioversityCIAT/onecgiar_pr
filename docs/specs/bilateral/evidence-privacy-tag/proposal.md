@@ -56,7 +56,7 @@ A Centre reports bilateral results with evidence that is sometimes confidential,
 | S6 | Review drawer: description + Private tag next to the URL |
 | S7 | AI quality payload mapper: honour the link-level tag, so a private link is not sent to the AI (consistent with today's file rule, P9) |
 | S8 | Evidence copied by bilateral siblings keeps its tag (see Requirement Delta, Siblings) |
-| S9 | *(Amended 2026-11-19 at `/akili-specify` Phase 2, after the user's question.)* **The Fetcher** (`onecgiar_result_functions`) strips `is_public` on ingest and drops it on output. It is in scope as EVP-R-14 / EVP-T-10, with a separate PR in that repo |
+| S9 | *(Amended 2026-11-19 at `/akili-specify` Phase 2, after the user's question.)* **The Fetcher** (`onecgiar_result_functions`) strips `is_public` on ingest and drops it on output. It is in scope as EVP-R-14 / EVP-T-11, with a separate PR in that repo |
 
 ## 6. Non-Goals
 

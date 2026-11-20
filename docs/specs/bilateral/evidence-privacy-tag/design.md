@@ -145,7 +145,7 @@ The request interface `EvidencesCreateInterface` (`create-evidence.dto.ts:7-29`)
 | Surface | Change |
 |---|---|
 | Quality payload (`mapEvidence`) | `visibility` from the resolver: private ⇒ `link: null` (EVP-R-10). Public and untagged links unchanged |
-| `getAIContext` | Each item gains `is_public` (resolver exposed value) beside its existing `is_public_file`. **No link withholding** there: parity with today's files on that surface, and out of ticket scope (DD-8) |
+| `getAIContext` | Each item gains `is_public` (resolver exposed value) beside its existing `is_public_file`. **Bilateral results:** a private item (link or file) is sent with `link: null`; the description and flags are kept. **Pool results:** links are unchanged (DD-8, amended 2026-11-20) |
 
 ### 4.6 Fetcher (`onecgiar_result_functions`, separate PR)
 
@@ -247,8 +247,9 @@ The request interface `EvidencesCreateInterface` (`create-evidence.dto.ts:7-29`)
 ### EVP-DD-7 — Centre form reuses the `is_public_file` UI slot
 - **Decision:** one radio, one lock binding. Only the wire mapping differs by item kind (§6.2).
 
-### EVP-DD-8 — `getAIContext` gets the flag, not withholding
-- **Decision:** that surface already sends private **file** links (`results.service.ts:3700-3712`). Withholding there is a separate product decision, out of P2-4110.
+### EVP-DD-8 — `getAIContext` gets the flag, and withholds bilateral private links
+- **Decision (amended 2026-11-20 at `/akili-validate`, user decision):** items carry `is_public`. On a **bilateral** result (`source = 'API'`), a private item (link or file) is sent with `link: null` and keeps its description, which satisfies NFR Security on this second AI surface. On a **pool** result, links are sent exactly as before (EVP-R-12).
+- *Original decision (superseded):* no withholding, because that surface already sent private file links.
 
 ### EVP-DD-9 — Rewrite is payload-truth (EVP-R-11)
 - **Decision:** a re-send without `is_public` stores untagged, and the contract doc says so. Approved at the Phase 1 gate (user, 2026-11-19).

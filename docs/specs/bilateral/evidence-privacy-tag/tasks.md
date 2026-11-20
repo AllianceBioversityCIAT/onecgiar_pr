@@ -16,7 +16,7 @@
 - [x] `requirements.md` approved (2026-11-19).
 - [x] `design.md` approved (2026-11-19, "sigue con phase 3"). Review Design not run.
 - [x] All open questions closed (EVP-OQ-1…4).
-- [ ] No in-flight spec touching `evidence` / `section-evidence` / `result-review-drawer`. **First Leader step**: `grep -rln "section-evidence\|result-review-drawer\|evidence.entity" docs/specs --include=tasks.md`, then read the status of each hit.
+- [x] No in-flight spec touching `evidence` / `section-evidence` / `result-review-drawer`. **First Leader step**: `grep -rln "section-evidence\|result-review-drawer\|evidence.entity" docs/specs --include=tasks.md`, then read the status of each hit.
 - [ ] P-17 settled by EVP-T-1, first step.
 - [ ] P-16 (Results Dashboard) is owned by the `/akili-validate` HITL. It does not block execution.
 
@@ -82,8 +82,8 @@
   - **Disqualifier:** any row's expected value disagrees with design §3.1. Stop and re-specify; do not edit the table to fit the code.
   - **Consumers:** none (new symbol).
 - **Definition of done:**
-  - [ ] All §3.1 rows (six, plus the file `is_public`=1 / `is_public_file`=0 row) asserted.
-  - [ ] Both mutations above executed and observed red, then reverted. Quoted in `execution.md`.
+  - [x] All §3.1 rows (six, plus the file `is_public`=1 / `is_public_file`=0 row) asserted.
+  - [x] Both mutations above executed and observed red, then reverted. Quoted in `execution.md`.
 
 ### EVP-T-3 — Shared evidence endpoint: bilateral-only write + load column
 
@@ -111,7 +111,7 @@
 - **Definition of done:**
   - [x] (a)(b)(c) green; both mutations observed red; reds quoted.
   - [x] All five consumer suites green, with no assertion edited.
-  - [ ] Server type-check green.
+  - [x] Server type-check green.
 
 ### EVP-T-4 — Bilateral API input: `is_public` + conditional storage-link rule + writer
 
@@ -147,7 +147,7 @@
 - **Type:** server
 - **Description:**
   - **Bilateral reads:** `filterActiveRelations` overwrites each `evidence_array[]` row's `is_public` with the resolver's exposed value (links `true/false/null`, files `true/false`) and leaves `evidenceSharepointArray` untouched.
-  - **AI context:** `getAIContext` items gain `is_public` from the resolver. No link withholding there (EVP-DD-8).
+  - **AI context:** `getAIContext` items gain `is_public` from the resolver. On bilateral results, private items are sent with `link: null`; pool links are unchanged (EVP-DD-8, amended at validate 2026-11-20).
 - **Implements:** EVP-R-6, EVP-R-1 ("Mixed visibilities"), EVP-DD-5, EVP-DD-8
 - **Files (expected):** `onecgiar-pr-server/src/api/bilateral/bilateral.service.ts` (`:2122-2152`) · `api/results/results.service.ts` (`:3700-3712`) · `bilateral.service.spec.ts` · `results.service.spec.ts`
 - **Depends on:** T-1, T-2 · **Blocks:** T-10, T-11
@@ -386,7 +386,7 @@ Parallel-friendly branches: T-1 ∥ T-2. Then T-3 ∥ T-4 ∥ T-5 ∥ T-6 ∥ T-
 
 - Follow-up candidate: stop logging evidence links in `evidences.service.ts:312`.
 - Follow-up candidate: the visibility question for admin-added drawer links (OQ-3).
-- Follow-up candidate: link withholding on `getAIContext` (EVP-DD-8).
+- ~~Follow-up candidate: link withholding on `getAIContext` (EVP-DD-8).~~ Done at validate 2026-11-20 for bilateral results (F-3).
 
 ## 8. Roll-back plan
 

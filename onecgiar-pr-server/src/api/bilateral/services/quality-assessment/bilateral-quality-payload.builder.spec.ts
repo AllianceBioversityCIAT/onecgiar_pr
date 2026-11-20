@@ -1405,7 +1405,12 @@ describe('mapEvidence (QEL-DD-1 link normalisation)', () => {
     it('an explicitly public link (is_public 1) is public with its link', () => {
       const [item] = mapEvidence(
         detailWith([
-          { is_sharepoint: 0, is_public: 1, link: 'https://x.org', description: 'P' },
+          {
+            is_sharepoint: 0,
+            is_public: 1,
+            link: 'https://x.org',
+            description: 'P',
+          },
         ]),
       );
       expect(item.visibility).toBe('public');
