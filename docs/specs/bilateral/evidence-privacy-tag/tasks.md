@@ -241,9 +241,9 @@
   - **Disqualifier:** an existing spec case asserting the storage-link refusal needs deleting instead of extending with the answer. Re-check against EVP-R-4.
   - **Consumers:** `onecgiar-pr-client/src/app/pages/bilateral/components/section-evidence/section-evidence.component.spec.ts` (pins `is_public_file`, `isCloudLink`, `draftLinkError`, `isDraftValid`, `hasValidLink`). Grep: `grep -rl "is_public_file\|isCloudLink\|draftLinkError\|isDraftValid\|hasValidLink" onecgiar-pr-client/src onecgiar-pr-client/cypress --include=*.spec.ts --include=*.cy.ts`. Pool hits (`user-evidence.component.spec.ts`, `user-evidence.zoneless.spec.ts`, `rd-evidences`, `evidence-item`, `ipsr-step3`) are **not** touched, and they must stay green as the AC 10 regression set.
 - **Definition of done:**
-  - [ ] (i)–(v) green; mutation red observed; quoted.
-  - [ ] Client build/type-check `npx ng build --configuration development` green.
-  - [ ] Completion report names the playbook (`refine`), polish `light` and its result, and `finish review: not run (AKILI execute)`.
+  - [x] (i)–(v) green; mutation red observed; quoted.
+  - [x] Client build/type-check `npx ng build --configuration development` green.
+  - [x] Completion report names the playbook (`refine`), polish `light` and its result, and `finish review: not run (AKILI execute)`.
 
 ### EVP-T-9 — Review drawer: Private tag + description
 

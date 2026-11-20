@@ -253,3 +253,45 @@
 - **spawns:** implementer#1 23 calls ~138.7k ended complete; reviewer#1 21 calls ~99.7k ended complete.
 - **Requirements covered:** EVP-R-6, EVP-R-1 (Mixed visibilities), EVP-DD-5, EVP-DD-8.
 - **Running totals:** tasks 7/11 · LOC ≈ 948 / ceiling ~1,400 · review rounds 8 / ~15.
+
+### EVP-T-8 — Centre form: question for links, storage rule, mapping, lock · PASS (attempt 2) · 2026-11-20
+
+- **Attempts:** 2. Implementer T2 (high → xhigh); Reviewer T3 (high).
+- **Attempt 1:**
+  - Changes in `section-evidence.component.{ts,html,spec.ts}` and `section-evidence.model.ts`:
+    - the shared `#publicQuestion` template;
+    - `isDraftValid` / `hasDraftAnswer`;
+    - `draftLinkError` / `hasValidLink` allow a storage link only on No;
+    - `fromWire` / `toWire` (link `is_public` ↔ draft slot);
+    - `showEvidenceLock`;
+    - the No-note copy.
+  - Red: 7 failed, 65 passed, with the old component and the new spec. Examples: `Expected: "" Received: "Links to file storage platforms (Google Drive, Dropbox, SharePoint, OneDrive) are not accepted."` and `isDraftValid` `Expected: false Received: true`.
+  - Mutation "allow storage links regardless" made the (ii) Yes case red (`Expected: true / Received: false` at `confirmDisabled`). Reverted.
+  - Leader re-run: `Tests: 72 passed` → VERIFIED.
+  - **Reviewer FAIL:**
+    - (1) The on-screen storage refusal text was rewritten. That violates EVP-R-4: "MUST keep today's refusal and today's message".
+    - (2) `setDraftFileMode()` did not clear the answer, so Link Yes → Upload file pre-selected Yes and the file was uploaded as public. That violates design §6.2: "switching the source still clears it".
+- **Attempt 2:**
+  - The refusal text was restored verbatim. The "answer No" hint is now a separate `storage-link-hint` line.
+  - `setDraftFileMode()` now sets `is_public_file: null`. Two existing assertions were extended, none deleted.
+  - New cases `(ii-b)` (exact text pin) and `(iii-b)`.
+  - Red before the fix: 4 failed, 70 passed. Example: `(iii-b) … expect(component.draftItem().is_public_file).toBeNull() → Received: true`.
+- **Evidence re-run (Leader inline):**
+  - `npx jest src/app/pages/bilateral/components/section-evidence --no-coverage -w 2` → `Tests: 74 passed` → **VERIFIED**.
+  - In the html diff, the refusal-description line is a context line.
+- **Implementer-reported:**
+  - Pool regression set (`user-evidence` ×2, `rd-evidences`/`evidence-item` ×5, `step-n3`/`ipsr-step3-evidence-list`): `Test Suites: 15 passed · Tests: 404 passed`. Pool files untouched.
+  - `npx ng build --configuration development` exit 0.
+- **Reviewer (attempt 2):** `STATUS: PASS`.
+  - API-set `is_public` true/false/null survives a centre-form save (closes the T-3 sequencing risk).
+  - File items are unchanged.
+  - An untouched legacy link does not block the save.
+- **Design route:** playbook `refine`, polish `light` (no new SCSS/tokens; the hint uses `--pr-text-secondary`); finish review: not run (AKILI execute).
+- **ADVISORY:**
+  - The `@if` condition is duplicated at html:169/176.
+  - No DOM-level test of the radio `(ngModelChange)` binding.
+  - The lock `<i>` lacks `role="img"` and `aria-label` (pre-existing pattern).
+  - The new hint is hard-coded English (pre-existing pattern).
+- **spawns:** implementer#1 47+3 calls ~208k ended complete; reviewer#1 18 calls ~122k + re-review ended complete.
+- **Requirements covered:** EVP-R-2 (all), EVP-R-3, EVP-R-4 (form), EVP-DD-7.
+- **Running totals:** tasks 8/11 · LOC ≈ 1,196 / ceiling ~1,400 · review rounds 10 / ~15.
