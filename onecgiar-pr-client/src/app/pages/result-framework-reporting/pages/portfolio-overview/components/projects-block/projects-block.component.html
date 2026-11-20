@@ -106,7 +106,7 @@
 
         <div [hlmTabsContent]="dimension()" class="!text-[13px]">
           @if (view() === 'chart') {
-            <app-pr-viz-chart class="mt-[12px] block w-full" [options]="chartOption()" [tableModel]="chartTable()" [chartTitle]="tableCaption()" height="320px" />
+            <app-pr-viz-chart class="mt-[12px] block w-full" [options]="chartOption()" [tableModel]="chartTable()" [chartTitle]="tableCaption()" [height]="chartHeight()" />
           } @else {
             <div class="mt-[12px] overflow-x-auto">
               <table class="w-full border-collapse text-[13px]" data-testid="projects-table">
@@ -123,10 +123,7 @@
                   @for (row of rows(); track row.code ?? '__unassigned') {
                     <tr class="border-b border-[var(--pr-border-divider)]" data-testid="projects-row">
                       <th scope="row" class="px-[8px] py-[8px] text-left font-semibold text-[var(--pr-text-heading)]">
-                        <span data-testid="projects-row-label">{{ row.label }}</span>
-                        @if (dimension() === 'program' && row.name) {
-                          <span class="ml-[6px] text-[12px] font-normal text-[var(--pr-text-muted)]">{{ row.name }}</span>
-                        }
+                        <span data-testid="projects-row-label">{{ row.fullLabel }}</span>
                       </th>
                       <td class="px-[8px] py-[8px] text-right font-mono tabular-nums text-[var(--pr-text-heading)]">{{ row.mapped }}</td>
                       <td class="px-[8px] py-[8px] text-right font-mono tabular-nums text-[var(--pr-text-secondary)]">{{ row.withBilateralResults }}</td>

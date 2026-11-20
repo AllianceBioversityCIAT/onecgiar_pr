@@ -8,6 +8,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ResultsController } from './results.controller';
 import { ResultsService } from './results.service';
 import { ReportingFullMetadataExportService } from './services/reporting-full-metadata-export.service';
+import { QaReviewLockGuard } from '../../shared/guards/qa-review-lock.guard';
 
 describe('ResultsController', () => {
   let controller: ResultsController;
@@ -89,7 +90,10 @@ describe('ResultsController', () => {
           useValue: mockReportingFullMetadataExportService,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(QaReviewLockGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<ResultsController>(ResultsController);
     jest.clearAllMocks();

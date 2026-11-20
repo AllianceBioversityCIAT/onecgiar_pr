@@ -38,6 +38,8 @@ export class PrSelectComponent implements ControlValueAccessor, OnDestroy {
   readonly editable = input<boolean>(false);
   readonly showPartnerAlert = input<boolean>(false);
   readonly extraInformation = input<boolean>(false);
+  /** Opt-in (TKR-R-1): long option labels wrap onto up to two lines (50px rows) instead of scrolling sideways. */
+  readonly wrapOptions = input<boolean>(false);
   readonly indexReference = input<number>(null);
   readonly noDataText = input<string>('');
   readonly fieldDisabled = input<boolean>(false);
@@ -59,8 +61,8 @@ export class PrSelectComponent implements ControlValueAccessor, OnDestroy {
   readonly optionBadgeLabel = input<string>('');
   readonly optionBadgeTone = input<string>('');
 
-  /** Must match `.custom_select .option` height in custom-fields.scss (30px; 50px when extraInformation). */
-  readonly virtualOptionItemSize = computed(() => (this.extraInformation() ? 50 : 30));
+  /** Must match `.custom_select .option` height in custom-fields.scss (30px; 50px when extraInformation or wrapOptions). */
+  readonly virtualOptionItemSize = computed(() => (this.extraInformation() || this.wrapOptions() ? 50 : 30));
 
   readonly selectOptionEvent = output<any>();
 

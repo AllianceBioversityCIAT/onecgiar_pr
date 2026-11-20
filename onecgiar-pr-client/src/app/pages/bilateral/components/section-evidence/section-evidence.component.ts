@@ -172,8 +172,33 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
       if (e.is_sharepoint) {
         return Boolean(e.sp_document_id || e.sp_file_name || e.link);
       }
-      return Boolean(e.link && !this.isCloudLink(e.link));
+      // EVP-R-4: a storage link is valid evidence only when it was answered private.
+      return Boolean(e.link && (!this.isCloudLink(e.link) || e.is_public_file === false));
     });
+  }
+
+  /** Link row from the server → the form's single answer slot (EVP-DD-7). Null stays null; files untouched. */
+  private fromWire(e: BilateralEvidenceItem): BilateralEvidenceItem {
+    if (e.is_sharepoint) return e;
+    return { ...e, is_public_file: e.is_public ?? null };
+  }
+
+  /**
+   * Form item → wire item. A link sends its answer as `is_public` (preserving a loaded tag, so a save
+   * never resets an API-set tag to null); a file keeps sending `is_public_file` as before.
+   */
+  private toWire(e: BilateralEvidenceItem): BilateralEvidenceItem {
+    const wire: BilateralEvidenceItem = { ...e, file: undefined };
+    if (!e.is_sharepoint) {
+      wire.is_public = e.is_public_file ?? null;
+      wire.is_public_file = false;
+    }
+    return wire;
+  }
+
+  /** Card lock: always for files (as today); for links only once tagged — an untagged link shows none. */
+  showEvidenceLock(e: BilateralEvidenceItem): boolean {
+    return this.isFileEvidence(e) || (e.is_public_file !== null && e.is_public_file !== undefined);
   }
 
   private readonly CLOUD_REGEX =
@@ -208,7 +233,7 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
     this.bilateralApi.GET_evidences(resultId).subscribe({
       next: ({ response }) => {
         const body = response ?? { evidences: [] };
-        this.evidenceBody.set(body);
+        this.evidenceBody.set({ ...body, evidences: (body.evidences ?? []).map((e: BilateralEvidenceItem) => this.fromWire(e)) });
         this.sortEvidences();
         this.loaded.set(true);
         this.isLoading.set(false);
@@ -297,7 +322,10 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
   get draftLinkError(): string {
     const link = this.draftItem().link?.trim();
     if (!link) return '';
-    if (this.isCloudLink(link)) return 'Links to file storage platforms (Google Drive, Dropbox, SharePoint, OneDrive) are not accepted.';
+    // EVP-R-4: refused unless the answer is No (private). Null / Yes keep today's refusal and message.
+    if (this.isCloudLink(link) && this.draftItem().is_public_file !== false) {
+      return 'Links to file storage platforms (Google Drive, Dropbox, SharePoint, OneDrive) are not accepted.';
+    }
     if (!this.isValidUrl(link)) return 'Invalid URL format.';
     const excludeIdx = this.editingId() !== null
       ? this.evidences.findIndex(e => e.id === this.editingId())
@@ -309,7 +337,13 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
   get isDraftValid(): boolean {
     const item = this.draftItem();
     if (item.is_sharepoint) return Boolean(item.file || item.link);
-    return Boolean(item.link?.trim() && !this.draftLinkError);
+    // EVP-R-2: a link is not confirmed without the public / private answer.
+    return Boolean(item.link?.trim() && !this.draftLinkError && this.hasDraftAnswer);
+  }
+
+  get hasDraftAnswer(): boolean {
+    const answer = this.draftItem().is_public_file;
+    return answer === true || answer === false;
   }
 
   // ── Draft Field Updates ─────────────────────────────────────────────
@@ -319,7 +353,8 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
   }
 
   setDraftFileMode(): void {
-    this.draftItem.update(d => ({ ...d, is_sharepoint: true, link: undefined }));
+    // design §6.2: switching the source clears the answer in both directions (no stale Yes carried into an upload).
+    this.draftItem.update(d => ({ ...d, is_sharepoint: true, link: undefined, is_public_file: null }));
   }
 
   /** "Source of the evidence" radio (W1/W2 `cleanSource`): switching clears the other source's data. */
@@ -443,10 +478,7 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
 
     const body = {
       ...this.evidenceBody(),
-      evidences: this.evidences.map(e => ({
-        ...e,
-        file: undefined
-      }))
+      evidences: this.evidences.map(e => this.toWire(e))
     };
 
     const formData = new FormData();

@@ -1591,4 +1591,57 @@ describe('ResultsTocResultsService', () => {
       expect(target.indicators_targets).toBe(2235);
     });
   });
+
+  describe('response build when the payload carries no changePrimaryInit', () => {
+    // prtest 2026-11-19: a Contributors and partners save of an UNMAPPED result whose body had no
+    // `changePrimaryInit` wrote everything and then asked `getRTRPrimary(id, [undefined], true)`,
+    // which went out as `initiative_id in ()` and answered 500.
+    const unmappedPayload = (extra: Record<string, unknown> = {}): any => ({
+      result_id: 1,
+      result_toc_result: {
+        planned_result: false,
+        initiative_id: 58,
+        toc_progressive_narrative: 'Not yet linked to a 2026 ToC KPI.',
+        result_toc_results: [{ result_toc_result_id: 13430 }],
+      },
+      ...extra,
+    });
+
+    beforeEach(() => {
+      resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+        initiative_id: 58,
+      } as any);
+      resultsTocResultRepository.find.mockResolvedValueOnce([]);
+    });
+
+    it('asks for the primary rows of the result ToC initiative, never an empty list', async () => {
+      await service.createTocMappingV2(unmappedPayload(), {
+        id: 1,
+      } as TokenDto);
+
+      expect(resultsTocResultRepository.getRTRPrimary).toHaveBeenCalledWith(
+        1,
+        [58],
+        true,
+      );
+      expect(resultsTocResultRepository.getRTRPrimary).not.toHaveBeenCalledWith(
+        1,
+        [undefined],
+        true,
+      );
+    });
+
+    it('still prefers changePrimaryInit when the client sends it', async () => {
+      await service.createTocMappingV2(
+        unmappedPayload({ changePrimaryInit: '58' }),
+        { id: 1 } as TokenDto,
+      );
+
+      expect(resultsTocResultRepository.getRTRPrimary).toHaveBeenCalledWith(
+        1,
+        [58],
+        true,
+      );
+    });
+  });
 });

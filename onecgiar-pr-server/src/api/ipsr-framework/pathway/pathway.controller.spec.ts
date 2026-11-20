@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PathwayController } from './pathway.controller';
 import { IpsrPathwayStepFourService } from './ipsr-pathway-step-four.service';
 import { IpsrPathwayStepOneService } from './ipsr-pathway-step-one.service';
+import { QaReviewLockGuard } from '../../../shared/guards/qa-review-lock.guard';
 
 describe('PathwayController', () => {
   let controller: PathwayController;
@@ -31,7 +32,10 @@ describe('PathwayController', () => {
           useValue: mockStepFour,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(QaReviewLockGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<PathwayController>(PathwayController);
     jest.clearAllMocks();

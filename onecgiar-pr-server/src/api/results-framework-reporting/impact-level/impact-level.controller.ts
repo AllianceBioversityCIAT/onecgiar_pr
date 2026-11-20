@@ -18,6 +18,7 @@ import {
 } from './dto/impact-level-search-query.dto';
 import { ImpactLevelSearchService } from './impact-level-search.service';
 import { ImpactLevelService } from './impact-level.service';
+import { LockedWhileInQa } from '../../../shared/guards/qa-review-lock.guard';
 
 /**
  * Mounted in `api/modules.routes.ts` at `results-framework-reporting/impact-level`
@@ -44,6 +45,7 @@ export class ImpactLevelController {
     return this.impactLevelService.getImpactLevelInfo(resultId);
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('save/result/:resultId')
   @ApiOperation({ summary: 'Save the Impact level info section (E4)' })
   saveImpactLevelInfo(

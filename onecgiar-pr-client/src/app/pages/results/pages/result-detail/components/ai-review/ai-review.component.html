@@ -32,7 +32,11 @@
           </div>
 
           @if (field.original_text == field.proposed_text) {
-            <div class="applied-badge"><i class="pi pi-check-circle"></i> Applied</div>
+            @if (field.canSave) {
+              <div class="applied-badge applied-badge--pending"><i class="pi pi-copy"></i> Copied to Result version — not saved yet</div>
+            } @else {
+              <div class="applied-badge"><i class="pi pi-check-circle"></i> Saved</div>
+            }
           } @else if (!readOnly) {
             <div class="apply-proposal-button" (click)="moveTextToInput(field)">Apply proposal</div>
           }

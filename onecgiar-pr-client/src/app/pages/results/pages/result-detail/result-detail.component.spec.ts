@@ -3,7 +3,7 @@ import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { HlmSidebarService } from '@spartan/sidebar';
 
-import { ResultDetailComponent } from './result-detail.component';
+import { ResultDetailComponent, pickDefaultResultPhase } from './result-detail.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { NoEditContainerComponent } from './components/no-edit-container/no-edit-container.component';
@@ -351,6 +351,105 @@ describe('ResultDetailComponent', () => {
    * P2-3574 — a saved link pointing at a phase the result was never carried over to used to leave
    * the screen on its loading skeleton forever, plus a `results/get/null` 400 in the console.
    */
+  describe('link without ?phase= (P2-3911, QA "Open in Reporting")', () => {
+    const versions = [
+      { id: 9, phase_name: 'IPSR 2026', phase_year: 2026, status: true, app_module_id: 2 },
+      { id: 34, phase_name: 'Reporting 2025', phase_year: 2025, status: false, app_module_id: 1 },
+      { id: 36, phase_name: 'Reporting 2026', phase_year: 2026, status: true, app_module_id: 1 }
+    ];
+    let navigateByUrlSpy: jest.SpiedFunction<Router['navigateByUrl']>;
+    let routeId: string | null;
+    let routePhase: string | null;
+
+    beforeEach(() => {
+      routeId = '9130';
+      routePhase = null;
+      mockActivatedRoute.snapshot.paramMap = { get: () => routeId };
+      mockActivatedRoute.snapshot.queryParamMap = { get: () => routePhase };
+      jest.spyOn(mockApiService.resultsSE, 'GET_versioningResultByCode').mockReturnValue(of({ response: versions }));
+      const router = TestBed.inject(Router);
+      jest.spyOn(router, 'url', 'get').mockReturnValue('/result/result-detail/9130/general-information');
+      navigateByUrlSpy = jest.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    });
+
+    it('opens the OPEN Reporting phase the result has a version in, keeping the section path', async () => {
+      const spyIdToCode = jest.spyOn(mockApiService.resultsSE, 'GET_resultIdToCode');
+
+      await component.getData();
+
+      expect(mockApiService.resultsSE.currentResultPhase).toBe('36');
+      expect(spyIdToCode).toHaveBeenCalledWith('9130', '36');
+      expect(navigateByUrlSpy).toHaveBeenCalledTimes(1);
+      const [tree, extras] = navigateByUrlSpy.mock.calls[0] as [any, any];
+      expect(TestBed.inject(Router).serializeUrl(tree)).toBe('/result/result-detail/9130/general-information?phase=36');
+      expect(extras).toEqual({ replaceUrl: true });
+    });
+
+    it('leaves an explicit ?phase= untouched and does not look phases up', async () => {
+      routePhase = '34';
+      const spyByCode = jest.spyOn(mockApiService.resultsSE, 'GET_versioningResultByCode');
+
+      await component.getData();
+
+      expect(spyByCode).not.toHaveBeenCalled();
+      expect(navigateByUrlSpy).not.toHaveBeenCalled();
+      expect(mockApiService.resultsSE.currentResultPhase).toBe('34');
+    });
+
+    it('keeps the old behavior when the lookup fails or finds nothing', async () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_versioningResultByCode').mockReturnValueOnce(throwError(() => ({ status: 500 })));
+      await component.getData();
+      expect(navigateByUrlSpy).not.toHaveBeenCalled();
+      expect(mockApiService.resultsSE.currentResultPhase).toBeNull();
+
+      jest.spyOn(mockApiService.resultsSE, 'GET_versioningResultByCode').mockReturnValueOnce(of({ response: [] }));
+      await component.getData();
+      expect(navigateByUrlSpy).not.toHaveBeenCalled();
+      expect(mockApiService.resultsSE.currentResultPhase).toBeNull();
+    });
+
+    it('does not rewrite the URL when the user already left the result', async () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_versioningResultByCode').mockImplementationOnce(() => {
+        routeId = '777';
+        return of({ response: versions });
+      });
+
+      await component.getData();
+
+      expect(navigateByUrlSpy).not.toHaveBeenCalled();
+    });
+
+    describe('pickDefaultResultPhase', () => {
+      it('prefers the open phase over a newer closed one', () => {
+        expect(
+          pickDefaultResultPhase([
+            { id: 40, phase_year: 2027, status: false, app_module_id: 1 },
+            { id: 36, phase_year: 2026, status: true, app_module_id: 1 }
+          ])?.id
+        ).toBe(36);
+      });
+
+      it('falls back to the most recent phase when none is open', () => {
+        expect(
+          pickDefaultResultPhase([
+            { id: 30, phase_year: 2024, status: false, app_module_id: 1 },
+            { id: 34, phase_year: 2025, status: false, app_module_id: 1 }
+          ])?.id
+        ).toBe(34);
+      });
+
+      it('skips IPSR phases and answers null with nothing to pick', () => {
+        expect(pickDefaultResultPhase([{ id: 9, phase_year: 2026, status: true, app_module_id: 2 }])).toBeNull();
+        expect(pickDefaultResultPhase([])).toBeNull();
+        expect(pickDefaultResultPhase(undefined)).toBeNull();
+      });
+
+      it('accepts rows without app_module_id as Reporting', () => {
+        expect(pickDefaultResultPhase([{ id: 36, phase_year: 2026, status: true }])?.id).toBe(36);
+      });
+    });
+  });
+
   describe('result missing in the requested phase', () => {
     beforeEach(() => {
       jest.spyOn(mockApiService.resultsSE, 'GET_resultIdToCode').mockReturnValue(throwError(() => ({ status: 404 })));

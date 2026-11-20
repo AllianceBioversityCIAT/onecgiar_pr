@@ -9,6 +9,7 @@ import { DataControlService } from '../../../../shared/services/data-control.ser
 import { PrToastService } from 'src/app/shared/components/pr-toast';
 import { scienceProgramLabel } from '../../../../shared/utils/science-program-label.util';
 import { FieldsManagerService } from '../../../../shared/services/fields-manager.service';
+import { QA_REVIEW_LOCK_REASON, isResultLockedByQaReview } from '../../../../shared/utils/qa-review-lock.util';
 
 @Component({
   selector: 'app-innovation-package-detail',
@@ -30,6 +31,28 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
     public dataControlSE: DataControlService,
     private readonly router: Router
   ) {}
+  /**
+   * P2-3912: Innovation Packages enter QA too. While QA holds a submitted package (`in_qa = 1` in an
+   * open phase) the server refuses unsubmit (409), so Un-submission is disabled and explains why.
+   */
+  get unsubmitLockedByQa(): boolean {
+    const detail = this.ipsrDataControlSE.detailData;
+    return detail?.status_id == 3 && isResultLockedByQaReview(detail);
+  }
+
+  get submissionButtonTooltip(): string | null {
+    return this.unsubmitLockedByQa ? QA_REVIEW_LOCK_REASON : null;
+  }
+
+  onSubmissionButtonClick(): void {
+    const statusId = this.ipsrDataControlSE.detailData?.status_id;
+    if (statusId == 1) {
+      this.ipsrDataControlSE.modals.submission = true;
+    } else if (!this.unsubmitLockedByQa) {
+      this.ipsrDataControlSE.modals.unsubmit = true;
+    }
+  }
+
   /** P/A label `CODE - Name` for the header Submitter (the detail API returns `initiative_*`, not `official_code`). */
   submitterLabel(): string {
     const detail = this.ipsrDataControlSE.detailData;

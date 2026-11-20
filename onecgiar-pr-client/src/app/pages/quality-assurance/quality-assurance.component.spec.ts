@@ -291,4 +291,46 @@ describe('QualityAssuranceComponent (P2-3911 SP link)', () => {
   it('originOf returns null for an invalid URL', () => {
     expect(QualityAssuranceComponent.originOf('not a url')).toBeNull();
   });
+
+  describe('full-screen button placement (P2-3911)', () => {
+    const el = () => fixture.nativeElement as HTMLElement;
+
+    it("'new': renders the button in its own bar above the iframe, not over it", () => {
+      fixture.detectChanges();
+
+      const bar = el().querySelector('.qa_toolbar');
+      const button = bar?.querySelector('button.expand_icon') as HTMLButtonElement;
+      const iframe = el().querySelector('iframe.embedded');
+      expect(button).toBeTruthy();
+      expect(button.type).toBe('button');
+      expect(button.getAttribute('aria-label')).toBe('Open Quality Assurance in full screen');
+      expect(button.getAttribute('title')).toBe('Open Quality Assurance in full screen');
+      expect(button.getAttribute('aria-pressed')).toBe('false');
+      // The bar precedes the iframe in the flow instead of being positioned on top of it.
+      expect(bar.compareDocumentPosition(iframe) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(bar.contains(iframe)).toBe(false);
+    });
+
+    it("'new': toggles full screen and swaps the accessible label", () => {
+      fixture.detectChanges();
+      (el().querySelector('.qa_toolbar button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(apiMock.dataControlSE.show_qa_full_screen).toBe(true);
+      expect(el().querySelector('.iframe_container').classList).toContain('expand');
+      const button = el().querySelector('.qa_toolbar button');
+      expect(button.getAttribute('aria-label')).toBe('Exit full screen');
+      expect(button.getAttribute('aria-pressed')).toBe('true');
+      expect(button.textContent).toContain('Minimize');
+    });
+
+    it("'legacy': keeps the floating button and no toolbar", () => {
+      component.qaSpEmbed = 'legacy';
+      fixture.detectChanges();
+
+      expect(el().querySelector('.qa_toolbar')).toBeNull();
+      expect(el().querySelector('div.expand_icon')).toBeTruthy();
+      expect(el().querySelector('.iframe_container').classList).not.toContain('iframe_container_new');
+    });
+  });
 });

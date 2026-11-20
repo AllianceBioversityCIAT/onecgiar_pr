@@ -383,6 +383,20 @@ export class ResultsTocResultRepository
     }
   }
 
+  /**
+   * The body of an SQL `IN (...)` list of initiative ids. Keeps only finite positive integers and
+   * answers `null` when none is left, so `in (null)` matches no row instead of going out as `in ()`.
+   * `[undefined].toString()` is `''`: a caller that did not know the primary initiative (a
+   * Contributors and partners save without `changePrimaryInit`) turned the query into a MySQL
+   * parse error and the save answered 500 after everything had already been written.
+   */
+  private initiativeIdList(ids: ReadonlyArray<unknown> | null | undefined) {
+    const clean = (ids ?? [])
+      .map((id) => Number(id))
+      .filter((id) => Number.isInteger(id) && id > 0);
+    return clean.length ? clean.join(',') : 'null';
+  }
+
   async getRTRPrimary(
     resultId: number,
     initiativeId: number[],
@@ -418,15 +432,13 @@ export class ResultsTocResultRepository
       left join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id
       left join result_indicators_targets ritt on ritt.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
     where rtr.results_id = ?
-      and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${
-        initiativeId ? initiativeId.toString() : null
-      })
+      and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${this.initiativeIdList(
+        initiativeId,
+      )})
       ${
         isPrimary
           ? ''
-          : `and rtr.initiative_id in (${
-              initiativeArray.length ? initiativeArray.toString() : null
-            })`
+          : `and rtr.initiative_id in (${this.initiativeIdList(initiativeArray)})`
       }
       and rtr.is_active > 0;
     `;
@@ -774,15 +786,13 @@ export class ResultsTocResultRepository
       results_toc_result rtr	
       inner join clarisa_initiatives ci on ci.id = rtr.initiative_id 
     where rtr.results_id = ?
-      and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${
-        initiativeId.length ? initiativeId.toString() : null
-      })
+      and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${this.initiativeIdList(
+        initiativeId,
+      )})
       ${
         isPrimary
           ? ''
-          : `and rtr.initiative_id in (${
-              initiativeArray.length ? initiativeArray.toString() : null
-            })`
+          : `and rtr.initiative_id in (${this.initiativeIdList(initiativeArray)})`
       }
       and rtr.is_active > 0;
     `;

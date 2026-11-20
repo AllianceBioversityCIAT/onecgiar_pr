@@ -1,3 +1,4 @@
+import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
 import {
   BadRequestException,
   ConflictException,
@@ -584,6 +585,49 @@ describe('BilateralService (unit)', () => {
     expect(res.result_by_institution_array).toHaveLength(1);
     expect(res.obj_results_toc_result).toHaveLength(1);
     expect(res.result_knowledge_product_array).toHaveLength(1);
+  });
+
+  // @akili-spec bilateral/evidence-privacy-tag EVP-T-5 (EVP-R-6, EVP-R-1 mixed visibilities)
+  it('filterActiveRelations exposes is_public per evidence item (link 0/1/NULL, file SP 0/1) and stays additive', () => {
+    const { service } = makeService();
+    const sp = (v: any) => [{ is_active: true, is_public_file: v }];
+    const base = { is_active: true, evidence_type_id: EvidenceTypeEnum.MAIN };
+    const evidence_array = [
+      { ...base, id: 1, is_sharepoint: 0, is_public: 0 },
+      { ...base, id: 2, is_sharepoint: 0, is_public: 1 },
+      { ...base, id: 3, is_sharepoint: 0, is_public: null },
+      {
+        ...base,
+        id: 4,
+        is_sharepoint: 1,
+        is_public: null,
+        evidenceSharepointArray: sp(0),
+      },
+      {
+        ...base,
+        id: 5,
+        is_sharepoint: 1,
+        is_public: null,
+        evidenceSharepointArray: sp(1),
+      },
+    ];
+    const keysBefore = evidence_array.map((e) => Object.keys(e));
+
+    const res = service.filterActiveRelations({ evidence_array });
+
+    expect(res.evidence_array.map((e) => e.is_public)).toEqual([
+      false,
+      true,
+      null,
+      false,
+      true,
+    ]);
+    res.evidence_array.forEach((e, i) => {
+      expect(Object.keys(e)).toEqual(expect.arrayContaining(keysBefore[i]));
+      if (e.is_sharepoint) {
+        expect(e.evidenceSharepointArray).toHaveLength(1);
+      }
+    });
   });
 
   it('extractProgramIdFromTocMapping / extractProgramIdsFromContributing / collectScienceProgramIds', () => {
@@ -5663,6 +5707,51 @@ describe('BilateralService (unit)', () => {
         await svc.handleEvidence(RESULT, [{ link: 'https://x.org/new' }], USER);
 
         expect(activeLinks(db)).toEqual(['https://x.org/new']);
+      });
+
+      // @akili-spec bilateral/evidence-privacy-tag (EVP-R-5, EVP-R-11, EVP-DD-9)
+      it('EVIDENCE is_public: false/true/absent are saved as false/true/null; a re-send without the field is null', async () => {
+        const saved: any[] = [];
+        const { service } = makeService({
+          _evidencesRepository: {
+            save: jest.fn(async (e: any) => {
+              saved.push(e);
+            }),
+          },
+          _evidencesService: {
+            getHandleFromRegularLink: jest.fn(async (l: string) => l),
+          },
+          _resultsKnowledgeProductsRepository: {
+            findOne: jest.fn().mockResolvedValue(null),
+          },
+        });
+        const svc: any = service;
+
+        await svc.handleEvidence(
+          RESULT,
+          [
+            { link: 'https://x.org/private', is_public: false },
+            { link: 'https://x.org/public', is_public: true },
+            { link: 'https://x.org/absent' },
+            { link: 'https://x.org/null', is_public: null },
+          ],
+          USER,
+        );
+        expect(saved.map((e) => [e.link, e.is_public])).toEqual([
+          ['https://x.org/private', false],
+          ['https://x.org/public', true],
+          ['https://x.org/absent', null],
+          ['https://x.org/null', null],
+        ]);
+
+        // Resubmission: the same link previously private, re-sent without the field.
+        saved.length = 0;
+        await svc.handleEvidence(
+          RESULT,
+          [{ link: 'https://x.org/private' }],
+          USER,
+        );
+        expect(saved[0].is_public).toBeNull();
       });
 
       it('PROJECTS: two before, the payload names one -> exactly one active, and its budget row is the new one', async () => {

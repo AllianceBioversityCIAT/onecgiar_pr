@@ -23,6 +23,8 @@ export interface EvidencesCreateInterface {
   poverty_related?: boolean;
   is_sharepoint?: number;
   is_public_file?: number;
+  // @akili-spec bilateral/evidence-privacy-tag
+  is_public?: boolean | null;
   sp_document_id?: string;
   sp_evidence_id?: string;
   sp_file_name?: string;

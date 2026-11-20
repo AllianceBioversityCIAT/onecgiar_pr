@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ResultInnovationPackageController } from './result-innovation-package.controller';
 import { ResultInnovationPackageService } from './result-innovation-package.service';
+import { QaReviewLockGuard } from '../../../shared/guards/qa-review-lock.guard';
 
 describe('ResultInnovationPackageController', () => {
   let controller: ResultInnovationPackageController;
@@ -27,7 +28,10 @@ describe('ResultInnovationPackageController', () => {
       providers: [
         { provide: ResultInnovationPackageService, useValue: mockService },
       ],
-    }).compile();
+    })
+      .overrideGuard(QaReviewLockGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get(ResultInnovationPackageController);
     jest.clearAllMocks();

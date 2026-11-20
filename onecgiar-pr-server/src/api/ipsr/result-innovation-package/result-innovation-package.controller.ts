@@ -17,6 +17,7 @@ import {
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
+import { LockedWhileInQa } from '../../../shared/guards/qa-review-lock.guard';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -36,6 +37,7 @@ export class ResultInnovationPackageController {
     );
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('general-information/:resultId')
   generalInformation(
     @Param('resultId') resultId: number,

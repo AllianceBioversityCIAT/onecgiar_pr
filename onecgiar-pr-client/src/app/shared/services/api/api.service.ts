@@ -20,6 +20,7 @@ import { EndpointsService } from './endpoints/endpoints.service';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 import { CurrentResult } from '../../interfaces/current-result.interface';
 import { FieldsManagerService } from '../fields-manager.service';
+import { isResultLockedByQaReview } from '../../utils/qa-review-lock.util';
 
 /**
  * P2-3653. `ResultTypeEnum.KNOWLEDGE_PRODUCT` on the server
@@ -152,6 +153,12 @@ export class ApiService {
           }
           break;
         }
+      }
+
+      // QA review lock: Innovation Packages enter QA too (the QA feed counts the IPSR versions of the
+      // year), and the server refuses their saves while QA holds them. Admins included.
+      if (isResultLockedByQaReview(response)) {
+        this.rolesSE.readOnly = true;
       }
 
       this.ipsrDataControlSE.initiative_id = response?.inititiative_id;

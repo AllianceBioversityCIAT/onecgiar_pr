@@ -1018,3 +1018,135 @@ describe('ResultsService — getBilateralCenterResults scope pass-through (CWS-R
     );
   });
 });
+
+// @akili-spec bilateral/evidence-privacy-tag EVP-T-5 (EVP-R-6, EVP-DD-8)
+describe('ResultsService — getAIContext evidence is_public (EVP-T-5)', () => {
+  const sp = (v: any) => [{ is_active: true, is_public_file: v }];
+  const rows = [
+    { is_active: true, link: 'l0', is_sharepoint: 0, is_public: 0 },
+    { is_active: true, link: 'l1', is_sharepoint: 0, is_public: 1 },
+    { is_active: true, link: 'lN', is_sharepoint: 0, is_public: null },
+    {
+      is_active: true,
+      link: 'f0',
+      is_sharepoint: 1,
+      is_public: null,
+      evidenceSharepointArray: sp(0),
+    },
+    {
+      is_active: true,
+      link: 'f1',
+      is_sharepoint: 1,
+      is_public: null,
+      evidenceSharepointArray: sp(1),
+    },
+  ];
+
+  it('adds is_public per item from the resolver and does not withhold links', async () => {
+    const service: any = Object.create(ResultsService.prototype);
+    service._resultRepository = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 1,
+        result_type_id: 1,
+        evidence_array: rows,
+        obj_version: { phase_year: 2025 },
+      }),
+    };
+    service.getTocMetadata = jest.fn().mockResolvedValue([]);
+
+    const out = await service.getAIContext(1);
+
+    expect(out.response.evidence.map((e) => e.is_public)).toEqual([
+      false,
+      true,
+      null,
+      false,
+      true,
+    ]);
+    expect(out.response.evidence.map((e) => e.link)).toEqual([
+      'l0',
+      'l1',
+      'lN',
+      'f0',
+      'f1',
+    ]);
+    for (const e of out.response.evidence) {
+      expect(Object.keys(e)).toEqual(
+        expect.arrayContaining([
+          'link',
+          'description',
+          'is_sharepoint',
+          'is_public_file',
+        ]),
+      );
+    }
+  });
+
+  const run = async (source: any) => {
+    const service: any = Object.create(ResultsService.prototype);
+    service._resultRepository = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 1,
+        result_type_id: 1,
+        source,
+        evidence_array: rows.map((r) => ({ ...r, description: `d-${r.link}` })),
+        obj_version: { phase_year: 2025 },
+      }),
+    };
+    service.getTocMetadata = jest.fn().mockResolvedValue([]);
+    return (await service.getAIContext(1)).response.evidence;
+  };
+
+  // @akili-spec bilateral/evidence-privacy-tag (validate F-3, EVP-R-12)
+  it('bilateral: withholds the link of private items (link/0, file/SP-0), keeps description and flags', async () => {
+    const ev = await run(SourceEnum.Bilateral);
+    expect(ev.map((e) => e.link)).toEqual([null, 'l1', 'lN', null, 'f1']);
+    expect(ev.map((e) => e.description)).toEqual([
+      'd-l0',
+      'd-l1',
+      'd-lN',
+      'd-f0',
+      'd-f1',
+    ]);
+    expect(ev.map((e) => e.is_public)).toEqual([
+      false,
+      true,
+      null,
+      false,
+      true,
+    ]);
+    expect(ev[0].is_sharepoint).toBe(0);
+    expect(ev[3].is_sharepoint).toBe(1);
+  });
+
+  it('pool result: every link is sent exactly as today', async () => {
+    const ev = await run(SourceEnum.Result);
+    expect(ev.map((e) => e.link)).toEqual(['l0', 'l1', 'lN', 'f0', 'f1']);
+    expect(ev.map((e) => e.is_public)).toEqual([
+      false,
+      true,
+      null,
+      false,
+      true,
+    ]);
+  });
+
+  it('bilateral: a private item without description is kept with link null', async () => {
+    const service: any = Object.create(ResultsService.prototype);
+    service._resultRepository = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 1,
+        result_type_id: 1,
+        source: SourceEnum.Bilateral,
+        evidence_array: [
+          { is_active: true, link: 'x', is_sharepoint: 0, is_public: 0 },
+        ],
+        obj_version: { phase_year: 2025 },
+      }),
+    };
+    service.getTocMetadata = jest.fn().mockResolvedValue([]);
+    const ev = (await service.getAIContext(1)).response.evidence;
+    expect(ev).toHaveLength(1);
+    expect(ev[0].link).toBeNull();
+  });
+});

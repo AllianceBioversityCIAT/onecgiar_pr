@@ -14,12 +14,14 @@ import { CreateInnovationDevDto } from './dto/create-innovation-dev.dto';
 import { PolicyChangesDto } from './dto/create-policy-changes.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
+import { LockedWhileInQa } from '../../../shared/guards/qa-review-lock.guard';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
 export class SummaryController {
   constructor(private readonly summaryService: SummaryService) {}
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('innovation-use/create/result/:resultId')
   saveInnovationUse(
     @Param('resultId') resultId: number,
@@ -38,6 +40,7 @@ export class SummaryController {
     return this.summaryService.getInnovationUse(resultId);
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('capacity-developent/create/result/:resultId')
   saveCapacityDevelopents(
     @Param('resultId') resultId: number,
@@ -56,6 +59,7 @@ export class SummaryController {
     return this.summaryService.getCapacityDevelopents(resultId);
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('innovation-dev/create/result/:resultId')
   saveInnovationDev(
     @Param('resultId') resultId: number,
@@ -76,6 +80,7 @@ export class SummaryController {
     return this.summaryService.getInnovationDev(resultId);
   }
 
+  @LockedWhileInQa({ param: 'resultId' })
   @Patch('policy-changes/create/result/:resultId')
   savePolicyChanges(
     @Param('resultId') resultId: number,
