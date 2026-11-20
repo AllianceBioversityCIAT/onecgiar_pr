@@ -86,3 +86,24 @@
 - **Requirements covered:** EVP-R-1 (storage), NFR Data, EVP-R-11 (phase copy).
 - **Running totals vs budget:** tasks 2/11 · LOC ~275 / ~780 · review rounds 2 / ~15.
 - **Gate:** auto-approved (pre-approved mode).
+
+### EVP-T-7 — AI quality payload honours link visibility · PASS (attempt 1) · 2026-11-20
+
+- **Attempts:** 1. Implementer T2 (medium); Reviewer T3 (high).
+- **checkpoints:** 1 (OS low-memory reap killed the worker's jest and tsc runs; the worker stopped by the reap notice instead of retrying). A fresh worker was respawned with the checkpoint report copied verbatim.
+- **Files changed:** `onecgiar-pr-server/src/api/bilateral/services/quality-assessment/mappers/evidence.mapper.ts` (+17/−7), `bilateral-quality-payload.builder.spec.ts` (+76, new `describe('EVP-R-10: link visibility from is_public')` with 4 tests; no existing expectation edited).
+- **Red (before the fix):** `-t "EVP-R-10"` → 1 failed, 3 passed: `- "link": null, + "link": "https://example.org/contract.pdf", - "visibility": "private", + "visibility": "public"`. This matches B-4.
+- **Mutation "NULL ⇒ private"** (`is_public: row?.is_public ?? 0`): `× legacy link (is_public NULL) stays public with the normalized link` — `- "link": "https://www.example.org/a", + "link": null`. Reverted.
+- **Implementer verification:** `npx jest src/api/bilateral/services/quality-assessment` → 6 suites / 263 tests passed; `tsc` exit 0.
+- **Evidence re-run (Leader inline, after the revert):** same command → `Test Suites: 6 passed, 6 total · Tests: 263 passed, 263 total` → **VERIFIED**.
+- **Review intensity:** not met. `Consumers` names the builder spec (condition 3 fails), and override (f) applies (privacy/link leak). A Reviewer was owed.
+- **Reviewer:** `STATUS: PASS`. EVP-R-10 is met term by term. File output is unchanged (§3.1 note). The disqualifier is clear. At runtime, `evidence_array` is loaded as a TypeORM relation, so `row.is_public` is populated (`bilateral.service.ts:1325`).
+- **ADVISORY (4R, not gating):**
+  - `source` uses `Number(is_sharepoint) === 1`, while the resolver uses `Boolean(Number(x))`. They could drift for values other than 0/1 (none exist today).
+  - A string `"0"` now reads private for files. This is fail-closed, and the driver never produces strings.
+- **Not Done / Assumptions (gist):** the wider `evidence_array` consumer suites outside quality-assessment were not run. No owed item: the task's Consumers list names only the builder spec.
+- **runtime events:** low-memory reap ×1 → checkpoint respawn (rung: checkpoint, not a runtime-ladder rung).
+- **spawns:** implementer#1 24 calls ~151k ended checkpoint; implementer#2 7 calls ~99k ended complete; reviewer not reported by host.
+- **Requirements covered:** EVP-R-10, EVP-R-1 (Legacy item).
+- **Running totals vs budget:** tasks 3/11 · LOC ~360 / ~780 · review rounds 3 / ~15.
+- **Gate:** auto-approved (pre-approved mode).

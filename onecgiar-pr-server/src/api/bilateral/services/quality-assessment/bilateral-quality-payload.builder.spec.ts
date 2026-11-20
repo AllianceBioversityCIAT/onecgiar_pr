@@ -1353,4 +1353,80 @@ describe('mapEvidence (QEL-DD-1 link normalisation)', () => {
     );
     expect(item.link).toBeNull();
   });
+
+  // @akili-spec bilateral/evidence-privacy-tag (EVP-T-7, EVP-R-10, EVP-R-1)
+  describe('EVP-R-10: link visibility from is_public', () => {
+    it('a private link (is_public 0) is private with link null, description still sent', () => {
+      expect(
+        mapEvidence(
+          detailWith([
+            {
+              is_sharepoint: 0,
+              is_public: 0,
+              link: 'https://example.org/contract.pdf',
+              description: 'Contract',
+            },
+          ]),
+        ),
+      ).toEqual([
+        {
+          description: 'Contract',
+          link: null,
+          source: 'url',
+          visibility: 'private',
+          tags: [],
+        },
+      ]);
+    });
+
+    it('legacy link (is_public NULL) stays public with the normalized link', () => {
+      expect(
+        mapEvidence(
+          detailWith([
+            {
+              is_sharepoint: 0,
+              is_public: null,
+              link: 'www.example.org/a',
+              description: 'Legacy',
+            },
+          ]),
+        ),
+      ).toEqual([
+        {
+          description: 'Legacy',
+          link: 'https://www.example.org/a',
+          source: 'url',
+          visibility: 'public',
+          tags: [],
+        },
+      ]);
+    });
+
+    it('an explicitly public link (is_public 1) is public with its link', () => {
+      const [item] = mapEvidence(
+        detailWith([
+          { is_sharepoint: 0, is_public: 1, link: 'https://x.org', description: 'P' },
+        ]),
+      );
+      expect(item.visibility).toBe('public');
+      expect(item.link).toBe('https://x.org');
+    });
+
+    it('file rows are unchanged: public file keeps link, is_public is ignored', () => {
+      const [item] = mapEvidence(
+        detailWith([
+          {
+            is_sharepoint: 1,
+            is_public: 0,
+            link: 'https://x.org/f',
+            description: 'F',
+            evidenceSharepointArray: [{ is_public_file: 1 }],
+          },
+        ]),
+      );
+      expect(item.visibility).toBe('public');
+      expect(item.source).toBe('prms_repository');
+      expect(item.link).toBe('https://x.org/f');
+    });
+  });
 });
