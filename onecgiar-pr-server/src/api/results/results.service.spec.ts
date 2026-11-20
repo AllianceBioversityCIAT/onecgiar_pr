@@ -1018,3 +1018,67 @@ describe('ResultsService — getBilateralCenterResults scope pass-through (CWS-R
     );
   });
 });
+
+// @akili-spec bilateral/evidence-privacy-tag EVP-T-5 (EVP-R-6, EVP-DD-8)
+describe('ResultsService — getAIContext evidence is_public (EVP-T-5)', () => {
+  const sp = (v: any) => [{ is_active: true, is_public_file: v }];
+  const rows = [
+    { is_active: true, link: 'l0', is_sharepoint: 0, is_public: 0 },
+    { is_active: true, link: 'l1', is_sharepoint: 0, is_public: 1 },
+    { is_active: true, link: 'lN', is_sharepoint: 0, is_public: null },
+    {
+      is_active: true,
+      link: 'f0',
+      is_sharepoint: 1,
+      is_public: null,
+      evidenceSharepointArray: sp(0),
+    },
+    {
+      is_active: true,
+      link: 'f1',
+      is_sharepoint: 1,
+      is_public: null,
+      evidenceSharepointArray: sp(1),
+    },
+  ];
+
+  it('adds is_public per item from the resolver and does not withhold links', async () => {
+    const service: any = Object.create(ResultsService.prototype);
+    service._resultRepository = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 1,
+        result_type_id: 1,
+        evidence_array: rows,
+        obj_version: { phase_year: 2025 },
+      }),
+    };
+    service.getTocMetadata = jest.fn().mockResolvedValue([]);
+
+    const out = await service.getAIContext(1);
+
+    expect(out.response.evidence.map((e) => e.is_public)).toEqual([
+      false,
+      true,
+      null,
+      false,
+      true,
+    ]);
+    expect(out.response.evidence.map((e) => e.link)).toEqual([
+      'l0',
+      'l1',
+      'lN',
+      'f0',
+      'f1',
+    ]);
+    for (const e of out.response.evidence) {
+      expect(Object.keys(e)).toEqual(
+        expect.arrayContaining([
+          'link',
+          'description',
+          'is_sharepoint',
+          'is_public_file',
+        ]),
+      );
+    }
+  });
+});

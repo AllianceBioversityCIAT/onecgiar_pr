@@ -26,6 +26,7 @@ import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { resolveInitialStatusId } from './constants/initial-status.constants';
 import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
+import { exposedEvidenceIsPublic } from '../results/evidences/utils/evidence-visibility';
 import { CENTER_ALIAS_TO_CLARISA_CENTER_CODE } from './constants/w3-center-alias.constants';
 import {
   buildCenterIndex,
@@ -2146,9 +2147,13 @@ export class BilateralService {
     result.obj_result_by_project = onlyActive(result.obj_result_by_project);
     const activeEvidence = onlyActive(result.evidence_array);
     result.evidence_array = Array.isArray(activeEvidence)
-      ? activeEvidence.filter(
-          (e) => Number(e?.evidence_type_id) === EvidenceTypeEnum.MAIN,
-        )
+      ? activeEvidence
+          .filter((e) => Number(e?.evidence_type_id) === EvidenceTypeEnum.MAIN)
+          .map((e) => {
+            // @akili-spec bilateral/evidence-privacy-tag (EVP-T-5, EVP-R-6, EVP-DD-5)
+            e.is_public = exposedEvidenceIsPublic(e);
+            return e;
+          })
       : activeEvidence;
     result.result_knowledge_product_array = onlyActive(
       result.result_knowledge_product_array,

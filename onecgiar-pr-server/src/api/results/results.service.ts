@@ -163,6 +163,7 @@ import { resolveEvidenceVisibility } from './evidences/utils/evidence-visibility
 import { SavePartnersV2Dto } from './results_by_institutions/dto/save-partners-v2.dto';
 import { ResultDeletionAuditService } from './result-deletion-audit/result-deletion-audit.service';
 import { ResultDeletionAuditSource } from './result-deletion-audit/result-deletion-audit-source.enum';
+import { exposedEvidenceIsPublic } from './evidences/utils/evidence-visibility';
 
 /**
  * BIL-RAU-T-2 (design.md §5, DD-4): the W1/W2 status rule (originally inline at
@@ -3709,6 +3710,8 @@ export class ResultsService {
             e.evidenceSharepointArray?.find(
               (sp) => sp?.is_public_file !== undefined,
             )?.is_public_file ?? null,
+          // @akili-spec bilateral/evidence-privacy-tag (EVP-T-5, EVP-DD-8): flag only, never withheld
+          is_public: exposedEvidenceIsPublic(e),
         }))
         .filter((e) => e.link || e.description);
 
