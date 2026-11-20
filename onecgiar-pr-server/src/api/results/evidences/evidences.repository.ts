@@ -442,6 +442,7 @@ export class EvidencesRepository
     e.gender_related,
     e.link,
     e.is_sharepoint,
+    e.is_public,
     e.youth_related,
     e.nutrition_related,
     e.environmental_biodiversity_related,

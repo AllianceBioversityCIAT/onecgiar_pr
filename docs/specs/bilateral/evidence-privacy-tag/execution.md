@@ -107,3 +107,33 @@
 - **Requirements covered:** EVP-R-10, EVP-R-1 (Legacy item).
 - **Running totals vs budget:** tasks 3/11 · LOC ~360 / ~780 · review rounds 3 / ~15.
 - **Gate:** auto-approved (pre-approved mode).
+
+### EVP-T-3 — Shared evidence endpoint: bilateral-only write + load column · PASS (attempt 1) · 2026-11-20
+
+- **Attempts:** 1. Implementer T2 (medium); Reviewer T3 (high).
+- **Files changed:** `onecgiar-pr-server/src/api/results/evidences/evidences.service.ts`, `evidences.repository.ts` (`getEvidencesByResultId` only), `dto/create-evidence.dto.ts`, `evidences.service.evp.spec.ts` (new, 5 tests).
+- **Reds before the fix:**
+  - (a) `Expected: false Received: undefined`
+  - (c) `Expected: null Received: undefined`
+  - (d) bilateral link with no field: `Expected: null Received: undefined`
+  - `findAll`: expected `true,false,null,null`, received `1,0,null,undefined`
+  - (b) was green before the fix, since nothing wrote the property.
+- **Mutations:**
+  - `if (true)` in place of the source check: only (b) red, `Received: false`.
+  - Write the input for SharePoint items: only (c) red, `Received: false`.
+  - Both restored.
+- **Implementer verification:** `npx jest src/api/results/evidences src/api/versioning` → 12 suites / 152 tests passed; `tsc` exit 0.
+- **Evidence re-run (Leader inline):** same jest command → `Test Suites: 12 passed · Tests: 152 passed` → **VERIFIED**.
+- **Reviewer:** `STATUS: PASS`. The guard matches EVP-DD-3 exactly. Pool rows are never assigned the property. No consumer assertion was edited. The other caller, `replicateSPFiles`, is unaffected. Rulings on the deviations:
+  - `findAllV2` normalisation accepted: pool rows stay null, which EVP-R-12 allows.
+  - `result` passed on both upsert paths accepted.
+  - `calls[0][0]` confirmed to be the evidence-entity save.
+- **ADVISORY (4R, not gating):**
+  - **RISK, sequencing:** until EVP-T-8 makes the centre form send `is_public`, a centre-form save of a bilateral result rewrites API-set tags to `null`. **T-3 must ship in the same release as T-8.** Both are in this run, and the push happens only after T-8 lands. Also confirm that no other client posts `evidences/create` for a `source='API'` result. Recorded for `/akili-validate`.
+  - RELIABILITY: there is no runtime boolean check on this JWT endpoint. Suggested hardening: `typeof v === 'boolean' ? v : null`.
+  - READABILITY: the normalisation is duplicated in `findAll` and `findAllV2`.
+- **Decisions:** accepted the `findAllV2` normalisation, outside the task text, per the Reviewer's EVP-R-12 ruling.
+- **spawns:** implementer 25 calls ~143.9k ended complete; reviewer not reported by host.
+- **Requirements covered:** EVP-R-3 (persistence), EVP-R-12 (pool link save), EVP-DD-3.
+- **Running totals vs budget:** tasks 4/11 · LOC ~560 / ~780 (tests are the bulk) · review rounds 4 / ~15.
+- **Gate:** auto-approved (pre-approved mode).
