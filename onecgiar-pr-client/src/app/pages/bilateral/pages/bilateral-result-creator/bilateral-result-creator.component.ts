@@ -875,10 +875,13 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     if (!this.isSubmitting() && this.autoSaveService.hasPendingFor(current)) {
       flushTargets = this.autoSaveService.pendingStatusKeysFor(current);
       await this.autoSaveService.flush(this.autoSaveService.getEndpointKeys(current));
-      await this.waitForSectionSave(current);
+      // P2-3960 (BSA-R-1, DD-1/DD-2): wait and failure check are both scoped to what THIS flush
+      // dispatched. A stale `'error'` on a field nothing re-sent counts as pending forever, so with an
+      // empty set there is nothing to wait for — waiting would run the whole 15s timeout.
+      if (flushTargets.length > 0) await this.waitForSectionSave(current, flushTargets);
 
-      if (this.autoSaveService.hasErrorFor(current)) {
-        const serverReason = this.autoSaveService.lastErrorMessageFor(current);
+      if (this.autoSaveService.hasErrorForFields(flushTargets)) {
+        const serverReason = this.autoSaveService.lastErrorMessageForFields(flushTargets);
         const missing = this.missingFieldsFor(current);
         this.api.alertsFe.show({
           id: 'bilateralManualSave',
@@ -1336,7 +1339,11 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         .filter(Boolean)
         .join(' ');
       const attention = missing.length + invalid.length > 0;
-      if (!hadChanges) {
+      // P2-3960 (BSA-R-2, DD-3): `hadChanges` alone is true for a stale `'error'` this flush never
+      // sent, which reported "Draft saved" for nothing saved. Keep `hadChanges` too: Evidence always
+      // captures `['evidence']` (P-4), so dropping it would turn an untouched Evidence "Up to date"
+      // into "Draft saved".
+      if (!hadChanges || flushTargets.length === 0) {
         this.api.alertsFe.show({
           id: 'bilateralManualSave',
           title: attention ? 'Nothing to save yet' : 'Up to date',
@@ -1375,9 +1382,9 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
    * before the flush that is being waited on), the early exit is scoped to exactly those status
    * keys via `hasErrorForFields`, instead of `hasErrorFor(section)`'s section-wide scan — so a
    * different, already-settled field's stale `'error'` can't trigger (or suppress) an exit based on
-   * data this call never touched. Omitted by `selectSection()` and `handleGiFieldSaveRequested()`,
-   * which keep the original section-wide behavior (other call sites still rely on it, per
-   * `BilateralAutoSaveService`'s `hasErrorFor` doc comment).
+   * data this call never touched. Omitted by `handleGiFieldSaveRequested()`, which keeps the
+   * original section-wide behavior (per `BilateralAutoSaveService`'s `hasErrorFor` doc comment).
+   * `selectSection()` is scoped too since P2-3960.
    */
   private async waitForSectionSave(section: BilateralEditorSection, scopedFields?: readonly string[]): Promise<void> {
     const start = Date.now();
