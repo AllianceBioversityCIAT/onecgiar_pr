@@ -8,7 +8,7 @@
 | Depth | Lite · Bug Mode |
 | Requirements | `requirements.md` (BSA-R-1..4) |
 | Verified at | `fcd441ad1` |
-| Status | draft |
+| Status | approved · executed (T-1 `6cc9c75e0`, T-2 `550737ec8`) |
 
 ## 2. Executive Summary
 
@@ -26,7 +26,7 @@ No change to the architecture. The fix stays inside the existing Save coordinato
 | File | Change |
 |---|---|
 | `onecgiar-pr-client/src/app/pages/bilateral/pages/bilateral-result-creator/bilateral-result-creator.component.ts` | `selectSection()` and the copy branch of `triggerManualSave()` |
-| `…/bilateral-result-creator/bilateral-result-creator.component.spec.ts` | Regression tests, plus an update to one consumer test (P-6) |
+| `…/bilateral-result-creator/bilateral-result-creator.component.spec.ts` | Regression tests A, B and C, plus updates to four consumer tests (P-6). The three in tasks.md T-1, and "the flush fails: savedTick NOT bumped", which was found during execution. Corrected at validation, 2026-11-23 |
 | `…/bilateral-result-creator/CLAUDE.md` | Invariant text and the `Verified:` stamp |
 | `onecgiar-pr-client/src/app/shared/services/customized-alerts-fe.service.ts` (+ `.spec.ts`) | Timer registry and null-safe removal |
 | `onecgiar-pr-client/src/app/shared/services/customized-alerts-fs.service.ts` (+ `.spec.ts`) | Null-safe removal only |
@@ -72,7 +72,7 @@ n/a. The change is client-only. No entity, endpoint, or payload changes.
 | P-3 | A failed field cannot be resent, because `flush` removes it from `_pendingFields` before it sends | existence | `bilateral-auto-save.service.ts:250-255,561-571` | `fcd441ad1` | The stale-error premise is wrong and DD-1 is unnecessary (High) | — |
 | P-4 | For Evidence, `pendingStatusKeysFor` always returns `['evidence']` | existence | `bilateral-auto-save.service.ts:376` | `fcd441ad1` | DD-3 could drop `hadChanges` (Low) | — |
 | P-5 | The scoped helpers exist and are already used by Save draft | existence | `bilateral-auto-save.service.ts:375,398,407`; `bilateral-result-creator.component.ts:1292,1300,1304` | `fcd441ad1` | T-1 would need new service API (Low) | — |
-| P-6 | Consumers that pin `selectSection`'s calls to the auto-save mock: the default mock `…spec.ts:189-194`; the failure test `:1953-1970`, which drives `hasErrorFor` and would invert; and the tests at `:1238-1251`, `:1938` and `:1975-1994`, which do not drive errors. The other bilateral specs that mention `hasErrorFor`/`selectSection` (`bilateral-annual-updating.component.spec.ts:68-260` for its own `waitForSave`, and `bilateral-progress-aside.component.spec.ts:47` for an output emit) do not exercise this method | consumer | `grep -rln "selectSection\|hasErrorFor" --include=*.spec.ts --include=*.cy.ts src/app cypress` → 5 files; each read | `fcd441ad1` | A suite breaks without being listed (Low) | — |
+| P-6 | Consumers that pin `selectSection`'s calls to the auto-save mock: the default mock `…spec.ts:189-194`; the failure test `:1953-1970`, which drives `hasErrorFor` and would invert; and the tests at `:1238-1251`, `:1938` and `:1975-1994`, which do not drive errors. The other bilateral specs that mention `hasErrorFor`/`selectSection` (`bilateral-annual-updating.component.spec.ts:68-260` for its own `waitForSave`, and `bilateral-progress-aside.component.spec.ts:47` for an output emit) do not exercise this method | consumer | `grep -rln "selectSection\|hasErrorFor" --include=*.spec.ts --include=*.cy.ts src/app cypress` → 5 files; each read | `fcd441ad1` | A suite breaks without being listed (Low) | **Partly false (found in T-1):** "the flush fails: savedTick NOT bumped" (~`:2042`) also drove `hasErrorFor` and was adapted. The whole-file run caught it as planned (execution.md T-1) |
 | P-7 | Consumers of `alertsFe.show`: about 70 non-spec files; 58 non-spec `closeIn` lines. All of them close at 3000 ms today whatever value they pass, and DD-4 keeps that | consumer | `grep -rln "alertsFe\.show\|alertsFeSE\|CustomizedAlertsFeService" src --include=*.ts \| grep -v spec \| wc -l` → 70; `grep -rn closeIn src --include=*.ts \| grep -v spec \| wc -l` → 58 (run from `onecgiar-pr-client`) | `fcd441ad1` | Timing regresses app-wide (High, which is why `closeIn` stays as it is) | — |
 | P-8 | Readers of the alert's shared DOM state: `show()` removes every `.custom_modal_container` (`:29`), and `closeAction` looks the alert up by id (`:92-95`). The removal listener sits on the container (`:82-88`). The sibling service `CustomizedAlertsFsService` has the same unguarded removal (`customized-alerts-fs.service.ts:35-40`) and no timer | shared-state | files as cited | `fcd441ad1` | DD-4 or DD-5 misses a reader (Low) | — |
 | P-9 | A field in `'error'` is still shown as failed on its own field card after DD-1 | other | `section-general-info.component.ts:536-538` exposes the status per field; whether the card paints it red was not confirmed | `fcd441ad1` (2026-11-23) | The `BSF-OQ-1` visibility trade-off gets worse | **Settled FALSE by T-1:** the getters are read only by `section-general-info.component.spec.ts:741-747`; the card's `fc-error` (`field-card.component.ts:141`) is fed only by word-count validation. The user accepted the gap and chose to proceed (execution.md T-1) |

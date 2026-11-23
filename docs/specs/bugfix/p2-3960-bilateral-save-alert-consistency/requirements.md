@@ -10,7 +10,7 @@
 | Deliverable | software |
 | Depth | Lite |
 | Approval Mode | gated |
-| Status | draft |
+| Status | approved · executed (T-1 `6cc9c75e0`, T-2 `550737ec8`) |
 | Source | `proposal.md` (approved 2026-11-23) |
 | ID prefix | `BSA-R-n` |
 
