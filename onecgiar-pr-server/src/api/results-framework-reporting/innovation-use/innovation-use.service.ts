@@ -42,6 +42,25 @@ import {
 } from '../../results/result-actors/farmer-follow-up.constant';
 import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
 
+/**
+ * P2-4129 — level-number gates. The use-level catalogue repeats levels under higher row ids
+ * (e.g. row 13 = level 2), so every threshold below compares the LEVEL NUMBER, never the row id
+ * stored in `innovation_use_level_id`. The driver may hand the number back as a numeric string;
+ * a missing or non-finite value counts as "below".
+ * @akili-spec bugfix/p2-4129-innovation-use-level-threshold ULT-R-1 ULT-R-2 DD-3 DD-5
+ */
+const EXPLANATION_MIN_LEVEL = InnovationUseLevel.Level_5;
+const STUDY_LINKS_MIN_LEVEL = InnovationUseLevel.Level_6;
+
+function isLevelAtLeast(
+  level: unknown,
+  threshold: InnovationUseLevel,
+): boolean {
+  if (level === null || level === undefined) return false;
+  const n = Number(level);
+  return Number.isFinite(n) && n >= threshold;
+}
+
 @Injectable()
 export class InnovationUseService {
   private readonly logger = new Logger(InnovationUseService.name);
@@ -116,6 +135,8 @@ export class InnovationUseService {
       // so `{ level: null }` returned the FIRST catalogue row (level 0, "Innovation is not
       // used") and every result sent without a level was stored as "No use".
       let innovation_use_level: number | null = null;
+      // P2-4129: the level NUMBER, used only by the gates; the row id above is what gets stored.
+      let innovation_use_level_number: number | null = null;
       if (
         innovation_use_level_id !== null &&
         innovation_use_level_id !== undefined
@@ -123,7 +144,7 @@ export class InnovationUseService {
         const use_levels =
           await this._clarisaInnovationUseLevelRepository.findOne({
             where: { level: innovation_use_level_id },
-            select: ['id'],
+            select: ['id', 'level'],
           });
 
         if (!use_levels) {
@@ -138,6 +159,7 @@ export class InnovationUseService {
         }
 
         innovation_use_level = use_levels.id;
+        innovation_use_level_number = Number(use_levels.level);
       }
 
       if (is_discontinued !== undefined) {
@@ -212,12 +234,19 @@ export class InnovationUseService {
         resultExist.new_users_added = new_users_added ?? null;
         resultExist.use_expansion_narrative = use_expansion_narrative ?? null;
 
-        if (innovation_use_level >= InnovationUseLevel.Level_6) {
+        if (
+          isLevelAtLeast(innovation_use_level_number, EXPLANATION_MIN_LEVEL)
+        ) {
           resultExist.readiness_level_explanation =
             readiness_level_explanation ?? null;
           resultExist.has_scaling_studies = !!has_scaling_studies;
 
-          if (!has_scaling_studies) {
+          // P2-4129: the study links exist only from level 6; at level 5 the answer is kept
+          // but the links are deactivated.
+          if (
+            !has_scaling_studies ||
+            !isLevelAtLeast(innovation_use_level_number, STUDY_LINKS_MIN_LEVEL)
+          ) {
             await this._resultScalingStudyUrlsRepository.update(
               { result_innov_use_id: resultExist.result_innovation_use_id },
               { is_active: false },
@@ -251,7 +280,9 @@ export class InnovationUseService {
         newInnUse.new_users_added = new_users_added ?? null;
         newInnUse.use_expansion_narrative = use_expansion_narrative ?? null;
 
-        if (innovation_use_level >= InnovationUseLevel.Level_6) {
+        if (
+          isLevelAtLeast(innovation_use_level_number, EXPLANATION_MIN_LEVEL)
+        ) {
           newInnUse.readiness_level_explanation =
             readiness_level_explanation ?? null;
           newInnUse.has_scaling_studies = !!has_scaling_studies;
@@ -296,12 +327,23 @@ export class InnovationUseService {
               resultExist.innov_use_2030_to_be_determined =
                 innov_use_2030_to_be_determined;
 
-              if (innovation_use_level >= InnovationUseLevel.Level_6) {
+              if (
+                isLevelAtLeast(
+                  innovation_use_level_number,
+                  EXPLANATION_MIN_LEVEL,
+                )
+              ) {
                 resultExist.readiness_level_explanation =
                   readiness_level_explanation ?? null;
                 resultExist.has_scaling_studies = !!has_scaling_studies;
 
-                if (!has_scaling_studies) {
+                if (
+                  !has_scaling_studies ||
+                  !isLevelAtLeast(
+                    innovation_use_level_number,
+                    STUDY_LINKS_MIN_LEVEL,
+                  )
+                ) {
                   await this._resultScalingStudyUrlsRepository.update(
                     {
                       result_innov_use_id: resultExist.result_innovation_use_id,
@@ -339,7 +381,7 @@ export class InnovationUseService {
       );
 
       if (
-        innovation_use_level >= InnovationUseLevel.Level_6 &&
+        isLevelAtLeast(innovation_use_level_number, STUDY_LINKS_MIN_LEVEL) &&
         has_scaling_studies &&
         Array.isArray(scalingStudiesUrls)
       ) {
@@ -1014,7 +1056,9 @@ export class InnovationUseService {
   private async getScalingStudiesUrls(
     innDevExists: ResultsInnovationsUse,
   ): Promise<string[]> {
-    if (innDevExists.innovation_use_level_id < InnovationUseLevel.Level_6) {
+    // P2-4129: `level` is the number joined by `InnovUseExists`; the stored
+    // `innovation_use_level_id` is a row id and must not be compared.
+    if (!isLevelAtLeast((innDevExists as any).level, STUDY_LINKS_MIN_LEVEL)) {
       return [];
     }
 
