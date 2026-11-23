@@ -257,3 +257,12 @@ All existing reminders and focal-points actions SHALL work as before: schedule, 
 ## 9. Requirement ID Index
 
 ARP-R-1 Reminders entry · ARP-R-2 Tabs · ARP-R-3 Removed from Phase management · ARP-R-4 Summary cards · ARP-R-5 Valid actions per status · ARP-R-6 History table · ARP-R-7 Scheduler · ARP-R-8 Focal points list · ARP-R-9 Opt-in switch · ARP-R-10 Behaviour unchanged · ARP-R-11 Style and copy · ARP-NFR-1..4
+
+
+## Amendment 2026-11-18 (user decision after ARP-T-5)
+
+ARP-R-6 and ARP-R-7 change from "local time with a UTC hint" to "UTC with a local hint":
+
+- The scheduler and the "Change date" input are read as UTC. A note says "Please note that the selected time is in UTC." Once valid, a line shows the local equivalent with its date, zone and offset (DST-aware for that instant).
+- History times and the Next send card show UTC with a "UTC" suffix; the zone line says times are in UTC and names the admin's zone.
+- Reason: admins must not convert time zones or enter their home time by mistake. Implemented by ARP-T-6.

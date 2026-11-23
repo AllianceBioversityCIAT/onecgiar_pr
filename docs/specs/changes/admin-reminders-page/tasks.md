@@ -143,7 +143,7 @@
   - [x] Three falsifiers observed red.
   - [x] `ng build` green; hex grep 0.
 
-### ARP-T-5: PRTest visual + behaviour check (HITL) [ ]
+### ARP-T-5: PRTest visual + behaviour check (HITL) [x]
 
 - **Type:** manual verification · **Estimate:** S · **Review:** skip-eligible — claim to prove: every step below recorded with evidence in `execution.md`, no code changed
 - **Implements:** ARP-NFR-2 and the layout/visual defect classes (requirements §7), ARP-R-1 live path, ARP-R-3 live.
@@ -162,7 +162,33 @@
 - **Consumers:** none.
 - **Skills:** `claude-in-chrome` (read-only).
 - **Done:**
-  - [ ] 6 steps recorded.
+  - [x] 6 steps recorded (step 5 drawer + more_vert keyboard deferred: no pending campaign on PRTest).
+
+### ARP-T-6: Scheduler and history in UTC, with the local equivalent (user decision 2026-11-18) [x]
+
+- **Type:** code · **Estimate:** S · **Review:** required (time conversion = logic)
+- **Implements:** ARP-R-6 and ARP-R-7 as amended 2026-11-18 (see requirements.md, "Amendment 2026-11-18").
+- **Why:** the user does not want admins to convert time zones in their head, or to enter their home time by mistake. The reference time is UTC, written once and shown everywhere; the admin's local time is only an aid.
+- **Scope (client only, `replicated-innovation-reminders` component, its copy, its specs, `reminder-time.util` if needed):**
+  1. The scheduler date-time input is read as **UTC**. Label "Date and time (UTC)". `scheduled_at` sent = the entered wall-clock with `Z` (no local offset applied).
+  2. Under the input, a note always visible: "Please note that the selected time is in UTC." And, once the value is valid, a live line with the local equivalent: "= {date, time} in your local time ({zone}, {UTC±hh:mm})" — date included, so a day change is visible; offset of THAT instant (DST-aware).
+  3. Remove the old hint "Your local time (…). The server runs in UTC." and "Sends at HH:MM UTC" (replaced by 2).
+  4. Inline "Change date" edit: same rule — prefilled with the UTC wall-clock of `scheduled_at`, saved as UTC, same note + local-equivalent line.
+  5. History "Scheduled for" and "Sent at", and the Next send card: shown in **UTC** with a "UTC" suffix (e.g. "Nov 18, 2026, 12:00 PM UTC"). Zone line above the table: "Times are shown in UTC. Your local time zone: {zone} ({offset})."
+  6. Validation unchanged: empty → required; instant ≤ now → past.
+- **Depends on:** T-5
+- **Verification:** `cd onecgiar-pr-client && npx jest --maxWorkers=2 --silent --no-coverage --testPathPattern="pages/admin-section/pages/reminders"` green, plus new cases:
+  - entering `2026-11-20T09:00` POSTs `scheduled_at` `2026-11-20T09:00:00.000Z` whatever the admin zone (test with a resolver of +60 and −300);
+  - local line for Europe/Rome-like +01:00 shows 10:00 and for Bogota-like −05:00 shows Nov 20 04:00; a value that crosses midnight shows the other date;
+  - edit prefill of `2026-11-20T09:00:00Z` = `2026-11-20T09:00`;
+  - history cell renders the UTC time with the "UTC" suffix.
+- **Falsifier:** an admin in UTC+1 who types 09:00 gets a campaign at 08:00Z → FAIL.
+- **Consumers:** server unchanged (already stores UTC). No API change.
+- **Skills:** `angular-developer`, `tdd`.
+- **Done:**
+  - [x] UTC input + note + local line (schedule and edit)
+  - [x] history, Next send card and zone line in UTC
+  - [x] tests green, `--findRelatedTests` green
 
 ## 3. Coverage (scenario / clause level)
 

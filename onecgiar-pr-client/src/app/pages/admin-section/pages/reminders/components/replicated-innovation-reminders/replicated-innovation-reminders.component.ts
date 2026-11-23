@@ -21,12 +21,16 @@ import {
   ReminderStatus
 } from '../../../../../../shared/interfaces/replicated-innovation-reminders.interface';
 import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
-import { OffsetAt, localInputToUtcIso, offsetLabel, utcClock, utcIsoToLocalInput } from './reminder-time.util';
+import { OffsetAt, localInputToUtcIso, offsetLabel, utcIsoToLocalInput } from './reminder-time.util';
 import { ReminderPreviewDrawerComponent } from './reminder-preview-drawer.component';
 import { DeliveryBarComponent } from './delivery-bar/delivery-bar.component';
 
 /** Override point: the admin's UTC offset AT a given instant (`Date#getTimezoneOffset` semantics, DST aware). Tests pin it; production reads the platform. */
 export const REMINDER_TZ_OFFSET_MINUTES = new InjectionToken<OffsetAt>('REMINDER_TZ_OFFSET_MINUTES');
+
+/** The admin types UTC: no zone offset is applied to the input. */
+const UTC_OFFSET: OffsetAt = () => 0;
+const formatUtc = (d: Date): string => d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' });
 
 const KINDS: ReminderKind[] = ['Q4_NOTICE', 'FINAL_REMINDER'];
 const OPEN_STATUSES: ReminderStatus[] = ['PENDING', 'SENDING', 'FAILED'];
@@ -123,17 +127,14 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
       return 'local';
     }
   }
-  /** Time-zone hint for the date being entered (or today when none yet). */
-  timeZoneHintFor(local: string | undefined): string {
-    const iso = local ? localInputToUtcIso(local, this.offsetAt) : null;
-    const at = iso ? new Date(iso) : new Date();
-    return this.copy.schedule.timeZoneHint(this.zoneName, offsetLabel(this.offsetAt(at)));
-  }
-
-  /** "Sends at HH:MM UTC" for the entered date (that date's own offset); empty until the input is a valid date-time. */
-  utcHintFor(local: string | undefined): string {
-    const iso = local ? localInputToUtcIso(local, this.offsetAt) : null;
-    return iso ? this.copy.schedule.sendsAtUtc(utcClock(iso)) : '';
+  /** Local equivalent of the UTC wall-clock typed by the admin (that instant's own offset, DST aware); empty until valid. */
+  localEquivalentFor(utcInput: string | undefined): string {
+    const iso = utcInput ? localInputToUtcIso(utcInput, UTC_OFFSET) : null;
+    if (!iso) return '';
+    const at = new Date(iso);
+    const offset = this.offsetAt(at);
+    const shifted = new Date(at.getTime() - offset * 60_000);
+    return this.copy.schedule.localEquivalent(formatUtc(shifted), this.zoneName, offsetLabel(offset));
   }
 
   ngOnInit(): void {
@@ -209,10 +210,10 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
     if (c.status !== 'SENT' || !c.sent_at) return false;
     return Date.parse(c.sent_at) < Date.parse(c.scheduled_at);
   }
-  /** Scheduled instant in the admin's local time. */
+  /** Instant shown in UTC with a " UTC" suffix (the reference time everywhere in this page). */
   displayDate(iso: string): string {
     const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? iso : d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    return Number.isNaN(d.getTime()) ? iso : `${formatUtc(d)} UTC`;
   }
 
   // Row state ---------------------------------------------------------------------------------
@@ -282,7 +283,7 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
   // Edit date ---------------------------------------------------------------------------------
   startEdit(c: ReminderCampaignView): void {
     this.editError.set(null);
-    this.editing.set({ id: c.id, value: utcIsoToLocalInput(c.scheduled_at, this.offsetAt) });
+    this.editing.set({ id: c.id, value: utcIsoToLocalInput(c.scheduled_at, UTC_OFFSET) });
   }
   setEditValue(value: string): void {
     this.editing.update(e => (e ? { ...e, value } : e));
@@ -396,7 +397,7 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
       onError(this.copy.schedule.required);
       return null;
     }
-    const iso = localInputToUtcIso(local, this.offsetAt);
+    const iso = localInputToUtcIso(local, UTC_OFFSET);
     if (!iso) {
       onError(this.copy.schedule.required);
       return null;
