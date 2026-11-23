@@ -1,8 +1,8 @@
 {
   "years": {
     "2026": {
-      "revision": 35,
-      "content_hash": "b2258ec2828bb8af2122472fae08536483076062ffae59d99274d9e013a42f78"
+      "revision": 36,
+      "content_hash": "832519d54253d42acdd8ed717ffecb576f9314ac3f952d8d437aba8689780a90"
     }
   },
   "keys": [
@@ -91,6 +91,7 @@
     "field:innovation_use.projection_2030.organizations",
     "field:innovation_use.projection_2030.yet_to_be_determined",
     "field:innovation_use.use_level.innovation_use_level",
+    "field:innovation_use.use_level.innovation_use_level_number",
     "field:innovation_use.use_level.readiness_level_explanation",
     "field:ipsr_step_1.countries",
     "field:ipsr_step_1.eoi_outcomes",
@@ -116,8 +117,10 @@
     "field:ipsr_step_3.core.current_use_level",
     "field:ipsr_step_3.core.readiness_evidences",
     "field:ipsr_step_3.core.readiness_level",
+    "field:ipsr_step_3.core.readiness_level_number",
     "field:ipsr_step_3.core.use_evidences",
     "field:ipsr_step_3.core.use_level",
+    "field:ipsr_step_3.core.use_level_number",
     "field:ipsr_step_4.bilateral_investment",
     "field:ipsr_step_4.initiative_investment",
     "field:ipsr_step_4.partner_investment",
@@ -353,6 +356,7 @@
     "subfield:ipsr_step_3.complementary_components/readiness_evidences/nutrition_related",
     "subfield:ipsr_step_3.complementary_components/readiness_evidences/poverty_related",
     "subfield:ipsr_step_3.complementary_components/readiness_level",
+    "subfield:ipsr_step_3.complementary_components/readiness_level_number",
     "subfield:ipsr_step_3.complementary_components/use_evidences",
     "subfield:ipsr_step_3.complementary_components/use_evidences/climate_related",
     "subfield:ipsr_step_3.complementary_components/use_evidences/description",
@@ -367,6 +371,7 @@
     "subfield:ipsr_step_3.complementary_components/use_evidences/nutrition_related",
     "subfield:ipsr_step_3.complementary_components/use_evidences/poverty_related",
     "subfield:ipsr_step_3.complementary_components/use_level",
+    "subfield:ipsr_step_3.complementary_components/use_level_number",
     "subfield:ipsr_step_3.core.current_use.actors/actor_type",
     "subfield:ipsr_step_3.core.current_use.actors/evidence_link",
     "subfield:ipsr_step_3.core.current_use.actors/how_many",

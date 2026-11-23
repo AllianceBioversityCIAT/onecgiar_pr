@@ -130,7 +130,7 @@ const EXPECTED: Record<string, Rule> = {
   'innovation_use.use_level.readiness_level_explanation': {
     required: false,
     required_when: inn(
-      'innovation_use.use_level.innovation_use_level',
+      'innovation_use.use_level.innovation_use_level_number',
       [5, 6, 7, 8, 9],
     ),
   },

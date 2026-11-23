@@ -14,8 +14,8 @@ const unregistered = (fields: CatalogField[]) =>
   [...new Set(sourcesOf(fields))].filter((s) => !(s in LOOKUP_SOURCES));
 
 describe('lookup source registry (P-13)', () => {
-  it('every source of the real catalog is registered (7 distinct)', () => {
-    expect(new Set(sourcesOf(CATALOG_FIELDS)).size).toBe(7);
+  it('every source of the real catalog is registered (9 distinct)', () => {
+    expect(new Set(sourcesOf(CATALOG_FIELDS)).size).toBe(9);
     expect(unregistered(CATALOG_FIELDS)).toEqual([]);
   });
 
