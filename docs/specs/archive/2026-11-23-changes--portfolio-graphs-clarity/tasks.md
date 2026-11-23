@@ -5,7 +5,7 @@
 - **Module / feature:** results-framework-reporting / Portfolio Overview (INC-168764)
 - **Linked spec:** `requirements.md` + `design.md` (same folder)
 - **Owner / driver:** Santiago Sanchez
-- **Status:** not-started (spec approved 2026-11-23)
+- **Status:** done, archived 2026-11-23
 - **Budget (design §11):** 3 tasks · ~260 LOC · 4 review rounds
 
 ## 2. Pre-flight checklist
