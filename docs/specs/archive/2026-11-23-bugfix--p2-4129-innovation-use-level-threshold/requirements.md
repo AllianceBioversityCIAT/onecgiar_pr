@@ -32,7 +32,7 @@ Current behavior (cited in `proposal.md` §3, §9):
 - Save keeps only the row id (`innovation-use.service.ts:123-140`) and gates on `>= InnovationUseLevel.Level_6` at `:215`, `:254`, `:299`, `:342`. Below the gate it clears the explanation, sets `has_scaling_studies = false` and deactivates the study URLs (`:226-233`).
 - Read: `getScalingStudiesUrls` returns `[]` when the stored id `< Level_6` (`:1017`).
 - The form decides on the level number: explanation 5–9, scaling answer ≥ 5, links ≥ 6 (`innovation-use-form.component.html:439`, `:453`, `:465`).
-- Row-id layout per environment: `UNVERIFIED — confirm at source before relying on it` (test DB layout from a 2026-10-09 read; prod never read).
+- Row-id layout per environment: verified 2026-11-23 by the user (`SELECT id, level FROM clarisa_innovation_use_levels`, screenshots in `/akili-validate`): PRPROD ids 1–10 = levels 0–9 (id = level + 1, no repeats); PRTEST ids 1–10 = 0–9 plus 13–20 = 2–9.
 
 In scope: `onecgiar-pr-server/src/api/results-framework-reporting/innovation-use/**`.
 Out of scope: client, legacy `summary` route, readiness enum (`InnovationReadinessLevelByLevel`), validation function, existing stored data.
