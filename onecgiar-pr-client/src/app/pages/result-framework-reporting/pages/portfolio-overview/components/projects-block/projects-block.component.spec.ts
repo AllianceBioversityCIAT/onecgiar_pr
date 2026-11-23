@@ -166,6 +166,20 @@ describe('PortfolioProjectsBlockComponent (WPS-T-4)', () => {
       expect(q(f, '[data-testid="projects-tab-center"]')).not.toBeNull();
     });
 
+    // @akili-spec changes/portfolio-graphs-clarity (PGC-T-4, Scenarios 6.1 and 6.2)
+    it('subtitle follows the active tab: rule text on By P/A, Center text on By Center', async () => {
+      const f = create();
+      await answer(f, pending()[0]);
+      const sel = '[data-testid="projects-subtitle"]';
+      expect(text(q(f, sel))).toBe(copy.subtitle(2026));
+      click(f, 'projects-tab-center');
+      expect(text(q(f, sel))).toBe(copy.centerSubtitle(2026));
+      expect(text(q(f, sel))).toBe('Projects mapped to a Program or Accelerator for 2026, grouped by the Center that leads each project.');
+      expect(text(q(f, sel))).not.toContain('Per Program/Accelerator');
+      click(f, 'projects-tab-program');
+      expect(text(q(f, sel))).toBe(copy.subtitle(2026));
+    });
+
     // @akili-spec bugfix/inc-168459-portfolio-overview-data (POD-T-2)
     it('binds the chart height to the row count (2 rows -> 320px floor; 13 rows -> taller)', async () => {
       const f = create();

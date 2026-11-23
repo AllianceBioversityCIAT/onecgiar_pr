@@ -121,6 +121,7 @@ export const PORTFOLIO_OVERVIEW_COPY = {
     title: 'W3/Bilateral projects',
     subtitle: (year: string | number) =>
       `Projects mapped to a Program or Accelerator for ${year}. Per Program/Accelerator, "With W3/Bilateral results" counts the projects whose W3/Bilateral results name it as primary or contributing.`,
+    centerSubtitle: (year: string | number) => `Projects mapped to a Program or Accelerator for ${year}, grouped by the Center that leads each project.`,
     kpiMapped: 'Mapped projects',
     kpiWithBilateral: 'With W3/Bilateral results',
     kpiW1w2: 'Contributing to W1/W2',

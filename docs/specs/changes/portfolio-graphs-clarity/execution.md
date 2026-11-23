@@ -186,3 +186,44 @@ Open items:
 - PRTest timing of the facts query (Reviewer PGC-T-1 perf advisory; Q1 run time not reported).
 - PGC-T-1 advisories: wrong old-rule numbers in the service-spec fixture comment; misleading repository-spec comment (readability only).
 - Rollout (tasks.md §6): qa-dev → performance-refactor (PRTest) → staging → master; compare 2 P/As against the HITL table; reply on INC-168764; `codegraph sync` after merge.
+
+## PRTest check — 2026-11-23 (owner, screenshots in chat)
+
+Deploy of `performance-refactor` `365225a96`. `GET …/portfolio/bilateral-projects?versionId=36` (Reporting 2026):
+- **Timing:** 216 ms total, 184 ms waiting for server → the per-project correlated sub-select is fine on PRTest (closes the PGC-T-1 perf advisory for PRTest data volume).
+- **Totals:** mapped 991, withBilateralResults 133, w1w2Contributors 9, unmappedWithBilateralResults 0 → unchanged vs the HITL query (PGC-R-5).
+- **By P/A chart, With W3/Bilateral:** SP01 36, SP02 23, SP03 15, SP04 24, SP05 5, SP06 15, SP07 10, SP08 6, SP09 17, SP10 6, SP11 6, SP12 6, SP13 11 → all 13 equal the HITL `new_with_w3` column (PGC-R-4 end to end).
+- **Colours:** Mapped purple, With W3/Bilateral green, W1/W2 orange with stripes; legend swatches match the bars; no grey/black (the canvas reads the resolved token values, not `var()`; closes the PGC-T-2 reliability advisory).
+- **Caption:** new `multiProgramCaption` text shown under the chart (PGC-R-6).
+- Pending from the step list: subtitle text, By Center tab (colours + subtitle wording), Typology key line and Center footnote, dark mode.
+- **Leader browser check (Claude in Chrome, PRTest, read-only, 2026-11-23):**
+  - Typology, By Program / Accelerator tab: `typology-bar-key-single` = "A row with only one bar has results in only one of the two groups."; no `typology-center-note` (PGC-R-1, R-2 hidden on P/A tab).
+  - Typology, By Center (W3/Bilateral) tab: key line still present; `typology-center-note` = the exact PGC-R-2 text.
+  - Projects subtitle (both tabs) = the exact design §8 text. Shown on the By Center tab too (block header); owner to judge wording — not a spec deviation.
+  - Projects, By Center tab: purple / green / orange-striped bars and matching legend (screenshot).
+  - Dark mode not checked (toggling the theme writes a stored preference; left to the owner).
+
+### PGC-T-4 — Projects subtitle per tab (amendment 2026-11-23)
+
+- **Status:** `[x]` PASS
+- **Date:** 2026-11-23
+- **Origin / decisions:** PRTest browser check showed the per-P/A rule subtitle on the By Center tab too. Owner approved the Center text ("dale, hazlo con ese texto"). `/akili-quick` refused by its Triviality Gate (adds a template conditional), so the Leader amended this spec instead: `requirements.md` Scenario 6.2 (new), `design.md` §8 `centerSubtitle(year)` line (new), `tasks.md` PGC-T-4 (new). Meaning of approved requirements unchanged (6.1 already scoped the rule text to the By P/A tab).
+- **Attempts:** 1 · **Skills:** `angular-developer` · effort low
+
+#### Attempt 1
+
+- **Files changed:** `onecgiar-pr-client/src/app/internationalization/portfolio-overview.copy.ts` (`projects.centerSubtitle`), `.../projects-block/projects-block.component.html` (subtitle ternary on the existing `dimension()` signal), `projects-block.component.spec.ts` (new test). No `.ts` change; guide has no projects-subtitle line, left as is.
+- **Red run / falsifier (verbatim, template reverted to unconditional subtitle):**
+  ```
+  ● PortfolioProjectsBlockComponent (WPS-T-4) › ready (WPS-R-8) › subtitle follows the active tab: rule text on By P/A, Center text on By Center
+    Expected: "Projects mapped to a Program or Accelerator for 2026, grouped by the Center that leads each project."
+    Received: "Projects mapped to a Program or Accelerator for 2026. Per Program/Accelerator, \"With W3/Bilateral results\" counts the projects whose W3/Bilateral results name it as primary or contributing."
+    > 176 |       expect(text(q(f, sel))).toBe(copy.centerSubtitle(2026));
+  ```
+- **Issue (process):** the Implementer's red run executed the **whole client suite** unscoped (`--testPathPatterns` not honored, output piped through `head`): 706 suites, ~7 min, 1 failed (the new test, expected) / 15,414 passed. Breaks the machine rule "always scoped Jest". No overlap with another run; no code impact.
+- **Evidence re-run (Leader inline, non-author):** `npx tsc -p tsconfig.app.json --noEmit` exit 0; `npx jest --maxWorkers=2 --findRelatedTests <copy.ts, projects-block.component.ts, its spec> --silent --reporters=summary --no-coverage` → `Test Suites: 38 passed, 38 total · Tests: 1289 passed, 1289 total`; eslint clean. **VERIFIED**.
+- **Reviewer verdict:** `PASS` — conforms to amended Scenario 6.2, design §8, tasks PGC-T-4; `dimension() === 'center'` matches the literal the Center tab sets (`setDimension`, `hlmTabsTrigger="center"`); test renders and clicks real tabs (disqualifier not hit). No issues.
+- **runtime events:** none
+- **spawns:** implementer 25 tool uses, 96,750 tokens, ended complete; reviewer not reported by host, ended complete
+- **Running totals:** tasks 4/4 (one amendment task) · LOC ~465 · review rounds 4/4.
+- **Open:** PRTest look on both tabs after deploy.

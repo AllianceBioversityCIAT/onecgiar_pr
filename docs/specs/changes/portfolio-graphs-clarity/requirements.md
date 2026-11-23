@@ -159,6 +159,13 @@ The projects block SHALL explain in its subtitle and caption how "With W3/Bilate
 - THEN the subtitle says projects are mapped to a P/A in CLARISA and that, per P/A, "With W3/Bilateral results" counts projects whose W3/Bilateral results name it as primary or contributing P/A
 - AND the caption says a P/A can show more projects with results than mapped projects, and that bars add up to more than the total
 
+#### Scenario 6.2 — Center tab subtitle (amended 2026-11-23, owner, after the PRTest check)
+
+- GIVEN the By Center tab of the projects block is shown
+- WHEN the user reads the block header
+- THEN the subtitle reads: "Projects mapped to a Program or Accelerator for {year}, grouped by the Center that leads each project."
+- BUT it must NOT show the per-P/A rule sentence of Scenario 6.1, which stays on the By P/A tab only
+
 ## 7. Non-Functional Requirements
 
 | ID | Requirement |
