@@ -172,6 +172,30 @@ describe('CustomizedAlertsFsService', () => {
     });
   });
 
+  describe('show - detached removal (P2-3960 BSA-R-4)', () => {
+    it('removing a detached alert on animationend does not throw', () => {
+      document.body.innerHTML = '<div id="host"></div>';
+      const errors: unknown[] = [];
+      const onError = (e: ErrorEvent) => {
+        errors.push(e.error);
+        e.preventDefault();
+      };
+      window.addEventListener('error', onError);
+      try {
+        service.show({ id: 'gone', title: 'T', status: 'error', querySelector: '#host', position: 'beforeend' });
+        service.showed = false;
+        const alert = document.getElementById('gone');
+        alert.remove();
+
+        alert.dispatchEvent(new Event('animationend'));
+      } finally {
+        window.removeEventListener('error', onError);
+      }
+
+      expect(errors).toEqual([]);
+    });
+  });
+
   describe('hide', () => {
     it('should set showed to false', () => {
       service.showed = true;
