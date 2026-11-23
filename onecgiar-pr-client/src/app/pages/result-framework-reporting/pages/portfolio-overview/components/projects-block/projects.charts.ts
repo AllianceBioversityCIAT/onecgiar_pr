@@ -1,7 +1,7 @@
 // @akili-spec changes/portfolio-overview-revamp/w3-projects-section (WPS-T-3)
 //
-// Pure builders: no DOM, no injection. Colours arrive as resolved tokens (ramp[0..2] = --pr-chart-1/2/3,
-// the page's palette path in `chart-tokens.util`); `--pr-chart-4` is excluded (too light, design 6.3).
+// Pure builders: no DOM, no injection. Text and border colours arrive as resolved tokens; the three series colours
+// arrive as `ProjectsSeriesColours` (PGC-DD-5), so this chart no longer reads `tokens.ramp`.
 import type { EChartsOption, VizChartTableModel } from '../../../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
 import type { ProjectCounts } from '../../../../../../shared/interfaces/portfolio-bilateral-projects.interface';
 import type { ResolvedChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
@@ -15,6 +15,13 @@ export interface ProjectsChartLabels {
   caption: string;
   firstColumn: string;
   totalLabel: string;
+}
+
+/** Series fills the caller resolves from design tokens: three different hues (PGC-R-3, PGC-DD-5). */
+export interface ProjectsSeriesColours {
+  mapped: string;
+  withBilateral: string;
+  w1w2: string;
 }
 
 const ESC: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -34,7 +41,12 @@ export function projectsChartHeight(rowCount: number): number {
 
 // @akili-spec bugfix/inc-168459-portfolio-overview-data (POD-T-2, POD-DD-2)
 /** Horizontal grouped (side by side, never stacked) bars: mapped, with W3/Bilateral, W1/W2. Value label to the right of each bar. */
-export function buildProjectsOption(rows: readonly ProjectsViewRow[], tokens: ResolvedChartTokens, labels: ProjectsChartLabels): EChartsOption {
+export function buildProjectsOption(
+  rows: readonly ProjectsViewRow[],
+  tokens: ResolvedChartTokens,
+  labels: ProjectsChartLabels,
+  colours: ProjectsSeriesColours
+): EChartsOption {
   // `decal` (ECharts 6 DecalObject) paints diagonal stripes; colour left to ECharts' default so no literal lives here.
   // The legend swatch reads the series itemStyle, so it carries the stripe too.
   const stripes = { symbol: 'rect', rotation: Math.PI / 4, dashArrayX: [1, 0], dashArrayY: [3, 4] };
@@ -73,9 +85,9 @@ export function buildProjectsOption(rows: readonly ProjectsViewRow[], tokens: Re
       axisLabel: { interval: 0, width: AXIS_LABEL_WIDTH, overflow: 'break', color: tokens.textSecondary }
     },
     series: [
-      series(labels.mapped, tokens.ramp[0], r => r.mapped),
-      series(labels.withBilateral, tokens.ramp[2], r => r.withBilateralResults),
-      series(labels.w1w2, tokens.ramp[1], r => r.w1w2Contributors, stripes)
+      series(labels.mapped, colours.mapped, r => r.mapped),
+      series(labels.withBilateral, colours.withBilateral, r => r.withBilateralResults),
+      series(labels.w1w2, colours.w1w2, r => r.w1w2Contributors, stripes)
     ]
   } as EChartsOption;
 }

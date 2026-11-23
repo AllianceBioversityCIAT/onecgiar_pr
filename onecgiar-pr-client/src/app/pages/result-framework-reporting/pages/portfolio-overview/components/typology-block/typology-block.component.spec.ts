@@ -299,7 +299,19 @@ describe('PortfolioTypologyBlockComponent (TBC-T-4)', () => {
       expect(labels).toEqual(['CIAT', 'ILRI', copy.typologyCenterChart.noProgramLabel]);
       expect(copy.typologyCenterChart.noProgramLabel).toBe('No lead Center');
       expect(q(f, '[data-testid="typology-center-note"]')!.textContent!.trim()).toBe(copy.centerNote);
+      expect(q(f, '[data-testid="typology-center-note"]')!.textContent!.trim()).toBe(
+        'Each result is counted once, under its lead Center. The Center filter also keeps results where that Center only contributes, so other Centers can appear in this chart while it is on.'
+      );
       expect(el(f).textContent).not.toContain('ZZZ-W1');
+    });
+
+    it('PGC-R-1 the single-bar key line renders from the copy on both tabs', () => {
+      const f = create(centerRows());
+      const text = () => q(f, '[data-testid="typology-bar-key-single"]')?.textContent?.trim();
+      expect(text()).toBe(copy.barKey.singleBar);
+      expect(copy.barKey.singleBar).toBe('A row with only one bar has results in only one of the two groups.');
+      openCenter(f);
+      expect(text()).toBe(copy.barKey.singleBar);
     });
 
     it('the Center tab is view-only: no table action, and a chart click never calls setSelection', () => {
