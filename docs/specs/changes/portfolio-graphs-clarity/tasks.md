@@ -78,6 +78,23 @@
 - **Consumers:** `typology-block.component.spec.ts` (`centerNote` assertion at line ~301), portfolio-overview `CLAUDE.md`.
 - **Definition of done:** specs green; guide updated; red quoted.
 
+### [x] PGC-T-4 — Projects subtitle per tab (amendment 2026-11-23)
+
+- **Type:** client
+- **Origin:** PRTest check 2026-11-23 showed the per-P/A rule sentence also on the By Center tab. Owner approved the Center text and doing it inside this spec (a `/akili-quick` was refused by its gate: it adds a template conditional).
+- **Description:** add `projects.centerSubtitle(year)` with the Scenario 6.2 text; the projects-block header renders `subtitle(year)` on the By P/A tab and `centerSubtitle(year)` on the By Center tab.
+- **Implements:** PGC-R-6 (6.1, 6.2), PGC-NFR-3
+- **Files:** `portfolio-overview.copy.ts`, `projects-block.component.html` (+ `projects-block.component.spec.ts`; `.ts` only if the active-tab signal is not reachable from the template)
+- **Depends on:** PGC-T-2 · **Estimate:** XS · **Skills:** `angular-developer`
+- **Review:** `full` (template conditional; changes what a user sees per tab)
+- **Scope clauses owned:** 6.1 P/A tab keeps the rule subtitle · 6.2 Center tab shows the Center text **BUT** not the rule sentence
+- **Verification:** component spec renders the block, asserts the subtitle equals `copy.subtitle(year)` on the By P/A tab and `copy.centerSubtitle(year)` (and the literal string) after switching to By Center, and that the Center subtitle does not contain "Per Program/Accelerator". Same Jest/eslint commands as T-2; `npx tsc -p tsconfig.app.json --noEmit`.
+- **Falsifier:** render `subtitle` unconditionally → the Center-tab assertion goes red.
+- **Red run:** predicted greenfield (`centerSubtitle` does not exist); the executed red is quoted.
+- **Disqualifier:** asserting the copy function against itself without rendering is no evidence.
+- **Consumers:** `projects-block.component.spec.ts`; portfolio-overview `CLAUDE.md` (one line, if it describes the subtitle).
+- **Definition of done:** spec green, red quoted, PRTest look on both tabs.
+
 ## 4. Dependency graph
 
 PGC-T-1 → PGC-T-2 → PGC-T-3 (T-3 only waits on T-2 because both edit the same copy file).

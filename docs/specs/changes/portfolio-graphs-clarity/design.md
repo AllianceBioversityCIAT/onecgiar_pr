@@ -71,6 +71,7 @@ Backend route: lead `nestjs-expert` (repository + service in an existing module;
 - **Projects colours:** `projects-block.component.ts` resolves `{ mapped, withBilateral, w1w2 }` from `--pr-chart-1`, `--pr-color-green-600`, `--pr-color-orange-700` with the same `getComputedStyle(...).getPropertyValue(...)` + `var(token)` fallback used in `typology-block.component.ts:42-51`. `buildProjectsOption(rows, tokens, labels, colours)` uses them; `tokens` still supplies text and border colours. W1/W2 keeps the stripe decal as a second cue (green vs orange is a weak pair for red-green colour blindness).
 - **Projects copy:**
   - `subtitle(year)`: "Projects mapped to a Program or Accelerator for {year}. Per Program/Accelerator, \"With W3/Bilateral results\" counts the projects whose W3/Bilateral results name it as primary or contributing."
+  - `centerSubtitle(year)` (amended 2026-11-23, PGC-T-4): "Projects mapped to a Program or Accelerator for {year}, grouped by the Center that leads each project." The block header shows `subtitle` on the By P/A tab and `centerSubtitle` on the By Center tab.
   - `multiProgramCaption`: "A project counts under every P/A it is mapped to and every P/A its results name, so a P/A can show more projects with results than mapped projects, and the bars add up to more than the total."
 
 ## 9. Shared Contracts
