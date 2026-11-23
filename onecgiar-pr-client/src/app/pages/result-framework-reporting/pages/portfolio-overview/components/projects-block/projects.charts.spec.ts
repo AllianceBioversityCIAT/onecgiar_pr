@@ -1,18 +1,19 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ResolvedChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
-import { buildProjectsOption, buildProjectsTable, ProjectsChartLabels, projectsChartHeight } from './projects.charts';
+import { buildProjectsOption, buildProjectsTable, ProjectsChartLabels, projectsChartHeight, ProjectsSeriesColours } from './projects.charts';
 import { ProjectsViewRow } from './projects.format';
 
 const tokens: ResolvedChartTokens = { ramp: ['c1', 'c2', 'c3', 'c4'], primary: 'p', primaryStrong: 'ps', bilateralMuted: 'bm', textSecondary: 'ts', border: 'b' };
 const labels: ProjectsChartLabels = { mapped: 'Mapped', withBilateral: 'With W3', w1w2: 'W1/W2', caption: 'Projects', firstColumn: 'P/A', totalLabel: 'Total' };
+const colours: ProjectsSeriesColours = { mapped: 'm-col', withBilateral: 'w-col', w1w2: 'x-col' };
 const rows: ProjectsViewRow[] = [
   { code: 'SP01', label: 'SP01 · One', fullLabel: 'SP01 · One Program', name: 'One Program', mapped: 30, withBilateralResults: 17, w1w2Contributors: 1 },
   { code: 'SP02', label: 'SP02', fullLabel: 'SP02 · Two Program', name: 'Two Program', mapped: 0, withBilateralResults: 0, w1w2Contributors: 0 }
 ];
 
 describe('projects.charts', () => {
-  const option: any = buildProjectsOption(rows, tokens, labels);
+  const option: any = buildProjectsOption(rows, tokens, labels, colours);
 
   it('has exactly 3 bar series and none is stacked', () => {
     expect(option.series).toHaveLength(3);
@@ -21,10 +22,16 @@ describe('projects.charts', () => {
       expect('stack' in s).toBe(false);
     }
   });
-  it('paints Mapped ramp[0], With W3 ramp[2], W1/W2 ramp[1] and names them from copy', () => {
-    expect(option.series.map((s: any) => s.itemStyle.color)).toEqual(['c1', 'c3', 'c2']);
-    expect(option.series.map((s: any) => s.color)).toEqual(['c1', 'c3', 'c2']);
+  it('paints the three series with the colours passed in, in order, and names them from copy', () => {
+    expect(option.series.map((s: any) => s.itemStyle.color)).toEqual(['m-col', 'w-col', 'x-col']);
+    expect(option.series.map((s: any) => s.color)).toEqual(['m-col', 'w-col', 'x-col']);
     expect(option.series.map((s: any) => s.name)).toEqual(['Mapped', 'With W3', 'W1/W2']);
+  });
+  it('uses no tokens.ramp value for any series colour (PGC-R-3)', () => {
+    for (const s of option.series) {
+      expect(tokens.ramp).not.toContain(s.itemStyle.color);
+      expect(tokens.ramp).not.toContain(s.color);
+    }
   });
   it('gives only the W1/W2 series a diagonal-stripe decal, with no colour literal', () => {
     expect(option.series.map((s: any) => !!s.itemStyle.decal)).toEqual([false, false, true]);
@@ -71,7 +78,7 @@ describe('projects.charts', () => {
     expect(out).toContain('W1/W2');
   });
   it('escapes HTML in the tooltip title', () => {
-    const o: any = buildProjectsOption([{ ...rows[0], fullLabel: 'X <b>y</b>' }], tokens, labels);
+    const o: any = buildProjectsOption([{ ...rows[0], fullLabel: 'X <b>y</b>' }], tokens, labels, colours);
     expect(o.tooltip.formatter([{ dataIndex: 0, seriesName: 'Mapped', value: 1, marker: '' }])).toContain('&lt;b&gt;y&lt;/b&gt;');
   });
   it('projectsChartHeight grows with the row count and never goes under 320 px', () => {

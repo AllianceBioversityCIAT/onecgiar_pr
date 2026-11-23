@@ -12,7 +12,7 @@ export class BilateralProjectCountsDto {
 
   @ApiProperty({
     description:
-      'Mapped projects with at least one active W3 (bilateral) result of the requested version, any status except Discontinued. Never greater than mapped.',
+      'Mapped projects with at least one active W3 (bilateral) result of the requested version, any status except Discontinued. In totals and by Center, never greater than mapped. On a by-Program/Accelerator row it counts the mapped projects whose qualifying W3 results name that P/A (primary, or contributing as role 2 or request status Pending, Accepted or Draft), so it can exceed the mapped count of that row.',
   })
   withBilateralResults: number;
 
