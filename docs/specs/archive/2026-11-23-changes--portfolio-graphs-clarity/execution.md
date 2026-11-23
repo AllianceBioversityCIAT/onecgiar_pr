@@ -227,3 +227,4 @@ Deploy of `performance-refactor` `365225a96`. `GET …/portfolio/bilateral-proje
 - **spawns:** implementer 25 tool uses, 96,750 tokens, ended complete; reviewer not reported by host, ended complete
 - **Running totals:** tasks 4/4 (one amendment task) · LOC ~465 · review rounds 4/4.
 - **Open:** PRTest look on both tabs after deploy.
+- **PGC-T-4 PRTest check (Leader, Claude in Chrome, read-only, 2026-11-23, perf `c7a1e7928`):** `projects-subtitle` on By P/A = the rule sentence (6.1); after clicking By Center = "Projects mapped to a Program or Accelerator for 2026, grouped by the Center that leads each project." (6.2); back to By P/A = rule sentence again. DoD met.
