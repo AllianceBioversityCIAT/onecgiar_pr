@@ -11,7 +11,7 @@
 
 - [x] `requirements.md` approved (2026-11-23)
 - [x] `design.md` approved (2026-11-23)
-- [ ] P-5: user runs `SELECT id, level FROM clarisa_innovation_use_levels` on test + prod (impact only, non-blocking; same check as P2-3939 P-5)
+- [x] P-5 (done 2026-11-23 — prod: no repeated rows; test: 13–20 repeat 2–9): user runs `SELECT id, level FROM clarisa_innovation_use_levels` on test + prod (impact only, non-blocking; same check as P2-3939 P-5)
 - [x] No migration (ULT-NFR-1)
 - [x] Baseline observed 2026-11-23 at `868a115a3`: `npx jest src/api/results-framework-reporting/innovation-use --silent --reporters=summary --forceExit` → `Test Suites: 9 passed, 9 total · Tests: 99 passed, 99 total`
 

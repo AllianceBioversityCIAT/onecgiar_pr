@@ -77,7 +77,7 @@ Matches Lite. Tripwire: > 1 task or > 320 LOC → escalate.
 
 ## 11. Premise Ledger
 
-Count: 10 rows — 9 verified, 1 `UNVERIFIED` (High 0, Low 1).
+Count: 10 rows — 10 verified (P-5 settled at `/akili-validate`, 2026-11-23).
 Blast-radius triggers: `live-path` (form and bilateral save, GET read), `shared-state` (the level value read by 5 gates and 2 siblings), `consumer` (stored field / response values) — all fired, rows P-6..P-8.
 
 | # | Claim | Class | Citation (as run) | Verified at | If false | Settled by |
@@ -86,11 +86,11 @@ Blast-radius triggers: `live-path` (form and bilateral save, GET read), `shared-
 | P-2 | The 5 gates compare that id/stored id with `InnovationUseLevel.Level_6` = 6 | location | `:215`, `:254`, `:299`, `:342`, `:1017`; `enum/innov-use-levels.enum.ts:8` | 868a115a3 | High — DD-2/DD-4 moot | — |
 | P-3 | `InnovUseExists` already returns the level number of the stored id | existence | `results/summary/repositories/results-innovations-use.repository.ts:222` (`ciul.level AS level`), `:244-245` (`LEFT JOIN … ON ciul.id = riu.innovation_use_level_id`) | 868a115a3 | Low — DD-4 needs one lookup by id | — |
 | P-4 | `level` is an `int` column, `id` a `bigint` | data-env | `clarisa/…/clarisa-innovation-use-level.entity.ts` (`type: 'int', name: 'level'`; `PrimaryGeneratedColumn({ type: 'bigint' })`) | 868a115a3 | Low — DD-5 already coerces | — |
-| P-5 | Row ids differ from level numbers and repeat (test: ids 1–10 = 0–9, 13–20 = 2–9) | data-env | `UNVERIFIED — confirm at source before relying on it` (secondary: `ipsr-step-3.ts` header, 2026-10-09 test read) | — | Low — fixtures stay valid (they model id ≠ level); only real-world impact changes | user (`SELECT id, level` on test + prod; P2-3939 P-5) |
+| P-5 | Row ids differ from level numbers and repeat (test: ids 1–10 = 0–9, 13–20 = 2–9) | data-env | verified 2026-11-23 by the user (`SELECT id, level FROM clarisa_innovation_use_levels`, screenshots in `/akili-validate`): PRPROD ids 1–10 = levels 0–9 (id = level + 1, no repeats); PRTEST ids 1–10 = 0–9 plus 13–20 = 2–9 | 2026-11-23 (DB) | Low — fixtures stay valid (they model id ≠ level); only real-world impact changes | user (`SELECT id, level` on test + prod; P2-3939 P-5) |
 | P-6 | **live-path**: form save → `PATCH /v2/api/innovation-use/create/result/:id` → `saveInnovationUse`; read → `GET …/get/result/:id` → `getInnovationUse` → `getScalingStudiesUrls`; bilateral → `saveInnovationUse` | live-path | client `innovation-use-info.component.ts:525` → `results-api.service.ts:593-596` (`PATCH_innovationUseP25`), `:629-631`; `innovation-use.controller.ts:25-30`, `:39-40`; `innovation-use.service.ts:69`, `:843`, `:907`; `bilateral/handlers/innovation-use.handler.ts:152` | 868a115a3 | High — patch off-path | — |
 | P-7 | **shared-state**: the level is read by the 5 gates above. Siblings: `bilateral.service.ts:3683` (already the number); readiness gates on row ids `summary.service.ts:875,1096`, `bilateral.service.ts:2812` (`InnovationReadinessLevelByLevel` = ids 11–20); IPSR step 1/3 saves have no `Level_6` gate | shared-state | `grep -rn "InnovationUseLevel\.\|InnovationReadinessLevelByLevel\." src/api --include=*.ts` (non-spec) → the sites listed; `innovation_dev/enum/innov-readiness-level.enum.ts:1-12` | 868a115a3 | Low — a reader missed | — |
 | P-8 | **consumer**: readers of `readiness_level_explanation` / `has_scaling_studies` / `scaling_studies_urls` from this service are the P25 form and the bilateral review; module specs stub `findOne` with `{ id, level }` | consumer | `grep -rln "getInnovationUse\|saveInnovationUse" src/api --include=*.ts` → controller, bilateral handler, MDS validator (legacy `summary`), IPSR step 1/3 (own `saveInnovationUse`); `innovation-use.service.use-level.spec.ts:27` (`findOne → { id: 3, level: '3' }`) | 868a115a3 | Low — an extra spec to update | — |
 | P-9 | The form thresholds are level numbers: explanation 5–9, answer ≥ 5, links ≥ 6 | location | `innovation-use-form.component.html:439`, `:453`, `:465`; `innovation-use-form.component.ts:796-804` (`getUseLevelIndex` returns `selected.level`) | 868a115a3 | High — DD-2 thresholds wrong | — |
 | P-10 | The bilateral handler sends the level number and no scaling studies | location | `bilateral/handlers/innovation-use.handler.ts:100-106` | 868a115a3 | Low — DD-2 reversion challenge revisited | — |
 
-Hand-off: P-5 → user (non-blocking); P-8 → `Consumers` of ULT-T-1.
+Hand-off: P-5 → user (settled 2026-11-23); P-8 → `Consumers` of ULT-T-1.

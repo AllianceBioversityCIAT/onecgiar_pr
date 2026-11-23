@@ -29,7 +29,7 @@ Make the P25 Innovation Use save and read paths keep or drop the explanation and
 | C2 | Save gates compare that id with `InnovationUseLevel.Level_6` (= 6, a level **number**). Below the gate the explanation is set to `null`, `has_scaling_studies = false`, and the study URLs are deactivated | `:215-234` (existing row), `:254` (new row), `:299` (duplicate-entry retry), `:342` (URL sync); enum `enum/innov-use-levels.enum.ts:8` |
 | C3 | The read path hides the study URLs when the stored id `< Level_6` | `:1017` (`getScalingStudiesUrls`, called from `getInnovationUse` `:907`) |
 | C4 | The form shows the explanation for level **numbers** 5–9, the scaling-studies yes/no from 5, and the study links from 6; from the 2026 phase the scaling-studies question is hidden (P2-3535) | `onecgiar-pr-client/…/innovation-use-form.component.html:439`, `:453`, `:465`; `getUseLevelIndex()` returns `selected.level` (`innovation-use-form.component.ts:796-804`) |
-| C5 | Row ids differ from level numbers: test DB ids 1–10 = levels 0–9, ids 13–20 repeat levels 2–9 | `UNVERIFIED — confirm at source before relying on it` (secondary: `qa-catalog/definitions/sections/ipsr-step-3.ts` header, "read 2026-10-09 on the test DB"; prod never read — P2-3939 P-5) |
+| C5 | Row ids differ from level numbers: test DB ids 1–10 = levels 0–9, ids 13–20 repeat levels 2–9 | verified 2026-11-23 by the user (`SELECT id, level FROM clarisa_innovation_use_levels`, screenshots in `/akili-validate`): PRPROD ids 1–10 = levels 0–9 (id = level + 1, no repeats); PRTEST ids 1–10 = 0–9 plus 13–20 = 2–9 |
 
 **Consequences** (with the C5 layout):
 - Level 5 → id 6 → passes `>= 6`, so the explanation is kept today (it matches the form by coincidence).
@@ -84,7 +84,7 @@ Make the P25 Innovation Use save and read paths keep or drop the explanation and
 ### Observed Symptom
 For results whose level is stored under a row id ≥ 6 that holds a level below 5 (the repeated rows), the explanation and the scaling studies are saved and returned although the form hides them. The decision also changes with the environment's id layout.
 
-**How likely is it today (honest scope):** on the save path, `findOne({ where: { level } })` has no `order`. It most likely returns the first block (id = level + 1), where `id >= 6` ⇔ `level >= 5`, so the explanation threshold works by coincidence. The defect bites when (a) `findOne` returns a repeated row, (b) another writer stored a repeated id (the legacy `summary` route writes `innovation_use_level_id` as sent, `summary.service.ts:264-276` area), or (c) an environment has a different id layout. The read gate `:1017` then misreads those rows. `UNVERIFIED — confirm at source before relying on it` whether such rows exist today (OQ-1). The fix is preventive and environment-proofing more than a fix for a widely visible failure.
+**How likely is it today (honest scope):** on the save path, `findOne({ where: { level } })` has no `order`. It most likely returns the first block (id = level + 1), where `id >= 6` ⇔ `level >= 5`, so the explanation threshold works by coincidence. The defect bites when (a) `findOne` returns a repeated row, (b) another writer stored a repeated id (the legacy `summary` route writes `innovation_use_level_id` as sent, `summary.service.ts:264-276` area), or (c) an environment has a different id layout. The read gate `:1017` then misreads those rows. Whether such rows exist (OQ-1) was answered 2026-11-23: only PRTEST has them (13–20); PRPROD is id = level + 1. The fix is preventive and environment-proofing more than a fix for a widely visible failure.
 
 ### Reproduction Steps
 1. On an environment with repeated rows (test: id 13 = level 2), save a P25 Innovation Use result with `innovation_use_level_id: 2`, an explanation, and `has_scaling_studies: true`. Today the service resolves `findOne({ level: 2 })`, which returns the first matching row (id 3 or id 13, depending on the data).
@@ -92,7 +92,7 @@ For results whose level is stored under a row id ≥ 6 that holds a level below 
 3. Deterministic unit reproduction: stub the level repository with `{ id: 13, level: 2 }` and assert the saved row. Today it keeps the explanation.
 
 ### Root Cause (confirmed)
-`saveInnovationUse` keeps only `use_levels.id` (`:123-140`, `select: ['id']`) and compares it with an enum of level numbers (`:215`, `:254`, `:299`, `:342`). `getScalingStudiesUrls` compares the stored id the same way (`:1017`). The id and the number are different values: on the test DB ids are offset (id = level + 1) and repeated (13–20). Confirmed by reading the code and the enum; the data layout is C5 (`UNVERIFIED` for prod).
+`saveInnovationUse` keeps only `use_levels.id` (`:123-140`, `select: ['id']`) and compares it with an enum of level numbers (`:215`, `:254`, `:299`, `:342`). `getScalingStudiesUrls` compares the stored id the same way (`:1017`). The id and the number are different values: on the test DB ids are offset (id = level + 1) and repeated (13–20). Confirmed by reading the code and the enum; the data layout is C5 (verified 2026-11-23: prod has no repeated rows).
 
 ### Blast Radius
 
@@ -131,7 +131,7 @@ Route: `/akili-specify` (Lite) in **Bug Mode**, with a red-first regression test
 | R-1 | The live function `validation_innovation_use_P25` requires the explanation from 6, the form and this fix from 5 | Accepted. The function is laxer, not contradictory; QA catalog 2026.36 already follows 5 |
 | R-2 | Rows already saved under a wrong gate keep their explanation or URLs until saved again | Out of scope; the user may request a one-off data review later |
 | R-3 | `level` may come back as a string from the entity (the existing spec stubs `level: '3'`) | Compare with `Number(...)` and test both shapes |
-| OQ-1 | Does prod have repeated rows (`SELECT id, level FROM clarisa_innovation_use_levels`)? | Measures today's impact; the fix is needed either way (same open item as P2-3939 P-5) |
+| OQ-1 | Does prod have repeated rows (`SELECT id, level FROM clarisa_innovation_use_levels`)? | Measures today's impact; the fix is needed either way (same open item as P2-3939 P-5). **Answered 2026-11-23: no** — PRPROD has ids 1–10 only (id = level + 1); PRTEST has the repeated rows 13–20 |
 | OQ-2 | Should `has_scaling_studies` stay gated at all from 2026, when the form hides the question? | Proposal keeps the gate at 5 (the user's decision); the service just never receives an answer from the 2026 form |
 
 ## 13. Success Criteria
