@@ -365,3 +365,12 @@
   - Tasks: 6/6.
   - Review rounds: 7/10.
   - LOC: within the revised budget (one small task).
+
+## PRTest check after ARP-T-6 deploy — 2026-11-23
+
+Deploy: `performance-refactor` `733ff4c5e` (commits `0da2380e4`, `41b83c774` on qa-dev). Leader in Chrome, read-only, `/admin-module/reminders`:
+- Zone line: "Times are shown in UTC. Your local time zone: America/Bogota (UTC-05:00)."
+- History: every scheduled/sent time with a `UTC` suffix (e.g. "Nov 18, 2026, 11:56 AM UTC", sent "12:00 PM UTC").
+- Scheduler: label "Date and time (UTC)" and note "Please note that the selected time is in UTC.". Typing 2026-12-01 15:00 showed "= Dec 1, 2026, 10:00 AM in your local time (America/Bogota, UTC-05:00)" (correct, UTC-5); field cleared, Schedule not clicked.
+- Old copy ("The server runs in UTC", "Times are shown in your local time zone") gone.
+- Still deferred: preview drawer and `more_vert` keyboard check on a PENDING campaign — PRTest still has none (all Sent/Cancelled). Carried to the archive as a follow-up.

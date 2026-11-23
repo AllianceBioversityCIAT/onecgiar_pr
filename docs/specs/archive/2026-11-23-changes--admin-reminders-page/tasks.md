@@ -6,7 +6,7 @@
 |---|---|
 | Spec Path | `changes/admin-reminders-page` |
 | Requirements / Design | `requirements.md` (ARP-R-1…11, NFR-1…4) · `design.md` (ARP-DD-1…7, P-1…13) |
-| Status | approved 2026-11-17 |
+| Status | done, archived 2026-11-23 |
 | Budget | 5 tasks · ≈1,450 LOC · 10 review rounds (design §13, revised 2026-11-17 after the tripwire; was ≈850 / 7) |
 | Test rules | Every Jest run: `--maxWorkers=2`, scoped `--testPathPattern`, one run at a time on the machine, never the full suite. Before push: `--findRelatedTests` on the changed files |
 | Base test command | `cd onecgiar-pr-client && npx jest --maxWorkers=2 --silent --no-coverage --testPathPattern="<pattern>"` |
