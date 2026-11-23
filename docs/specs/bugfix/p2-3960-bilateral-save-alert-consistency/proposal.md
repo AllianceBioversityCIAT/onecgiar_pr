@@ -47,7 +47,7 @@ The reported flow is a W3/Bilateral **Capacity Sharing** result in the bilateral
 | Limit the failure check in `selectSection()` to the keys this move actually sends (`pendingStatusKeysFor` captured before `flush`, then `hasErrorForFields` / `lastErrorMessageForFields`), the same way BSF-T-2 does for Save draft | `bilateral-result-creator.component.ts` |
 | Choose the Save draft copy from `flushTargets.length > 0`, not from `hadChanges` | same |
 | `show()`: cancel the timer of the alert being replaced, and make the `animationend` removal null-safe | `shared/services/customized-alerts-fe.service.ts` |
-| Regression tests, which fail before the fix and pass after it | `bilateral-result-creator.component.spec.ts`, `customized-alerts-fe.service.spec.ts` |
+| Regression tests, which fail before the fix and pass after it | `bilateral-result-creator.component.spec.ts`, `customized-alerts-fe.service.spec.ts`, `customized-alerts-fs.service.spec.ts` |
 | Folder doc | `bilateral-result-creator/CLAUDE.md` (*Save draft tells the truth* invariant, plus the `Verified:` stamp) |
 
 ## 6. Non-Goals
@@ -139,7 +139,7 @@ The smallest safe fix is the three code changes listed in §5. It is logic, not 
 ## 13. Success Criteria
 
 - The QA repro (steps 1-5 in §9) on prtest gives: no "Save failed" when moving sections without a new failure, no "Draft saved" when nothing was sent, no alert closing before its own timer, and a clean console.
-- The 4 regression tests fail on HEAD and pass after the fix. The existing `customized-alerts-fe` and `bilateral-result-creator` suites stay green.
+- The 4 regression scenarios fail on HEAD and pass after the fix. tasks.md implements them as **6 tests**: A and B for scenario 1, C for scenario 2, D for scenario 3, and E (Fe) plus F (Fs) for scenario 4. The existing `customized-alerts-fe`, `customized-alerts-fs` and `bilateral-result-creator` suites stay green. *(Count and Fs suite corrected at validation, 2026-11-23.)*
 - Client lint passes and coverage stays at or above 50/60/60/60.
 
 ## 14. Next Step
