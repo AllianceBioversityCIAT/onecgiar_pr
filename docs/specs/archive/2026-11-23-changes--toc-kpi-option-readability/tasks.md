@@ -9,7 +9,7 @@ Implements `requirements.md` TKR-R-1..3 and TKR-NFR-1..4 per `design.md` (TKR-DD
 - [x] `requirements.md` approved (2026-11-19, Phase 1 gate)
 - [x] `design.md` approved (2026-11-19, Phase 2 gate, no judgment-day requested)
 - [x] No migration, no API, no payload change
-- [ ] Free RAM ≥ 4 GB before Cypress CT (`Get-CimInstance Win32_OperatingSystem`); Jest and Cypress never at the same time
+- [x] Free RAM ≥ 4 GB before Cypress CT (`Get-CimInstance Win32_OperatingSystem`); Jest and Cypress never at the same time (serialized by a scratchpad lock; see execution.md)
 
 Test rules for every task: Jest `--maxWorkers=2 --testPathPattern=<touched>`; Cypress CT via `npm run test:ct:changed` (batched); lint only touched files (`npx eslint <files> --quiet`); templates `npx ngc -p tsconfig.app.json --noEmit`.
 

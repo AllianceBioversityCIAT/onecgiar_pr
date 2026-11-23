@@ -12,7 +12,7 @@
 
 ## 1. Pre-flight
 
-- [ ] Branch `qa-development-2026-ss`, tree clean except this spec.
+- [x] Branch `qa-development-2026-ss`, tree clean except this spec. (waived at archive: tree held unrelated edits, see execution.md Pre-flight)
 - [x] RIR is live in PROD (PR #786). No open campaign this phase. If one is open, tell the user before T-5.
 
 ## 2. Task list
