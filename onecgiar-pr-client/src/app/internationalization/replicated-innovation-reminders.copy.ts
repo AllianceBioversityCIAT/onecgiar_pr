@@ -57,12 +57,12 @@ export const REPLICATED_INNOVATION_REMINDERS_COPY = {
   },
   schedule: {
     heading: 'Schedule a reminder',
-    dateLabel: 'Date and time',
+    dateLabel: 'Date and time (UTC)',
     kindLabel: 'Reminder',
-    timeZoneHint: (zone: string, offset: string): string => `Your local time (${zone}, ${offset}). The server runs in UTC.`,
+    utcNote: 'Please note that the selected time is in UTC.',
+    localEquivalent: (when: string, zone: string, offset: string): string => `= ${when} in your local time (${zone}, ${offset})`,
     required: 'Pick a date and time.',
     past: 'The date must be in the future.',
-    sendsAtUtc: (time: string): string => `Sends at ${time} UTC`,
     allOpen: 'Both reminders already have an open campaign. Send or cancel one to schedule another.'
   },
   confirm: {
@@ -172,7 +172,7 @@ export const REPLICATED_INNOVATION_REMINDERS_COPY = {
   },
   history: {
     title: 'Reminder history',
-    zoneLine: (zone: string, offset: string): string => `Times are shown in your local time zone: ${zone} (${offset}).`,
+    zoneLine: (zone: string, offset: string): string => `Times are shown in UTC. Your local time zone: ${zone} (${offset}).`,
     sentManually: 'Sent manually, before schedule',
     moreActions: 'More actions',
     moreActionsFor: (kind: string): string => `More actions for ${kind}`

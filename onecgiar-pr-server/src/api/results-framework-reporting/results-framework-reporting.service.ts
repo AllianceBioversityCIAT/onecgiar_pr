@@ -1176,9 +1176,21 @@ export class ResultsFrameworkReportingService {
         }
 
         addProject(totals, row.hasBilateral, row.hasW1w2);
+        // mapped / w1w2Contributors stay on the approved CLARISA mapping.
         for (const code of codes) {
           const counts = countsByProgram.get(code);
-          if (counts) addProject(counts, row.hasBilateral, row.hasW1w2);
+          if (counts) addProject(counts, false, row.hasW1w2);
+        }
+        // changes/portfolio-graphs-clarity PGC-T-1: "with W3/Bilateral results"
+        // follows the P/As the project's results name, once per P/A.
+        const namedCodes = new Set(
+          (row.namedProgramCodes ?? [])
+            .map((code) => normaliseCode(code))
+            .filter((code) => code !== ''),
+        );
+        for (const code of namedCodes) {
+          const counts = countsByProgram.get(code);
+          if (counts) counts.withBilateralResults += 1;
         }
 
         const owner = resolveProjectOwnerCenter(row, centerIndex);

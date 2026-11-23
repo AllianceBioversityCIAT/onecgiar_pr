@@ -326,7 +326,7 @@ describe('ReplicatedInnovationRemindersComponent', () => {
       type('rir-draft-FINAL_REMINDER', '2026-11-15T08:00');
       click('rir-submit-FINAL_REMINDER');
       expect(api['POST_reminderCampaign']).toHaveBeenCalledTimes(1);
-      expect(api['POST_reminderCampaign']).toHaveBeenCalledWith({ kind: 'FINAL_REMINDER', scheduled_at: '2026-11-15T13:00:00.000Z' });
+      expect(api['POST_reminderCampaign']).toHaveBeenCalledWith({ kind: 'FINAL_REMINDER', scheduled_at: '2026-11-15T08:00:00.000Z' });
     } finally {
       jest.useRealTimers();
     }
@@ -404,34 +404,67 @@ describe('ReplicatedInnovationRemindersComponent', () => {
     expect(q('rir-send-again-hint-Q4_NOTICE')!.textContent).toContain('emailed again');
     type('rir-draft-Q4_NOTICE', '2099-11-15T08:00');
     click('rir-submit-Q4_NOTICE');
-    expect(api['POST_reminderCampaign']).toHaveBeenCalledWith({ kind: 'Q4_NOTICE', scheduled_at: '2099-11-15T13:00:00.000Z' });
+    expect(api['POST_reminderCampaign']).toHaveBeenCalledWith({ kind: 'Q4_NOTICE', scheduled_at: '2099-11-15T08:00:00.000Z' });
     expect(component.sendAgainKind()).toBeNull();
   });
 
-  it('POSTs local 2026-11-15T08:00 in UTC-5 as 2026-11-15T13:00:00.000Z', async () => {
+  it.each([
+    ['UTC+1 (resolver -60)', -60],
+    ['UTC-5 (resolver +300)', 300]
+  ])('POSTs the typed time as UTC whatever the admin zone: 2026-11-20T09:00 in %s -> 09:00Z', async (_l, resolver) => {
     jest.useFakeTimers().setSystemTime(new Date('2026-10-01T00:00:00Z'));
     try {
-      await setup(of(list([])));
-      type('rir-draft-Q4_NOTICE', '2026-11-15T08:00');
+      await setup(of(list([])), () => resolver);
+      type('rir-draft-Q4_NOTICE', '2026-11-20T09:00');
       click('rir-submit-Q4_NOTICE');
-      expect(api['POST_reminderCampaign']).toHaveBeenCalledWith({ kind: 'Q4_NOTICE', scheduled_at: '2026-11-15T13:00:00.000Z' });
+      expect(api['POST_reminderCampaign']).toHaveBeenCalledWith({ kind: 'Q4_NOTICE', scheduled_at: '2026-11-20T09:00:00.000Z' });
     } finally {
       jest.useRealTimers();
     }
   });
 
-  it('labels the time zone next to the schedule form', async () => {
+  it('labels the input as UTC and always shows the UTC note, without a local line until the value is valid', async () => {
     await setup(of(list([])));
-    expect(q('rir-tz-hint-Q4_NOTICE')?.textContent).toContain('UTC-05:00');
-    expect(q('arp-utc-hint')).toBeNull();
+    expect(root().textContent).toContain('Date and time (UTC)');
+    expect(q('arp-utc-note-Q4_NOTICE')?.textContent).toContain('Please note that the selected time is in UTC.');
+    expect(q('arp-local-equivalent-Q4_NOTICE')).toBeNull();
+    expect(q('rir-tz-hint-Q4_NOTICE')).toBeNull();
+    expect(root().textContent).not.toContain('The server runs in UTC');
   });
 
-  it('hints the UTC send time of the entered date: 2026-12-02T09:00 at UTC-5 sends at 14:00 UTC', async () => {
+  it('local line for UTC+01:00 shows 10:00 on Nov 20 for a typed 09:00 UTC', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-10-01T00:00:00Z'));
     try {
-      await setup(of(list([])));
-      type('rir-draft-Q4_NOTICE', '2026-12-02T09:00');
-      expect(q('arp-utc-hint')?.textContent).toContain('Sends at 14:00 UTC');
+      await setup(of(list([])), () => -60);
+      type('rir-draft-Q4_NOTICE', '2026-11-20T09:00');
+      const t = q('arp-local-equivalent-Q4_NOTICE')?.textContent ?? '';
+      expect(t).toMatch(/Nov 20, 2026.*10:00/);
+      expect(t).toContain('in your local time');
+      expect(t).toContain('UTC+01:00');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('local line for UTC-05:00 shows 4:00 on Nov 20 for a typed 09:00 UTC', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-01T00:00:00Z'));
+    try {
+      await setup(of(list([])), () => 300);
+      type('rir-draft-Q4_NOTICE', '2026-11-20T09:00');
+      const t = q('arp-local-equivalent-Q4_NOTICE')?.textContent ?? '';
+      expect(t).toMatch(/Nov 20, 2026.*4:00/);
+      expect(t).toContain('UTC-05:00');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('local line shows the previous day when the local instant crosses midnight (02:00 UTC at UTC-5 -> Nov 19)', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-01T00:00:00Z'));
+    try {
+      await setup(of(list([])), () => 300);
+      type('rir-draft-Q4_NOTICE', '2026-11-20T02:00');
+      expect(q('arp-local-equivalent-Q4_NOTICE')?.textContent).toMatch(/Nov 19, 2026.*9:00/);
     } finally {
       jest.useRealTimers();
     }
@@ -531,15 +564,17 @@ describe('ReplicatedInnovationRemindersComponent', () => {
     expect(api['GET_reminderCampaigns']).toHaveBeenCalledTimes(2);
   });
 
-  it('Edit date prefills local time and PATCHes the new UTC instant', async () => {
+  it('Edit date prefills the UTC wall-clock, shows note and local line, and PATCHes the typed UTC instant', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-10-01T00:00:00Z'));
     try {
       await setup(of(list([campaign({ scheduled_at: '2026-12-01T14:00:00.000Z' })])));
       click('rir-edit-btn');
-      expect((q('rir-edit-input') as HTMLInputElement).value).toBe('2026-12-01T09:00');
+      expect((q('rir-edit-input') as HTMLInputElement).value).toBe('2026-12-01T14:00');
+      expect(q('arp-edit-utc-note')?.textContent).toContain('selected time is in UTC');
+      expect(q('arp-edit-local-equivalent')?.textContent).toMatch(/9:00/);
       type('rir-edit-input', '2026-12-02T10:00');
       click('rir-edit-save');
-      expect(api['PATCH_reminderCampaignDate']).toHaveBeenCalledWith(1, { scheduled_at: '2026-12-02T15:00:00.000Z' });
+      expect(api['PATCH_reminderCampaignDate']).toHaveBeenCalledWith(1, { scheduled_at: '2026-12-02T10:00:00.000Z' });
     } finally {
       jest.useRealTimers();
     }
@@ -616,26 +651,34 @@ describe('ReplicatedInnovationRemindersComponent', () => {
     expect(q('rir-redirect-banner')).toBeNull();
   });
 
-  it('uses the offset of the entered date across a DST change (POST, label, edit prefill)', async () => {
+  it('local line uses the offset of the entered instant across a DST change; edit prefill and POST stay UTC', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-10-19T00:00:00Z'));
     try {
       // Rome: UTC+2 before 2026-10-25T01:00Z, UTC+1 after (getTimezoneOffset semantics: -120 / -60).
       const rome = (at: Date) => (at.getTime() < Date.parse('2026-10-25T01:00:00Z') ? -120 : -60);
       await setup(of(list([campaign({ id: 5, kind: 'FINAL_REMINDER', scheduled_at: '2026-11-15T08:00:00.000Z' })])), rome);
       type('rir-draft-Q4_NOTICE', '2026-11-15T09:00');
-      expect(q('rir-tz-hint-Q4_NOTICE')?.textContent).toContain('UTC+01:00');
-      expect(q('arp-utc-hint')?.textContent).toContain('Sends at 08:00 UTC');
+      expect(q('arp-local-equivalent-Q4_NOTICE')?.textContent).toContain('UTC+01:00');
+      expect(q('arp-local-equivalent-Q4_NOTICE')?.textContent).toMatch(/10:00/);
       type('rir-draft-Q4_NOTICE', '2026-10-19T09:00');
-      expect(q('rir-tz-hint-Q4_NOTICE')?.textContent).toContain('UTC+02:00');
-      expect(q('arp-utc-hint')?.textContent).toContain('Sends at 07:00 UTC');
+      expect(q('arp-local-equivalent-Q4_NOTICE')?.textContent).toContain('UTC+02:00');
+      expect(q('arp-local-equivalent-Q4_NOTICE')?.textContent).toMatch(/11:00/);
       type('rir-draft-Q4_NOTICE', '2026-11-15T09:00');
       click('rir-submit-Q4_NOTICE');
-      expect(api['POST_reminderCampaign']).toHaveBeenCalledWith({ kind: 'Q4_NOTICE', scheduled_at: '2026-11-15T08:00:00.000Z' });
+      expect(api['POST_reminderCampaign']).toHaveBeenCalledWith({ kind: 'Q4_NOTICE', scheduled_at: '2026-11-15T09:00:00.000Z' });
       click('rir-edit-btn');
-      expect((q('rir-edit-input') as HTMLInputElement).value).toBe('2026-11-15T09:00');
+      expect((q('rir-edit-input') as HTMLInputElement).value).toBe('2026-11-15T08:00');
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  it('history cells render the instant in UTC with a UTC suffix, whatever the admin zone', async () => {
+    await setup(of(list([campaign({ id: 1, status: 'SENT', scheduled_at: '2026-11-18T12:00:00.000Z', sent_at: '2026-11-18T12:05:00.000Z' })])), () => 300);
+    const sent = q('rir-sent-at')?.textContent ?? '';
+    expect(sent).toMatch(/Nov 18, 2026.*12:05/);
+    expect(sent.trim().endsWith('UTC')).toBe(true);
+    expect(q('arp-zone-line')?.textContent).toContain('Times are shown in UTC. Your local time zone:');
   });
 
   it('shows the sent-at date, or a dash when the campaign was not sent', async () => {

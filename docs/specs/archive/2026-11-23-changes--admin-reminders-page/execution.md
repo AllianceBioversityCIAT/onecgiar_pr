@@ -261,3 +261,116 @@
 
 - `npx jest --maxWorkers=2 --silent --no-coverage --findRelatedTests <27 changed client files>` → 28 suites / 878 tests passed.
 - T-5 (PRTest HITL) is waiting for the user to commit and push to perf. Agents do not push.
+
+## ARP-T-5: PRTest visual + behaviour check (HITL) — 2026-11-18
+
+- **Type:** manual, read-only, Leader inline (claude-in-chrome, Browser 2). No code changed.
+  - Review: skip-eligible. REVIEW_SKIPPED, because the predicate held: manual check, no diff.
+- **Bundle:** commit 262dfcf38 is on performance-refactor; the user confirmed the deploy.
+  - The served page has the new route and 105 `arp-*` test ids.
+  - Disqualifier "old bundle" ruled out.
+- **Step 1, sidebar: PASS.**
+  - Admin module flyout order: Tickets dashboard · Phase management · **Reminders** (bell icon) · Knowledge products · User management · AI narrative.
+  - Reminders is highlighted as active on `/admin-module/reminders`.
+  - Breadcrumb: Admin module › Reminders.
+- **Step 2, Reporting: PASS.**
+  - `/admin-module/phase-management/reporting` headings: Reporting phases, Configured phases, Phase operations, Result innovations, Innovation use.
+  - Zero `rir-*`/`cfp-*` nodes; no "reminder" text.
+  - Side note, not this change: bare `/admin-module/phase-management` loaded directly redirects to `/`.
+- **Step 3, layout: PASS at both widths.**
+  - Fonts: `document.fonts.check` true for Poppins and "Material Icons Round". Icons render as glyphs (`expand_more` 18 px wide).
+
+  | Viewport (CSS px) | Tab | page scrollWidth / clientWidth | Card or table L–R | Action cells max right | Notes |
+  |---|---|---|---|---|---|
+  | 1280 (screen 1920 @ dpr 1.5) | Reminders | 1265 / 1265 | card 100–1229 | 1228 | table wrapper 1127/1127 |
+  | 1280 | Focal points | 1265 / 1265 | table 113–1216 | all `cfp-edit-*` inside | CIAT long name wraps (cell 62 px tall); no inner scrollers |
+  | 1568 (same-origin iframe, see below) | Reminders | 1553 / 1553 | table 446–1475 | 1475 | expanded sidebar shown at this width |
+  | 1568 | Focal points | 1553 / 1553 | table 458–1463 | all inside | long names still wrap |
+
+  - The 1568 px reading used a same-origin iframe exactly 1568 CSS px wide, because the physical screen is only 1280 CSS px.
+    - Media queries follow the iframe viewport.
+    - The iframe was removed afterwards. Page storage was not touched.
+- **Step 4, visual review: PASS with known advisories.**
+  - Matches the preview: cards, status badges (Cancelled grey, Sent green), delivery bar with green/amber segments, "Sent manually, before schedule" sub-line.
+  - Advisories carried from review, still visible and not blocking:
+    - the scheduler is a separate block, not the accents-1 strip;
+    - "The server runs in UTC" repeats the hint;
+    - `h1` colour and the active-tab underline.
+- **Step 5, read-only actions: PASS, with one deferral.**
+  - Tabs: click and keyboard. ArrowLeft from Focal points moves focus and selection to Reminders, and its panel shows.
+  - Search: "cortesini" leaves 2 rows (CENTER-02, CENTER-03). "zzzz" leaves 0 rows plus "No Centers match". Clearing restores the list.
+  - Chip "No focal point": 4 rows (CENTER-04, -08, OFF-01, CENTER-17), equal to the chip count and the tab pill. `aria-pressed` toggles. Restored to All.
+  - **DEFERRED: preview drawer and the `more_vert` keyboard check.**
+    - Both render only for PENDING/scheduled campaigns (`showPreviewOrSend`).
+    - PRTest has none: 5 Sent, 2 Cancelled.
+    - Creating one would be a write on the shared DB and mailer, which is not allowed.
+    - Covered by the ARP-T-2 Jest specs. Live check owed when a pending campaign exists.
+  - Not clicked: Send again, Schedule, opt-in switches, Edit contacts, Add contact.
+  - Console: one `ERROR undefined` from main.js at 9:15:22. It coincides with the phase-management redirect; not triaged.
+- **Step 6, campaign 12: NOT cancelled. It was sent.**
+  - `rir-row-12`: Final reminder · scheduled Nov 18, 2026, 6:56 AM · **Sent** Nov 18, 2026, 7:00 AM · 16 sent · 4 unreachable.
+  - Reported to the user; nothing done by the agent.
+- **Evidence (local screenshots, not committed):**
+  - `screenshot-1795011300887-0.jpg` (focal 1280)
+  - `screenshot-1795011348703-1.jpg` (focal 1568)
+  - `screenshot-1795011429024-2.jpg` (history + scheduler 1280)
+
+## REVIEW_SKIPPED: ARP-T-5
+
+- Manual HITL check with no diff. The skip-eligible predicate held and no override applied.
+
+## User decision 2026-11-18 (after ARP-T-5)
+
+- Question asked during T-5: "Should Nicoleta enter the time in UTC?" Answer: yes.
+  - The scheduler takes UTC input.
+  - A note says "Please note that the selected time is in UTC".
+  - A line shows the local equivalent, so the admin never converts by hand.
+  - History is shown in UTC.
+- ARP-R-6 and ARP-R-7 are amended at the end of `requirements.md`.
+- New task ARP-T-6 is added to `tasks.md`.
+
+## ARP-T-6: Scheduler and history in UTC, with the local equivalent — 2026-11-18
+
+### Attempt 1
+
+- **Implementer** (akili-implementer, sonnet, medium): STATUS DONE.
+- **Files:**
+  - `replicated-innovation-reminders.component.{ts,html,spec.ts}`
+  - `replicated-innovation-reminders.copy.ts`
+- **What changed:**
+  - `validate`, `startEdit` and the edit save use `UTC_OFFSET = () => 0`.
+  - `localEquivalentFor()` uses the offset of the entered instant.
+  - `displayDate` shows UTC plus a " UTC" suffix.
+  - The zone line copy is updated.
+  - Removed: `timeZoneHintFor`, `utcHintFor` and the testids `rir-tz-hint-*` and `arp-utc-hint`. Their elements are deleted by step 3; nothing in Cypress references them.
+  - New testids: `arp-utc-note-{kind}`, `arp-local-equivalent-{kind}`, `arp-edit-utc-note`, `arp-edit-local-equivalent`.
+- **Implementer evidence:**
+  - Scoped run: 6 suites / 119 tests passed.
+  - `--findRelatedTests` on 4 files: 25 suites / 854 tests passed.
+  - ESLint: no flat config (known gap).
+  - No red-first run.
+- **Leader non-author re-run:** `npx jest --maxWorkers=2 --silent --no-coverage --testPathPattern="pages/admin-section/pages/reminders"` gave 6 suites, 119 tests passed. Result: **VERIFIED**.
+- **Reviewer** (akili-reviewer, opus): **PASS**.
+  - UTC input is checked in schedule, edit prefill and edit save. The falsifier (UTC+1, 09:00 gives 09:00Z) is covered by `it.each`.
+  - The local line is DST-aware and shows the date.
+  - Display is UTC everywhere in the component.
+  - Removing the testid is justified: NFR-4 applies "wherever the element still exists".
+- **Reviewer advisories (not blocking):**
+  - a11y: add `aria-describedby` from the input to the note and the local line, and an always-rendered `aria-live="polite"` wrapper.
+  - The regex `/Nov 20, 2026.*4:00/` would also match 14:00. Anchor it.
+  - No test pins the UTC suffix on "Scheduled for" or the Next send card.
+  - `utcClock` is now dead code in `reminder-time.util.ts`.
+  - The tests assume an en-US locale.
+- **Running totals:**
+  - Tasks: 6/6.
+  - Review rounds: 7/10.
+  - LOC: within the revised budget (one small task).
+
+## PRTest check after ARP-T-6 deploy — 2026-11-23
+
+Deploy: `performance-refactor` `733ff4c5e` (commits `0da2380e4`, `41b83c774` on qa-dev). Leader in Chrome, read-only, `/admin-module/reminders`:
+- Zone line: "Times are shown in UTC. Your local time zone: America/Bogota (UTC-05:00)."
+- History: every scheduled/sent time with a `UTC` suffix (e.g. "Nov 18, 2026, 11:56 AM UTC", sent "12:00 PM UTC").
+- Scheduler: label "Date and time (UTC)" and note "Please note that the selected time is in UTC.". Typing 2026-12-01 15:00 showed "= Dec 1, 2026, 10:00 AM in your local time (America/Bogota, UTC-05:00)" (correct, UTC-5); field cleared, Schedule not clicked.
+- Old copy ("The server runs in UTC", "Times are shown in your local time zone") gone.
+- Still deferred: preview drawer and `more_vert` keyboard check on a PENDING campaign — PRTest still has none (all Sent/Cancelled). Carried to the archive as a follow-up.
