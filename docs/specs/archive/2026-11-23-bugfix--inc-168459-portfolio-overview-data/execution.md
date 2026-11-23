@@ -201,3 +201,18 @@
 - **Commit:** authorized. One commit with the spec docs, the server changes (POD-T-1) and the client changes (POD-T-2, POD-T-3). The unrelated `docs/specs/bugfix/reporting-memory-runners/*` changes stay out.
 - **POD-T-2:** stays `[~]`. The user will run the HITL browser check (390 and 1280 px, both tabs, screenshots into this file). The Reviewer flagged the 150 px label width at 390 px as the first thing to inspect.
 - **Pending items for archive:** `migration:check` deferred to CI (POD-T-1). Kaizen candidates: (1) workers must never `git stash` a shared tree; (2) the Leader measures numeric premises before putting them in a brief.
+
+### POD-T-2 HITL browser check, 2026-11-23 (browser agent, read-only, PRTest `/portfolio-overview` 2026)
+
+Rendered at exact widths in a same-origin iframe (the Chrome window could not be resized). Screenshots in `evidence/`.
+
+| Width | Tab | Labels | Page sideways scroll | 13 rows readable |
+|---|---|---|---|---|
+| 1280 | By P/A (`pod-1280-by-pa.jpg`) | wrap, none clipped | no | yes |
+| 1280 | By Center (`pod-1280-by-center.jpg`) | none clipped | no | yes (15 Centers) |
+| 390 | By P/A (`pod-390-by-pa.jpg`) | wrap to 2-3 lines, none clipped | no (`scrollWidth` 375) | yes |
+| 390 | By Center (`pod-390-by-center.jpg`) | none clipped | no | yes |
+
+- POD-R-1 Scenario 1.2 criteria hold → **PASS**.
+- ⚠️ At 390 px only: (1) the x-axis tick labels collide on By P/A ("0 50 100 150 200 250" run together); (2) the legend sits on top of the x-axis tick labels on both tabs. Labels and bars stay readable. User decides: accept and mark POD-T-2 `[x]`, or a small follow-up.
+- **User decision, 2026-11-23:** "acepto". The 390 px axis-tick and legend overlap is accepted as is. POD-T-2 → `[x]`.

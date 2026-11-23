@@ -134,3 +134,12 @@ Cause: test code. T-1's CT runs 6 cases × 2 widths with long fixtures and three
 - Open for validation (`/akili-validate`): PRTest check on result #953 (SP09, HLO 5.5.1) after deploy — two-line KPI list without sideways scroll; full KPI text with Show more; Save draft payload unchanged.
 - Gaps to carry: ESLint 9 has no flat config (`ESLINT_USE_FLAT_CONFIG=false` used; `pr-select.cy.ts` not linted); `npm run test:ct -- <filter>` matches nothing on Windows backslash paths; `.agents/leader.md` `primary-instructions` outdated; scratchpad `mkdir` lock is not owner-safe (released by another holder twice).
 - Constitution impact: new shared component `src/app/shared/components/clamped-text/` — consider a line in client `src/CLAUDE.md`; CodeGraph re-index pending (`codegraph sync`).
+
+## PRTest check (validation pause), 2026-11-23, browser agent, read-only
+
+- **Result used:** #953 is not a 2026 SP09 result on PRTest (it is a 2024 INIT-21 innovation, no 2026 version). Substitute: SP09 2026 result **8954** (Editing, Intermediate Outcome AOW01, 2 KPI options), section Contributors & partners. Nothing was saved.
+- **Option list:** the KPI panel has `options_wrap` (`wrapOptions() === true`); the Level/HLO panels do not. At 900 px wide (same-origin iframe; the Chrome window could not be resized) each option is **2 lines with an ellipsis**, panel `scrollWidth === clientWidth` (378), no page sideways scroll. At 1920 px the options fit on one line. → TKR-R-1 PASS.
+- **Selected KPI block:** "KPI statement:" label, text clamped to 3 lines + **Show more**; Show more expands and shows **Show less**. → TKR-R-2 PASS.
+- **Dirty state:** `hasUnsavedChanges()` stays `false` after opening the list and after Show more. ⚠️ Cosmetic: opening the KPI list (no selection) turns on the field-card "Unsaved changes" pill. Section state is clean, so no payload impact; likely the shared `app-pr-select` touched state, not TKR. Not fixed here.
+- **Not done:** Save draft payload check (it would write to the shared DB). Option hover (`title`) is not present; it was in the proposal only, not in `requirements.md`.
+- Side finding (outside TKR): on result 8700 (SP09 2026, not mapped), the Theory of Change column renders "SP09 Scaling for Impact…" one letter per line (crushed column).

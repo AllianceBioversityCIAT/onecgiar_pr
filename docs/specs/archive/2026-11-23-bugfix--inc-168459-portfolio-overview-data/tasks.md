@@ -56,7 +56,7 @@
   - [ ] `npx eslint "src/api/results-framework-reporting/**/*.ts" --quiet` clean. `npm run build` compiles.
   - [ ] `npm run migration:check` reports nothing pending (no entity change).
 
-### [~] POD-T-2 — Horizontal projects chart with full names
+### [x] POD-T-2 — Horizontal projects chart with full names
 - **Type:** client
 - **Description:**
   - In `projects.format.ts`: add `fullLabel` to `ProjectsViewRow`. P/A label = `code · shortName` (fallback `code`), fullLabel = `code · name` (fallback label). Center fullLabel = label.

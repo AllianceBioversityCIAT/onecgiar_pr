@@ -254,3 +254,9 @@ Repo grep: "bilateral" only at `1791700000000-RIR-RecipientModelV2.ts:371` (Cent
 ### RCF-T-5 closed `[x]` (2026-11-14)
 
 All checks are recorded above. Step 3 (403) and dark mode were waived by the user. Proven on PRTest: RCF-R-2/R-3/R-4/R-10 via the CENTER-01 temporary opt-in, plus the duplicate 409. PROD counts are recorded (ICARDA 85 rows, 61 developer rows leave the developer digests).
+
+### RCF-T-4 rework, PRTest check at 1280 px, 2026-11-23 (browser agent, read-only)
+
+- `/admin-module/reminders` → Center focal points tab, page rendered at 1280 px (same-origin iframe; the Chrome window could not be resized).
+- 17 rows, 17 "Edit contacts" buttons, **0 cut off**; table `scrollWidth === clientWidth` (1103); no page sideways scroll. Long Center names wrap (CIAT Regional Hub on 2 lines). → overflow fix (`2ffb3e887`) **PASS**.
+- Campaign 12: the Replicated innovation reminders tab shows no next send scheduled, so nothing pending fires from PRTest.
