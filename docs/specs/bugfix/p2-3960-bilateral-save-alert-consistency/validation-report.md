@@ -56,7 +56,7 @@ No unlisted production file was touched (`git diff fcd441ad1 HEAD --stat`).
 | `npx jest src/app/pages/bilateral src/app/shared/services/customized-alerts --silent --reporters=summary --no-coverage` | 68 suites, **2842/2842 passed** |
 | `npx ng lint --quiet` | exit 0 |
 | `npm run build` | exit 0 |
-| Full client suite with coverage (50/60/60/60 gate) | **Pending.** The full run was still in progress at commit time; its result is added in a follow-up edit. The diff only adds tests and guards, so coverage cannot fall |
+| Full client suite with coverage (50/60/60/60 gate) | **WARN (not caused by this spec).** Full run: 706 suites, **15385/15390 passed**.<br>**5 failures.** `general-interceptor.service.spec.ts` (4) and `impact-level-info.component.spec.ts` (1). Both fail identically with this spec's 3 production files reverted to `fcd441ad1`, which makes them failures that existed before this spec. Neither suite exercises this change.<br>**1 flaky suite.** `quality-assurance.component.spec.ts` failed once, then passed on `--onlyFailures`.<br>**Coverage percentages were not captured** (the output was truncated to its tail). The diff only adds tests and guards, so coverage cannot fall. |
 
 ## 6. Requirement Coverage (scenario and clause level)
 
@@ -152,6 +152,7 @@ There are no `## Constitution Impact` blocks, and none are owed: no module was c
 | R-3 | W-5 stale `Status: draft` | ~~WARN~~ **done** | requirements and design set to `approved · executed` |
 | R-4 | W-1 and the 15 s stall | WARN, advisory | Follow-up ticket: per-field save-error display, plus scoping the wait's pending condition. Outside this spec |
 | R-5 | W-4 budget overrun | info | Kaizen input at archive (the rework assumption in review-round budgets) |
+| R-6 | Pre-existing client failures: `general-interceptor` (missing `auth` header in 4 tests), `impact-level-info` (1), and the flaky `quality-assurance` suite | WARN, outside this spec | Separate ticket. These failures do not block this spec's archive |
 
 ## 12. Archive Readiness Recommendation
 
