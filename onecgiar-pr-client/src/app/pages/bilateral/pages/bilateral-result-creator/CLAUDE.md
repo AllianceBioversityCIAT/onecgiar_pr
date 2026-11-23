@@ -116,4 +116,4 @@
 ## Pending
 - HITL responsive/axe pass on the drawer — see `execution.md` of spec `manual-create-drawer`.
 
-**Verified:** 2026-11-23 · P2-3960 save-alert consistency (selectSection scoped, Save draft nothing-to-save)
+**Verified:** 2026-11-23 · P2-3960 save-alert consistency (selectSection scoped, Save draft nothing-to-save; /akili-test G-I)

@@ -1041,6 +1041,39 @@ describe('BilateralResultCreatorComponent', () => {
       expect(show).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Draft saved' }));
     });
 
+    // P2-3960 /akili-test (BSA-R-2 "BUT it must NOT read ... 'Saved.'" + "lists the missing fields").
+    it('BSA-R-2: a stale error alone lists the missing fields and never says "Saved."', async () => {
+      autoSaveService.hasPendingFor.mockReturnValueOnce(true).mockReturnValue(false);
+      autoSaveService.pendingStatusKeysFor.mockReturnValue([]);
+      await component.triggerManualSave();
+      const [options] = show.mock.calls.at(-1);
+      expect(options.description).toBe('Still missing: Title of Result, Description.');
+      expect(options.description).not.toContain('Saved.');
+    });
+
+    // P2-3960 /akili-test (BSA-R-2 "Otherwise ... the existing 'Up to date' branch").
+    it('BSA-R-2: a stale error alone with nothing missing says "Up to date", not "Success"', async () => {
+      mdsTracker.sectionStatus.set([{ sectionName: 'general-info', status: 'complete', fields: [] }]);
+      autoSaveService.hasPendingFor.mockReturnValueOnce(true).mockReturnValue(false);
+      autoSaveService.pendingStatusKeysFor.mockReturnValue([]);
+      await component.triggerManualSave();
+      expect(show).toHaveBeenCalledWith(expect.objectContaining({ title: 'Up to date' }));
+      expect(show).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Success' }));
+    });
+
+    // P2-3960 /akili-test (DD-3 keeps `hadChanges`, P-4): Evidence always captures ['evidence'],
+    // so an untouched Evidence section must stay "Up to date", never "Success".
+    it('DD-3: an untouched Evidence section stays "Up to date" although its capture is never empty', async () => {
+      component.openSectionName.set('evidence');
+      autoSaveService.getEndpointKeys.mockReturnValue([]);
+      mdsTracker.sectionStatus.set([{ sectionName: 'evidence', status: 'complete', fields: [] }]);
+      autoSaveService.hasPendingFor.mockReturnValue(false);
+      autoSaveService.pendingStatusKeysFor.mockReturnValue(['evidence']);
+      await component.triggerManualSave();
+      expect(show).toHaveBeenCalledWith(expect.objectContaining({ title: 'Up to date' }));
+      expect(show).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Success' }));
+    });
+
     // NOST-456 QA finding 01: a 14-word Short title (over the 10-word ceiling) saved with "Success".
     // Save draft still persists it, as on W1/W2, but it has to say Submit will refuse it.
     it('names an over-limit field when the draft is saved, and counts it in the footer', async () => {
