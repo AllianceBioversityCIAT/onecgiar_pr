@@ -206,6 +206,7 @@ function assertEvidenceList(
   },
   level: string,
   fromCore: boolean,
+  gate: { key: string; target: CatalogField | CatalogSubField | undefined },
 ): void {
   if (list.type !== 'list') throw new Error(`${owner}: must be a list`);
   const p = list.storage as PathBinding;
@@ -218,11 +219,31 @@ function assertEvidenceList(
     p.value_column !== 'id'
   )
     throw new Error(`${owner}: evidence binding is wrong (level ${level})`);
-  // The level gate is NOT expressible (ids of the level lists are not the level numbers and differ by environment): stating one
-  // would compare numbers with ids.
-  if (list.visible_when || list.required_when)
+  // P2-3939 (LVL-R-3, DD-4, design Step 2.3): the list is required when its level NUMBER is 1..9 and never hidden. The stored value is a
+  // level ROW id (not the number, and different by environment), so the gate must read a level-number lookup (`value_column: 'level'`):
+  // a gate re-pointed at the row-id field compares numbers with ids and fails here.
+  if (
+    json(list.required_when) !==
+    json({
+      field: gate.key,
+      operator: 'in',
+      value: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+    })
+  )
     throw new Error(
-      `${owner}: no level gate may be stated (level ids differ by environment, no "not" operator)`,
+      `${owner}: the level gate must be in [1..9] on ${gate.key} (the level number)`,
+    );
+  if (list.visible_when)
+    throw new Error(
+      `${owner}: no visibility gate (the form always renders the list)`,
+    );
+  if (
+    !gate.target ||
+    gate.target.storage.kind !== 'lookup' ||
+    gate.target.storage.value_column !== 'level'
+  )
+    throw new Error(
+      `${owner}: the level gate must read a level-number lookup (value_column level), not the stored row id`,
     );
   expect(list.subfields?.map((s) => s.key)).toEqual(
     EVIDENCE_ITEM.map(([k]) => k),
@@ -494,9 +515,13 @@ export function assertIpsrStep3(fields: CatalogField[]): void {
     const f = get(fields, k);
     if (f.required || !f.required_confirmed)
       throw new Error(
-        `${k}: VS3 states the rule (level != 0), not expressible: required false, confirmed true`,
+        `${k}: VS3 states the rule (level != 0): required false, confirmed true`,
       );
-    assertEvidenceList(k, f, level, true);
+    const gateKey = `ipsr_step_3.core.${level}_level_number`;
+    assertEvidenceList(k, f, level, true, {
+      key: gateKey,
+      target: fields.find((x) => x.key === gateKey),
+    });
   }
 
   // 4. current use of the core innovation
@@ -506,10 +531,20 @@ export function assertIpsrStep3(fields: CatalogField[]): void {
       throw new Error(
         `${u.key}: list, any-of rule not expressible (required false, confirmed true)`,
       );
-    if (f.visible_when || f.required_when)
+    // P2-3939 (LVL-R-4, DD-5): shown only when the EVIDENCE-BASED use level number is 1..9 (not `current_use_level`, not the row id)
+    if (
+      json(f.visible_when) !==
+      json({
+        field: 'ipsr_step_3.core.use_level_number',
+        operator: 'in',
+        value: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+      })
+    )
       throw new Error(
-        `${u.key}: the use-level-0 gate is not expressible (level ids differ by environment)`,
+        `${u.key}: visible_when must be in [1..9] on ipsr_step_3.core.use_level_number`,
       );
+    if (f.required_when)
+      throw new Error(`${u.key}: the any-of rule is not expressible`);
     const want = [
       CORE_STEP,
       {
@@ -542,8 +577,10 @@ export function assertIpsrStep3(fields: CatalogField[]): void {
     'current_readiness_level',
     'current_use_level',
     'readiness_level',
+    'readiness_level_number',
     'readiness_evidences',
     'use_level',
+    'use_level_number',
     'use_evidences',
   ]);
   for (const [k, col, list] of [
@@ -573,18 +610,39 @@ export function assertIpsrStep3(fields: CatalogField[]): void {
       storage: `column:result_by_innovation_package.${col}`,
     });
   }
-  assertEvidenceList(
-    `${COMPLEMENTARY}/readiness_evidences`,
-    sub(comp, 'readiness_evidences'),
-    'readiness',
-    false,
-  );
-  assertEvidenceList(
-    `${COMPLEMENTARY}/use_evidences`,
-    sub(comp, 'use_evidences'),
-    'use',
-    false,
-  );
+  // the level-number subfields: read-only lookups of `level` by the sibling row id (LVL-R-1)
+  for (const [k, from, source] of [
+    [
+      'readiness_level_number',
+      'readiness_level',
+      'prms.clarisa_innovation_readiness_level',
+    ],
+    ['use_level_number', 'use_level', 'prms.clarisa_innovation_use_levels'],
+  ] as const) {
+    const n = sub(comp, k);
+    if (
+      n.type !== 'number' ||
+      n.required ||
+      n.storage.kind !== 'lookup' ||
+      n.storage.source !== source ||
+      n.storage.value_column !== 'level' ||
+      json(n.storage.keys) !== json([{ from, to: 'id' }])
+    )
+      throw new Error(`${COMPLEMENTARY}/${k}: level-number lookup of ${from}`);
+  }
+  for (const [list, level] of [
+    ['readiness_evidences', 'readiness'],
+    ['use_evidences', 'use'],
+  ] as const) {
+    const gateKey = `${level}_level_number`;
+    assertEvidenceList(
+      `${COMPLEMENTARY}/${list}`,
+      sub(comp, list),
+      level,
+      false,
+      { key: gateKey, target: comp.subfields?.find((x) => x.key === gateKey) },
+    );
+  }
 }
 
 // ---- The entity mirrors the migration ---------------------------------------------------------
@@ -676,6 +734,8 @@ describe('QAC-T-30 IPSR step 3', () => {
       'ipsr_step_3.core.current_use.actors',
       'ipsr_step_3.core.current_use.organizations',
       'ipsr_step_3.core.current_use.measures',
+      'ipsr_step_3.core.readiness_level_number',
+      'ipsr_step_3.core.use_level_number',
     ])
       expect(keys).toContain(k);
     const comp = get(CATALOG_FIELDS, COMPLEMENTARY);
@@ -890,7 +950,7 @@ describe('QAC-T-30 IPSR step 3', () => {
       ).toThrow(/evidence binding/);
     });
 
-    it('a level gate over the level ids (the in [1..9] of the level numbers) is rejected', () => {
+    it('a level gate over the level ids (in [1..9] on the stored row id) is rejected', () => {
       expect(() =>
         assertIpsrStep3(
           mutate(CORE_R, () => ({
@@ -901,7 +961,45 @@ describe('QAC-T-30 IPSR step 3', () => {
             },
           })),
         ),
-      ).toThrow(/no level gate/);
+      ).toThrow(/the level gate must be in \[1\.\.9\] on/);
+    });
+
+    it('an evidence list without its level gate is rejected', () => {
+      expect(() =>
+        assertIpsrStep3(mutate(CORE_R, () => ({ required_when: undefined }))),
+      ).toThrow(/the level gate must be in/);
+    });
+
+    it('an evidence list hidden at level 0 (a visible_when added) is rejected', () => {
+      expect(() =>
+        assertIpsrStep3(
+          mutate(CORE_R, (f) => ({ visible_when: f.required_when })),
+        ),
+      ).toThrow(/no visibility gate/);
+    });
+
+    it('a gate on a level-number field that is not a lookup of `level` is rejected', () => {
+      expect(() =>
+        assertIpsrStep3(
+          mutate('ipsr_step_3.core.readiness_level_number', (f) => ({
+            storage: { ...(f.storage as any), value_column: 'id' },
+          })),
+        ),
+      ).toThrow(/level-number lookup/);
+    });
+
+    it('a current-use list keyed on the current use level instead of the evidence-based one is rejected', () => {
+      expect(() =>
+        assertIpsrStep3(
+          mutate('ipsr_step_3.core.current_use.actors', () => ({
+            visible_when: {
+              field: 'ipsr_step_3.core.current_use_level',
+              operator: 'in',
+              value: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+            },
+          })),
+        ),
+      ).toThrow(/visible_when must be in \[1\.\.9\] on/);
     });
 
     it('the link required for an upload evidence (source gate dropped) is detected', () => {

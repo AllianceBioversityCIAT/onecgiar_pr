@@ -22,15 +22,20 @@
 // cross-section warning for a principal impact area without tagged evidence, S3:7-12, is documented, not a data condition). `file` of
 // inventory §3.7 is split into `file_name` + `file_url` exactly as the owner decided for `evidence.items` (QAC-T-17).
 //   - Cap: at most 6 evidences per element, readiness and use together (IPSR_STEP3_MAX_EVIDENCE_PER_COMPONENT, S3E). Not expressible.
-//   - Level gate, NOT EXPRESSIBLE (documented gap): the lists are required when the element's level is not 0 (S3:38,55; S3X:34,53; the
-//     form reads "index in the ordered CLARISA list != 0", an unset level counts as != 0; VS3:19-47 and VS3:231-264 read `clarisa_*.level`
+//   - Level gate (P2-3939 DD-4, LVL-R-3): the lists are required when the element's level NUMBER is 1..9 (S3:38,55; S3X:34,53; the form
+//     reads "index in the ordered CLARISA list != 0", an unset level counts as != 0; VS3:19-47 and VS3:231-264 read `clarisa_*.level`
 //     != 0 and, for the complementary elements, also a NULL level). The stored value is the level ROW id, and the ids are NOT the level
 //     numbers and differ by environment (read 2026-10-09 on the test DB: use levels id 1..10 = level 0..9 plus ids 13..20 = levels 2..9
-//     again; readiness levels id 11..20 = level 0..9), so no `in` list over the ids is valid in every environment, the closed-list
-//     vocabulary has no `not` and the level lists are not closed lists. An `in [1..9]` over level numbers (the D28 convention of
-//     innovation_use.use_level) would compare numbers with ids and flag/hide the wrong rows, so no condition is stated: the lists are
-//     `required: false, required_confirmed: true` (the function states the rule) and the lists are always shown (the form always renders
-//     them, only the `required` marker changes, S3E header).
+//     again; readiness levels id 11..20 = level 0..9), so the gate reads the read-only level-number entry, not the id: `core.readiness_level_number`
+//     / `core.use_level_number` and, inside each complementary element, the sibling subfields `readiness_level_number` /
+//     `use_level_number` (a lookup of `level` by the stored row id, LVL-R-1). The lists stay always shown (the form always renders them,
+//     only the `required` marker changes, S3E header), so there is NO `visible_when`. The two core lists stay `required: false,
+//     required_confirmed: true` (VS3 states the same rule); the complementary lists are relation subfields and carry no
+//     `required_confirmed`.
+//   - Residual NULL-level gap (P2-3939 DD-6, LVL-R-6): a NULL level is not stated as a condition, because the vocabulary has no "is null".
+//     The form counts an unset level as != 0 (evidence required) and, for the complementary elements, the function also requires evidence
+//     for a NULL level, while the level-number entry of an unset level is empty and `in [1..9]` does not hold. The level field itself is
+//     `required: true`, so QA already flags the missing level.
 //   - Legacy columns: the first evidence of each level is dual-written to `readinees_evidence_link` / `use_evidence_link` /
 //     `readiness_details_of_evidence` / `use_details_of_evidence` of the element row, and VS3 tests THOSE columns (VS3:19-47, 231-264), not
 //     the list. They stay PENDING_CATALOG (not NOT_FOR_QA): packages without link rows (saved before P2-3824, no backfill, migration
@@ -47,9 +52,10 @@
 // VS3:62-103,147-192 / VS3:193-217). The any-of rule across the three lists (VS3:49-146: with a use level != 0 at least one complete
 // entry in actors / organizations / measures; once rows exist every active row must be complete, VS3:147-230) is not expressible
 // (there is no "at least one of the sibling lists" operator), so the lists are `required: false, required_confirmed: true`. The block
-// is hidden when the core use level is 0 (S3:61-63): not expressible for the id reason above, so the lists carry no `visible_when`
-// (documented gap: a consumer must treat the three lists as not applicable when the core use level is 0; the server also deactivates
-// the rows of a level 0, innovation-pathway-step-three.service.ts:665,754,829). "Organization" and "Sub-type" write the same column:
+// is shown only when the core evidence-based use level number is 1..9 (S3:61-63; P2-3939 DD-5, LVL-R-4): `visible_when` on
+// `core.use_level_number` (the evidence-based `core.use_level`, not `core.current_use_level`); the required flags and the row rules do not
+// change. The server also deactivates the rows of a level 0 (innovation-pathway-step-three.service.ts:665,754,829); an unset level shows
+// the block in the form but not here (residual NULL-level gap above). "Organization" and "Sub-type" write the same column:
 // one subfield `institution_type` with the 2-level list `institution_types` (REVIEW D3 (a), as in step 1).
 //
 // Levels (VS3:8-18): invalid only when BOTH core evidence-based levels are empty. The form marks both required (feedback markers
@@ -69,7 +75,7 @@ import {
   PathBinding,
   PathStep,
 } from '../types';
-import { FROM_2026, whenEq } from './shared';
+import { FROM_2026, whenEq, whenIn } from './shared';
 import {
   IPSR_ELEMENT_TABLE,
   IPSR_TABLE,
@@ -124,6 +130,12 @@ const SOURCE_UPLOAD = 1;
 const OTHER_ACTOR_TYPE = 5;
 const OTHER_INSTITUTION_TYPE = 78;
 const GRADUATE_STUDENTS_TYPE = 50;
+/** The level numbers 1..9: any level but 0 (P2-3939 DD-4, DD-5). The stored value is a level ROW id, so rules read the level-number entries. */
+const LEVELS_1_TO_9 = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+const READINESS_LEVEL_SOURCE = 'prms.clarisa_innovation_readiness_level';
+const USE_LEVEL_SOURCE = 'prms.clarisa_innovation_use_levels';
+const CORE_READINESS_NUMBER = 'ipsr_step_3.core.readiness_level_number';
+const CORE_USE_NUMBER = 'ipsr_step_3.core.use_level_number';
 
 const base = {
   result_types: IPSR_TYPES,
@@ -357,7 +369,24 @@ export const IPSR_STEP_3_FIELDS: CatalogField[] = [
     storage: levelOf(ROLE_CORE, 'readiness_level_evidence_based'),
   },
   {
-    // S3:37-39; VS3:19-33 (through the legacy mirror) when the level is not 0. Level gate not expressible (see the header).
+    // P2-3939 / LVL-R-1: the level NUMBER (0-9) of the row the field above points at (the stored value is the CLARISA row id). Read-only,
+    // no form label, same convention as `innovation_use.use_level.innovation_use_level_number`. Same `order` as the level field: ties sort by key.
+    ...base,
+    required_confirmed: false,
+    key: CORE_READINESS_NUMBER,
+    label: 'Level number (read-only)',
+    type: 'number',
+    section: IPSR_S3_CORE_SECTION.key,
+    order: 5,
+    storage: {
+      kind: 'lookup',
+      source: READINESS_LEVEL_SOURCE,
+      keys: [{ from: 'ipsr_step_3.core.readiness_level', to: 'id' }],
+      value_column: 'level',
+    },
+  },
+  {
+    // S3:37-39; VS3:19-33 (through the legacy mirror) when the level is not 0: required on the level number (see the header).
     ...base,
     key: 'ipsr_step_3.core.readiness_evidences',
     label: 'Innovation Readiness level evidence',
@@ -365,6 +394,7 @@ export const IPSR_STEP_3_FIELDS: CatalogField[] = [
     type: 'list',
     section: IPSR_S3_CORE_SECTION.key,
     order: 6,
+    required_when: whenIn(CORE_READINESS_NUMBER, LEVELS_1_TO_9),
     storage: {
       kind: 'path',
       steps: [CORE_ELEMENT_STEP, ...evidenceSteps('readiness')],
@@ -386,7 +416,24 @@ export const IPSR_STEP_3_FIELDS: CatalogField[] = [
     storage: levelOf(ROLE_CORE, 'use_level_evidence_based'),
   },
   {
-    // S3:54-56; VS3:34-47 when the level is not 0. Level gate not expressible (see the header).
+    // P2-3939 / LVL-R-1: the level NUMBER of the evidence-based use level row (see `core.readiness_level_number`). It drives the
+    // use evidence and the visibility of the current use of the core innovation.
+    ...base,
+    required_confirmed: false,
+    key: CORE_USE_NUMBER,
+    label: 'Level number (read-only)',
+    type: 'number',
+    section: IPSR_S3_CORE_SECTION.key,
+    order: 18,
+    storage: {
+      kind: 'lookup',
+      source: USE_LEVEL_SOURCE,
+      keys: [{ from: 'ipsr_step_3.core.use_level', to: 'id' }],
+      value_column: 'level',
+    },
+  },
+  {
+    // S3:54-56; VS3:34-47 when the level is not 0: required on the level number (see the header).
     ...base,
     key: 'ipsr_step_3.core.use_evidences',
     label: 'Innovation use level evidence',
@@ -394,6 +441,7 @@ export const IPSR_STEP_3_FIELDS: CatalogField[] = [
     type: 'list',
     section: IPSR_S3_CORE_SECTION.key,
     order: 19,
+    required_when: whenIn(CORE_USE_NUMBER, LEVELS_1_TO_9),
     storage: {
       kind: 'path',
       steps: [CORE_ELEMENT_STEP, ...evidenceSteps('use')],
@@ -402,8 +450,9 @@ export const IPSR_STEP_3_FIELDS: CatalogField[] = [
     subfields: evidenceItemSubfields(),
   },
   {
-    // S3C:6-97, block hidden at use level 0 (S3:61-63, not expressible). Any-of rule of the three lists: see the header.
+    // S3C:6-97, block hidden at use level 0 (S3:61-63): visible on the evidence-based use level number 1..9. Any-of rule of the three lists: see the header.
     ...base,
+    visible_when: whenIn(CORE_USE_NUMBER, LEVELS_1_TO_9),
     key: 'ipsr_step_3.core.current_use.actors',
     label: 'Actors',
     description:
@@ -505,6 +554,7 @@ export const IPSR_STEP_3_FIELDS: CatalogField[] = [
   },
   {
     ...base,
+    visible_when: whenIn(CORE_USE_NUMBER, LEVELS_1_TO_9),
     key: 'ipsr_step_3.core.current_use.organizations',
     label: 'Organizations',
     type: 'list',
@@ -580,6 +630,7 @@ export const IPSR_STEP_3_FIELDS: CatalogField[] = [
   },
   {
     ...base,
+    visible_when: whenIn(CORE_USE_NUMBER, LEVELS_1_TO_9),
     key: 'ipsr_step_3.core.current_use.measures',
     label: 'Other quantitative measures of innovation use (e.g. # of hectares)',
     type: 'list',
@@ -680,12 +731,27 @@ export const IPSR_STEP_3_FIELDS: CatalogField[] = [
         'readiness_levels',
         { required: true },
       ),
+      // P2-3939 / LVL-R-1: level number of the sibling row id above (read-only, no form label), read by the evidence gate below.
       {
-        // S3X:31-35; VS3:231-252 (through the legacy mirror) when the readiness level is not 0 or NULL. Level gate not expressible.
+        key: 'readiness_level_number',
+        label: 'Level number (read-only)',
+        type: 'number',
+        required: false,
+        storage: {
+          kind: 'lookup',
+          source: READINESS_LEVEL_SOURCE,
+          keys: [{ from: 'readiness_level', to: 'id' }],
+          value_column: 'level',
+        },
+      },
+      {
+        // S3X:31-35; VS3:231-252 (through the legacy mirror) when the readiness level is not 0 (or NULL, the residual gap): required
+        // on the sibling level number, never hidden (see the header).
         key: 'readiness_evidences',
         label: 'Innovation Readiness level evidence',
         type: 'list',
         required: false,
+        required_when: whenIn('readiness_level_number', LEVELS_1_TO_9),
         storage: {
           kind: 'path',
           steps: evidenceSteps('readiness'),
@@ -704,11 +770,24 @@ export const IPSR_STEP_3_FIELDS: CatalogField[] = [
         { required: true },
       ),
       {
-        // S3X:50-54; VS3:253-263.
+        key: 'use_level_number',
+        label: 'Level number (read-only)',
+        type: 'number',
+        required: false,
+        storage: {
+          kind: 'lookup',
+          source: USE_LEVEL_SOURCE,
+          keys: [{ from: 'use_level', to: 'id' }],
+          value_column: 'level',
+        },
+      },
+      {
+        // S3X:50-54; VS3:253-263: required on the sibling level number (see the header).
         key: 'use_evidences',
         label: 'Innovation use level evidence',
         type: 'list',
         required: false,
+        required_when: whenIn('use_level_number', LEVELS_1_TO_9),
         storage: {
           kind: 'path',
           steps: evidenceSteps('use'),
