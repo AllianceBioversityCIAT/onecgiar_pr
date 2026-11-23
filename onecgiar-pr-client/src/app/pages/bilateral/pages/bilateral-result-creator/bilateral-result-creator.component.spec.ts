@@ -1018,6 +1018,8 @@ describe('BilateralResultCreatorComponent', () => {
     it('saves the partial draft but lists what is still missing', async () => {
       // Pending before the flush, settled after it.
       autoSaveService.hasPendingFor.mockReturnValueOnce(true).mockReturnValue(false);
+      // P2-3960 (DD-3): "saved" needs a field this flush actually dispatched, not just a pending flag.
+      autoSaveService.pendingStatusKeysFor.mockReturnValue(['title']);
       await component.triggerManualSave();
       expect(autoSaveService.flush).toHaveBeenCalledWith(['generalInfo']);
       expect(show).toHaveBeenCalledWith(
@@ -1027,6 +1029,16 @@ describe('BilateralResultCreatorComponent', () => {
           status: 'warning',
         }),
       );
+    });
+
+    // P2-3960 BSA-R-2 (DD-3): a stale 'error' makes hasPendingFor true but nothing is staged, so
+    // flush sends nothing. It must read "Nothing to save yet", never "Draft saved".
+    it('BSA-R-2: a stale error alone (nothing dispatched) says "Nothing to save yet", not "Draft saved"', async () => {
+      autoSaveService.hasPendingFor.mockReturnValueOnce(true).mockReturnValue(false);
+      autoSaveService.pendingStatusKeysFor.mockReturnValue([]);
+      await component.triggerManualSave();
+      expect(show).toHaveBeenCalledWith(expect.objectContaining({ title: 'Nothing to save yet' }));
+      expect(show).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Draft saved' }));
     });
 
     // NOST-456 QA finding 01: a 14-word Short title (over the 10-word ceiling) saved with "Success".
@@ -1042,6 +1054,7 @@ describe('BilateralResultCreatorComponent', () => {
         },
       ]);
       autoSaveService.hasPendingFor.mockReturnValueOnce(true).mockReturnValue(false);
+      autoSaveService.pendingStatusKeysFor.mockReturnValue(['short-title']);
 
       await component.triggerManualSave();
 
@@ -1955,8 +1968,10 @@ describe('BilateralResultCreatorComponent', () => {
       const show = jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
       autoSaveService.hasPendingFor.mockReturnValue(true);
       autoSaveService.getEndpointKeys.mockReturnValue(['generalInfo']);
-      autoSaveService.hasErrorFor.mockReturnValue(true);
-      autoSaveService.lastErrorMessageFor.mockReturnValue('Title cannot be empty.');
+      // P2-3960 (DD-1): the failure check is scoped to the fields this flush dispatched.
+      autoSaveService.pendingStatusKeysFor.mockReturnValue(['title']);
+      autoSaveService.hasErrorForFields.mockReturnValue(true);
+      autoSaveService.lastErrorMessageForFields.mockReturnValue('Title cannot be empty.');
 
       await component.selectSection('contributors');
 
@@ -1965,6 +1980,48 @@ describe('BilateralResultCreatorComponent', () => {
       expect(show).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'error',
+          description: expect.stringContaining('Title cannot be empty.'),
+        }),
+      );
+    });
+
+    // P2-3960 BSA-R-1 (DD-1): a stale 'error' on a field nothing re-sent must not trap the user.
+    it('BSA-R-1: a stale error on a field this flush did not dispatch does not block navigation', async () => {
+      const show = jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+      autoSaveService.hasPendingFor.mockReturnValue(true);
+      autoSaveService.getEndpointKeys.mockReturnValue(['generalInfo']);
+      autoSaveService.pendingStatusKeysFor.mockReturnValue([]);
+      autoSaveService.hasErrorFor.mockReturnValue(true);
+      autoSaveService.hasErrorForFields.mockReturnValue(false);
+
+      await component.selectSection('contributors');
+
+      expect(component.openSectionName()).toBe('contributors');
+      expect(show).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Save failed' }));
+    });
+
+    // P2-3960 BSA-R-1 (DD-2): the wait is scoped too. The dispatched field is still 'saving' while a
+    // stale error exists elsewhere; the wait must not exit on the stale one, and a real failure that
+    // lands after a delay must still block with its own reason. Real timers, flip well under 1s.
+    it('BSA-R-1: the wait is scoped, so a real failure after a delay still blocks with its reason', async () => {
+      const show = jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+      autoSaveService.hasPendingFor.mockReturnValue(true);
+      autoSaveService.getEndpointKeys.mockReturnValue(['generalInfo']);
+      autoSaveService.pendingStatusKeysFor.mockReturnValue(['title']);
+      autoSaveService.hasErrorFor.mockReturnValue(true); // stale, section-wide
+      autoSaveService.hasErrorForFields.mockReturnValue(false);
+      autoSaveService.lastErrorMessageFor.mockReturnValue('Title cannot be empty.');
+      autoSaveService.lastErrorMessageForFields.mockReturnValue('Title cannot be empty.');
+      setTimeout(() => autoSaveService.hasErrorForFields.mockReturnValue(true), 300);
+
+      const start = Date.now();
+      await component.selectSection('contributors');
+
+      expect(Date.now() - start).toBeLessThan(5000);
+      expect(component.openSectionName()).toBe('general-info');
+      expect(show).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Save failed',
           description: expect.stringContaining('Title cannot be empty.'),
         }),
       );
@@ -2042,7 +2099,7 @@ describe('BilateralResultCreatorComponent', () => {
     it('the flush fails: savedTick NOT bumped (BSP-AC-3/BSP-R-4)', async () => {
       autoSaveService.hasPendingFor.mockReturnValue(true);
       autoSaveService.pendingStatusKeysFor.mockReturnValue(['title']);
-      autoSaveService.hasErrorFor.mockReturnValue(true);
+      autoSaveService.hasErrorForFields.mockReturnValue(true); // P2-3960: scoped failure check
       const before = saveButtonSE.savedTick();
 
       await component.selectSection('contributors');
