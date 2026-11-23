@@ -76,7 +76,7 @@
 
 ## T-2 · Alert services: replacement cancels stale timers; removal is null-safe
 
-- **Status:** todo · **Size:** XS (about 12 lines of production code, about 45 lines of tests)
+- **Status:** [x] done (PASS attempt 1, see execution.md) · **Size:** XS (about 12 lines of production code, about 45 lines of tests)
 - **Depends on:** none
 - **Requirements:** BSA-R-3, BSA-R-4
 - **Design:** DD-4, DD-5; P-7, P-8
