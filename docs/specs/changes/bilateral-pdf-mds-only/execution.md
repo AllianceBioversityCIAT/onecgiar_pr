@@ -119,3 +119,10 @@
 - Budget: 3/3 tasks; review rounds 4 vs 3 (accepted by the user); shipped LOC ≈ +55/−119.
 - Execute-time spec edits: listed under BPM-T-1 (verification wording + rollout, user-approved).
 - Pending (outside this command): commit + PR feature → `staging` → `main` (main = production deploy, Cristian Gamboa); look at result 27926 in production; reply to Nicoleta in INC-168048; OQ-1 (add non-printed MDS fields?); advisory — ID "readiness not provided" image when only nature/developers (product call); `fixtures/out/` never committed; `/akili-archive`.
+
+## Post-PR fix: Sonar duplication gate (2026-11-12)
+
+- PR #7 (pdf-viewer → `staging`) quality gate ERROR: `new_duplicated_lines_density` 4.5 > 3. Cause (SonarCloud `api/duplications/show`, PR 7): the bilateral `common-sections.tsx` is a pre-existing copy of `results_p25` / `ipsr_p25` common sections; 2 of the new lines fell inside those clone blocks — the `// @akili-spec` comment (line 41, block 12-43) and `hasPartners;` (line 172, block 167-255).
+- Fix (Leader inline, user request, 2 lines): comment moved to the file header; guard term written as `kpPartners.length > 0`. Behavior identical.
+- Verification: `tsc --noEmit` 0; eslint 0; `next build` 0; full render set vs `out/after` → 21 files, 0 diffs.
+- Commit `dfa8180` pushed to `fix/inc-168048-bilateral-pdf-mds-only`.
