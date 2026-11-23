@@ -20,11 +20,12 @@
   anchors via `position:absolute; inset:0`, not a `height:100%` chain (which resolves to content
   height on a long form and pushes the footer off-screen).
 - **Save draft tells the truth.** The alert names the section's empty MDS fields
-  (`missingFieldsFor`) and, on failure, the server's own reason. `triggerManualSave()` scopes its
-  post-flush failure check to `pendingStatusKeysFor(activeSection)` (captured before `flush()`) via
-  `hasErrorForFields`/`lastErrorMessageForFields` — NOT the section-wide `hasErrorFor`, which also
-  counts a different, already-settled field's stale `'error'` as if it belonged to this save
-  (BSF-T-2). `selectSection()`/`handleGiFieldSaveRequested()` still use the section-wide pair.
+  (`missingFieldsFor`) and, on failure, the server's own reason. `selectSection()` and
+  `triggerManualSave()` both scope wait, failure check and copy to `flushTargets`
+  (`pendingStatusKeysFor`, captured before `flush()`; `hasErrorForFields`/`lastErrorMessageForFields`,
+  never the section-wide `hasErrorFor`, BSF-T-2; P2-3960). An empty set neither waits nor blocks;
+  `triggerManualSave()` then says "Nothing to save yet". Trade-off BSF-OQ-1: a stale field error has
+  no per-field signal. `handleGiFieldSaveRequested()` still uses the section-wide pair.
 - **`savedTick` clears EVERY mounted field-card's "Unsaved changes" pill, page-wide** — every
   section stays mounted under `[hidden]`. All three save-reaching call sites
   (`triggerManualSave()`, `selectSection()`, `handleGiFieldSaveRequested()`) gate their bump through
@@ -56,15 +57,11 @@
 - `bilateral-routing.module.ts` (`create`/`result/:id`); `bilateral-results-list.component.ts:430` (`openResult`) navigates with `result_code`+`phase`.
 
 ## Gotchas (⚠️ = already broke something)
-- ⚠️ **The savedTick guard is page-wide, not per-section (BSP-T-1, second rework of this guard).**
-  The ORIGINAL 2026-09-29 guard assumed "navigating away always flushes the section being left
-  first" — false: `selectSection()` skips its flush entirely while `isSubmitting()` (the AI
-  quality-assessment drawer's `'refreshing'` window, `bilateral-quality-assessment-ui.service.ts:54`
-  — the rail's buttons aren't disabled during it). `hasAnyUnsavedAnywhere()` reads the ACTUAL state
-  of every field instead of inferring safety from navigation order — correct regardless of whether
-  any call site's own flush-before-switch assumption holds. A stuck `'error'` field anywhere now
-  blocks every later bump page-wide until it's retried and succeeds — an accepted trade-off, not a
-  new bug (it does not self-clear).
+- ⚠️ **The savedTick guard is page-wide, not per-section (BSP-T-1).** "Navigating away always
+  flushes the section being left" is false: `selectSection()` skips its flush while `isSubmitting()`
+  (AI-check `'refreshing'` window, `bilateral-quality-assessment-ui.service.ts:54`; rail buttons stay
+  enabled). So `hasAnyUnsavedAnywhere()` reads every field's actual state. A stuck `'error'` field
+  blocks every later bump until retried successfully — accepted trade-off, it does not self-clear.
 - ⚠️ **Evidence's own draft-item state is invisible to the page-wide check, by design, not by
   accident.** `section-evidence.component.ts`'s `showDraft()` (an open, not-yet-saved draft item)
   never reaches `BilateralAutoSaveService` until an actual save — `hasAnyUnsavedAnywhere()` can read
@@ -119,4 +116,4 @@
 ## Pending
 - HITL responsive/axe pass on the drawer — see `execution.md` of spec `manual-create-drawer`.
 
-**Verified:** 2026-10-16 · P2-3980 bilateral KP pool-funding parity
+**Verified:** 2026-11-23 · P2-3960 save-alert consistency (selectSection scoped, Save draft nothing-to-save)
