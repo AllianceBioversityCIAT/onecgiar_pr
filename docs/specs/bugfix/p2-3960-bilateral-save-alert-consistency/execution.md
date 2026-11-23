@@ -89,3 +89,56 @@
   - LOC: 86 added and 25 removed over 3 files (budget about 130 in total);
   - review rounds: 2 used against a budget of 2 in total (1 per task). T-1 used both, so T-2's first Reviewer verdict will exceed the budget's review rounds.
 - **Issues encountered:** the premise ledger rated P-9 Low; the settling check shows it invalidates the §10 reversion answer
+- **Gate (user, 2026-11-23):** "Commit T-1, run T-2". T-1 committed as `6cc9c75e0` (its 3 files and the spec folder only). The user accepted the extra review round for T-2, over the budget of 2.
+
+### T-2 · Alert services: replacement cancels stale timers; removal is null-safe
+
+- **Final status:** PASS (attempt 1)
+- **Date:** 2026-11-23
+- **Attempts:** 1
+- **Attempt 1**
+  - files changed: `onecgiar-pr-client/src/app/shared/services/customized-alerts-fe.service.ts`, `customized-alerts-fs.service.ts`, `customized-alerts-fe.service.spec.ts`, `customized-alerts-fs.service.spec.ts` (83 lines added, 2 removed)
+  - Red before the fix (tests first, `npx jest src/app/shared/services/customized-alerts --no-coverage`): `3 failed, 28 passed`.
+    - D: `Expected: false` / `Received: true`.
+    - E and F: `[TypeError: Cannot read properties of null (reading 'removeChild')]`.
+  - Falsifier after the fix:
+    - Removed `closeTimers.forEach(...)` and both `if (!alert.parentNode) return;` guards.
+    - Result: `3 failed, 28 passed`, with the same reds.
+    - Restored afterwards.
+  - Implementer verification: jest 31/31 (2 suites); lint clean; build exit 0.
+  - Evidence re-run (Leader inline): jest 31/31, lint exit 0, build exit 0 → **VERIFIED**.
+  - Reviewer: **PASS**. "T-2 passes. I reviewed 148 diff lines (standard depth, all four lenses) against tasks.md T-2, requirements §6 BSA-R-3 and BSA-R-4 plus §7, and design DD-4, DD-5, §9, P-7 and P-8. Every scope item, Disqualifier and Done criterion is met, and nothing contradicts the amended design §10 or the P-9 row." The Reviewer traced each red to a behavioural assertion and confirmed there is no leak of the mocks between describes.
+  - ADVISORY (4R):
+    - RELIABILITY: if the user closes an alert before its timer fires, the timer stays in the map until the next `show()` or until it fires. When it fires it does nothing, so this is harmless. DD-4 keeps `closeAction` unchanged.
+    - READABILITY: the map can only ever hold one entry, because `show()` clears everything. Keying it by id follows DD-4's wording.
+  - runtime events: none
+- **Not Done / Assumptions (verbatim, assumptions only, so no continuation):**
+  > I did not run `codegraph_impact` before editing. The change is additive and internal to `show()`: no signature change and no change to `closeIn` semantics. The `closeTimers.clear()` call runs on every `show()`, including a `show()` with a different id. That matches DD-4's "clears ALL pending timers" and the single-alert behaviour from P2-3030. `dist/` was produced by the build; it is gitignored and absent from `git status`.
+- **spawns:**
+  - implementer: 17 calls, ~144k tokens, ended complete;
+  - reviewer: 11 calls, ~86k tokens, ended complete.
+- **Skills:** angular-developer, tdd, error-handling-patterns (the task defaults). Effort: medium.
+- **Requirements covered:** BSA-R-3 (test D), BSA-R-4 (tests E and F).
+- **Final verification:** jest 31/31 · lint clean · build exit 0.
+- **Budget running totals:**
+  - tasks: 2 of 2;
+  - LOC: 169 added and 27 removed over 7 files, against an estimate of about 130;
+  - review rounds: 3 against a budget of 2. The user accepted the overrun at the T-1 gate. The LOC overrun comes mostly from tests and the CLAUDE.md invariant.
+
+## Summary
+
+| Task | Status | Attempts | Reviewer |
+|---|---|---|---|
+| T-1 | PASS | 2 (docs-only rework, CLAUDE.md line cap) | PASS |
+| T-2 | PASS | 1 | PASS |
+
+- **Requirements:** BSA-R-1..4 are all covered by automated tests, and each test was shown to go red under its falsifier.
+- **Open for validate (HITL):** the proposal §13 manual repro on prtest.
+- **Follow-up ticket candidates (advisories, not in this spec):**
+  1. Per-field display of save errors (the accepted P-9/BSF-OQ-1 trade-off).
+  2. A 15 s stall on a rail click when the same section holds a stale error and a successful save; the scoped pending condition would fix it.
+  3. Loose wording in the T-1 CLAUDE.md invariant.
+- **Kaizen inputs:**
+  - P-6 under-counted the consumers.
+  - P-9 was graded Low but invalidated a §10 premise.
+  - The review-round budget assumed no rework.

@@ -34,6 +34,7 @@ export class CustomizedAlertsFsService {
 
     alert.addEventListener('animationend', () => {
       if (!this.showed) {
+        if (!alert.parentNode) return;
         alert.classList.remove('animate__animated', 'animate__bounceIn', 'animate__bounceOut');
         alert.style.display = 'none';
         alert.parentNode.removeChild(alert);
