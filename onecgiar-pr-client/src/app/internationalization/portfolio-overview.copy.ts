@@ -46,13 +46,15 @@ export const PORTFOLIO_OVERVIEW_COPY = {
     submitted: 'Top bar: Submitted',
     submittedHint: '(every status except Editing)',
     editing: 'Bottom bar, striped: Editing',
+    singleBar: 'A row with only one bar has results in only one of the two groups.',
     countsHint: 'Numbers show inside a segment when they fit; hover a row for the full breakdown.'
   },
   // "By Center" tab, view-only (TBC-R-10, TBC-DD-9): same shape as typologyChart, no action labels are used
   dimensionProgram: 'By Program / Accelerator',
   dimensionCenter: 'By Center (W3/Bilateral)',
   dimensionAriaLabel: 'Group the chart by',
-  centerNote: 'Counts the lead Center; the Center filter also matches contributing Centers.',
+  centerNote:
+    'Each result is counted once, under its lead Center. The Center filter also keeps results where that Center only contributes, so other Centers can appear in this chart while it is on.',
   typologyCenterChart: {
     bucketLabels: { submitted: 'Submitted', editing: 'Editing' },
     unclassifiedLabel: 'Unclassified',
@@ -117,7 +119,9 @@ export const PORTFOLIO_OVERVIEW_COPY = {
   // W3/Bilateral projects (spec changes/portfolio-overview-revamp/w3-projects-section, WPS-R-4..R-9)
   projects: {
     title: 'W3/Bilateral projects',
-    subtitle: (year: string | number) => `Projects mapped to a Program or Accelerator for ${year}, and how many report results`,
+    subtitle: (year: string | number) =>
+      `Projects mapped to a Program or Accelerator for ${year}. Per Program/Accelerator, "With W3/Bilateral results" counts the projects whose W3/Bilateral results name it as primary or contributing.`,
+    centerSubtitle: (year: string | number) => `Projects mapped to a Program or Accelerator for ${year}, grouped by the Center that leads each project.`,
     kpiMapped: 'Mapped projects',
     kpiWithBilateral: 'With W3/Bilateral results',
     kpiW1w2: 'Contributing to W1/W2',
@@ -128,7 +132,8 @@ export const PORTFOLIO_OVERVIEW_COPY = {
     viewChart: 'Chart',
     viewTable: 'Table',
     viewAriaLabel: 'Show the projects as',
-    multiProgramCaption: 'A project mapped to several P/As counts under each, so the bars add up to more than the total.',
+    multiProgramCaption:
+      'A project counts under every P/A it is mapped to and every P/A its results name, so a P/A can show more projects with results than mapped projects, and the bars add up to more than the total.',
     footnote: (n: number) =>
       n === 1
         ? '1 project has W3/Bilateral results but no approved P/A mapping, so it is not counted.'

@@ -246,6 +246,53 @@ describe('CustomizedAlertsFeService', () => {
     });
   });
 
+  describe('show - replacement and detached removal (P2-3960 BSA-R-3, BSA-R-4)', () => {
+    beforeEach(() => {
+      delete (document as any).getElementById;
+      delete (document as any).getElementsByTagName;
+      document.body.innerHTML = '<app-root></app-root>';
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      document.body.innerHTML = '';
+    });
+
+    it('a same-id replacement keeps the new alert when the stale timer would have fired, and closes it on its own timer', () => {
+      jest.useFakeTimers();
+      service.show({ id: 'X', title: 'First', status: 'success', closeIn: 1 });
+      jest.advanceTimersByTime(2000);
+      service.show({ id: 'X', title: 'Second', status: 'success', closeIn: 1 });
+
+      jest.advanceTimersByTime(1500); // t=3500, the stale timer (t=3000) has passed
+      expect(document.getElementById('X').classList.contains('delete')).toBe(false);
+
+      jest.advanceTimersByTime(1500); // t=5000, the new alert own timer
+      expect(document.getElementById('X').classList.contains('delete')).toBe(true);
+    });
+
+    it('removing a detached alert on animationend does not throw', () => {
+      const errors: unknown[] = [];
+      const onError = (e: ErrorEvent) => {
+        errors.push(e.error);
+        e.preventDefault();
+      };
+      window.addEventListener('error', onError);
+      try {
+        service.show({ id: 'gone', title: 'T', status: 'success' });
+        const container = document.getElementById('gone');
+        service.closeAction('gone');
+        container.remove();
+
+        container.dispatchEvent(new Event('animationend'));
+      } finally {
+        window.removeEventListener('error', onError);
+      }
+
+      expect(errors).toEqual([]);
+    });
+  });
+
   describe('closeAction', () => {
     it('should add animation classes when elements exist', () => {
       const alertModal = document.createElement('div');

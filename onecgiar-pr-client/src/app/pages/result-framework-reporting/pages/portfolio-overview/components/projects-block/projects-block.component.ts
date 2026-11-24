@@ -10,13 +10,23 @@ import { PortfolioBilateralProjects } from '../../../../../../shared/interfaces/
 import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { resolveChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
-import { buildProjectsOption, buildProjectsTable, ProjectsChartLabels, projectsChartHeight } from './projects.charts';
+import { buildProjectsOption, buildProjectsTable, ProjectsChartLabels, ProjectsSeriesColours, projectsChartHeight } from './projects.charts';
 import { FilterDimension } from '../../services/portfolio-filters';
 import { filterProjectRows, ProjectsViewRow, shareOfMapped, toCenterRows, toProgramRows } from './projects.format';
 
 type LoadStatus = 'loading' | 'error' | 'ready';
 export type ProjectsDimension = 'program' | 'center';
 export type ProjectsView = 'chart' | 'table';
+
+/** Series colour tokens (PGC-DD-5): three different hues, all at 3:1 or more on the card (PGC-DD-6). */
+const SERIES_TOKENS = { mapped: '--pr-chart-1', withBilateral: '--pr-color-green-600', w1w2: '--pr-color-orange-700' } as const;
+
+/** A canvas cannot read `var()`: use the computed value, or the `var(--pr-...)` reference itself where there is none (jsdom, SSR). */
+export function resolveProjectsSeriesColours(): ProjectsSeriesColours {
+  const style = typeof document !== 'undefined' && typeof getComputedStyle === 'function' ? getComputedStyle(document.documentElement) : null;
+  const pick = (token: string): string => style?.getPropertyValue(token).trim() || `var(${token})`;
+  return { mapped: pick(SERIES_TOKENS.mapped), withBilateral: pick(SERIES_TOKENS.withBilateral), w1w2: pick(SERIES_TOKENS.w1w2) };
+}
 
 /** Rows of the loading skeleton. A fixed number: the real count is unknown until the response lands. */
 const SKELETON_ROWS = [0, 1, 2, 3] as const;
@@ -93,7 +103,7 @@ export class PortfolioProjectsBlockComponent {
     totalLabel: this.copy.totalLabel
   }));
 
-  readonly chartOption = computed(() => buildProjectsOption(this.rows(), resolveChartTokens(), this.chartLabels()));
+  readonly chartOption = computed(() => buildProjectsOption(this.rows(), resolveChartTokens(), this.chartLabels(), resolveProjectsSeriesColours()));
   /** Grows with the row count so 13 horizontal groups stay readable (POD-R-1). */
   readonly chartHeight = computed(() => `${projectsChartHeight(this.rows().length)}px`);
   readonly chartTable = computed(() => buildProjectsTable(this.rows(), this.totals(), this.chartLabels()));

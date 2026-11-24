@@ -8,20 +8,6 @@
 
 PRMS (Planning, Reporting & Management System) is a monorepo for OneCGIAR. This file maps the whole platform so an AI coding agent can decide where to work next without scanning the tree from scratch.
 
-## 2. Ecosystem map
-
-```text
-onecgiar_pr/
-├── onecgiar-pr-server/      # NestJS 11 backend (TypeORM/MySQL, Lambda + Docker)
-│   └── AGENTS.md            # Server-side agent guide (agents.md standard)
-├── onecgiar-pr-client/      # Angular 21 frontend (PrimeNG, Jest, Cypress)
-│   ├── AGENTS.md            # Package-level frontend guide
-│   └── src/AGENTS.md        # Source-tree frontend guide
-├── docs/                    # AKILI baseline: prd, ux-ui, trd, infrastructure, specs
-├── .cursorrules             # Hard rule: no secrets in logs, code, or docs
-└── AGENTS.md                # This root router + project memory
-```
-
 ## 3. Read order
 
 1. This file (`AGENTS.md`).
@@ -38,17 +24,6 @@ You are a coding assistant for a regulated reporting platform. Your job is to:
 - Make the smallest correct change.
 - Never log, print, commit, or document secrets, JWTs, API keys, credentials, or webhook URLs.
 
-## 5. Platform-wide skills
-
-| Skill | Command / location |
-|---|---|
-| Install & bootstrap | `npm ci && npm run prepare` (root) |
-| Server run | `cd onecgiar-pr-server && npm run start:dev` |
-| Server test | `npm run test` |
-| Migration check | `npm run migration:check` / `npm run migration:check:ci` |
-| Client run | `cd onecgiar-pr-client && npm start` |
-| Client test | `npm run test` / `npm run cypress:run` |
-
 ## 6. Cross-cutting constraints
 
 - **Auth header**: custom `auth: <JWT>`, never `Authorization: Bearer`.
@@ -56,6 +31,7 @@ You are a coding assistant for a regulated reporting platform. Your job is to:
 - **Commits**: format `<emoji> <type>(<scope>) [ticket]: <description>`.
 - **Branches**: `master` (main), `staging` (integration). PRs target `staging` or `master`.
 - **Do not commit** unless the user explicitly asks.
+- **W3/Bilateral form ↔ API ↔ Fetcher**: before changing a W3/Bilateral form (the `pages/bilateral/` centre form, or a shared result-detail form shown when `source_name = 'W3/Bilaterals'`), check whether the change alters what `/api/bilateral/*` accepts or returns: fields, required-ness, MDS rules or enum values. If it does, ship every layer together: client UI, reporting server (DTO, handler and the change log in `onecgiar-pr-server/docs/bilateral-result-summaries.en.md`) and the Fetcher (its schema and backend, a separate service). If it does not (copy or show/hide only, payload unchanged), say so in the PR description so the reviewer can merge without asking. Rule from the PR #802 review, 2026-11-13.
 
 ## 7. Where to go next
 

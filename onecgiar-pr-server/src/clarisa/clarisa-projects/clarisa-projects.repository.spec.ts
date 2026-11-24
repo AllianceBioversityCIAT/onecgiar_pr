@@ -83,9 +83,32 @@ describe('ClarisaProjectsRepository', () => {
       return { result, sql: squash(sql), params };
     };
 
-    it('binds [approvedStatuses, API, version, Discontinued, Result, version, year] in order', async () => {
+    it('binds [approvedStatuses, API, version, Discontinued, Result, version, roles, requestStatuses, API, version, Discontinued, year] in order', async () => {
       const { params } = await run();
-      expect(params).toEqual([['Confirmed'], 'API', 7, 4, 'Result', 7, 2026]);
+      expect(params).toEqual([
+        ['Confirmed'],
+        'API',
+        7,
+        4,
+        'Result',
+        7,
+        [1, 2],
+        [1, 2, 4],
+        'API',
+        7,
+        4,
+        2026,
+      ]);
+    });
+
+    it('names P/As from role 1/2 links and Pending/Accepted/Draft requests, active only', async () => {
+      const { sql } = await run();
+      expect(sql).toContain('rbi.initiative_role_id IN (?)');
+      expect(sql).toContain('srr.request_status_id IN (?)');
+      expect(sql).toContain('rbi.is_active = 1');
+      expect(sql).toContain('srr.is_active = 1');
+      expect(sql).toContain('GROUP_CONCAT(DISTINCT TRIM(ci.official_code))');
+      expect(sql).toContain('ci.id = named.initiative_id');
     });
 
     it('compares mapping status case-sensitively on the trimmed value', async () => {
@@ -114,8 +137,9 @@ describe('ClarisaProjectsRepository', () => {
 
     it('requires active links and results in both probes', async () => {
       const { sql } = await run();
-      expect(sql.match(/rbp\.is_active = 1/g)).toHaveLength(2);
-      expect(sql.match(/r\.is_active = 1/g)).toHaveLength(2);
+      expect(sql.match(/rbp\.is_active = 1/g)).toHaveLength(3);
+      // 3 result probes + srr.is_active (substring match)
+      expect(sql.match(/r\.is_active = 1/g)).toHaveLength(4);
     });
 
     it('applies no status filter to the W1/W2 probe', async () => {
@@ -124,13 +148,14 @@ describe('ClarisaProjectsRepository', () => {
       const w1w2 = sql.slice(sql.lastIndexOf('EXISTS', w1w2End), w1w2End);
       expect(w1w2.length).toBeGreaterThan(0);
       expect(w1w2).not.toContain('status_id');
-      expect(sql.match(/status_id/g)).toHaveLength(2);
+      // has_bilateral + named_program_codes W3 filters + the request_status_id filter
+      expect(sql.match(/r\.status_id/g)).toHaveLength(4);
     });
 
     it('uses no string interpolation', async () => {
       const { sql } = await run();
       expect(sql).not.toContain('${');
-      expect(sql.match(/\?/g)).toHaveLength(7);
+      expect(sql.match(/\?/g)).toHaveLength(12);
     });
 
     it('maps rows: splits and trims codes, drops blanks, coerces flags', async () => {
@@ -140,6 +165,7 @@ describe('ClarisaProjectsRepository', () => {
           organization_code: '5',
           source_center_acronym: 'CIAT',
           approved_program_codes: ' SP01, ,SP04',
+          named_program_codes: 'SP09, ,SP01 ',
           has_bilateral: '1',
           has_w1w2: 0,
         },
@@ -148,6 +174,7 @@ describe('ClarisaProjectsRepository', () => {
           organization_code: null,
           source_center_acronym: null,
           approved_program_codes: null,
+          named_program_codes: null,
           has_bilateral: 0,
           has_w1w2: '1',
         },
@@ -157,6 +184,7 @@ describe('ClarisaProjectsRepository', () => {
         organizationCode: 5,
         sourceCenterAcronym: 'CIAT',
         approvedProgramCodes: ['SP01', 'SP04'],
+        namedProgramCodes: ['SP09', 'SP01'],
         hasBilateral: true,
         hasW1w2: false,
       });
@@ -165,6 +193,7 @@ describe('ClarisaProjectsRepository', () => {
         organizationCode: null,
         sourceCenterAcronym: null,
         approvedProgramCodes: [],
+        namedProgramCodes: [],
         hasBilateral: false,
         hasW1w2: true,
       });

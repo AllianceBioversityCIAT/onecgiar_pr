@@ -13,7 +13,7 @@ import {
  * and are NOT checked.
  *
  * UNVERIFIED (left out on purpose, no authoritative source in the repo, so no ids are invented):
- *  - `innovation_use_levels` (CLARISA use levels; see the D28 note in sections/innovation-use.ts)
+ *  - `innovation_use_levels` (CLARISA use levels; row ids are not the level numbers, rules compare the `*_level_number` lookups)
  *  - `innovation_types` (CLARISA; `innovation_dev.nature eq 12`)
  *  - `discontinued_reasons` (`investment_discontinued_option`, rows added over time by migration
  *    1712162692416 and by admins; ids are not a fixed set)

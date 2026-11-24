@@ -11,9 +11,16 @@ export interface PortfolioProjectFactsRow {
   organizationCode: number | null;
   sourceCenterAcronym: string | null;
   approvedProgramCodes: string[];
+  /** P/A codes the project's qualifying W3 results name (primary or contributing). */
+  namedProgramCodes: string[];
   hasBilateral: boolean;
   hasW1w2: boolean;
 }
+
+/** `results_by_inititiative.initiative_role_id`: 1 primary, 2 accepted contributor. */
+const NAMED_INITIATIVE_ROLE_IDS = [1, 2];
+/** `share_result_request.request_status_id`: 1 Pending, 2 Accepted, 4 Draft (3 Declined is excluded). */
+const NAMED_REQUEST_STATUS_IDS = [1, 2, 4];
 
 @Injectable()
 export class ClarisaProjectsRepository extends Repository<ClarisaProject> {
@@ -73,7 +80,8 @@ export class ClarisaProjectsRepository extends Repository<ClarisaProject> {
    * Portfolio Overview W3 section aggregates (WPS-T-1). Read-only; every value is bound.
    *
    * Bind order follows the text order of the placeholders: approved statuses,
-   * 'API', version, Discontinued, 'Result', version, year.
+   * 'API', version, Discontinued, 'Result', version, then the named_program_codes
+   * sub-select (roles, request statuses, 'API', version, Discontinued), year.
    */
   async getPortfolioProjectFacts(
     year: number,
@@ -113,7 +121,32 @@ export class ClarisaProjectsRepository extends Repository<ClarisaProject> {
             AND r.is_active = 1
             AND r.source = ?
             AND r.version_id = ?
-        ) AS has_w1w2
+        ) AS has_w1w2,
+        (
+          SELECT GROUP_CONCAT(DISTINCT TRIM(ci.official_code))
+          FROM results_by_projects rbp
+          INNER JOIN result r ON r.id = rbp.result_id
+          INNER JOIN (
+            SELECT rbi.result_id AS result_id, rbi.inititiative_id AS initiative_id
+            FROM results_by_inititiative rbi
+            WHERE rbi.is_active = 1
+              AND rbi.initiative_role_id IN (?)
+            UNION
+            SELECT srr.result_id AS result_id, srr.shared_inititiative_id AS initiative_id
+            FROM share_result_request srr
+            WHERE srr.is_active = 1
+              AND srr.request_status_id IN (?)
+          ) named ON named.result_id = r.id
+          INNER JOIN clarisa_initiatives ci ON ci.id = named.initiative_id
+          WHERE rbp.project_id = cp.id
+            AND rbp.is_active = 1
+            AND r.is_active = 1
+            AND r.source = ?
+            AND r.version_id = ?
+            AND (r.status_id IS NULL OR r.status_id <> ?)
+            AND ci.official_code IS NOT NULL
+            AND TRIM(ci.official_code) <> ''
+        ) AS named_program_codes
       FROM clarisa_projects cp
       WHERE cp.phase = ?
         AND (cp.is_active IS NULL OR cp.is_active <> 0)
@@ -125,6 +158,11 @@ export class ClarisaProjectsRepository extends Repository<ClarisaProject> {
       ResultStatusData.Discontinued.value,
       SourceEnum.Result,
       resolvedVersionId,
+      [...NAMED_INITIATIVE_ROLE_IDS],
+      [...NAMED_REQUEST_STATUS_IDS],
+      SourceEnum.Bilateral,
+      resolvedVersionId,
+      ResultStatusData.Discontinued.value,
       year,
     ];
 
@@ -140,6 +178,10 @@ export class ClarisaProjectsRepository extends Repository<ClarisaProject> {
               : Number(row.organization_code),
           sourceCenterAcronym: row.source_center_acronym ?? null,
           approvedProgramCodes: String(row.approved_program_codes ?? '')
+            .split(',')
+            .map((code) => code.trim())
+            .filter((code) => code !== ''),
+          namedProgramCodes: String(row.named_program_codes ?? '')
             .split(',')
             .map((code) => code.trim())
             .filter((code) => code !== ''),

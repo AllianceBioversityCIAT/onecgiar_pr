@@ -140,13 +140,20 @@ describe('PortfolioProjectsBlockComponent (WPS-T-4)', () => {
       const f = create();
       await answer(f, pending()[0], payload({ totals: counts(30, 17, 1) }));
       expect(text(q(f, 'h2'))).toBe('W3/Bilateral projects');
-      expect(text(q(f, '[data-testid="projects-subtitle"]'))).toContain('2026');
+      expect(text(q(f, '[data-testid="projects-subtitle"]'))).toBe(copy.subtitle(2026));
       expect(text(q(f, '[data-testid="projects-kpi-mapped"]'))).toContain('30');
       expect(text(q(f, '[data-testid="projects-kpi-mapped"]'))).not.toContain('%');
       expect(text(q(f, '[data-testid="projects-kpi-with-bilateral"] [data-testid="projects-kpi-value"]'))).toBe('17');
       expect(text(q(f, '[data-testid="projects-kpi-with-bilateral"] [data-testid="projects-kpi-percent"]'))).toBe('56.7% of mapped');
       expect(text(q(f, '[data-testid="projects-kpi-w1w2"] [data-testid="projects-kpi-value"]'))).toBe('1');
       expect(text(q(f, '[data-testid="projects-kpi-w1w2"] [data-testid="projects-kpi-percent"]'))).toBe('3.3% of mapped');
+    });
+
+    it('passes the three resolved series tokens to the chart option, in order', async () => {
+      const f = create();
+      await answer(f, pending()[0]);
+      const option: any = f.componentInstance.chartOption();
+      expect(option.series.map((s: any) => s.itemStyle.color)).toEqual(['var(--pr-chart-1)', 'var(--pr-color-green-600)', 'var(--pr-color-orange-700)']);
     });
 
     it('starts on By P/A + Chart: chart host present, table absent, caption visible', async () => {
@@ -157,6 +164,20 @@ describe('PortfolioProjectsBlockComponent (WPS-T-4)', () => {
       expect(text(q(f, '[data-testid="projects-multi-caption"]'))).toBe(copy.multiProgramCaption);
       expect(q(f, '[data-testid="projects-tab-program"]')).not.toBeNull();
       expect(q(f, '[data-testid="projects-tab-center"]')).not.toBeNull();
+    });
+
+    // @akili-spec changes/portfolio-graphs-clarity (PGC-T-4, Scenarios 6.1 and 6.2)
+    it('subtitle follows the active tab: rule text on By P/A, Center text on By Center', async () => {
+      const f = create();
+      await answer(f, pending()[0]);
+      const sel = '[data-testid="projects-subtitle"]';
+      expect(text(q(f, sel))).toBe(copy.subtitle(2026));
+      click(f, 'projects-tab-center');
+      expect(text(q(f, sel))).toBe(copy.centerSubtitle(2026));
+      expect(text(q(f, sel))).toBe('Projects mapped to a Program or Accelerator for 2026, grouped by the Center that leads each project.');
+      expect(text(q(f, sel))).not.toContain('Per Program/Accelerator');
+      click(f, 'projects-tab-program');
+      expect(text(q(f, sel))).toBe(copy.subtitle(2026));
     });
 
     // @akili-spec bugfix/inc-168459-portfolio-overview-data (POD-T-2)

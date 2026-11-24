@@ -37,6 +37,15 @@ export const LOOKUP_SOURCES: Readonly<Record<string, SourceEntry>> = {
     table: 'investment_discontinued_option',
     primaryKey: 'investment_discontinued_option_id',
   },
+  // P2-3939 DD-2: the level NUMBER (`level`) of a CLARISA level row, whose id is NOT the number (repeated rows, offsets).
+  'prms.clarisa_innovation_use_levels': {
+    table: 'clarisa_innovation_use_levels',
+    primaryKey: 'id',
+  },
+  'prms.clarisa_innovation_readiness_level': {
+    table: 'clarisa_innovation_readiness_level',
+    primaryKey: 'id',
+  },
   'prms.result_questions': {
     table: 'result_questions',
     primaryKey: 'result_question_id',

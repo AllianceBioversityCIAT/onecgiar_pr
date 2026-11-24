@@ -74,7 +74,7 @@ const VISIBLE: Record<string, Condition | undefined> = {
     ],
   },
   'innovation_use.use_level.readiness_level_explanation': inn(
-    'innovation_use.use_level.innovation_use_level',
+    'innovation_use.use_level.innovation_use_level_number',
     [5, 6, 7, 8, 9],
   ),
   'capacity_sharing.length_of_training>degree': eq(

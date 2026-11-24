@@ -74,6 +74,7 @@ Patrón completo: `innov_use_2030_justification` (P2-3515).
   runtime. Y sin embargo el green check de Innovation Use **funciona** (medido 3-sep-2026: verde en
   8 de 12 resultados). ⇒ El cuerpo vivo está en la base y **difiere del repo**. No basar cambios en
   esa copia: pedir `SHOW CREATE FUNCTION`.
+- ⚠️ **Los umbrales de nivel comparan el NÚMERO de nivel, nunca el id de fila** (P2-4129). El catálogo repite niveles bajo ids altos (fila 13 = nivel 2). Explicación y respuesta de escalamiento: nivel >= 5; enlaces de estudios: nivel >= 6 (guardar y leer). `innovation_use_level_id` sigue guardando el id de fila. Spec: `innovation-use.service.level-threshold.spec.ts`.
 - Ninguna validación compara sumas de actores hoy. Si una historia pide "el total debe cuadrar", eso
   es nuevo y hay que decidir si vive en el front o en la función SQL.
 - Los specs se construyen con `Object.create(InnovationUseService.prototype)` para saltarse el
