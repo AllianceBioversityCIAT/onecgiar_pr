@@ -83,6 +83,15 @@
     </div>
   }
 
+  <!-- P2-4125: the green check needs at least one actor, organization or other measure here; this
+       marker is what puts that rule in the bottom-bar alert. Same fence as the server function (P25),
+       never IPSR step 1, which has its own completeness. -->
+  @if (this.fieldsManagerSE.isP25() && !this.isIpsr) {
+    <div
+      appFeedbackValidation
+      labelText="Current core innovation use: add at least one actor, organization or other measure"
+      [isComplete]="isCurrentUseGroupComplete()"></div>
+  }
   <app-pr-field-header [required]="false" label="Actors" description="{{ narrativeActors() }}"></app-pr-field-header>
   <input type="text" id="removeFocus" style="position: absolute; opacity: 0" />
   <div class="fields_list" *ngIf="this.body.innovatonUse.actors?.length">
