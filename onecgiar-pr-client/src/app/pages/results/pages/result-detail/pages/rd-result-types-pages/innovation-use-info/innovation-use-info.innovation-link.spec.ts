@@ -92,7 +92,7 @@ describe('InnovationUseInfoComponent — optional link to a QA’d Innovation De
             }
           }
         },
-        { provide: FieldsManagerService, useValue: { isP25: () => true } },
+        { provide: FieldsManagerService, useValue: { isP25: () => true, isInnovationUseAgeFallback2026: () => false } },
         { provide: DataControlService, useValue: { currentResultSignal } },
         { provide: QaInnovationDevelopmentResultsService, useValue: qaInnovationsSE }
       ]

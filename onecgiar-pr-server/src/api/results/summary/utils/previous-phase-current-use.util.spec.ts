@@ -73,6 +73,10 @@ describe('previous-phase current use util (P2-3985)', () => {
     v2._resultActorRepository = {
       find: jest.fn().mockResolvedValue(rawRows()),
     };
+    v2._resultByIntitutionsTypeRepository = {
+      find: jest.fn().mockResolvedValue([]),
+    };
+    v2._resultIpMeasureRepository = { find: jest.fn().mockResolvedValue([]) };
 
     const fromV2 = await v2.getPreviousPhaseCurrentUse(41, 2025);
     const fromUtil = summarizePreviousPhaseCurrentUse(rawRows(), 41, 2025);
@@ -81,8 +85,101 @@ describe('previous-phase current use util (P2-3985)', () => {
       result_id: 41,
       phase_year: 2025,
       total_actors: 505,
+      total_organizations: 0,
+      measures: [],
     });
     expect(fromV2.total_actors).toBe(fromUtil.total_actors);
     expect(fromV2.phase_year).toBe(fromUtil.phase_year);
+  });
+
+  describe('IU26-R-4 per-category previous use', () => {
+    const actors = [
+      { section_id: 1, sex_and_age_disaggregation: true, how_many: 100 },
+      { section_id: null, sex_and_age_disaggregation: true, how_many: 50 },
+      { section_id: 2, sex_and_age_disaggregation: true, how_many: 999 },
+    ];
+    const orgs = [
+      { section_id: 1, institution_roles_id: 5, is_active: true, how_many: 9 },
+      { section_id: 1, institution_roles_id: 2, is_active: true, how_many: 30 },
+      { section_id: 1, institution_roles_id: 5, is_active: false, how_many: 7 },
+      { section_id: 2, institution_roles_id: 5, is_active: true, how_many: 80 },
+    ];
+    const measures = [
+      {
+        section_id: 1,
+        is_active: true,
+        unit_of_measure: 'Hectares',
+        quantity: 4000,
+      },
+      {
+        section_id: 1,
+        is_active: true,
+        unit_of_measure: 'hectares ',
+        quantity: 100,
+      },
+      {
+        section_id: 1,
+        is_active: true,
+        unit_of_measure: 'Trees',
+        quantity: 500,
+      },
+      {
+        section_id: 2,
+        is_active: true,
+        unit_of_measure: 'Hectares',
+        quantity: 77,
+      },
+    ];
+    const v2 = (rows = actors, o = orgs, m = measures) =>
+      summarizePreviousPhaseCurrentUse(
+        rows,
+        41,
+        2025,
+        undefined,
+        currentUseRows,
+        o,
+        m,
+      );
+
+    it('v2: role-5 current-use organizations and units grouped case/space-insensitively', () => {
+      expect(v2()).toEqual({
+        result_id: 41,
+        phase_year: 2025,
+        total_actors: 100,
+        total_organizations: 9,
+        measures: [
+          { unit: 'Hectares', quantity: 4100 },
+          { unit: 'Trees', quantity: 500 },
+        ],
+      });
+    });
+
+    it('legacy: NULL-section actors count (150), organizations and measures follow the same pick', () => {
+      const r = summarizePreviousPhaseCurrentUse(
+        actors,
+        41,
+        2025,
+        undefined,
+        undefined,
+        orgs,
+        measures,
+      );
+      expect(r?.total_actors).toBe(150);
+      expect(r?.total_organizations).toBe(9);
+    });
+
+    it('is not null with organizations only', () => {
+      expect(v2([], orgs, [])).toEqual({
+        result_id: 41,
+        phase_year: 2025,
+        total_actors: 0,
+        total_organizations: 9,
+        measures: [],
+      });
+    });
+
+    it('is null when actors, organizations and measures are all empty', () => {
+      expect(v2([], [orgs[1], orgs[3]], [measures[3]])).toBeNull();
+    });
   });
 });

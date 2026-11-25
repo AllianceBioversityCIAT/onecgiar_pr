@@ -140,6 +140,8 @@ class InnovatonUse {
 export class Measure {
   unit_of_measure: string = null;
   quantity: number = null;
+  /** IU26-R-11 — "of which NEW" (optional, W1/W2 2026 current-use rows only); `null`/absent = not answered. */
+  new_users?: number | null;
   is_active: boolean = null;
   result_ip_measure_id: any;
 }
@@ -148,6 +150,8 @@ export class Organization {
   institution_types_id: number;
   institution_sub_type_id: number;
   how_many: number;
+  /** IU26-R-11 — "of which NEW" (optional, W1/W2 2026 current-use rows only); `null`/absent = not answered. */
+  new_users?: number | null;
   other_institution: string;
   graduate_students: string;
   // Aux
@@ -197,6 +201,8 @@ export class Actor {
    */
   count_unit?: string | null;
   use_nature?: string | null;
+  /** IU26-R-11 — "of which NEW" (optional, W1/W2 2026 current-use rows only); `null`/absent = not answered. */
+  new_users?: number | null;
 }
 
 interface SdgTarget {

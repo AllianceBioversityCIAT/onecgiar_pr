@@ -5,13 +5,16 @@ import { INNOVATION_USE_2030_PROJECTION_COPY } from '../../../internationalizati
 import { CURRENT_USE_UPDATE_COPY } from '../../../internationalization/current-use-update.copy';
 import { INNOVATION_USE_YOUTH_REQUIRED_COPY } from '../../../internationalization/innovation-use-youth-required.copy';
 import {
-  currentUseDifference,
-  currentUseMismatchMessage,
-  hasCurrentUseMismatch,
-  isCurrentUseUpdateComplete,
-  previousReportedUse,
-  previousUsePhaseYear,
-  totalCumulativeUse
+  actorRowTotal,
+  isCurrentUseNarrativeComplete,
+  newUsersByCategory,
+  newUsersExceedsMessage,
+  newUsersExceedsTotal,
+  previousUseByCategory,
+  totalsByCategory,
+  type NewUsersByCategory,
+  type PreviousUseByCategory,
+  type TotalsByCategory
 } from '../../utils/current-use-update.util';
 import { ApiService } from '../../services/api/api.service';
 import { TerminologyService } from '../../../internationalization/terminology.service';
@@ -207,6 +210,10 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
 
   /** Hard limit on the expansion narrative, per the story. */
   readonly maxNarrativeWords = CURRENT_USE_UPDATE_COPY.maxNarrativeWords;
+  /** IU26-R-4 — category labels of the previous-use block. */
+  readonly categoryLabels = CURRENT_USE_UPDATE_COPY.categoryLabels;
+  /** IU26-DD-10 — the CUU block's own strings (header, validation label, narrative placeholder). */
+  readonly cuuCopy = CURRENT_USE_UPDATE_COPY;
 
   /**
    * True when the Current Use Update block is rendered at all.
@@ -216,11 +223,10 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
    * - From the 2026 phase only. Earlier rounds keep the section exactly as it is today.
    * - Not inside IPSR: this template is shared with Innovation Package step 1, which the story
    *   does not cover.
-   * - 🥇 Only when the previous phase actually reported actors (`current_use_previous`). The server
-   *   returns `null` both for a first report and for a previous phase that reported organisations
-   *   but no actors — and in both cases the block must be ABSENT, not merely empty. Yeck's decision
-   *   of 3 Sep 2026: reconciling against zero actors is an error the reporter could never resolve,
-   *   so they would never be able to submit.
+   * - 🥇 Only when the previous phase reported something (`current_use_previous` not null). The server
+   *   returns `null` for a first report; a
+   *   previous phase with organizations only now yields a non-null value (IU26-R-3), so the block is
+   *   shown there. ABSENT, not merely empty, when null.
    */
   showCurrentUseUpdate(): boolean {
     return (
@@ -230,86 +236,130 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     );
   }
 
-  /** The figure reported in the previous phase, as a number. */
-  previousReportedUse(): number {
-    return previousReportedUse(this.body?.current_use_previous);
-  }
-
-  /** The round that figure comes from, for the "(FY2025)" label. `null` when unknown. */
-  previousUsePhaseYear(): number | null {
-    return previousUsePhaseYear(this.body?.current_use_previous);
+  /**
+   * IU26 (R-1) — the 2026 current-use surface of W1/W2: phase 2026+ and not IPSR. Pre-2026 and IPSR step 1
+   * keep today's labels, order and copy byte for byte. Keyed on the phase year through the fields-manager
+   * gate (P-14), never on the portfolio.
+   */
+  isCurrentUse2026(): boolean {
+    return !this.isIpsr && !!this.fieldsManagerSE.isInnovationUseAgeFallback2026();
   }
 
   /**
-   * Total cumulative use to date = previous + new. Never typed by anyone, which is why the control
-   * is read-only: the story makes it field 3, auto-calculated from fields 1 and 2.
+   * IU26-R-6 — the `2026` in the labels is the result's phase year. The gate already guarantees >= 2026, so an
+   * unresolved year (which the gate would not have let through) falls back to 2026, the only year in this release.
    */
-  totalCumulativeUse(): number {
-    return totalCumulativeUse(this.body?.current_use_previous, this.body?.new_users_added);
+  currentUseYear(): number {
+    return this.currentResultPhaseYear() ?? 2026;
   }
 
   /**
-   * The sum of the actor rows, which is what has to match the cumulative total (§4.1).
-   *
-   * ⚠️ Counts ACTORS only — not organisations, not other measures. Yeck's decision (Q4): the total
-   * means PEOPLE, so that next year's "previous use" stays a number whose meaning can be read
-   * instead of "523 users" made of people, organisations and hectares.
-   *
-   * Reads `how_many`, which the form keeps as `women + men` on disaggregated rows and as the typed
-   * value where disaggregation does not apply — summing the gender columns would drop the second kind.
+   * IU26-R-7 — read-only totals per category, computed from the current-use rows only (never the 2030 projection)
+   * and never stored. Rows removed in the form (`is_active == false`, which also covers `0`) are dropped before the
+   * util sees them. Actor rows flagged "sex and age disaggregation does not apply" keep their typed `how_many`; the
+   * others use the Women + Men sum, so the figure does not depend on `how_many` having been synced. Gate: 2026
+   * current-use only (`isCurrentUse2026()`), exactly like the "– total" labels; null means no grid.
    */
-  actorsTotal(): number {
-    return (this.body?.innovatonUse?.actors || [])
-      .filter((a: any) => a?.is_active !== false)
-      .reduce((sum: number, a: any) => sum + (Number(a?.how_many) || 0), 0);
-  }
-
-  /** The gap between what the actor rows add up to and the cumulative total. 0 means reconciled. */
-  currentUseDifference(): number {
-    return currentUseDifference(this.actorsTotal(), this.body?.current_use_previous, this.body?.new_users_added);
-  }
-
-  /**
-   * True while the actor rows do not add up to the cumulative total.
-   *
-   * §4.1 requires submission to be blocked with an error naming the difference, and §5 requires the
-   * error to appear as soon as the figures diverge — not only on submit. Rendering it off this
-   * getter is what gives the "immediately" part for free.
-   */
-  hasCurrentUseMismatch(): boolean {
-    return this.showCurrentUseUpdate() && hasCurrentUseMismatch(this.actorsTotal(), this.body?.current_use_previous, this.body?.new_users_added);
-  }
-
-  /** The message §6.1 asks for: names the figures and states the exact gap. */
-  currentUseMismatchMessage(): string {
-    return currentUseMismatchMessage(this.actorsTotal(), this.body?.current_use_previous, this.body?.new_users_added);
-  }
-
-  /**
-   * Completion rule for the block, fed to the mandatory-field scan.
-   *
-   * §5: "New users added = 0" is allowed and still requires the narrative — the reporter is stating
-   * that use was verified and did not grow, and that statement needs its explanation. So the test is
-   * "answered", not "greater than zero".
-   */
-  isCurrentUseUpdateComplete(): boolean {
-    if (!this.showCurrentUseUpdate()) return true;
-    return isCurrentUseUpdateComplete(
-      this.actorsTotal(),
-      this.body?.current_use_previous,
-      this.body?.new_users_added,
-      this.body?.use_expansion_narrative
+  currentUseTotals(): TotalsByCategory | null {
+    if (!this.isCurrentUse2026()) return null;
+    const live = (rows: any[] | null | undefined) => (rows ?? []).filter(row => row && row.is_active != false);
+    const actors = live(this.body?.innovatonUse?.actors).map((actor: any) =>
+      actor.sex_and_age_disaggregation ? actor : { ...actor, how_many: Number(actor.women || 0) + Number(actor.men || 0) }
     );
+    const totals = totalsByCategory(actors, live(this.body?.innovatonUse?.organization), live(this.body?.innovatonUse?.measures));
+    const hasAny = totals.actorsIndividuals !== null || totals.households !== null || totals.organizations !== null || totals.measures.length > 0;
+    return hasAny ? totals : null;
   }
 
-  /** Keeps the derived figures fresh while the reporter types the increment. */
-  onNewUsersAddedChange(): void {
-    if (Number(this.body?.new_users_added) < 0) {
-      // §5: a negative increment is not permitted by the input. Use cannot decrease through this
-      // field; a downward correction is explicitly out of scope for this story.
-      this.body.new_users_added = 0;
-    }
-    this.cdr.markForCheck();
+  /** IU26-R-4 — the previous phase's figures per category, for reference only. */
+  previousUseByCategory(): PreviousUseByCategory {
+    return previousUseByCategory(this.body?.current_use_previous);
+  }
+
+  /** IU26-R-4 — "Previous reported use (FY<year> · for reference only)". */
+  previousUseHeading(): string {
+    const year = Number(this.body?.current_use_previous?.phase_year);
+    return CURRENT_USE_UPDATE_COPY.previousUseHeading(Number.isFinite(year) && year > 0 ? year : null);
+  }
+
+  /** IU26-R-5 — "Brief narrative on how use changed in 2026". */
+  currentUseNarrativeLabel(): string {
+    return CURRENT_USE_UPDATE_COPY.narrativeLabel2026(this.currentUseYear());
+  }
+
+  /** IU26-R-8 — "How many – total" on 2026 current-use rows, "How many" everywhere else. */
+  howManyLabel(): string {
+    return this.isCurrentUse2026() ? CURRENT_USE_UPDATE_COPY.howManyTotalLabel : 'How many';
+  }
+
+  /** IU26-R-8 — "Quantity – total" on 2026 current-use rows, "Quantity" everywhere else. */
+  quantityLabel(): string {
+    return this.isCurrentUse2026() ? CURRENT_USE_UPDATE_COPY.quantityTotalLabel : 'Quantity';
+  }
+
+  /** IU26-R-8 — the guidance above the rows; the NEW sentence only where the NEW input exists (W1/W2, never W3). */
+  currentUseGuidance(): { title: string; lines: string[] } {
+    return CURRENT_USE_UPDATE_COPY.guidance(this.currentUseYear(), this.isNewUsersEnabled());
+  }
+
+  /**
+   * IU26-R-11 / R-12 — the optional "Of which NEW" input exists on 2026 W1/W2 current-use rows only: never IPSR,
+   * never a W3/Bilaterals result (which reads the same form through `innovation-use-info`), never the 2030 rows.
+   */
+  isNewUsersEnabled(): boolean {
+    return this.isCurrentUse2026() && this.api?.dataControlSE?.currentResultSignal?.()?.source_name !== W3_BILATERALS_SOURCE_NAME;
+  }
+
+  /** IU26-R-11 — the row total NEW is compared with: actors per `actorRowTotal`, organizations `how_many`, measures `quantity`. */
+  newUsersTotal(kind: 'actor' | 'organization' | 'measure', row: any): number {
+    if (kind === 'actor') return actorRowTotal(row);
+    return Number(kind === 'organization' ? row?.how_many : row?.quantity) || 0;
+  }
+
+  /** IU26-R-11 — NEW higher than the row total (blank NEW is valid). Only evaluated where the input exists. */
+  newUsersInvalid(kind: 'actor' | 'organization' | 'measure', row: any): boolean {
+    return this.isNewUsersEnabled() && row?.is_active !== false && newUsersExceedsTotal(row?.new_users, this.newUsersTotal(kind, row));
+  }
+
+  /** IU26-R-11 — "New users (N) cannot be higher than the total (M)." */
+  newUsersError(kind: 'actor' | 'organization' | 'measure', row: any): string {
+    return newUsersExceedsMessage(row?.new_users, this.newUsersTotal(kind, row));
+  }
+
+  /** IU26-R-11 — false while any active current-use row has NEW above its total; feeds the mandatory-field scan (blocks submit). */
+  isNewUsersComplete(): boolean {
+    if (!this.isNewUsersEnabled()) return true;
+    const use = this.body?.innovatonUse;
+    const anyInvalid = (kind: 'actor' | 'organization' | 'measure', rows: any[] | undefined) => (rows ?? []).some(row => this.newUsersInvalid(kind, row));
+    return !(anyInvalid('actor', use?.actors) || anyInvalid('organization', use?.organization) || anyInvalid('measure', use?.measures));
+  }
+
+  /** IU26-R-7 — "of which new" per total tile; null when the gate is off. */
+  currentUseNewUsers(): NewUsersByCategory | null {
+    if (!this.isNewUsersEnabled()) return null;
+    const live = (rows: any[] | null | undefined) => (rows ?? []).filter(row => row && row.is_active != false);
+    const use = this.body?.innovatonUse;
+    return newUsersByCategory(live(use?.actors), live(use?.organization), live(use?.measures));
+  }
+
+  /** IU26-R-7 — the "Of which new: N / not available" line of a tile. */
+  ofWhichNew(value: number | null | undefined): string {
+    return CURRENT_USE_UPDATE_COPY.ofWhichNew(value ?? null);
+  }
+
+  /** Unit lookup for the measures tile (same trimmed, case-insensitive key as the totals). */
+  newUsersForUnit(unit: string): number | null {
+    const key = String(unit ?? '').trim().toLowerCase();
+    return this.currentUseNewUsers()?.measures.find(m => m.unit.toLowerCase() === key)?.newUsers ?? null;
+  }
+
+  /**
+   * Completion rule for the block, fed to the mandatory-field scan. IU26-R-5: the narrative alone answers it
+   * (no "New users added", no reconciliation), within the 100-word limit.
+   */
+  isCurrentUseNarrativeComplete(): boolean {
+    if (!this.showCurrentUseUpdate()) return true;
+    return isCurrentUseNarrativeComplete(this.body?.use_expansion_narrative);
   }
 
   /** True when the youth figures on this row were computed rather than typed. */
@@ -784,7 +834,10 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     if (this.fieldsManagerSE.isP25()) {
       return `<ul>
       <li>
-      If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use. ${
+      If the innovation does not target specific groups of actors or people, then please specify the ${
+        // IU26-R-8 — "expected" is dropped only on the 2026 current-use description (not IPSR, not 2030, not 2025).
+        !this.isIpsr && this.fieldsManagerSE.isInnovationUseAgeFallback2026() ? '' : 'expected '
+      }innovation use at organizational level or other use. ${
         // INC-168060 (Nicoleta): IPSR step 1 is about scaling ambition, so it keeps the 2030 wording.
         this.isIpsr
           ? 'The numbers should reflect the expected innovation use by end of 2030.'

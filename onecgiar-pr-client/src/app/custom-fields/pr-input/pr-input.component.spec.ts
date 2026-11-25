@@ -127,4 +127,29 @@ describe('PrInputComponent', () => {
       expect(component.value).toBe(2432432);
     });
   });
+
+  // IU26-R-11 — opt-in invalid state on the number box (the "Of which NEW" input).
+  describe('type="number" - markInvalid', () => {
+    const numberBox = (): HTMLInputElement => {
+      fixture.componentRef.setInput('type', 'number');
+      fixture.componentRef.setInput('showFieldHeader', false);
+      (component.rolesSE as any).readOnly = false;
+      fixture.detectChanges();
+      return fixture.nativeElement.querySelector('.pr-input input[inputmode="decimal"]');
+    };
+
+    it('paints aria-invalid="true" and links the message when markInvalid is on', () => {
+      fixture.componentRef.setInput('markInvalid', true);
+      fixture.componentRef.setInput('describedBy', 'msg-1');
+      const input = numberBox();
+      expect(input.getAttribute('aria-invalid')).toBe('true');
+      expect(input.getAttribute('aria-describedby')).toBe('msg-1');
+    });
+
+    it('leaves the box without aria-invalid by default', () => {
+      const input = numberBox();
+      expect(input.hasAttribute('aria-invalid')).toBe(false);
+      expect(input.hasAttribute('aria-describedby')).toBe(false);
+    });
+  });
 });

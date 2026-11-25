@@ -85,6 +85,92 @@ export class InnovationUseService {
     private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
   ) {}
 
+  /**
+   * IU26-R-2 / DD-6: true when the row's result sits in a 2026+ phase. The phase year rides on the
+   * row that is already being read — `obj_result.obj_version` joined by `findOne`, or the flat
+   * `phase_year` that `InnovUseExists` selects — so no extra query is needed.
+   */
+  private keepsCumulativeFields(row: any): boolean {
+    const phaseYear = Number(
+      row?.obj_result?.obj_version?.phase_year ?? row?.phase_year,
+    );
+    return Number.isFinite(phaseYear) && phaseYear >= 2026;
+  }
+
+  /**
+   * IU26-R-11 (IU26-T-11): `new_users` on an actor / organization / measure row must be a whole
+   * number >= 0 and never above the row total, else a 400 naming the row. Runs over the current
+   * rows and the 2030 projection rows, before any write. Inactive rows and rows with no
+   * comparable total are skipped; null / absent `new_users` is "not answered" and always passes.
+   *
+   * Actor total: `sex_and_age_disaggregation === true` means the breakdown does NOT apply and the
+   * typed `how_many` is the total; any other row uses women + men, exactly what `getActorsData`
+   * recomputes on read. Organizations compare against `how_many`, measures against `quantity`.
+   */
+  assertNewUsersWithinTotal(dto: {
+    actors?: any[];
+    organization?: any[];
+    measures?: any[];
+    innovation_use_2030?: InnovUseGroupsDto;
+  }): void {
+    const groups: Array<[string, any]> = [
+      ['innovation_use', dto],
+      ['innovation_use_2030', dto?.innovation_use_2030],
+    ];
+    for (const [groupName, group] of groups) {
+      const sets: Array<[string, any[] | undefined, (el: any) => unknown]> = [
+        ['actors', group?.actors, (el) => this.actorRowTotal(el)],
+        ['organization', group?.organization, (el) => el?.how_many],
+        ['measures', group?.measures, (el) => el?.quantity],
+      ];
+      for (const [kind, rows, totalOf] of sets) {
+        (rows ?? []).forEach((el, index) => {
+          if (el?.is_active === false) return;
+          const nu = el?.new_users;
+          if (nu === null || nu === undefined) return;
+          const label = `${groupName}.${kind}[${index}]${
+            el?.actor_type_id
+              ? ` (actor_type_id ${el.actor_type_id})`
+              : el?.institution_types_id
+                ? ` (institution_types_id ${el.institution_types_id})`
+                : el?.unit_of_measure
+                  ? ` (unit_of_measure ${el.unit_of_measure})`
+                  : ''
+          }`;
+          if (typeof nu !== 'number' || !Number.isInteger(nu) || nu < 0) {
+            throw {
+              response: {},
+              message: `new_users in ${label} must be a whole number of 0 or more.`,
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
+          const rawTotal = totalOf(el);
+          if (rawTotal === null || rawTotal === undefined || rawTotal === '') {
+            return;
+          }
+          const total = Number(rawTotal);
+          if (Number.isFinite(total) && nu > total) {
+            throw {
+              response: {},
+              message: `new_users (${nu}) cannot be above the total (${total}) in ${label}.`,
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
+        });
+      }
+    }
+  }
+
+  private actorRowTotal(el: any): number | null {
+    if (el?.sex_and_age_disaggregation === true) {
+      return el?.how_many ?? null;
+    }
+    if (el?.women == null && el?.men == null) {
+      return el?.how_many ?? null;
+    }
+    return (Number(el.women) || 0) + (Number(el.men) || 0);
+  }
+
   async saveInnovationUse(
     innovationUseDto: CreateInnovationUseDto,
     resultId: number,
@@ -100,8 +186,13 @@ export class InnovationUseService {
         };
       }
 
+      // IU26-R-11: reject a `new_users` above the row total before anything is written.
+      this.assertNewUsersWithinTotal(innovationUseDto);
+
       let resultExist = await this._resultsInnovationsUseRepository.findOne({
         where: { results_id: resultId, is_active: true },
+        // IU26-R-2: the phase year for the cumulative-field guard, in the same query (a join).
+        relations: { obj_result: { obj_version: true } },
       });
 
       if (!resultExist) {
@@ -231,8 +322,22 @@ export class InnovationUseService {
           innov_use_2030_justification ?? null;
         // P2-3537 §4. `?? null` and never `|| null`: with `||`, a reported 0 ("use was verified and
         // did not grow", which §5 allows explicitly) would be stored as "not answered".
-        resultExist.new_users_added = new_users_added ?? null;
-        resultExist.use_expansion_narrative = use_expansion_narrative ?? null;
+        //
+        // IU26-R-2 / DD-6: from 2026 the two cumulative fields are never erased — an omitted or
+        // null value keeps what is stored. Earlier phases keep the write above (a null clears).
+        if (
+          !this.keepsCumulativeFields(resultExist) ||
+          (new_users_added !== undefined && new_users_added !== null)
+        ) {
+          resultExist.new_users_added = new_users_added ?? null;
+        }
+        if (
+          !this.keepsCumulativeFields(resultExist) ||
+          (use_expansion_narrative !== undefined &&
+            use_expansion_narrative !== null)
+        ) {
+          resultExist.use_expansion_narrative = use_expansion_narrative ?? null;
+        }
 
         if (
           isLevelAtLeast(innovation_use_level_number, EXPLANATION_MIN_LEVEL)
@@ -731,6 +836,10 @@ export class InnovationUseService {
       ),
       how_many: el?.how_many,
       addressing_demands: this.isNullData(el?.addressing_demands),
+      // IU26-R-11: only when the row carries the key, so a caller that omits it never wipes it.
+      ...('new_users' in (el ?? {})
+        ? { new_users: this.isNullData(el.new_users) }
+        : {}),
       // IFC-R-7: only the four codes are stored; anything else is NULL (IFC-DD-3).
       // @akili-spec changes/innovation-use-nature-all-actors (INA-T-4, INA-DD-9 amendment):
       // only when the row carries the key. A caller that omits it (the review update,
@@ -761,6 +870,9 @@ export class InnovationUseService {
       institution_roles_id: 5,
       how_many: el?.how_many,
       addressing_demands: this.isNullData(el?.addressing_demands),
+      ...('new_users' in (el ?? {})
+        ? { new_users: this.isNullData(el.new_users) }
+        : {}),
       section_id: this.isNullData(section),
       is_active: true,
     };
@@ -779,6 +891,9 @@ export class InnovationUseService {
       created_by: user,
       last_updated_by: user,
       addressing_demands: this.isNullData(el?.addressing_demands),
+      ...('new_users' in (el ?? {})
+        ? { new_users: this.isNullData(el.new_users) }
+        : {}),
       section_id: this.isNullData(section),
       is_active: el.is_active ?? true,
     };
@@ -859,7 +974,11 @@ export class InnovationUseService {
     if (!Number.isFinite(previousId) || previousId <= 0) return null;
 
     try {
-      const actors = await this.getActorsData(previousId);
+      const [actors, organizations, measures] = await Promise.all([
+        this.getActorsData(previousId),
+        this.getOrganizationsData(previousId),
+        this.getMeasuresData(previousId),
+      ]);
       const currentUseActors = currentUseRows(actors);
 
       // P2-3985 — the filter, the null rule and the shape are shared with the legacy summary read
@@ -870,6 +989,8 @@ export class InnovationUseService {
         previousPhaseYear,
         (row) => Number(row.how_many) || 0,
         currentUseRows,
+        organizations,
+        measures,
       );
 
       return summary ? { ...summary, actors: currentUseActors } : null;

@@ -903,11 +903,23 @@ describe('FieldsManagerService', () => {
       expect(fields['[innovation-use-form]-2030-to-be-determined'].required).toBe(true);
     });
 
-    it('should have core-innovation description', () => {
+    it('should have core-innovation description on a pre-2026 result (P-13: the 2025 form is unchanged)', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', result_type_id: 2, phase_year: 2025 } as CurrentResult);
       const fields = service.fields();
       expect(fields['[innovation-use-form]-core-innovation'].description).toContain(
         'Depending on the innovation, users may be groups of actors'
       );
+      expect(fields['[innovation-use-form]-core-innovation'].label).toBe(
+        'Current core innovation use in number of users that can be supported by evidence (within the reporting year)'
+      );
+    });
+
+    it('IU26-R-6: the 2026 core-innovation question has the new label and no "Depending…" description', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', result_type_id: 2, phase_year: 2026 } as CurrentResult);
+      const field = service.fields()['[innovation-use-form]-core-innovation'];
+      expect(field.label).toBe('Innovation use in 2026 supported by evidence (calculated from the categories below)');
+      expect(field.description).toBe('');
+      expect(field.required).toBe(true);
     });
 
     it('should have 2030-to-be-determined description with guidance link', () => {

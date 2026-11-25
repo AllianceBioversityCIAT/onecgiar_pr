@@ -46,6 +46,17 @@ export class IpsrStep3Body {
   link_workshop_list: string;
   /** P2-3824 — read-only, from the GET; drives the score-2 alerts. Never sent back. */
   principal_impact_areas?: IpsrPrincipalImpactArea[] = [];
+  /**
+   * IU26-R-4 — read-only, TOP-LEVEL on the step-three GET (2026+ packages only; `null` / absent otherwise):
+   * the previous phase's current-use figures, for reference. Never sent back.
+   */
+  current_use_previous?: {
+    result_id?: number;
+    phase_year?: number | string | null;
+    total_actors?: number | string | null;
+    total_organizations?: number | string | null;
+    measures?: { unit?: string | null; quantity?: number | string | null }[] | null;
+  } | null;
 }
 
 export class Resultipresultcomplementary {
@@ -91,6 +102,8 @@ export class MeasureN3 {
   is_active: boolean;
   evidence_link: string;
   result_ip_result_measures_id: any;
+  /** IU26-R-13 — "of which NEW" (2026+ packages); `null`/absent = not answered. The save payload always sends the key (see `buildIpsrStep3SavePayload`). */
+  new_users?: number | null;
 }
 
 export class OrganizationN3 {
@@ -104,6 +117,8 @@ export class OrganizationN3 {
   evidence_link: string;
   other_institution: string;
   id: any;
+  /** IU26-R-13 — "of which NEW" (2026+ packages); `null`/absent = not answered. The save payload always sends the key (see `buildIpsrStep3SavePayload`). */
+  new_users?: number | null;
 }
 
 export class ActorN3 {
@@ -128,4 +143,6 @@ export class ActorN3 {
   result_ip_actors_id: any;
   showWomenExplanationwomen?: boolean;
   showMenExplanationmen?: boolean;
+  /** IU26-R-13 — "of which NEW" (2026+ packages); `null`/absent = not answered. The save payload always sends the key (see `buildIpsrStep3SavePayload`). */
+  new_users?: number | null;
 }

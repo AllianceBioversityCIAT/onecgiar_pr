@@ -463,6 +463,7 @@ describe('P2-3939 IPSR Step 3 level rules (LVL-R-1, LVL-R-3, LVL-R-4)', () => {
       expect(rules(USE_LISTS[2])).toEqual([
         ['unit_of_measure', true, null, null],
         ['quantity', true, null, null],
+        ['new_users', false, null, null],
         ['evidence_link', true, null, null],
       ]);
     });

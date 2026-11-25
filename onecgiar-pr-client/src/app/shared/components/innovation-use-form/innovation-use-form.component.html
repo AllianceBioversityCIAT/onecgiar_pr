@@ -1,3 +1,41 @@
+@if (showCurrentUseUpdate()) {
+  <!-- IU26-R-3 / DD-5 — the Current Use Update sits ABOVE the 2026 question and ignores TBD: it stays visible
+       (and its narrative required) when "This is yet to be determined" is selected. showCurrentUseUpdate()
+       carries the gate: 2026+, not IPSR, previous phase present. ABSENT, not empty, on a first report. -->
+  <div class="current_use_update" data-testid="iu-current-use-update">
+    <app-pr-field-header [label]="cuuCopy.title" [useColon]="false" [showDescriptionLabel]="false"></app-pr-field-header>
+
+    @let previousUse = previousUseByCategory();
+    <div class="current_use_update__figure" data-testid="iu-previous-use">
+      <strong>{{ previousUseHeading() }}</strong>
+      @if (previousUse.actors !== null) {
+        <div data-testid="iu-previous-actors">{{ categoryLabels.actors }}: {{ previousUse.actors | number }}</div>
+      }
+      @if (previousUse.organizations !== null) {
+        <div data-testid="iu-previous-organizations">{{ categoryLabels.organizations }}: {{ previousUse.organizations | number }}</div>
+      }
+      @if (previousUse.measures.length) {
+        <div data-testid="iu-previous-measures">
+          {{ categoryLabels.measures }}:
+          @for (measure of previousUse.measures; track measure.unit) {
+            <div class="pl-[12px]">{{ measure.unit }} {{ measure.quantity | number }}</div>
+          }
+        </div>
+      }
+    </div>
+
+    <app-pr-textarea
+      [label]="currentUseNarrativeLabel()"
+      [placeholder]="cuuCopy.placeholder"
+      [required]="true"
+      [disabled]="saving"
+      [maxWords]="maxNarrativeWords"
+      [(ngModel)]="body.use_expansion_narrative">
+    </app-pr-textarea>
+
+    <div appFeedbackValidation [labelText]="cuuCopy.title" [isComplete]="isCurrentUseNarrativeComplete()"></div>
+  </div>
+}
 @if (!this.isIpsr) {
   <!-- The "linked or bundled with another CGIAR-reported result" question lives only in
        Contributors and partners (section 2). See P2-3199 — it used to be duplicated here. -->
@@ -13,7 +51,10 @@
     [(ngModel)]="body.innov_use_to_be_determined"
     optionValue="value">
   </app-pr-radio-button>
-  <app-alert-status status="info" [collapsible]="false" [description]="this.fieldsManagerSE.fields()['[innovation-use-form]-core-innovation'].description"></app-alert-status>
+  <!-- IU26-R-6 — no "Depending on the innovation…" alert on 2026 W1/W2 results. -->
+  @if (!isCurrentUse2026()) {
+    <app-alert-status status="info" [collapsible]="false" [description]="this.fieldsManagerSE.fields()['[innovation-use-form]-core-innovation'].description"></app-alert-status>
+  }
 }
 @if (
   !body.innov_use_to_be_determined ||
@@ -21,65 +62,62 @@
   body.innov_use_to_be_determined === null ||
   body.innov_use_to_be_determined === undefined
 ) {
-  <!-- P2-3537 §4 — Current Use Update. Rendered immediately above the actor-type fields, inside the
-       Current use section, exactly where the story places it.
-       🥇 ABSENT, not empty, when the previous phase reported no actors: reconciling against zero
-       actors is an error the reporter could never resolve, so they would never be able to submit
-       (Yeck, 3 Sep 2026). `showCurrentUseUpdate()` carries that condition. -->
-  @if (showCurrentUseUpdate()) {
-    <div class="current_use_update">
-      <app-pr-field-header
-        label="Current Use Update"
-        [useColon]="false"
-        description="This innovation was already reported before, so only the change since then is asked for here. The user categories below hold the cumulative total."
-        [showDescriptionLabel]="false">
-      </app-pr-field-header>
-
-      <div class="current_use_update__figure">
-        Previous reported use:
-        <strong>{{ previousReportedUse() }}</strong
-        >@if (previousUsePhaseYear()) {
-          <!-- The space lives inside the span: Angular collapses whitespace between elements, so
-               without it the line renders as "500(FY2025)". Seen on prtest, 3 Sep 2026. -->
-          <span class="current_use_update__phase">&nbsp;(FY{{ previousUsePhaseYear() }})</span>
+  @if (isCurrentUse2026()) {
+    <!-- IU26-R-7 — read-only totals per category, 2026 W1/W2 only (isCurrentUse2026 gate inside currentUseTotals).
+         A category without rows gets no tile; hidden with the rows when TBD is selected. -->
+    @let totals = currentUseTotals();
+    @let newUsers = currentUseNewUsers();
+    @if (totals) {
+      <div class="mb-[16px] grid grid-cols-2 gap-[10px] lg:grid-cols-4" data-testid="iu-totals">
+        @if (totals.actorsIndividuals !== null) {
+          <div class="rounded-[8px] bg-[var(--pr-surface-sunken)] p-[12px]" data-testid="iu-total-actors-individuals">
+            <div class="text-[13px] text-ink-secondary">{{ categoryLabels.actorsIndividuals }}</div>
+            <div class="font-mono text-[20px] font-bold tabular-nums text-ink-body">{{ totals.actorsIndividuals | number }}</div>
+            @if (newUsers) {
+              <div class="mt-[4px] text-[12px] text-ink-secondary" data-testid="iu-new-actors-individuals">{{ ofWhichNew(newUsers.actorsIndividuals) }}</div>
+            }
+          </div>
+        }
+        @if (totals.households !== null) {
+          <div class="rounded-[8px] bg-[var(--pr-surface-sunken)] p-[12px]" data-testid="iu-total-households">
+            <div class="text-[13px] text-ink-secondary">{{ categoryLabels.households }}</div>
+            <div class="font-mono text-[20px] font-bold tabular-nums text-ink-body">{{ totals.households | number }}</div>
+            @if (newUsers) {
+              <div class="mt-[4px] text-[12px] text-ink-secondary" data-testid="iu-new-households">{{ ofWhichNew(newUsers.households) }}</div>
+            }
+          </div>
+        }
+        @if (totals.organizations !== null) {
+          <div class="rounded-[8px] bg-[var(--pr-surface-sunken)] p-[12px]" data-testid="iu-total-organizations">
+            <div class="text-[13px] text-ink-secondary">{{ categoryLabels.organizations }}</div>
+            <div class="font-mono text-[20px] font-bold tabular-nums text-ink-body">{{ totals.organizations | number }}</div>
+            @if (newUsers) {
+              <div class="mt-[4px] text-[12px] text-ink-secondary" data-testid="iu-new-organizations">{{ ofWhichNew(newUsers.organizations) }}</div>
+            }
+          </div>
+        }
+        @if (totals.measures.length) {
+          <div class="rounded-[8px] bg-[var(--pr-surface-sunken)] p-[12px]" data-testid="iu-total-measures">
+            <div class="text-[13px] text-ink-secondary">{{ categoryLabels.measures }}</div>
+            @for (measure of totals.measures; track measure.unit) {
+              <div class="text-[13px] text-ink-body">{{ measure.unit }}: <strong class="font-mono tabular-nums">{{ measure.quantity | number }}</strong></div>
+              @if (newUsers) {
+                <div class="mb-[4px] text-[12px] text-ink-secondary" data-testid="iu-new-measure">{{ ofWhichNew(newUsersForUnit(measure.unit)) }}</div>
+              }
+            }
+          </div>
         }
       </div>
-
-      <app-pr-input
-        label="New users added during this reporting period"
-        type="number"
-        placeholder="Write some..."
-        [required]="true"
-        [disabled]="saving"
-        [(ngModel)]="body.new_users_added"
-        (ngModelChange)="onNewUsersAddedChange()">
-      </app-pr-input>
-
-      <!-- Field 3 of the story: never typed, always previous + new. -->
-      <div class="current_use_update__figure">
-        Total cumulative current use to date:
-        <strong>{{ totalCumulativeUse() }}</strong>
-      </div>
-
-      <app-pr-textarea
-        label="Brief narrative on how the use expanded"
-        placeholder="Write some..."
-        [required]="true"
-        [disabled]="saving"
-        [maxWords]="maxNarrativeWords"
-        [(ngModel)]="body.use_expansion_narrative">
-      </app-pr-textarea>
-
-      <!-- §4.1 + §5: the error names the exact difference and appears as soon as the figures
-           diverge, not only on submit. Driven off a getter, so "immediately" comes for free. -->
-      @if (hasCurrentUseMismatch()) {
-        <div class="current_use_update__mismatch">
-          <i class="pi pi-exclamation-triangle" style="font-size: 14px; margin-top: 2px"></i>
-          <div>{{ currentUseMismatchMessage() }}</div>
-        </div>
+    }
+    <!-- IU26-R-8 — guidance above the rows, 2026 W1/W2 only. Hidden with the rows when TBD is selected. -->
+    @let guidance = currentUseGuidance();
+    <div
+      data-testid="iu-guidance"
+      class="mb-[16px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-subtle)] px-[14px] py-[12px] text-[12px] leading-[1.5] text-[var(--pr-color-secondary-400)]">
+      <p class="m-0 mb-[6px] font-semibold">{{ guidance.title }}</p>
+      @for (line of guidance.lines; track $index) {
+        <p class="m-0 mb-[4px]">{{ line }}</p>
       }
-
-      <div appFeedbackValidation labelText="Current Use Update" [isComplete]="isCurrentUseUpdateComplete()"></div>
     </div>
   }
 
@@ -267,7 +305,7 @@
           <div class="right_content" *ngIf="actorItem.sex_and_age_disaggregation">
             <app-pr-input
               placeholder="Write some..."
-              label="How many"
+              [label]="howManyLabel()"
               type="number"
               [required]="!!actorItem?.result_actors_id || isHouseholdsRow(actorItem)"
               [disabled]="saving"
@@ -275,6 +313,27 @@
               (ngModelChange)="validateYouth(i, true, actorItem)">
             </app-pr-input>
           </div>
+          @if (isNewUsersEnabled() && actorItem.is_active !== false) {
+            <div class="right_content" data-testid="iu-new-users-actor">
+              <div class="flex w-full flex-col">
+                <app-pr-input
+                  placeholder="Write some..."
+                  [label]="cuuCopy.newUsersActorLabel"
+                  type="number"
+                  [required]="false"
+                  [disabled]="saving"
+                  [markInvalid]="newUsersInvalid('actor', actorItem)"
+                  [describedBy]="newUsersInvalid('actor', actorItem) ? 'iu-new-error-actor-' + i : null"
+                  [(ngModel)]="actorItem.new_users">
+                </app-pr-input>
+                @if (newUsersInvalid('actor', actorItem)) {
+                  <p [id]="'iu-new-error-actor-' + i" class="m-0 mt-[4px] text-[12px] text-[var(--pr-danger)]" role="alert" data-testid="iu-new-users-error">
+                    {{ newUsersError('actor', actorItem) }}
+                  </p>
+                }
+              </div>
+            </div>
+          }
           <br />
         </div>
       </div>
@@ -345,7 +404,7 @@
             <app-pr-input
               [disabled]="saving"
               placeholder="Write some..."
-              label="How many"
+              [label]="howManyLabel()"
               type="number"
               [required]="!!organizationItem?.id"
               [(ngModel)]="organizationItem.how_many">
@@ -360,6 +419,27 @@
               [(ngModel)]="organizationItem.graduate_students">
             </app-pr-input>
           </div>
+          @if (isNewUsersEnabled() && organizationItem.is_active !== false) {
+            <div class="right_content" data-testid="iu-new-users-organization">
+              <div class="flex w-full flex-col">
+                <app-pr-input
+                  placeholder="Write some..."
+                  [label]="cuuCopy.newUsersOfWhichLabel"
+                  type="number"
+                  [required]="false"
+                  [disabled]="saving"
+                  [markInvalid]="newUsersInvalid('organization', organizationItem)"
+                  [describedBy]="newUsersInvalid('organization', organizationItem) ? 'iu-new-error-organization-' + i : null"
+                  [(ngModel)]="organizationItem.new_users">
+                </app-pr-input>
+                @if (newUsersInvalid('organization', organizationItem)) {
+                  <p [id]="'iu-new-error-organization-' + i" class="m-0 mt-[4px] text-[12px] text-[var(--pr-danger)]" role="alert" data-testid="iu-new-users-error">
+                    {{ newUsersError('organization', organizationItem) }}
+                  </p>
+                }
+              </div>
+            </div>
+          }
         </div>
       </div>
     }
@@ -390,19 +470,42 @@
           <app-pr-input
             [disabled]="saving"
             placeholder="Write some..."
-            label="Quantity"
+            [label]="quantityLabel()"
             type="number"
             [style]="{ width: '200px !important' }"
             [required]="!!measuresItem?.result_ip_measure_id"
             [(ngModel)]="measuresItem.quantity">
           </app-pr-input>
         </div>
+        @if (isNewUsersEnabled() && measuresItem.is_active !== false) {
+          <div class="right_content" data-testid="iu-new-users-measure">
+            <div class="flex w-full flex-col">
+              <app-pr-input
+                placeholder="Write some..."
+                [label]="cuuCopy.newUsersOfWhichLabel"
+                type="number"
+                [required]="false"
+                [disabled]="saving"
+                [markInvalid]="newUsersInvalid('measure', measuresItem)"
+                [describedBy]="newUsersInvalid('measure', measuresItem) ? 'iu-new-error-measure-' + i : null"
+                [(ngModel)]="measuresItem.new_users">
+              </app-pr-input>
+              @if (newUsersInvalid('measure', measuresItem)) {
+                <p [id]="'iu-new-error-measure-' + i" class="m-0 mt-[4px] text-[12px] text-[var(--pr-danger)]" role="alert" data-testid="iu-new-users-error">
+                  {{ newUsersError('measure', measuresItem) }}
+                </p>
+              }
+            </div>
+          </div>
+        }
       </div>
     }
   </div>
   <app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.measures, 'result_ip_measure_id', ['quantity'])" title="Other quantitative measures not added">
   </app-no-data-text>
   <app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" [disabled]="saving" (clickEvent)="addOther()"></app-add-button>
+  <!-- IU26-R-11 — NEW above its row total keeps the section incomplete, so Submit stays blocked. -->
+  <div appFeedbackValidation [labelText]="cuuCopy.newUsersMarkerLabel" [isComplete]="isNewUsersComplete()"></div>
 }
 
 @if (this.fieldsManagerSE.isP25() && !this.isIpsr) {

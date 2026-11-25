@@ -1,6 +1,6 @@
 # type-innovation-use (bilateral)
 
-**Verified:** 2026-11-18 · INC-168062 (INA-T-8 households lock): the "does not apply" tick is locked ON while the unit is Households, and a loaded Households row with the tick off is normalised on load; prior: 2026-11-18 · INC-168062 (INA-T-8): current-use actor cards ask the optional unit (Farmers only) and nature (every type) questions from 2026, not in the MDS tracker; prior: 2026-11-12 · qa-development-2026-ss · changes/innovation-use-w3-hide-2030 IWH-T-2 (INC-168060: 2030 Use Projection block removed from the form, `hasActorMissingType` checks current-use actors only, payload unchanged); prior: 2026-11-11 · quick/innovation-use-actors-sentence-ipsr (INC-168060: current-use Actors description adds the reporting-year sentence — current use is MDS; Nicoleta); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: Current Use Update block + 4th MDS item `use-current-update` (blocks Submit); prior: 2026-10-14 · fix/innovation-use-phase-copy · current use hides only on an explicit "Yes" (NULL shows it); bilateral results DO roll over; prior: 2026-10-07 · The use-level ladder (not MDS since P2-3785 AC1) moved under full metadata, before the questions it gates.
+**Verified:** 2026-11-25 · INC-169264 (IU26-T-7, changes/innovation-use-2026-total-and-new-users, PR-1): Current Use Update is narrative-only, above the TBD question, with totals tiles and 2026 labels; `new_users_added` never sent; cumulative helpers deleted; prior: 2026-11-18 · INC-168062 (INA-T-8 households lock): the "does not apply" tick is locked ON while the unit is Households, and a loaded Households row with the tick off is normalised on load; prior: 2026-11-18 · INC-168062 (INA-T-8): current-use actor cards ask the optional unit (Farmers only) and nature (every type) questions from 2026, not in the MDS tracker; prior: 2026-11-12 · qa-development-2026-ss · changes/innovation-use-w3-hide-2030 IWH-T-2 (INC-168060: 2030 Use Projection block removed from the form, `hasActorMissingType` checks current-use actors only, payload unchanged); prior: 2026-11-11 · quick/innovation-use-actors-sentence-ipsr (INC-168060: current-use Actors description adds the reporting-year sentence — current use is MDS; Nicoleta); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: Current Use Update block + 4th MDS item `use-current-update` (blocks Submit); prior: 2026-10-14 · fix/innovation-use-phase-copy · current use hides only on an explicit "Yes" (NULL shows it); bilateral results DO roll over; prior: 2026-10-07 · The use-level ladder (not MDS since P2-3785 AC1) moved under full metadata, before the questions it gates.
 
 ## What it is
 BIL-RAU-T-8 pointer: Section 1 (`section-general-info`) now renders the Annual updating block
@@ -19,13 +19,15 @@ P2-3556 (load gate), P2-3390 (the three Investment tables).
   `use-actors`, `use-measures` (optional), `use-investment`. The last one is the W3/bilateral-project
   table only; Submit is gated on `overallStatus() === 'complete'`. **P2-3985 adds a fourth,
   `use-current-update`, only while `showCurrentUseUpdate`** — NOT optional (holds Submit, as on W1/W2):
-  `filled` = both answered, a mismatch adds `invalid` + the exact gap. ⚠️ Client-only: the server
-  submit gate does not check it.
-- **P2-3985 contract keys** (legacy GET/PATCH, additive): GET returns `current_use_previous`
-  (`{ result_id, phase_year, total_actors }` or `null`), `new_users_added`, `use_expansion_narrative`;
-  PATCH persists the two answers only when their key is present, so `buildPayload()` sends them only
-  while the block is shown. The previous figure comes from
-  `api/results/summary/utils/previous-phase-current-use.util.ts`, the same rule the v2 read uses.
+  `filled` = `isCurrentUseNarrativeComplete(use_expansion_narrative)` (IU26-R-5: narrative present, within 100 words;
+  no mismatch rule any more). ⚠️ Client-only: the server submit gate does not check it.
+- **P2-3985 / IU26 contract keys** (legacy GET/PATCH, additive): GET returns `current_use_previous`
+  (`{ result_id, phase_year, total_actors, total_organizations, measures:[{unit, quantity}] }` or `null`), `new_users_added`,
+  `use_expansion_narrative`; `buildPayload()` sends ONLY `use_expansion_narrative`, as `?? ''` (an emptied narrative must be `""`:
+  the 2026 server guard ignores null), and only while the block is shown. 🛑 **`new_users_added` is never sent** from this form
+  (IU26-DD-6); from 2026 the server also keeps the stored value on undefined/null. The previous figure comes from
+  `api/results/summary/utils/previous-phase-current-use.util.ts`, the same rule the v2 read uses (null only when actors,
+  organizations and measures are all empty).
 - **INA-T-8 contract keys** (legacy GET/PATCH, additive): each current-use actor row carries `count_unit`
   (`households` | `individuals`) and `use_nature` (`information_received` | `innovation_applied`). They ride on
   the loaded rows (`buildPayload()` sends `this.body.actors` as-is) and the legacy writer persists each only
@@ -155,12 +157,19 @@ P2-3556 (load gate), P2-3390 (the three Investment tables).
   ⚠️ Current-use lookups by type/unit now skip section-2 rows, and the legacy GET splits them out; before
   this, a section-2 row would have shown up (and been re-saved) as current use.
 
-- **P2-3985 — Current Use Update** (P2-3537 §4; result #8398 never showed it): one getter,
-  `showCurrentUseUpdate` (= not "to be determined" Yes + `current_use_previous` present + phase ≥ 2026
-  or unresolved), drives the template, the MDS item and the payload keys. Rules shared with W1/W2 in
-  `shared/utils/current-use-update.util.ts`, copy in `internationalization/current-use-update.copy.ts`.
-  Actor sum = `how_many` where disaggregation does not apply, else Women + Men (server's rule).
-  ⚠️ Both forms write the same two columns: the last save wins.
+- **P2-3985 / IU26 — Current Use Update** (IU26-R-3, R-5, R-7, R-8, DD-5): one getter, `showCurrentUseUpdate`
+  (= `current_use_previous` present + phase >= 2026 or unresolved), drives the template, the MDS item and the payload narrative.
+  🛑 It no longer depends on "Innovation Use to be Determined": the block sits ABOVE the TBD question and shows either way (the TBD
+  condition was removed). Contents: previous use by category (`previousUse`, `previousUseHeading`), the narrative
+  (`narrativeLabel`: "Brief narrative on how use changed in {phaseYear}") and read-only totals tiles (`totals`, `hasTotals`).
+  `currentUseTotalLabels` (phase year >= 2026, or year unresolved) gates the tiles, the guidance block and the
+  "How many – total" / "Quantity – total" labels. Rules shared with W1/W2 in `shared/utils/current-use-update.util.ts`
+  (`previousUseByCategory`, `totalsByCategory`, `isCurrentUseNarrativeComplete`), copy in `internationalization/current-use-update.copy.ts`
+  (`CURRENT_USE_UPDATE_COPY`). Actor rows keeping the Women/Men breakdown feed `actorTotal`; "does not apply" rows their typed `how_many`.
+  🛑 The cumulative helpers (`previousReportedUse`, `totalCumulativeUse`, `hasCurrentUseMismatch`, `currentUseMismatch*`,
+  `isCurrentUseUpdateComplete`, `currentUseActorsTotal`, `onNewUsersAddedChange`) were deleted — **pre-2026 history only**, and no W3 result exists
+  before 2026. The shared W1/W2 form renders for `source_name = 'W3/Bilaterals'` too (see its CLAUDE.md).
+  ⚠️ Both forms write the same narrative column: the last save wins.
 
 - **INA-T-8 — actor follow-up answers** (changes/innovation-use-nature-all-actors, INC-168062; INA-DD-9/10): the
   current-use actor card asks two optional questions under the type select — **unit** (Households / Individual

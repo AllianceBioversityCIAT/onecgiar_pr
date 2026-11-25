@@ -656,6 +656,29 @@ describe('InnovationUseInfoComponent', () => {
       expect('count_unit' in unanswered).toBe(false);
     });
 
+    // IU26-R-11 — the save carries `new_users` per current-use row; a row without the key stays without it (the server
+    // writes NEW only when the key is present), and a blank box leaves as null.
+    it('sends new_users per current-use row as a number or null, and leaves rows without the key alone', () => {
+      const untouched: any = { actor_type_id: 1, result_actors_id: 3 };
+      component.innovationUseInfoBody.innovatonUse = {
+        actors: [{ actor_type_id: 1, result_actors_id: 1, new_users: 12 }, { actor_type_id: 2, result_actors_id: 2, new_users: '' }, untouched],
+        organization: [{ institution_types_id: 5, how_many: 9, new_users: '4' }],
+        measures: [{ unit_of_measure: 'Hectares', quantity: 8, new_users: undefined }]
+      } as any;
+      component.innovationUseInfoBody.innovation_use_2030 = { actors: [{ actor_type_id: 1, result_actors_id: 9 }], measures: [], organization: [] } as any;
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUse');
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0];
+      expect(bodyArg.actors.map((a: any) => a.new_users)).toEqual([12, null, undefined]);
+      expect('new_users' in bodyArg.actors[2]).toBe(false);
+      expect(bodyArg.organization[0].new_users).toBe(4);
+      expect(bodyArg.measures[0].new_users).toBeNull();
+      expect('new_users' in bodyArg.innovation_use_2030.actors[0]).toBe(false);
+      expect('new_users' in untouched).toBe(false);
+    });
+
     it('should handle linked_results with id objects and plain values', () => {
       component.innovationUseInfoBody.innovatonUse = {
         actors: [],
@@ -868,6 +891,62 @@ describe('InnovationUseInfoComponent', () => {
       const bodyArg: any = spyPATCH.mock.calls[0][0] as any;
       expect(bodyArg).toHaveProperty('new_users_added');
       expect(bodyArg).toHaveProperty('use_expansion_narrative');
+      expect(bodyArg.new_users_added).toBeNull();
+      expect(bodyArg.use_expansion_narrative).toBeNull();
+    });
+  });
+
+  // IU26-R-2 / DD-6 (client half) — for 2026+ results the cumulative key is omitted and the narrative never goes as null.
+  describe('IU26 — the 2026 payload omits new_users_added and sends an emptied narrative as an empty string', () => {
+    beforeEach(() => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      mockFieldsManagerService.isInnovationUseAgeFallback2026.set(true);
+    });
+
+    afterEach(() => {
+      mockFieldsManagerService.isInnovationUseAgeFallback2026.set(false);
+    });
+
+    it('has no new_users_added key, even when a value is stored in the body', () => {
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
+      component.innovationUseInfoBody.new_users_added = 175;
+      component.innovationUseInfoBody.use_expansion_narrative = 'Use changed after the new seed supply';
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0] as any;
+      expect(bodyArg).not.toHaveProperty('new_users_added');
+      expect(bodyArg.use_expansion_narrative).toBe('Use changed after the new seed supply');
+    });
+
+    it('sends an emptied narrative as "" and never as null', () => {
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
+      component.innovationUseInfoBody.use_expansion_narrative = null;
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0] as any;
+      expect(bodyArg.use_expansion_narrative).toBe('');
+      expect(bodyArg.use_expansion_narrative).not.toBeNull();
+    });
+
+    it('keeps an explicit "" as ""', () => {
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
+      component.innovationUseInfoBody.use_expansion_narrative = '';
+
+      component.onSaveSection();
+
+      expect((spyPATCH.mock.calls[0][0] as any).use_expansion_narrative).toBe('');
+    });
+
+    it('a pre-2026 result still sends new_users_added (null when unanswered)', () => {
+      mockFieldsManagerService.isInnovationUseAgeFallback2026.set(false);
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0] as any;
+      expect(bodyArg).toHaveProperty('new_users_added');
       expect(bodyArg.new_users_added).toBeNull();
       expect(bodyArg.use_expansion_narrative).toBeNull();
     });

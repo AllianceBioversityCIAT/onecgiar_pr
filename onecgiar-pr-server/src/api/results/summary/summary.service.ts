@@ -86,6 +86,8 @@ export class SummaryService {
     try {
       const resultExist = await this._resultRepository.findOne({
         where: { id: resultId },
+        // IU26-R-2: the phase year for the cumulative-field guard, in the same query (a join).
+        relations: { obj_version: true },
       });
 
       const InnovationUse = await this._innoDevService.saveAnticipatedInnoUser(
@@ -115,6 +117,8 @@ export class SummaryService {
 
       const { innov_use_to_be_determined, innovation_use_level_id } =
         innovationUseDto;
+      const keepCumulative =
+        Number(resultExist?.obj_version?.phase_year) >= 2026;
       // Deliberately NOT filtered by `is_active`: `results_innovations_use` has a
       // UNIQUE index on `results_id`, so an inactive row still occupies the slot.
       // Filtering it out here made the lookup miss, sent us down the insert branch,
@@ -135,7 +139,11 @@ export class SummaryService {
         innUseExists.last_updated_by = user.id;
         // Reactivate rather than insert: the row owns this result's unique slot.
         innUseExists.is_active = true;
-        this.applyOptionalInnovationUseFields(innUseExists, innovationUseDto);
+        this.applyOptionalInnovationUseFields(
+          innUseExists,
+          innovationUseDto,
+          keepCumulative,
+        );
         innUseRow =
           await this._resultsInnovationsUseRepository.save(innUseExists);
       } else {
@@ -149,7 +157,11 @@ export class SummaryService {
         newInnUse.innov_use_to_be_determined =
           innov_use_to_be_determined ?? null;
         newInnUse.innovation_use_level_id = innovation_use_level_id ?? null;
-        this.applyOptionalInnovationUseFields(newInnUse, innovationUseDto);
+        this.applyOptionalInnovationUseFields(
+          newInnUse,
+          innovationUseDto,
+          keepCumulative,
+        );
 
         try {
           innUseRow =
@@ -167,7 +179,11 @@ export class SummaryService {
           raced.innovation_use_level_id = innovation_use_level_id ?? null;
           raced.last_updated_by = user.id;
           raced.is_active = true;
-          this.applyOptionalInnovationUseFields(raced, innovationUseDto);
+          this.applyOptionalInnovationUseFields(
+            raced,
+            innovationUseDto,
+            keepCumulative,
+          );
           innUseRow = await this._resultsInnovationsUseRepository.save(raced);
         }
       }
@@ -260,6 +276,7 @@ export class SummaryService {
   private applyOptionalInnovationUseFields(
     entity: ResultsInnovationsUse,
     dto: InnovationUseDto,
+    keepCumulative = false,
   ): void {
     if (dto.has_scaling_studies !== undefined) {
       entity.has_scaling_studies = this.toNullableBoolean(
@@ -281,10 +298,17 @@ export class SummaryService {
       );
     }
     // P2-3985 — `??`, never `||`: "0 new users" is a real answer and must not turn into null.
-    if (dto.new_users_added !== undefined) {
+    // IU26-R-2 / DD-6: from 2026 (`keepCumulative`) an explicit null no longer erases either field.
+    if (
+      dto.new_users_added !== undefined &&
+      !(keepCumulative && dto.new_users_added === null)
+    ) {
       entity.new_users_added = dto.new_users_added ?? null;
     }
-    if (dto.use_expansion_narrative !== undefined) {
+    if (
+      dto.use_expansion_narrative !== undefined &&
+      !(keepCumulative && dto.use_expansion_narrative === null)
+    ) {
       entity.use_expansion_narrative = dto.use_expansion_narrative ?? null;
     }
   }
@@ -508,10 +532,28 @@ export class SummaryService {
       const previousActors = await this._resultActorRepository.find({
         where: { result_id: previousId, is_active: true },
       });
+      // IU26-R-4: organizations (role 5) and measures ride along; the util applies the legacy
+      // NULL-or-not-2030 row rule to all three and keeps only active role-5 organizations.
+      const [previousOrganizations, previousMeasures] = await Promise.all([
+        this._resultByIntitutionsTypeRepository.find({
+          where: {
+            results_id: previousId,
+            institution_roles_id: 5,
+            is_active: true,
+          },
+        }),
+        this._resultIpMeasureRepository.find({
+          where: { result_id: previousId, is_active: true },
+        }),
+      ]);
       return summarizePreviousPhaseCurrentUse(
         previousActors,
         previousId,
         innUse?.previous_phase_year,
+        undefined,
+        undefined,
+        previousOrganizations,
+        previousMeasures,
       );
     } catch (error) {
       this._logger.error(

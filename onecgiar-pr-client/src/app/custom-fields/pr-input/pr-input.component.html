@@ -9,7 +9,7 @@
         [required]="effectiveRequired()"
         [hasValue]="hasValue"
         [readOnly]="readOnly() || this.rolesSE.readOnly"
-        [hasError]="!!maxWords() && wordCount() > maxWords() && !autogenerate()"
+        [hasError]="markInvalid() || (!!maxWords() && wordCount() > maxWords() && !autogenerate())"
         [showDescription]="showDescription()"
         [descInlineStyles]="descInlineStyles()">
         <ng-container *ngTemplateOutlet="bodyTpl"></ng-container>
@@ -95,7 +95,9 @@
         (blur)="onNumberBlur()"
         [disabled]="disabled()"
         [placeholder]="effectivePlaceholder()"
-        [ngClass]="{ 'pr-body-2': true }"
+        [attr.aria-invalid]="markInvalid() ? 'true' : null"
+        [attr.aria-describedby]="describedBy()"
+        [ngClass]="{ 'pr-body-2': true, invalid: markInvalid() }"
         [style]="{ 'max-height': variant() === 'sm' ? '30px' : variant() === 'xs' ? '25px' : 'auto', width: '100%' }" />
 
       <input

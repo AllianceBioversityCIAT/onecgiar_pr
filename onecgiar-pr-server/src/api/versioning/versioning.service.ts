@@ -4,6 +4,7 @@ import { UpdateVersioningDto } from './dto/update-versioning.dto';
 import { Version } from './entities/version.entity';
 import { VersionRepository } from './versioning.repository';
 import { Result, SourceEnum } from '../results/entities/result.entity';
+import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultRepository } from '../results/result.repository';
 import { ApplicationModules } from './entities/application-modules.entity';
 import { ApplicationModulesRepository } from './repositories/application-modules.repository';
@@ -79,6 +80,9 @@ import { ResultImpactPreviousResultRepository } from '../results-framework-repor
 
 /** Clarisa `clarisa_initiatives.portfolio_id` for CGIAR Programs (P25). */
 const PORTFOLIO_CGIAR_PROGRAMS_P25_ID = 3;
+
+/** IU26-R-9 (IPSR): first phase year whose copy leaves the Step 3 use rows behind. */
+const IPSR_STEP_THREE_USE_FIRST_SKIPPED_YEAR = 2026;
 
 @Injectable()
 export class VersioningService {
@@ -339,6 +343,13 @@ export class VersioningService {
         user: user,
         entity_id: entity_id,
         same_portfolio_phase_change: same_portfolio_phase_change,
+        // IU26-R-9: only Innovation Use copies start without current-use rows in a 2026+ phase
+        // (the actor / P25 measure / organization repositories read this); type 7 and the rest
+        // keep the full copy.
+        ...(Number.parseInt(`${result.result_type_id}`, 10) ===
+        ResultTypeEnum.INNOVATION_USE
+          ? { phase_year: Number(phase.phase_year) }
+          : {}),
       };
       await this._resultByInitiativesRepository.replicate(manager, config);
 
@@ -369,6 +380,9 @@ export class VersioningService {
           // every Innovation Use reached the new phase with no actors or measures and the
           // reporter saw last year's figures as gone (W3 result 27270, 2026-10-14). Decision:
           // the new phase starts PRE-FILLED and editable, for W1/W2 and W3 alike.
+          // IU26-R-9 reverts that for a 2026+ phase: `config.phase_year` makes these two copies
+          // (and the organizations copy below) carry only the 2030 projection; the legacy measures
+          // and the IU answers above stay as today (DD-11).
           await this._resultActorRepository.replicate(manager, config);
           await this._resultIpMeasureRepository.replicate(manager, config);
           break;
@@ -796,9 +810,23 @@ export class VersioningService {
         manager,
         config,
       );
-      await this._resultIpResultsActorsRepository.replicate(manager, config);
-      await this._resultsIpResultMeasuresRespository.replicate(manager, config);
-      await this._resultsIpInstitutionTypeRepository.replicate(manager, config);
+      // IU26-R-9 (IPSR): a 2026+ package starts with no Step 3 use rows (actors, measures,
+      // institution types) — the reporter sees last year's figures as `current_use_previous`
+      // instead. Gated on THIS phase's year, not on a config field: `$_phaseChangeReporting`'s
+      // `config.phase_year` is type-2 only and is deliberately not read here.
+      const skipStepThreeUse =
+        Number(phase?.phase_year) >= IPSR_STEP_THREE_USE_FIRST_SKIPPED_YEAR;
+      if (!skipStepThreeUse) {
+        await this._resultIpResultsActorsRepository.replicate(manager, config);
+        await this._resultsIpResultMeasuresRespository.replicate(
+          manager,
+          config,
+        );
+        await this._resultsIpInstitutionTypeRepository.replicate(
+          manager,
+          config,
+        );
+      }
 
       await this._resultInitiativeBudgetRepository.ensureMissingBudgetsForPrimaryInitiatives(
         manager,

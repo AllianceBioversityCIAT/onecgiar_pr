@@ -540,6 +540,8 @@ export const IPSR_STEP_3_FIELDS: CatalogField[] = [
       sub(ACTORS, 'how_many', 'How many', 'number', 'how_many', undefined, {
         required_when: whenEq('sex_and_age_disaggregation', true),
       }),
+      // IU26-R-11 / R-14: of the row's total, how many are new in this reporting period (optional, NULL is a valid answer).
+      sub(ACTORS, 'new_users', 'Of which NEW users', 'number'),
       // S3C:85-86 `type="link"`, required once the row is real; VS3 (NULL or '' invalid).
       sub(
         ACTORS,
@@ -611,6 +613,8 @@ export const IPSR_STEP_3_FIELDS: CatalogField[] = [
         undefined,
         ALWAYS,
       ),
+      // IU26-R-11 / R-14: of the row's total, how many are new in this reporting period.
+      sub(ORGS, 'new_users', 'Of which NEW users', 'number'),
       // S3C:135-138 (type 50 only, `[required]="false"`); no rule in VS3.
       {
         ...sub(ORGS, 'graduate_students', '# of graduate students', 'number'),
@@ -673,6 +677,8 @@ export const IPSR_STEP_3_FIELDS: CatalogField[] = [
         undefined,
         ALWAYS,
       ),
+      // IU26-R-11 / R-14: of the row's quantity, how much is new in this reporting period.
+      sub(MEASURES, 'new_users', 'Of which NEW users', 'number'),
       // S3C:173-174 `[required]="true"` for every row; VS3 reads it only inside the any-of group (VS3:143).
       sub(
         MEASURES,

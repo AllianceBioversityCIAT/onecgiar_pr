@@ -21,6 +21,43 @@
       <app-alert-status status="error" [description]="loadErrorNote"></app-alert-status>
     }
 
+    <!-- IU26-R-3 / DD-5 — the Current Use Update sits ABOVE "Innovation Use to be Determined" and ignores it.
+         Previous use per category (reference only) + the narrative; no cumulative fields (IU26-R-2). ABSENT
+         when the server sends no `current_use_previous`. Read-only mode comes from the `[inert]` wrapper. -->
+    @if (showCurrentUseUpdate) {
+      <div class="flex flex-col gap-3 rounded-md border border-[#E0E0E0] p-3">
+        <app-pr-field-header
+          [label]="currentUseCopy.title"
+          [useColon]="false"
+          [description]="currentUseCopy.description"
+          [showDescriptionLabel]="false"
+          [required]="true">
+        </app-pr-field-header>
+
+        <div class="flex flex-col gap-1 text-[13px]">
+          <span class="font-semibold">{{ previousUseHeading }}</span>
+          @if (previousUse.actors !== null) {
+            <span>{{ currentUseCopy.categoryLabels.actors }}: <strong class="font-mono tabular-nums">{{ previousUse.actors }}</strong></span>
+          }
+          @if (previousUse.organizations !== null) {
+            <span>{{ currentUseCopy.categoryLabels.organizations }}: <strong class="font-mono tabular-nums">{{ previousUse.organizations }}</strong></span>
+          }
+          @for (measure of previousUse.measures; track measure.unit) {
+            <span>{{ measure.unit }}: <strong class="font-mono tabular-nums">{{ measure.quantity }}</strong></span>
+          }
+        </div>
+
+        <app-pr-textarea
+          [label]="narrativeLabel"
+          [placeholder]="currentUseCopy.placeholder"
+          [required]="true"
+          [maxWords]="currentUseCopy.maxNarrativeWords"
+          [(ngModel)]="body.use_expansion_narrative"
+          (ngModelChange)="onFieldChange()">
+        </app-pr-textarea>
+      </div>
+    }
+
     <app-pr-radio-button
       label="Innovation Use to be Determined"
       [options]="[
@@ -39,58 +76,45 @@
        which hides the fields only on an explicit "Yes": an UNANSWERED question (NULL — every result rolled
        over to a new phase before 2026-10-14) used to hide the actors the copy had carried over (27270). -->
     @if (body.innov_use_to_be_determined !== true) {
-      <!-- P2-3985 — the Current Use Update block of P2-3537 §4, same order as the W1/W2 form
-           (`shared/components/innovation-use-form`): previous figure, new users, calculated total,
-           narrative, mismatch error. Right above the actors it reconciles against, inside the
-           "to be determined" gate and OUTSIDE full metadata: it is an MDS item. ABSENT, not empty,
-           when the server sends no `current_use_previous`. Read-only mode comes from the `[inert]`
-           wrapper above. -->
-      @if (showCurrentUseUpdate) {
-        <div class="flex flex-col gap-3 rounded-md border border-[#E0E0E0] p-3">
-          <app-pr-field-header
-            [label]="currentUseCopy.title"
-            [useColon]="false"
-            [description]="currentUseCopy.description"
-            [showDescriptionLabel]="false"
-            [required]="true">
-          </app-pr-field-header>
+      <!-- IU26-R-7 — read-only totals per category, computed from the rows below and never stored. A category
+           without rows gets no tile; hidden while the use is "to be determined". -->
+      @if (hasTotals) {
+        <div class="grid grid-cols-2 gap-[10px] lg:grid-cols-4" data-testid="iu-totals">
+          @if (totals.actorsIndividuals !== null) {
+            <div class="rounded-md bg-[var(--pr-surface-sunken)] p-3">
+              <div class="text-[13px] text-ink-secondary">{{ currentUseCopy.categoryLabels.actorsIndividuals }}</div>
+              <div class="font-mono text-[20px] font-bold tabular-nums text-ink-body">{{ totals.actorsIndividuals | number }}</div>
+            </div>
+          }
+          @if (totals.households !== null) {
+            <div class="rounded-md bg-[var(--pr-surface-sunken)] p-3">
+              <div class="text-[13px] text-ink-secondary">{{ currentUseCopy.categoryLabels.households }}</div>
+              <div class="font-mono text-[20px] font-bold tabular-nums text-ink-body">{{ totals.households | number }}</div>
+            </div>
+          }
+          @if (totals.organizations !== null) {
+            <div class="rounded-md bg-[var(--pr-surface-sunken)] p-3">
+              <div class="text-[13px] text-ink-secondary">{{ currentUseCopy.categoryLabels.organizations }}</div>
+              <div class="font-mono text-[20px] font-bold tabular-nums text-ink-body">{{ totals.organizations | number }}</div>
+            </div>
+          }
+          @if (totals.measures.length) {
+            <div class="rounded-md bg-[var(--pr-surface-sunken)] p-3">
+              <div class="text-[13px] text-ink-secondary">{{ currentUseCopy.categoryLabels.measures }}</div>
+              @for (measure of totals.measures; track measure.unit) {
+                <div class="text-[13px] text-ink-body">{{ measure.unit }}: <strong class="font-mono tabular-nums">{{ measure.quantity | number }}</strong></div>
+              }
+            </div>
+          }
+        </div>
+      }
 
-          <div class="text-[13px]">
-            {{ currentUseCopy.previousLabel }}
-            <strong class="font-mono tabular-nums">{{ previousReportedUse }}</strong
-            >@if (previousUsePhaseYear) {
-              <!-- The space lives inside the span: Angular collapses whitespace between elements. -->
-              <span>&nbsp;(FY{{ previousUsePhaseYear }})</span>
-            }
-          </div>
-
-          <app-pr-input
-            [label]="currentUseCopy.newUsersLabel"
-            type="number"
-            [placeholder]="currentUseCopy.placeholder"
-            [required]="true"
-            [(ngModel)]="body.new_users_added"
-            (ngModelChange)="onNewUsersAddedChange()">
-          </app-pr-input>
-
-          <!-- Field 3 of the story: never typed, always previous + new. -->
-          <div class="text-[13px]">
-            {{ currentUseCopy.totalLabel }}
-            <strong class="font-mono tabular-nums">{{ totalCumulativeUse }}</strong>
-          </div>
-
-          <app-pr-textarea
-            [label]="currentUseCopy.narrativeLabel"
-            [placeholder]="currentUseCopy.placeholder"
-            [required]="true"
-            [maxWords]="currentUseCopy.maxNarrativeWords"
-            [(ngModel)]="body.use_expansion_narrative"
-            (ngModelChange)="onFieldChange()">
-          </app-pr-textarea>
-
-          <!-- §4.1 + §5: names the exact difference and appears as soon as the figures diverge. -->
-          @if (hasCurrentUseMismatch) {
-            <app-alert-status status="error" [collapsible]="false" [description]="currentUseMismatchMessage"></app-alert-status>
+      <!-- IU26-R-8 — the guidance above the rows (never carries the NEW-users sentence on W3). -->
+      @if (currentUseTotalLabels) {
+        <div class="flex flex-col gap-1 rounded-md bg-[var(--pr-surface-sunken)] p-3 text-[13px] text-ink-body" data-testid="iu-guidance">
+          <strong>{{ guidance.title }}</strong>
+          @for (line of guidance.lines; track $index) {
+            <span>{{ line }}</span>
           }
         </div>
       }
@@ -130,7 +154,7 @@
                 [(ngModel)]="measure.unit_of_measure"
                 (ngModelChange)="onFieldChange()"></app-pr-input>
               <app-pr-input
-                label="Quantity"
+                [label]="currentUseTotalLabels ? currentUseCopy.quantityTotalLabel : 'Quantity'"
                 type="number"
                 placeholder="0"
                 [required]="true"
@@ -488,7 +512,7 @@
         [ngModel]="actorTotal(actor)"></app-pr-input>
     } @else {
       <app-pr-input
-        label="How many"
+        [label]="currentUseTotalLabels ? currentUseCopy.howManyTotalLabel : 'How many'"
         type="number"
         placeholder="0"
         [required]="false"
@@ -558,7 +582,7 @@
     }
 
     <app-pr-input
-      label="How many"
+      [label]="currentUseTotalLabels ? currentUseCopy.howManyTotalLabel : 'How many'"
       type="number"
       placeholder="0"
       [required]="false"

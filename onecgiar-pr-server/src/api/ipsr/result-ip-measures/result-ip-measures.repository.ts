@@ -18,6 +18,8 @@ export class ResultIpMeasureRepository
   createQueries(
     config: ReplicableConfigInterface<ResultIpMeasure>,
   ): ConfigCustomQueryInterface {
+    // IU26-R-9: a 2026+ Innovation Use copy carries only the 2030 projection (section_id = 2).
+    const sectionFilter = config.phase_year >= 2026 ? 'AND section_id = 2' : '';
     const resultIpIdValue = config.new_ipsr_id
       ? `${config.new_result_id} AS result_ip_id,`
       : `NULL AS result_ip_id,`;
@@ -39,7 +41,7 @@ export class ResultIpMeasureRepository
           result_ip_measure
       WHERE
           result_id = ${config.old_result_id}
-          AND is_active > 0;
+          AND is_active > 0 ${sectionFilter};
       `,
       insertQuery: `
       INSERT INTO
@@ -70,7 +72,7 @@ export class ResultIpMeasureRepository
           result_ip_measure
       WHERE
           result_id = ${config.old_result_id}
-          AND is_active > 0;
+          AND is_active > 0 ${sectionFilter};
       `,
       returnQuery: `
       SELECT
