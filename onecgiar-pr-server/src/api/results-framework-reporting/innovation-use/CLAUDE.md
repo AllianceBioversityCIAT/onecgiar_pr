@@ -74,6 +74,12 @@ Patrón completo: `innov_use_2030_justification` (P2-3515).
   `findOne` ahora une `obj_result.obj_version` (efecto: la respuesta del PATCH v2 `create/result/:id` trae además `obj_result` anidado) e `InnovUseExists` selecciona `v.phase_year AS phase_year`.
 - El camino bilateral `afterCreate` → v2 `saveInnovationUse` hereda la guarda: un payload W3 2026 sin esos campos ya no los anula. Forma del payload sin cambios.
 
+## `new_users` por fila (IU26-T-11, IU26-R-11/R-12)
+- `result_actors`, `results_by_institution_type` y `result_ip_measure` traen `new_users` (INT >= 0, NULL = sin responder; migración IU26-T-10). Los tres builders lo escriben **solo si la fila trae la clave** (un llamador que la omite no la borra); la lectura lo devuelve tal cual (las tres lecturas hacen `find` de la entidad).
+- `assertNewUsersWithinTotal` corre al inicio de `saveInnovationUse`, **antes de cualquier escritura**, sobre las filas actuales y las de 2030: entero >= 0 y `<=` el total de la fila, si no 400 con el nombre de la fila. Total: actor con `sex_and_age_disaggregation === true` (el desglose NO aplica) -> `how_many` tecleado; cualquier otro actor -> women + men (igual que `getActorsData`); organización -> `how_many`; medida -> `quantity`. Filas inactivas o sin total comparable se saltan.
+- Los decoradores `IsOptional/IsInt/Min(0)` viven en la propiedad de las 3 entidades (el DTO v2 las usa como tipo de fila); el controlador v2 no tiene `ValidationPipe`, así que la regla efectiva es la del servicio.
+- R-12: el DTO bilateral NO lleva `new_users` (el handler arma el DTO v2 sin la clave); W3 `results/summary` tampoco lo acepta. Spec: `innovation-use.service.new-users.spec.ts`.
+
 ## Trampas (⚠️ = ya rompió algo)
 - ⚠️ **Non-youth con Youth vacío = `null`, nunca el total** (P2-4049, 12-nov-2026). `getActorsData` es la lectura que carga el formulario P25 (`GET_innovationUseP25`), NO `summary.service`. Calculaba `total - (youth || 0)` y PROD mostró Women 14 / Non-youth 14 con Youth vacío aunque `summary` ya devolvía `null`. Si Youth es `null`/`undefined`, Non-youth es `null`; con Youth lleno (0 incluido) se mantiene la resta con tope en 0. Spec: `innovation-use.service.youth-required.spec.ts`.
 - ⚠️ **Nivel de uso ausente → NULL, nunca `findOne({ where: { level: null } })`** (13-oct-2026). TypeORM descarta la condición `null` del WHERE y devolvía la PRIMERA fila del catálogo (nivel 0, "Innovation is not used"): todo resultado del API sin nivel quedaba en "No use". `saveInnovationUse` solo consulta el catálogo cuando viene un nivel; 0 sí es respuesta y se busca. Spec: `innovation-use.service.use-level.spec.ts`.
@@ -84,7 +90,6 @@ Patrón completo: `innov_use_2030_justification` (P2-3515).
   8 de 12 resultados). ⇒ El cuerpo vivo está en la base y **difiere del repo**. No basar cambios en
   esa copia: pedir `SHOW CREATE FUNCTION`.
 - ⚠️ **Los umbrales de nivel comparan el NÚMERO de nivel, nunca el id de fila** (P2-4129). El catálogo repite niveles bajo ids altos (fila 13 = nivel 2). Explicación y respuesta de escalamiento: nivel >= 5; enlaces de estudios: nivel >= 6 (guardar y leer). `innovation_use_level_id` sigue guardando el id de fila. Spec: `innovation-use.service.level-threshold.spec.ts`.
-- Ninguna validación compara sumas de actores hoy. Si una historia pide "el total debe cuadrar", eso
-  es nuevo y hay que decidir si vive en el front o en la función SQL.
+- Desde IU26-T-11 solo `new_users` se compara contra el total de su fila (ver sección arriba); ninguna otra validación compara sumas de actores.
 - Los specs se construyen con `Object.create(InnovationUseService.prototype)` para saltarse el
   constructor, que es enorme. Copiar `innovation-use.service.2030-projection.spec.ts`.

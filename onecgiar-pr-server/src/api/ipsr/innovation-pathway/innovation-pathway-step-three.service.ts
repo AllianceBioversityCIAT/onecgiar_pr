@@ -41,6 +41,12 @@ import {
 } from '../../../shared/constants/evidence-type.enum';
 import { EvidenceWithEvidenceSharepoint } from '../../results/evidences/interfaces/evidence-with-evidence-sharepoint.interface';
 import { Result } from '../../results/entities/result.entity';
+import {
+  CurrentUseActorRow,
+  currentUseActorCount,
+  PreviousPhaseCurrentUse,
+  summarizePreviousPhaseCurrentUse,
+} from '../../results/summary/utils/previous-phase-current-use.util';
 
 /**
  * P2-3824 — the two Step 3 evidence lists of a component and the legacy single-link columns each
@@ -75,6 +81,15 @@ const PRINCIPAL_IMPACT_AREA_COLUMNS: ReadonlyArray<
   ['poverty_tag_level_id', 'poverty'],
 ];
 
+/** IU26-R-13 / IU26-R-9 (IPSR): first phase year with `new_users` and the previous-use figure. */
+const IU26_FIRST_PHASE_YEAR = 2026;
+
+/** IPSR Step 3 organizations are role 6 (the Innovation Use form of Reporting uses role 5). */
+const IPSR_STEP_THREE_ORGANIZATION_ROLE = 6;
+
+/** The shared previous-use summary reads Innovation Use organizations as role 5. */
+const SUMMARY_ORGANIZATION_ROLE = 5;
+
 @Injectable()
 export class InnovationPathwayStepThreeService {
   constructor(
@@ -107,11 +122,14 @@ export class InnovationPathwayStepThreeService {
           id: resultId,
           is_active: true,
         },
+        relations: { obj_version: true },
       });
 
       if (!result) {
         throw new Error('The result was not found');
       }
+      // IU26-R-13: `new_users` exists only on a 2026+ package.
+      const keepsNewUsers = this._isIu26Phase(result?.obj_version?.phase_year);
 
       const version = await this._versioningService.$_findActivePhase(
         AppModuleIdEnum.IPSR,
@@ -134,6 +152,7 @@ export class InnovationPathwayStepThreeService {
         result_ip_core,
         ...(result_ip_complementary ?? []),
       ]);
+      if (keepsNewUsers) this._assertNewUsers(saveData?.innovatonUse);
       const evidenceFailures: string[] = [];
 
       await this._resultInnovationPackageRepository.update(
@@ -159,7 +178,7 @@ export class InnovationPathwayStepThreeService {
       evidenceFailures.push(
         ...(await this._saveStepThreeEvidences(resultId, result_ip_core, user)),
       );
-      await this.saveInnovationUse(user, saveData);
+      await this.saveInnovationUse(user, saveData, keepsNewUsers);
 
       if (result_ip_complementary?.length) {
         for (const ripc of result_ip_complementary) {
@@ -456,7 +475,7 @@ export class InnovationPathwayStepThreeService {
     try {
       const result_ip = await this._resultInnovationPackageRepository.findOne({
         where: { result_innovation_package_id: resultId, is_active: true },
-        relations: { obj_result_innovation_package: true },
+        relations: { obj_result_innovation_package: { obj_version: true } },
       });
       if (!result_ip) {
         return {
@@ -564,6 +583,16 @@ export class InnovationPathwayStepThreeService {
           result_ip.obj_result_innovation_package,
         ),
       };
+      // IU26-R-13: only a 2026+ package shows last year's figure.
+      if (
+        this._isIu26Phase(
+          result_ip.obj_result_innovation_package?.obj_version?.phase_year,
+        )
+      ) {
+        returdata.current_use_previous = await this._previousUse(
+          result_ip.obj_result_innovation_package,
+        );
+      }
 
       return {
         response: returdata,
@@ -578,7 +607,11 @@ export class InnovationPathwayStepThreeService {
   private async saveInnovationUse(
     user: TokenDto,
     { innovatonUse: crtr, result_ip_result_core: riprc }: SaveStepTwoThree,
+    keepsNewUsers = false,
   ) {
+    // IU26-R-13: stored only for a 2026+ package; `undefined` leaves the column untouched.
+    const newUsers = (el: { new_users?: number | null }) =>
+      keepsNewUsers ? this.isNullData(el?.new_users) : undefined;
     const useLevel = await this._innovationByResultRepository.findOne({
       where: {
         result_by_innovation_package_id: riprc.result_by_innovation_package_id,
@@ -660,6 +693,7 @@ export class InnovationPathwayStepThreeService {
               sex_and_age_disaggregation:
                 el?.sex_and_age_disaggregation === true ? true : false,
               how_many: el?.how_many,
+              new_users: newUsers(el),
             },
           );
           if (useLevel?.obj_use_level_evidence_based.level === 0) {
@@ -677,6 +711,7 @@ export class InnovationPathwayStepThreeService {
                 last_updated_by: user.id,
                 sex_and_age_disaggregation: null,
                 how_many: null,
+                new_users: null,
               },
             );
           }
@@ -703,6 +738,7 @@ export class InnovationPathwayStepThreeService {
             sex_and_age_disaggregation:
               el?.sex_and_age_disaggregation === true ? true : false,
             how_many: el?.how_many,
+            new_users: newUsers(el),
           });
         }
       });
@@ -748,6 +784,7 @@ export class InnovationPathwayStepThreeService {
             graduate_students: el?.graduate_students,
             is_active: el.is_active == undefined ? true : el.is_active,
             evidence_link: this.isNullData(el.evidence_link),
+            new_users: newUsers(el),
           });
           if (
             useLevel?.obj_use_level_evidence_based &&
@@ -761,6 +798,7 @@ export class InnovationPathwayStepThreeService {
               graduate_students: null,
               is_active: false,
               evidence_link: null,
+              new_users: null,
             });
           }
         } else {
@@ -781,6 +819,7 @@ export class InnovationPathwayStepThreeService {
             institution_roles_id: 6,
             how_many: el?.how_many,
             evidence_link: el?.evidence_link,
+            new_users: newUsers(el),
           });
         }
       });
@@ -824,6 +863,7 @@ export class InnovationPathwayStepThreeService {
               last_updated_by: user.id,
               evidence_link: el.evidence_link,
               is_active: el.is_active == undefined ? true : el.is_active,
+              new_users: newUsers(el),
             },
           );
           if (useLevel?.obj_use_level_evidence_based.level === 0) {
@@ -835,6 +875,7 @@ export class InnovationPathwayStepThreeService {
                 last_updated_by: user.id,
                 evidence_link: null,
                 is_active: false,
+                new_users: null,
               },
             );
           }
@@ -853,6 +894,7 @@ export class InnovationPathwayStepThreeService {
             created_by: user.id,
             last_updated_by: user.id,
             evidence_link: el.evidence_link,
+            new_users: newUsers(el),
           });
         }
       });
@@ -1082,6 +1124,113 @@ export class InnovationPathwayStepThreeService {
     return PRINCIPAL_IMPACT_AREA_COLUMNS.filter(
       ([column]) => Number(result?.[column]) === PRINCIPAL_TAG_LEVEL_ID,
     ).map(([, area]) => area);
+  }
+
+  private _isIu26Phase(phaseYear: unknown): boolean {
+    const year = Number(phaseYear);
+    return Number.isFinite(year) && year >= IU26_FIRST_PHASE_YEAR;
+  }
+
+  /**
+   * IU26-R-13 / DD-9: what the previous phase's twin of this package reported: actors, role-6
+   * organizations and P25 measures of its core component. The twin is the package with the same
+   * `result_code` in the version this phase follows (`result_id` changes every phase, so joining
+   * on it would never match). `null` when there is no twin or it reported nothing. Step 3 rows
+   * carry no `section_id` (P-16), so the pick keeps every active row.
+   */
+  private async _previousUse(
+    result: Result,
+  ): Promise<PreviousPhaseCurrentUse | null> {
+    const previousPhase = Number(result?.obj_version?.previous_phase);
+    if (!result?.result_code || !previousPhase) return null;
+
+    const previous = await this._resultRepository.findOne({
+      where: {
+        result_code: result.result_code,
+        version_id: previousPhase,
+        is_active: true,
+      },
+      relations: { obj_version: true },
+    });
+    if (!previous) return null;
+
+    const previousCore = await this._innovationByResultRepository.findOne({
+      where: {
+        ipsr_role_id: 1,
+        result_innovation_package_id: previous.id,
+        is_active: true,
+      },
+    });
+    if (!previousCore) return null;
+    const previousCoreId = previousCore.result_by_innovation_package_id;
+
+    const actors = await this._resultsIpActorRepository.find({
+      where: { is_active: true, result_ip_result_id: previousCoreId },
+    });
+    const organizations = await this._resultsIpInstitutionTypeRepository.find({
+      where: {
+        is_active: true,
+        result_ip_results_id: previousCoreId,
+        institution_roles_id: IPSR_STEP_THREE_ORGANIZATION_ROLE,
+      },
+    });
+    const measures = await this._resultsByIpInnovationUseMeasureRepository.find(
+      { where: { is_active: true, result_ip_result_id: previousCoreId } },
+    );
+
+    return summarizePreviousPhaseCurrentUse(
+      actors,
+      previous.id,
+      previous.obj_version?.phase_year,
+      undefined,
+      (rows) => rows,
+      organizations.map((row) => ({
+        ...row,
+        institution_roles_id: SUMMARY_ORGANIZATION_ROLE,
+      })),
+      measures,
+    );
+  }
+
+  /**
+   * IU26-R-13: `new_users` cannot exceed the row's total. Runs before anything is written, so a
+   * refused save leaves the step untouched. Totals: an actor row counts `how_many` when its
+   * disaggregation is on (the save itself requires it then) and `women + men` otherwise, the
+   * same rule `currentUseActorCount` applies; an organization counts `how_many`, a measure
+   * `quantity`. Inactive rows are skipped.
+   */
+  private _assertNewUsers(innovatonUse: SaveStepTwoThree['innovatonUse']) {
+    const check = (
+      label: string,
+      row: { new_users?: number | null; is_active?: boolean | null },
+      total: number,
+    ) => {
+      if (row?.is_active === false) return;
+      if (row?.new_users === null || row?.new_users === undefined) return;
+      if (Number(row.new_users) > total) {
+        this._rejectStepThree(
+          `${label}: new users (${row.new_users}) cannot be more than the total (${total}).`,
+        );
+      }
+    };
+
+    (innovatonUse?.actors ?? []).forEach((row, index) =>
+      check(
+        `Actor row ${index + 1}`,
+        row,
+        currentUseActorCount(row as unknown as CurrentUseActorRow),
+      ),
+    );
+    (innovatonUse?.organization ?? []).forEach((row, index) =>
+      check(`Organization row ${index + 1}`, row, Number(row?.how_many) || 0),
+    );
+    (innovatonUse?.measures ?? []).forEach((row, index) =>
+      check(
+        `Measure row ${index + 1} (${row?.unit_of_measure ?? 'no unit'})`,
+        row,
+        Number(row?.quantity) || 0,
+      ),
+    );
   }
 
   isNullData(data: any) {

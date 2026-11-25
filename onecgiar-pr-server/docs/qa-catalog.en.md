@@ -37,7 +37,7 @@ x-api-key: <CLARISA key registered for QA>
 {
   "portfolio": "P25",
   "phase": 2026,
-  "catalog_version": "2026.36",
+  "catalog_version": "2026.37",
   "generated_at": "2026-10-06T12:00:00.000Z",
   "result_types": [
     { "key": "innovation_development", "label": "Innovation development", "level": "output" }
@@ -298,16 +298,16 @@ Notes:
 
 ---
 
-## Catalog at revision 36 (2026.36)
+## Catalog at revision 37 (2026.37)
 
-Counts measured on the code catalog on 2026-10-09 (the same data the endpoint returns); revision 31 (QRF-T-9) changes no count, only value bindings; revision 33 (IFC-T-6) adds 4 subfields (2 per Innovation Use actor list) and 4 conditional subfield requirements; revision 34 (ITD-T-2) removes the team diversity field (1 field, 2 subfields, 2 conditional subfield requirements); revision 36 (P2-3939) adds 3 fields (all `number`: 1 for `innovation_use`, 2 for `innovation_package`), 2 subfields, 2 conditional field requirements and 2 conditional subfield requirements; counts below updated by hand:
+Counts measured on the code catalog on 2026-10-09 (the same data the endpoint returns); revision 31 (QRF-T-9) changes no count, only value bindings; revision 33 (IFC-T-6) adds 4 subfields (2 per Innovation Use actor list) and 4 conditional subfield requirements; revision 34 (ITD-T-2) removes the team diversity field (1 field, 2 subfields, 2 conditional subfield requirements); revision 36 (P2-3939) adds 3 fields (all `number`: 1 for `innovation_use`, 2 for `innovation_package`), 2 subfields, 2 conditional field requirements and 2 conditional subfield requirements; revision 37 (IU26-T-15) removes 1 field (`innovation_use.current_use_update.new_users_added`) and adds 6 optional `number` subfields (`new_users`, 3 on `innovation_use.current_use` and 3 on `ipsr_step_3.core.current_use`); counts below updated by hand:
 
 | Item | Count |
 |---|---|
 | Result types | 9 |
 | Sections | 25 |
-| Catalogued fields (top level) | 163 |
-| Catalogued subfields | 253 (of which 32 at the second level) |
+| Catalogued fields (top level) | 162 |
+| Catalogued subfields | 259 (of which 32 at the second level) |
 | Fields with `required: true` (unconditional) | 53 |
 | Fields with a conditional requirement (`required: false` plus `required_when`) | 49 |
 | Subfields with `required: true` / with a conditional requirement | 64 / 74 |
@@ -434,7 +434,7 @@ Example for `phase_year` 2026, `result_ids` `[900001, 900002, 900003]` and `fiel
 ```json
 {
   "phase": 2026,
-  "catalog_version": "2026.36",
+  "catalog_version": "2026.37",
   "results": [
     {
       "result_id": 900001,
@@ -869,3 +869,4 @@ These are deliberate and tracked; each one is **additive** when resolved.
 | 2026-11-18 | **v1.34 — 2026-11-18: `program_codes` filter on `GET /api/qa/results`; `catalog_version` unchanged (2026.34).** New optional query parameter `program_codes`: comma-separated program official codes (for example `SP01`), each at most 32 characters (a longer one is a 400). It matches the **lead** program only, the same as `program_ids`, which is unchanged; when both are sent they are ANDed. It applies to `items`, `total` and `breakdown` (both `by_program` and `by_result_type`). Additive only. |
 | 2026-11-18 | **v1.35 — 2026-11-18: `use_nature` required for every actor type in Innovation Use; catalog_version 2026.35.** On `innovation_use.current_use.actors` and `innovation_use.projection_2030.actors`, the subfield `use_nature` is now required for every actor type: it has no `actor_type` condition in `visible_when` / `required_when` and carries `required: true`. `count_unit` keeps its Farmers-only condition. No key, type or list changes. Consumers holding `2026.34` re-read the catalog. Spec `changes/innovation-use-nature-all-actors`, INA-T-5. |
 | 2026-11-23 | **v1.36 — 2026-11-23: level gates compare the level number, not the row id (P2-3939); catalog_version 2026.36.** No key is renamed or removed and no type changes; five keys are added, all read-only level numbers (type `number`, `required: false`): `innovation_use.use_level.innovation_use_level_number`, `ipsr_step_3.core.readiness_level_number`, `ipsr_step_3.core.use_level_number` and, as subfields of each `ipsr_step_3.complementary_components` element, `readiness_level_number` and `use_level_number`. Each holds the number 0 to 9 of the level row the level field points at (empty when the level is unset). (a) **Corrected rule:** `innovation_use.use_level.readiness_level_explanation` `visible_when` / `required_when` now compare `innovation_use_level_number` `in [5..9]`; before 2026.36 they compared the stored row id, which is not the level number (level 4 is row id 5), so the explanation was gated on the wrong levels. (b) **New rules:** `ipsr_step_3.core.readiness_evidences`, `ipsr_step_3.core.use_evidences` and the subfields `readiness_evidences` / `use_evidences` of each complementary element carry `required_when` on their level number `in [1..9]` (no `visible_when`; the core lists keep `required_confirmed: true`); `ipsr_step_3.core.current_use.actors|organizations|measures` carry `visible_when` on `core.use_level_number` `in [1..9]`. (c) **Residual gap:** an unset (NULL) level is not stated as a condition (the vocabulary has no "is null"): the form requires the evidence for it, and for a complementary element the live function does too, but the catalog does not; the level field is `required: true`. The complementary rules cite a 2026-10-09 read of the deployed function that has not been re-verified; the core rule is confirmed by a migration. The rules are only as true as the `level` column of the CLARISA level tables. The step 3 note that said the level gate had no stated condition, and the known-gap line that called it not expressible, are replaced. Consumers holding `2026.35` re-read the catalog. Spec `bugfix/p2-3939-qa-catalog-level-numbers`, LVL-T-3. |
+| 2026-11-25 | **v1.37 — 2026-11-25: Innovation Use 2026 reports NEW users per row; catalog_version 2026.37.** `innovation_use.current_use_update.new_users_added` ("New users added during this reporting period") is no longer catalogued: the 2026 form replaces the single total with the per-row figure (spec `changes/innovation-use-2026-total-and-new-users`, IU26-R-14), and the stored column stays out of the catalog as a pending, retired column. Six optional `number` subfields "Of which NEW users" are added, bound to the `new_users` column of each row: `innovation_use.current_use.actors`, `.organizations` and `.measures` (tables `result_actors`, `results_by_institution_type`, `result_ip_measure`) and `ipsr_step_3.core.current_use.actors`, `.organizations` and `.measures` (tables `result_ip_result_actors`, `result_ip_result_institution_types`, `result_ip_result_measures`). They are optional with no `visible_when` or `required_when`: the form shows them only while the previous phase holds a matching row, which the catalog cannot state. The 2030 projection rows carry no NEW. W3 results have no NEW. Fields 163 to 162, subfields 253 to 259. |

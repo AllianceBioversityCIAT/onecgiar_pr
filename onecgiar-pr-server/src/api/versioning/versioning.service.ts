@@ -81,6 +81,9 @@ import { ResultImpactPreviousResultRepository } from '../results-framework-repor
 /** Clarisa `clarisa_initiatives.portfolio_id` for CGIAR Programs (P25). */
 const PORTFOLIO_CGIAR_PROGRAMS_P25_ID = 3;
 
+/** IU26-R-9 (IPSR): first phase year whose copy leaves the Step 3 use rows behind. */
+const IPSR_STEP_THREE_USE_FIRST_SKIPPED_YEAR = 2026;
+
 @Injectable()
 export class VersioningService {
   private readonly _logger: Logger = new Logger(VersioningService.name);
@@ -807,9 +810,23 @@ export class VersioningService {
         manager,
         config,
       );
-      await this._resultIpResultsActorsRepository.replicate(manager, config);
-      await this._resultsIpResultMeasuresRespository.replicate(manager, config);
-      await this._resultsIpInstitutionTypeRepository.replicate(manager, config);
+      // IU26-R-9 (IPSR): a 2026+ package starts with no Step 3 use rows (actors, measures,
+      // institution types) — the reporter sees last year's figures as `current_use_previous`
+      // instead. Gated on THIS phase's year, not on a config field: `$_phaseChangeReporting`'s
+      // `config.phase_year` is type-2 only and is deliberately not read here.
+      const skipStepThreeUse =
+        Number(phase?.phase_year) >= IPSR_STEP_THREE_USE_FIRST_SKIPPED_YEAR;
+      if (!skipStepThreeUse) {
+        await this._resultIpResultsActorsRepository.replicate(manager, config);
+        await this._resultsIpResultMeasuresRespository.replicate(
+          manager,
+          config,
+        );
+        await this._resultsIpInstitutionTypeRepository.replicate(
+          manager,
+          config,
+        );
+      }
 
       await this._resultInitiativeBudgetRepository.ensureMissingBudgetsForPrimaryInitiatives(
         manager,

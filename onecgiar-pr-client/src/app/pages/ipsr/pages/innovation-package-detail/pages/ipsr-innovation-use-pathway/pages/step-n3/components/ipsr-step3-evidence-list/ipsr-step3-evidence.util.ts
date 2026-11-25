@@ -106,7 +106,7 @@ function toComponentPayload<T extends Partial<Resultipresultcomplementary>>(item
 /**
  * The Step 3 PATCH body: the evidence arrays on core and every complementary item, WITHOUT the four
  * legacy single-link fields (the server owns them now) and without the read-only
- * `principal_impact_areas`. Never mutates the body on screen.
+ * `principal_impact_areas` and `current_use_previous` (IU26-R-4). Never mutates the body on screen.
  */
 export function buildIpsrStep3SavePayload(body: IpsrStep3Body): IpsrStep3Body {
   const payload: any = {
@@ -115,6 +115,20 @@ export function buildIpsrStep3SavePayload(body: IpsrStep3Body): IpsrStep3Body {
     result_ip_result_complementary: (body.result_ip_result_complementary ?? []).map(toComponentPayload)
   };
   delete payload.principal_impact_areas;
+  delete payload.current_use_previous;
+  // IU26-R-13 — a 2026 row saved without the `new_users` key is stored as NULL (it erases a value), so every
+  // current-use row always carries the key (value or null). The server ignores it on pre-2026 packages.
+  if (body.innovatonUse) {
+    const lacksKey = (rows: any[] | undefined) => (rows ?? []).some(row => row && row.new_users === undefined);
+    const withNewUsers = (rows: any[]) => rows.map(row => (row && row.new_users === undefined ? { ...row, new_users: null } : row));
+    const use: any = body.innovatonUse;
+    if (lacksKey(use.actors) || lacksKey(use.organization) || lacksKey(use.measures)) {
+      payload.innovatonUse = { ...use };
+      (['actors', 'organization', 'measures'] as const).forEach(key => {
+        if (Array.isArray(use[key])) payload.innovatonUse[key] = withNewUsers(use[key]);
+      });
+    }
+  }
   return payload;
 }
 

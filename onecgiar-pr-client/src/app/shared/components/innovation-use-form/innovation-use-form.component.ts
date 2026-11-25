@@ -5,9 +5,14 @@ import { INNOVATION_USE_2030_PROJECTION_COPY } from '../../../internationalizati
 import { CURRENT_USE_UPDATE_COPY } from '../../../internationalization/current-use-update.copy';
 import { INNOVATION_USE_YOUTH_REQUIRED_COPY } from '../../../internationalization/innovation-use-youth-required.copy';
 import {
+  actorRowTotal,
   isCurrentUseNarrativeComplete,
+  newUsersByCategory,
+  newUsersExceedsMessage,
+  newUsersExceedsTotal,
   previousUseByCategory,
   totalsByCategory,
+  type NewUsersByCategory,
   type PreviousUseByCategory,
   type TotalsByCategory
 } from '../../utils/current-use-update.util';
@@ -292,9 +297,60 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     return this.isCurrentUse2026() ? CURRENT_USE_UPDATE_COPY.quantityTotalLabel : 'Quantity';
   }
 
-  /** IU26-R-8 — the guidance above the rows. W1/W2 PR-1 carries no "Of which NEW" sentence (PR-2). */
+  /** IU26-R-8 — the guidance above the rows; the NEW sentence only where the NEW input exists (W1/W2, never W3). */
   currentUseGuidance(): { title: string; lines: string[] } {
-    return CURRENT_USE_UPDATE_COPY.guidance(this.currentUseYear());
+    return CURRENT_USE_UPDATE_COPY.guidance(this.currentUseYear(), this.isNewUsersEnabled());
+  }
+
+  /**
+   * IU26-R-11 / R-12 — the optional "Of which NEW" input exists on 2026 W1/W2 current-use rows only: never IPSR,
+   * never a W3/Bilaterals result (which reads the same form through `innovation-use-info`), never the 2030 rows.
+   */
+  isNewUsersEnabled(): boolean {
+    return this.isCurrentUse2026() && this.api?.dataControlSE?.currentResultSignal?.()?.source_name !== W3_BILATERALS_SOURCE_NAME;
+  }
+
+  /** IU26-R-11 — the row total NEW is compared with: actors per `actorRowTotal`, organizations `how_many`, measures `quantity`. */
+  newUsersTotal(kind: 'actor' | 'organization' | 'measure', row: any): number {
+    if (kind === 'actor') return actorRowTotal(row);
+    return Number(kind === 'organization' ? row?.how_many : row?.quantity) || 0;
+  }
+
+  /** IU26-R-11 — NEW higher than the row total (blank NEW is valid). Only evaluated where the input exists. */
+  newUsersInvalid(kind: 'actor' | 'organization' | 'measure', row: any): boolean {
+    return this.isNewUsersEnabled() && row?.is_active !== false && newUsersExceedsTotal(row?.new_users, this.newUsersTotal(kind, row));
+  }
+
+  /** IU26-R-11 — "New users (N) cannot be higher than the total (M)." */
+  newUsersError(kind: 'actor' | 'organization' | 'measure', row: any): string {
+    return newUsersExceedsMessage(row?.new_users, this.newUsersTotal(kind, row));
+  }
+
+  /** IU26-R-11 — false while any active current-use row has NEW above its total; feeds the mandatory-field scan (blocks submit). */
+  isNewUsersComplete(): boolean {
+    if (!this.isNewUsersEnabled()) return true;
+    const use = this.body?.innovatonUse;
+    const anyInvalid = (kind: 'actor' | 'organization' | 'measure', rows: any[] | undefined) => (rows ?? []).some(row => this.newUsersInvalid(kind, row));
+    return !(anyInvalid('actor', use?.actors) || anyInvalid('organization', use?.organization) || anyInvalid('measure', use?.measures));
+  }
+
+  /** IU26-R-7 — "of which new" per total tile; null when the gate is off. */
+  currentUseNewUsers(): NewUsersByCategory | null {
+    if (!this.isNewUsersEnabled()) return null;
+    const live = (rows: any[] | null | undefined) => (rows ?? []).filter(row => row && row.is_active != false);
+    const use = this.body?.innovatonUse;
+    return newUsersByCategory(live(use?.actors), live(use?.organization), live(use?.measures));
+  }
+
+  /** IU26-R-7 — the "Of which new: N / not available" line of a tile. */
+  ofWhichNew(value: number | null | undefined): string {
+    return CURRENT_USE_UPDATE_COPY.ofWhichNew(value ?? null);
+  }
+
+  /** Unit lookup for the measures tile (same trimmed, case-insensitive key as the totals). */
+  newUsersForUnit(unit: string): number | null {
+    const key = String(unit ?? '').trim().toLowerCase();
+    return this.currentUseNewUsers()?.measures.find(m => m.unit.toLowerCase() === key)?.newUsers ?? null;
   }
 
   /**

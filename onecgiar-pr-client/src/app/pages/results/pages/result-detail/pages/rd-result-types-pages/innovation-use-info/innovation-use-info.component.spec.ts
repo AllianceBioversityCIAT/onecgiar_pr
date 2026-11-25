@@ -656,6 +656,29 @@ describe('InnovationUseInfoComponent', () => {
       expect('count_unit' in unanswered).toBe(false);
     });
 
+    // IU26-R-11 — the save carries `new_users` per current-use row; a row without the key stays without it (the server
+    // writes NEW only when the key is present), and a blank box leaves as null.
+    it('sends new_users per current-use row as a number or null, and leaves rows without the key alone', () => {
+      const untouched: any = { actor_type_id: 1, result_actors_id: 3 };
+      component.innovationUseInfoBody.innovatonUse = {
+        actors: [{ actor_type_id: 1, result_actors_id: 1, new_users: 12 }, { actor_type_id: 2, result_actors_id: 2, new_users: '' }, untouched],
+        organization: [{ institution_types_id: 5, how_many: 9, new_users: '4' }],
+        measures: [{ unit_of_measure: 'Hectares', quantity: 8, new_users: undefined }]
+      } as any;
+      component.innovationUseInfoBody.innovation_use_2030 = { actors: [{ actor_type_id: 1, result_actors_id: 9 }], measures: [], organization: [] } as any;
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUse');
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0];
+      expect(bodyArg.actors.map((a: any) => a.new_users)).toEqual([12, null, undefined]);
+      expect('new_users' in bodyArg.actors[2]).toBe(false);
+      expect(bodyArg.organization[0].new_users).toBe(4);
+      expect(bodyArg.measures[0].new_users).toBeNull();
+      expect('new_users' in bodyArg.innovation_use_2030.actors[0]).toBe(false);
+      expect('new_users' in untouched).toBe(false);
+    });
+
     it('should handle linked_results with id objects and plain values', () => {
       component.innovationUseInfoBody.innovatonUse = {
         actors: [],

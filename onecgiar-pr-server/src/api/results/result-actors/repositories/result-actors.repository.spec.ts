@@ -29,6 +29,8 @@ const NON_DB_MODES = new Set(['virtual', 'virtual-property']);
 const NOT_REPLICATED: Record<string, string> = {
   result_actors_id:
     'AUTO_INCREMENT primary key — the phase copy is a new row, so the id is never carried across.',
+  new_users:
+    'IU26-R-11 "stored, never copied" — Innovation Use 2026 new users belong to the reporting phase that entered them; a rollover copy starts NULL.',
 };
 // addressing_demands was allow-listed here pending a business answer. The answer
 // landed on 7 Sep 2026 (Yeck): it carries across phases like every other column,

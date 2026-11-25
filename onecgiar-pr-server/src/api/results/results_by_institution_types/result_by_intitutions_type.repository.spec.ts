@@ -191,5 +191,13 @@ describe('ResultByIntitutionsTypeRepository (unit)', () => {
       });
       expect(normalize(returnQuery)).not.toContain('<> 5');
     });
+
+    it('never replicates new_users (IU26-R-11 stored, never copied)', () => {
+      const { findQuery, insertQuery, returnQuery } =
+        repo.createQueries(config);
+      for (const sql of [findQuery, insertQuery, returnQuery]) {
+        expect(normalize(sql)).not.toContain('new_users');
+      }
+    });
   });
 });

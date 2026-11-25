@@ -182,4 +182,15 @@ describe('ResultIpMeasureRepository (unit)', () => {
       },
     );
   });
+
+  it('never replicates new_users (IU26-R-11 stored, never copied)', () => {
+    const { findQuery, insertQuery, returnQuery } = repo.createQueries({
+      user: { id: 77 },
+      old_result_id: 1000,
+      new_result_id: 2000,
+    } as any);
+    for (const sql of [findQuery, insertQuery, returnQuery]) {
+      expect(sql).not.toContain('new_users');
+    }
+  });
 });

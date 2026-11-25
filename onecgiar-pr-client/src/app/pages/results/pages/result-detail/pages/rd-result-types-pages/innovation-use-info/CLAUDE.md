@@ -1,6 +1,6 @@
 # innovation-use-info
 
-**Verified:** 2026-11-25 · INC-169264 (IU26-T-6, changes/innovation-use-2026-total-and-new-users, PR-1): 2026 P25 save omits `new_users_added` and sends the narrative `?? ''`; prior: 2026-11-03 · qa-development-2026-ss · IFC-T-4: `saveSectionWith` sends `count_unit`/`use_nature` on every actor row; prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update keys travel on the P25 save only; prior: 2026-09-11 · branch performance-refactor · the innovation-link picker no longer wipes the links it cannot show (`linked_result` is a shared table — see the trap below); prior: 2026-09-10 · P2-3424 moves the "link to a QA'd Innovation Development result" question INTO this section, optional (PO decision, Ángel Jarrín, 10 Sep 2026).
+**Verified:** 2026-11-25 · INC-169264 (IU26-T-12, PR-2: the save carries `new_users` per current-use row); prior: 2026-11-25 · INC-169264 (IU26-T-6, changes/innovation-use-2026-total-and-new-users, PR-1): 2026 P25 save omits `new_users_added` and sends the narrative `?? ''`; prior: 2026-11-03 · qa-development-2026-ss · IFC-T-4: `saveSectionWith` sends `count_unit`/`use_nature` on every actor row; prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update keys travel on the P25 save only; prior: 2026-09-11 · branch performance-refactor · the innovation-link picker no longer wipes the links it cannot show (`linked_result` is a shared table — see the trap below); prior: 2026-09-10 · P2-3424 moves the "link to a QA'd Innovation Development result" question INTO this section, optional (PO decision, Ángel Jarrín, 10 Sep 2026).
 
 ## What it is
 The "Innovation Use" section of the result detail (`result_type_id` 2, `prHide: 2`). It is a **host**:
@@ -32,6 +32,7 @@ hydration of `innovationUseInfoBody`, the save, and — since P2-3424 — the in
   clearing the narrative needs the `""`, never `null`. The legacy (non-P25) path never hydrates them, so omitting them there leaves them alone.
   Specs pin both branches; spec mocks of `FieldsManagerService` that feed this component now need `isInnovationUseAgeFallback2026`.
 
+- **IU26-T-12 (`new_users`):** `withNewUsers()` maps the current-use actors, organizations and measures: a row that carries the key leaves with a number or `null` (blank box = `null`, never `''`); a row without the key is untouched, because the server writes NEW only when the key is present (T-11). The 2030 rows are never mapped. Payload copy only.
 - ⚠️ **Every actor row leaves with `count_unit` + `use_nature`** (IFC, Farmers follow-up): `withFarmerFollowUp()` maps both
   blocks' actors to a payload copy with the two keys as `null` when unanswered. The server's existing-row save writes the
   whole actor, so omitting them would blank the stored answers. Exact lowercase codes; the form folder's CLAUDE.md has the rest.

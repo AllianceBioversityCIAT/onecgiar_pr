@@ -100,3 +100,75 @@ export function isCurrentUseNarrativeAnswered(narrative: unknown): boolean {
 export function isCurrentUseNarrativeComplete(narrative: unknown): boolean {
   return isCurrentUseNarrativeAnswered(narrative) && wordCount(String(narrative)) <= CURRENT_USE_UPDATE_COPY.maxNarrativeWords;
 }
+
+/**
+ * IU26-R-11 — "of which NEW" on W1/W2 2026 current-use rows. A blank (`null`, `undefined`, `''`) is "not
+ * answered" and never invalid; 0 is a valid answer.
+ */
+export function newUsersValue(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/**
+ * IU26-R-11 — the row total NEW is compared with, mirroring the server (T-11): an actor row marked
+ * `sex_and_age_disaggregation` ("does not apply") reads its typed `how_many`; any other actor row reads Women + Men,
+ * falling back to `how_many` when neither was typed. Organizations pass `how_many`, measures `quantity`
+ * (see `newUsersRowTotal`).
+ */
+export function actorRowTotal(actor: any): number {
+  if (actor?.sex_and_age_disaggregation) return toNumber(actor?.how_many);
+  const hasSexFigures = [actor?.women, actor?.men].some(v => v !== null && v !== undefined && v !== '');
+  return hasSexFigures ? toNumber(actor?.women) + toNumber(actor?.men) : toNumber(actor?.how_many);
+}
+
+/** IU26-R-11 — true when NEW is answered and higher than the row total. Blank NEW is valid. */
+export function newUsersExceedsTotal(newUsers: unknown, total: unknown): boolean {
+  const value = newUsersValue(newUsers);
+  return value !== null && value > toNumber(total);
+}
+
+/** IU26-R-11 — "New users (N) cannot be higher than the total (M)." */
+export function newUsersExceedsMessage(newUsers: unknown, total: unknown): string {
+  return CURRENT_USE_UPDATE_COPY.newUsersExceeds(toNumber(newUsers), toNumber(total));
+}
+
+/** IU26-R-7 — "of which new" per category; `null` = no row of the category answered NEW ("not available"). */
+export interface NewUsersByCategory {
+  actorsIndividuals: number | null;
+  households: number | null;
+  organizations: number | null;
+  measures: { unit: string; newUsers: number | null }[];
+}
+
+/**
+ * IU26-R-7 — sum of the NEW typed on the active rows of each category (same grouping as `totalsByCategory`).
+ * A category where no row answered NEW is `null`, so the tile reads "not available" instead of a misleading 0.
+ */
+export function newUsersByCategory(
+  actors: any[] | null | undefined,
+  organizations: any[] | null | undefined,
+  measures: any[] | null | undefined
+): NewUsersByCategory {
+  const sumNew = (rows: any[]): number | null => {
+    const answered = rows.map(row => newUsersValue(row?.new_users)).filter((v): v is number => v !== null);
+    return answered.length ? answered.reduce((a, b) => a + b, 0) : null;
+  };
+  const activeActors = (actors ?? []).filter(isActiveRow);
+  const byUnit = new Map<string, { unit: string; rows: any[] }>();
+  (measures ?? []).filter(isActiveRow).forEach(row => {
+    const unit = String(row.unit_of_measure ?? '').trim();
+    if (!unit) return;
+    const key = unit.toLowerCase();
+    const line = byUnit.get(key) ?? { unit, rows: [] };
+    line.rows.push(row);
+    byUnit.set(key, line);
+  });
+  return {
+    actorsIndividuals: sumNew(activeActors.filter(a => a.count_unit !== 'households')),
+    households: sumNew(activeActors.filter(a => a.count_unit === 'households')),
+    organizations: sumNew((organizations ?? []).filter(isActiveRow)),
+    measures: [...byUnit.values()].map(line => ({ unit: line.unit, newUsers: sumNew(line.rows) }))
+  };
+}

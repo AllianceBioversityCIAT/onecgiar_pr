@@ -357,6 +357,13 @@ const USE_LISTS: Array<{
         },
       ],
       [
+        'new_users',
+        {
+          type: 'number',
+          storage: 'column:result_ip_result_actors.new_users',
+        },
+      ],
+      [
         'evidence_link',
         {
           type: 'text',
@@ -402,6 +409,13 @@ const USE_LISTS: Array<{
         },
       ],
       [
+        'new_users',
+        {
+          type: 'number',
+          storage: 'column:result_ip_result_institution_types.new_users',
+        },
+      ],
+      [
         'graduate_students',
         {
           type: 'number',
@@ -441,6 +455,13 @@ const USE_LISTS: Array<{
           type: 'number',
           ...ALWAYS,
           storage: 'column:result_ip_result_measures.quantity',
+        },
+      ],
+      [
+        'new_users',
+        {
+          type: 'number',
+          storage: 'column:result_ip_result_measures.new_users',
         },
       ],
       [

@@ -1415,10 +1415,10 @@ describe('InnovationUseFormComponent', () => {
         expect(result).not.toContain('expected');
       });
 
-      it('shows the guidance starting "Report 2026 use only." with no "Of which NEW users" sentence', () => {
+      it('shows the guidance starting "Report 2026 use only." plus the NEW sentence (IU26-R-8, W1/W2)', () => {
         const guidance = el().querySelector('[data-testid="iu-guidance"]');
         expect(guidance.textContent).toContain('Report 2026 use only.');
-        expect(guidance.textContent).not.toContain('Of which NEW');
+        expect(guidance.textContent).toContain('If you know how many of the 2026 users are new, enter that number in "Of which NEW users".');
       });
 
       it('does not show the "Depending on the innovation…" alert (one alert fewer than the 2025 form)', () => {
@@ -1504,14 +1504,14 @@ describe('InnovationUseFormComponent', () => {
           expect(tile('iu-total-measures').textContent).toContain('Hectares: 2,000');
         });
 
-        it('uses the copy labels, no "Calculated from" sentence and no "of which new" line', () => {
+        it('uses the copy labels, no "Calculated from" sentence and an "of which new" line per tile ("not available" without NEW)', () => {
           mount();
           const text = tile('iu-totals').textContent;
           expect(text).toContain('Actors - individuals');
           expect(text).toContain('Households');
           expect(text).toContain('Other quantitative measures');
           expect(text).not.toContain('Calculated from');
-          expect(text.toLowerCase()).not.toContain('of which');
+          expect(text).toContain('Of which new: not available');
         });
 
         it('drops the Households tile when its row is removed (is_active false or 0)', () => {
@@ -1563,6 +1563,110 @@ describe('InnovationUseFormComponent', () => {
         apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026 });
         mount(true);
         expect(tile('iu-totals')).toBeNull();
+      });
+    });
+
+    describe('"Of which NEW" (IU26-T-12, IU26-R-11)', () => {
+      const q = (id: string) => el().querySelector(`[data-testid="${id}"]`);
+      const qa = (id: string) => Array.from(el().querySelectorAll(`[data-testid="${id}"]`));
+      // app-pr-input is a stub here (NO_ERRORS_SCHEMA): the invalid flag is its `markInvalid` input, which pr-input paints as aria-invalid on the real box (pr-input spec).
+      const invalidInputs = () => Array.from(el().querySelectorAll('app-pr-input')).filter((i: any) => i.markInvalid === true);
+      const setBody = () => {
+        body.innovatonUse.actors = [
+          Object.assign(new Actor(), { is_active: true, actor_type_id: 2, sex_and_age_disaggregation: false, women: 70, men: 50, how_many: null, result_actors_id: 1 })
+        ];
+        body.innovatonUse.organization = [Object.assign(new Organization(), { is_active: true, institution_types_id: 1, how_many: 40, id: 1 })];
+        body.innovatonUse.measures = [Object.assign(new Measure(), { is_active: true, unit_of_measure: 'Hectares', quantity: 30, result_ip_measure_id: 1 })];
+      };
+
+      beforeEach(() => {
+        apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026 });
+        setBody();
+      });
+
+      it('a disaggregated actor row shows ONE NEW input and no women/men/youth NEW input; orgs and measures say "Of which NEW (optional)"', () => {
+        mount();
+        const labels = rowInputLabels();
+        expect(labels.filter(l => l === 'Of which NEW users (optional)').length).toBe(1);
+        expect(labels.filter(l => l === 'Of which NEW (optional)').length).toBe(2);
+        expect(qa('iu-new-users-actor').length).toBe(1);
+        expect(qa('iu-new-users-organization').length).toBe(1);
+        expect(qa('iu-new-users-measure').length).toBe(1);
+      });
+
+      it('total 120 / new 150 -> message, the input flagged invalid and the section marked incomplete', () => {
+        body.innovatonUse.actors[0]['new_users'] = 150;
+        mount();
+        expect(q('iu-new-users-error').textContent.trim()).toBe('New users (150) cannot be higher than the total (120).');
+        expect(invalidInputs().length).toBe(1);
+        expect(component.isNewUsersComplete()).toBe(false);
+      });
+
+      it('new empty is valid; new equal to the total is valid; 0 is valid', () => {
+        body.innovatonUse.actors[0]['new_users'] = null;
+        body.innovatonUse.organization[0]['new_users'] = 40;
+        body.innovatonUse.measures[0]['new_users'] = 0;
+        mount();
+        expect(q('iu-new-users-error')).toBeNull();
+        expect(invalidInputs().length).toBe(0);
+        expect(component.isNewUsersComplete()).toBe(true);
+      });
+
+      it('compares organizations with how_many, measures with quantity and actors with women + men (not women only)', () => {
+        body.innovatonUse.actors[0]['new_users'] = 100; // 100 <= 70 + 50, but above women alone
+        body.innovatonUse.organization[0]['new_users'] = 41;
+        body.innovatonUse.measures[0]['new_users'] = 31;
+        mount();
+        expect(qa('iu-new-users-error').length).toBe(2);
+        expect(invalidInputs().length).toBe(2);
+      });
+
+      it('an actor row on a single total (does not apply) compares with its typed how_many', () => {
+        body.innovatonUse.actors[0] = Object.assign(new Actor(), {
+          is_active: true,
+          actor_type_id: 2,
+          sex_and_age_disaggregation: true,
+          how_many: 10,
+          new_users: 11,
+          result_actors_id: 1
+        });
+        mount();
+        expect(q('iu-new-users-error').textContent).toContain('New users (11) cannot be higher than the total (10).');
+      });
+
+      it('each total tile shows "Of which new: N", and "not available" for a category without NEW', () => {
+        body.innovatonUse.actors[0]['new_users'] = 25;
+        body.innovatonUse.organization[0]['new_users'] = null;
+        mount();
+        expect(q('iu-new-actors-individuals').textContent).toContain('Of which new: 25');
+        expect(q('iu-new-organizations').textContent).toContain('Of which new: not available');
+        expect(q('iu-new-measure').textContent).toContain('Of which new: not available');
+      });
+
+      it('2025 result and IPSR step 1 render no NEW input, no NEW tile line and no NEW completeness rule', () => {
+        fieldsManagerServiceMock.isInnovationUseAgeFallback2026.mockReturnValue(false);
+        apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2025 });
+        mount();
+        expect(q('iu-new-users-actor')).toBeNull();
+        fieldsManagerServiceMock.isInnovationUseAgeFallback2026.mockReturnValue(true);
+        apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026 });
+        body.innovatonUse.actors[0]['new_users'] = 999;
+        mount(true);
+        expect(q('iu-new-users-actor')).toBeNull();
+        expect(q('iu-new-actors-individuals')).toBeNull();
+        expect(component.isNewUsersComplete()).toBe(true);
+      });
+
+      it('a W3/Bilaterals result renders no NEW input, no NEW tile line and no NEW sentence (IU26-R-12)', () => {
+        apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026, source_name: 'W3/Bilaterals' });
+        body.innovatonUse.actors[0]['new_users'] = 999;
+        mount();
+        expect(q('iu-new-users-actor')).toBeNull();
+        expect(q('iu-new-users-organization')).toBeNull();
+        expect(q('iu-new-users-measure')).toBeNull();
+        expect(q('iu-new-actors-individuals')).toBeNull();
+        expect(q('iu-guidance').textContent).not.toContain('Of which NEW');
+        expect(component.isNewUsersComplete()).toBe(true);
       });
     });
   });

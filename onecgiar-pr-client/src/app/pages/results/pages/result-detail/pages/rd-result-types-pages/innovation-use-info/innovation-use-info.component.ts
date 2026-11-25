@@ -15,6 +15,7 @@ import {
 import { CanComponentDeactivate } from '../../../../../../../shared/guards/unsaved-changes.types';
 import { SectionDirtyTrackerService } from '../../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
 import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../../internationalization/result-detail-section-load.copy';
+import { newUsersValue } from '../../../../../../../shared/utils/current-use-update.util';
 
 @Component({
   selector: 'app-innovation-use-info',
@@ -465,12 +466,21 @@ export class InnovationUseInfoComponent implements CanComponentDeactivate {
     return (actors || []).map((actor: any) => ({ ...actor, count_unit: actor?.count_unit ?? null, use_nature: actor?.use_nature ?? null }));
   }
 
+  /**
+   * IU26-R-11 — a current-use row that carries `new_users` leaves with a clean number or `null` (a blank box is `null`,
+   * never `''`). A row without the key is left alone: the server writes NEW only when the key is present (T-11), so an
+   * untouched row never overwrites a stored value. Payload copy only; the bound rows are not mutated.
+   */
+  private withNewUsers<T>(rows: T[] | undefined | null): T[] {
+    return (rows || []).map((row: any) => ('new_users' in (row || {}) ? { ...row, new_users: newUsersValue(row.new_users) } : row));
+  }
+
   private saveSectionWith(innovationLink: { has_innovation_link: boolean; linked_results: number[] }): Observable<void> {
     const { investment_programs = [], investment_bilateral = [], investment_partners = [] } = this.innovationUseInfoBody as any;
-    const actors = this.withFarmerFollowUp(this.innovationUseInfoBody?.innovatonUse?.actors);
-    const measures = this.innovationUseInfoBody?.innovatonUse?.measures || [];
+    const actors = this.withNewUsers(this.withFarmerFollowUp(this.innovationUseInfoBody?.innovatonUse?.actors));
+    const measures = this.withNewUsers(this.innovationUseInfoBody?.innovatonUse?.measures);
     // Do not mutate UI-bound state; map payload only
-    const organization = (this.innovationUseInfoBody?.innovatonUse?.organization || []).map((item: any) => ({
+    const organization = this.withNewUsers(this.innovationUseInfoBody?.innovatonUse?.organization).map((item: any) => ({
       ...item,
       institution_types_id: item?.institution_sub_type_id ?? item?.institution_types_id
     }));

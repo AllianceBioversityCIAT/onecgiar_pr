@@ -66,24 +66,34 @@
     <!-- IU26-R-7 — read-only totals per category, 2026 W1/W2 only (isCurrentUse2026 gate inside currentUseTotals).
          A category without rows gets no tile; hidden with the rows when TBD is selected. -->
     @let totals = currentUseTotals();
+    @let newUsers = currentUseNewUsers();
     @if (totals) {
       <div class="mb-[16px] grid grid-cols-2 gap-[10px] lg:grid-cols-4" data-testid="iu-totals">
         @if (totals.actorsIndividuals !== null) {
           <div class="rounded-[8px] bg-[var(--pr-surface-sunken)] p-[12px]" data-testid="iu-total-actors-individuals">
             <div class="text-[13px] text-ink-secondary">{{ categoryLabels.actorsIndividuals }}</div>
             <div class="font-mono text-[20px] font-bold tabular-nums text-ink-body">{{ totals.actorsIndividuals | number }}</div>
+            @if (newUsers) {
+              <div class="mt-[4px] text-[12px] text-ink-secondary" data-testid="iu-new-actors-individuals">{{ ofWhichNew(newUsers.actorsIndividuals) }}</div>
+            }
           </div>
         }
         @if (totals.households !== null) {
           <div class="rounded-[8px] bg-[var(--pr-surface-sunken)] p-[12px]" data-testid="iu-total-households">
             <div class="text-[13px] text-ink-secondary">{{ categoryLabels.households }}</div>
             <div class="font-mono text-[20px] font-bold tabular-nums text-ink-body">{{ totals.households | number }}</div>
+            @if (newUsers) {
+              <div class="mt-[4px] text-[12px] text-ink-secondary" data-testid="iu-new-households">{{ ofWhichNew(newUsers.households) }}</div>
+            }
           </div>
         }
         @if (totals.organizations !== null) {
           <div class="rounded-[8px] bg-[var(--pr-surface-sunken)] p-[12px]" data-testid="iu-total-organizations">
             <div class="text-[13px] text-ink-secondary">{{ categoryLabels.organizations }}</div>
             <div class="font-mono text-[20px] font-bold tabular-nums text-ink-body">{{ totals.organizations | number }}</div>
+            @if (newUsers) {
+              <div class="mt-[4px] text-[12px] text-ink-secondary" data-testid="iu-new-organizations">{{ ofWhichNew(newUsers.organizations) }}</div>
+            }
           </div>
         }
         @if (totals.measures.length) {
@@ -91,6 +101,9 @@
             <div class="text-[13px] text-ink-secondary">{{ categoryLabels.measures }}</div>
             @for (measure of totals.measures; track measure.unit) {
               <div class="text-[13px] text-ink-body">{{ measure.unit }}: <strong class="font-mono tabular-nums">{{ measure.quantity | number }}</strong></div>
+              @if (newUsers) {
+                <div class="mb-[4px] text-[12px] text-ink-secondary" data-testid="iu-new-measure">{{ ofWhichNew(newUsersForUnit(measure.unit)) }}</div>
+              }
             }
           </div>
         }
@@ -290,6 +303,27 @@
               (ngModelChange)="validateYouth(i, true, actorItem)">
             </app-pr-input>
           </div>
+          @if (isNewUsersEnabled() && actorItem.is_active !== false) {
+            <div class="right_content" data-testid="iu-new-users-actor">
+              <div class="flex w-full flex-col">
+                <app-pr-input
+                  placeholder="Write some..."
+                  [label]="cuuCopy.newUsersActorLabel"
+                  type="number"
+                  [required]="false"
+                  [disabled]="saving"
+                  [markInvalid]="newUsersInvalid('actor', actorItem)"
+                  [describedBy]="newUsersInvalid('actor', actorItem) ? 'iu-new-error-actor-' + i : null"
+                  [(ngModel)]="actorItem.new_users">
+                </app-pr-input>
+                @if (newUsersInvalid('actor', actorItem)) {
+                  <p [id]="'iu-new-error-actor-' + i" class="m-0 mt-[4px] text-[12px] text-[var(--pr-danger)]" role="alert" data-testid="iu-new-users-error">
+                    {{ newUsersError('actor', actorItem) }}
+                  </p>
+                }
+              </div>
+            </div>
+          }
           <br />
         </div>
       </div>
@@ -375,6 +409,27 @@
               [(ngModel)]="organizationItem.graduate_students">
             </app-pr-input>
           </div>
+          @if (isNewUsersEnabled() && organizationItem.is_active !== false) {
+            <div class="right_content" data-testid="iu-new-users-organization">
+              <div class="flex w-full flex-col">
+                <app-pr-input
+                  placeholder="Write some..."
+                  [label]="cuuCopy.newUsersOfWhichLabel"
+                  type="number"
+                  [required]="false"
+                  [disabled]="saving"
+                  [markInvalid]="newUsersInvalid('organization', organizationItem)"
+                  [describedBy]="newUsersInvalid('organization', organizationItem) ? 'iu-new-error-organization-' + i : null"
+                  [(ngModel)]="organizationItem.new_users">
+                </app-pr-input>
+                @if (newUsersInvalid('organization', organizationItem)) {
+                  <p [id]="'iu-new-error-organization-' + i" class="m-0 mt-[4px] text-[12px] text-[var(--pr-danger)]" role="alert" data-testid="iu-new-users-error">
+                    {{ newUsersError('organization', organizationItem) }}
+                  </p>
+                }
+              </div>
+            </div>
+          }
         </div>
       </div>
     }
@@ -412,12 +467,35 @@
             [(ngModel)]="measuresItem.quantity">
           </app-pr-input>
         </div>
+        @if (isNewUsersEnabled() && measuresItem.is_active !== false) {
+          <div class="right_content" data-testid="iu-new-users-measure">
+            <div class="flex w-full flex-col">
+              <app-pr-input
+                placeholder="Write some..."
+                [label]="cuuCopy.newUsersOfWhichLabel"
+                type="number"
+                [required]="false"
+                [disabled]="saving"
+                [markInvalid]="newUsersInvalid('measure', measuresItem)"
+                [describedBy]="newUsersInvalid('measure', measuresItem) ? 'iu-new-error-measure-' + i : null"
+                [(ngModel)]="measuresItem.new_users">
+              </app-pr-input>
+              @if (newUsersInvalid('measure', measuresItem)) {
+                <p [id]="'iu-new-error-measure-' + i" class="m-0 mt-[4px] text-[12px] text-[var(--pr-danger)]" role="alert" data-testid="iu-new-users-error">
+                  {{ newUsersError('measure', measuresItem) }}
+                </p>
+              }
+            </div>
+          </div>
+        }
       </div>
     }
   </div>
   <app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.measures, 'result_ip_measure_id', ['quantity'])" title="Other quantitative measures not added">
   </app-no-data-text>
   <app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" [disabled]="saving" (clickEvent)="addOther()"></app-add-button>
+  <!-- IU26-R-11 — NEW above its row total keeps the section incomplete, so Submit stays blocked. -->
+  <div appFeedbackValidation [labelText]="cuuCopy.newUsersMarkerLabel" [isComplete]="isNewUsersComplete()"></div>
 }
 
 @if (this.fieldsManagerSE.isP25() && !this.isIpsr) {
