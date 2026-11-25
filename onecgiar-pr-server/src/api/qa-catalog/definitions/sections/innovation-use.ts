@@ -596,6 +596,29 @@ export const INNOVATION_USE_FIELDS: CatalogField[] = [
     storage: col(USE_TABLE, 'innovation_use_level_id'),
   },
   {
+    // P2-3939 / LVL-R-1: the level NUMBER (0-9) of the row the field above points at. The stored value is the CLARISA row id,
+    // which is not the number (id = level + 1 in the first block, repeated rows after it), so a rule on the level compares THIS
+    // entry. Read-only, no form label (the form never shows it), same convention as `requires_description` (general.discontinued_reasons).
+    // Same `order` as the level field: the catalog sorts ties by key, so it follows the level field and precedes the explanation.
+    key: 'innovation_use.use_level.innovation_use_level_number',
+    label: 'Level number (read-only)',
+    type: 'number',
+    section: IU_USE_LEVEL_SECTION.key,
+    order: 26,
+    result_types: TYPES,
+    required: false,
+    required_confirmed: false,
+    ...FROM_2026,
+    storage: {
+      kind: 'lookup',
+      source: 'prms.clarisa_innovation_use_levels',
+      keys: [
+        { from: 'innovation_use.use_level.innovation_use_level', to: 'id' },
+      ],
+      value_column: 'level',
+    },
+  },
+  {
     key: 'innovation_use.use_level.readiness_level_explanation',
     label:
       'Provide a brief explanation of how the provided evidence/documentation (URL provided under Section 4) justifies the chosen innovation use level',
@@ -610,18 +633,16 @@ export const INNOVATION_USE_FIELDS: CatalogField[] = [
     // (IUF:412-416, `getUseLevelIndex() > 4 && <= 9`; the index is the level NUMBER); VIU requires it from level 6 (VIU:76-82).
     // Level 5 is form-only, so the rule is no longer fully function-stated: `required_confirmed: false`.
     required_confirmed: false,
-    // Values are the clarisa use level NUMBERS (5-9), not row ids (VIU:76-82). D28 (advisory, UNVERIFIED): the form
-    // control declares optionValue="level" (IUF:385) while the stored FK `innovation_use_level_id` is the level ROW id,
-    // so whether the id and the level number coincide in every environment was not verified; confirm against the
-    // `innovation_use_levels` data before relying on this gate. The form shows the control for levels 5-9 (IUF:414)
-    // but the live function requires it only from 6. Max 50 words.
+    // P2-3939: compares the level NUMBER (`innovation_use_level_number`, resolved from the level row), not the stored row id: the
+    // id and the number differ (level 4 is row id 5). The form shows the control for levels 5-9 (IUF:414) but the live
+    // function requires it only from 6. Max 50 words.
     required_when: whenIn(
-      'innovation_use.use_level.innovation_use_level',
+      'innovation_use.use_level.innovation_use_level_number',
       [5, 6, 7, 8, 9],
     ),
     // QAC-T-25: same gate, the textarea itself (IUF:410-418 `getUseLevelIndex() > 4 && <= 9`).
     visible_when: whenIn(
-      'innovation_use.use_level.innovation_use_level',
+      'innovation_use.use_level.innovation_use_level_number',
       [5, 6, 7, 8, 9],
     ),
     ...FROM_2026,

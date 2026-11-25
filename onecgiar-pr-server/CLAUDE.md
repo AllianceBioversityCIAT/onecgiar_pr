@@ -31,78 +31,7 @@ Bootstraps in `src/main.ts`:
 
 ---
 
-## 2. Module map (where everything lives)
-
-Wired in `src/app.module.ts`; routed in `src/main.routes.ts` + `src/api/modules.routes.ts`.
-
-| Path | Surface | Responsibility |
-|---|---|---|
-| `auth/` (+ `auth/modules/user`, `auth/modules/role`, `auth/modules/role-by-user`) | `/auth/*` | JWT issue/verify, AD/Cognito flows, roles. Provides `JwtMiddleware` and `JwtStrategy`. |
-| `api/results/` | `/api/results/*` | The largest module: typed result CRUD + dozens of result-association sub-modules (evidences, partners, countries/regions, ToC links, budgets, type-specific blocks). |
-| `api/ipsr/` | `/api/ipsr/*` | Innovation Package authoring (pathway steps 1–4). |
-| `api/ipsr-framework/` | `/api/ipsr-framework/*` | Cross-result IPSR framework reporting. |
-| `api/bilateral/` | `/api/bilateral/*` | **JWT-excluded, throttler-excluded** typed payload surface. Contract lives in [`docs/bilateral-result-summaries.en.md`](./docs/bilateral-result-summaries.en.md). |
-| `api/platform-report/` | `/api/platform-report/*` | **JWT-excluded** headless payload surface for platform reports. |
-| `api/type-one-report/` | `/type-one-report` | PMU consolidated report (bound separately in `app.module.ts`). |
-| `api/results-framework-reporting/` (+ `contributors-partners`, `innovation_dev`, `innovation-use`, `geographic-location`) | `/api/results-framework-reporting/*` + sub-routes | Cross-cutting reporting flows. |
-| `api/result-impact-area-scores/` | `/api/result-impact-area-scores/*` | DAC / impact-area scoring. |
-| `api/result-qaed/` | `/api/result-qaed/*` | QA decisions and transitions (status_id 1 ↔ 2 ↔ 3). |
-| `api/contribution-to-indicators/` | `/contribution-to-indicators/*` (top-level, not under `/api/`) | Indicator-level contributions. |
-| `api/notification/` + `api/user-notification-settings/` | `/api/notification/*`, `/api/user-notification-settings/*` | In-app + email notifications respecting user prefs. |
-| `api/ai/` | `/api/ai/*` | AI-assisted authoring helpers. |
-| `api/ad_users/` | `/api/ad-users/*` | AD lookup. |
-| `api/initiative_entity_map/` | `/api/initiatives-entity/*` | Initiative ↔ entity mapping. |
-| `api/versioning/` | `/api/versioning/*` | Phase / reporting cycle. |
-| `api/global-narratives/` | `/api/global-narratives/*` | PMU-curated narrative blocks. |
-| `api/global-parameter/` | `/api/global-parameters/*` | Tunable runtime parameters. |
-| `api/delete-recover-data/` | `/api/manage-data/*` | Soft-delete recovery surface. |
-| `api/home/` | `/api/home/*` | Landing-page aggregates. |
-| `api/m-qap/` | `/api/m-qap/*` | MQAP integration (knowledge-product attributes). |
-| `clarisa/` (many sub-modules) | `/clarisa/*` | CLARISA catalog cache + cron sync (`clarisaCron.service.ts`, `clarisatask.service.ts`). |
-| `toc/` (+ `toc-results`, `toc-level`) | `/toc/*` | Theory of Change trees and result→ToC mappings. |
-| `elastic/` | (internal) | Elasticsearch integration. |
-| `result-dashboard-bi/` | `/result-dashboard-bi/*` | BI integration surface. |
-| `connection/dynamodb-logs/` | `/logs/*` | Operational log storage (Dynamoose). |
-| `shared/microservices/` | (internal) | `auth-microservice`, `email-notification-management`, `reporting-metadata-export-queue`, `socket-management`. |
-| `shared/services/share-point/` | (internal) | Document storage integration. |
-| `shared/utils/global-utils.module.ts` | (internal) | Cross-module utilities. |
-
-### Standard module layout
-
-Every domain folder is the **NestJS trio** plus repositories/entities/dtos:
-
-```
-<module>/
-├── <module>.module.ts          # @Module: imports, controllers, providers
-├── <module>.controller.ts      # Routes + DTOs + Swagger decorators
-├── <module>.service.ts         # Business logic
-├── <module>.repository.ts      # TypeORM repository (custom queries)
-├── <module>.routes.ts          # Optional: nested route definitions
-├── dto/                        # Input DTOs (class-validator)
-├── entities/                   # TypeORM entities
-├── *.spec.ts                   # Co-located Jest tests
-└── (optional) handlers/, repository/, sub-modules/...
-```
-
-The `api/results/` and `api/clarisa/` folders break this pattern in scale only: they nest dozens of related sub-modules using the same shape.
-
----
-
 ## 3. Routing & middleware pipeline
-
-### Top-level mounts (`src/main.routes.ts`)
-
-| Mount | Notes |
-|---|---|
-| `/api/*` | `ModulesRoutes` (most application traffic). |
-| `/v2/api/*` | Versioned API; `apiVersionMiddleware` reads `?version=`. |
-| `/auth/*` | `AuthModulesRoutes`. |
-| `/clarisa/*` | CLARISA proxy and cache. |
-| `/toc/*` | ToC trees. |
-| `/result-dashboard-bi/*` | BI surface. |
-| `/logs/*` | DynamoDB logs. |
-| `/contribution-to-indicators/*` | Indicator contributions. |
-| `/type-one-report` | Bound with JWT middleware separately in `app.module.ts`. |
 
 ### JWT enforcement
 
@@ -185,17 +114,6 @@ JWT secret comes from `env.JWT_SKEY`. **Never log it**, never include it in erro
 - Entities are autoloaded from `src/api/**`, `src/auth/**`, `src/clarisa/**`, `src/toc/**`, `src/result-dashboard-bi/**` (`*.entity.{ts,js}`).
 - `synchronize: false` and `migrationsRun: false` — **schema changes only via migrations**.
 - 🛑 **WHO APPLIES THEM: the Jenkins deployment pipeline does, automatically, and they stay applied in the database.** Confirmed by Cristian Gamboa (who runs the deployment) on 2 Sep 2026. **Do NOT conclude otherwise from this repo** — three separate sessions have already got this wrong, because the code looks like it says the opposite: `migrationsRun: false` above, and the `RUN npm run migration:run` line in `Dockerfile` is **commented out**. The step lives in the job configuration, which is not in the repo. Consequence for planning: a normal deploy never leaves new code running against a database without its column, so **do not add defensive code for that case** — that is wasted complexity.
-
-### Migration scripts (`package.json`)
-
-| Script | Use |
-|---|---|
-| `npm run migration:empty -- --name=<name>` | Generate an empty migration. |
-| `npm run migration:generate -- --name=<name>` | Diff entities → migration. |
-| `npm run migration:run` | Apply pending migrations. |
-| `npm run migration:revert` | Roll back the last applied migration. |
-| `npm run migration:check` | Local guard — fails if entities drift from migrations. |
-| `npm run migration:check:ci` | Same check, CI-friendly output (blocks merges). |
 
 Migration files live in `src/migrations/`. Every migration MUST have a working `down`. Migrations are excluded from coverage and from test discovery (see jest config in `package.json`).
 
@@ -293,15 +211,6 @@ These are the most consumer-visible APIs and the most tightly contracted.
 
 ## 9. Testing
 
-### Framework
-
-Jest with `ts-jest`. `npm run test`, `npm run test:watch`, `npm run test:cov`, `npm run test:e2e` (uses `test/jest-e2e.json`).
-
-### Layout
-
-- Unit tests co-located with the source: `*.spec.ts` (e.g., `bilateral.service.spec.ts`, `clarisatask.service.spec.ts`).
-- E2E tests under `test/`.
-
 ### Excluded from coverage
 
 `*.spec.ts`, `*.e2e-spec.ts`, `*.module.ts`, `*.dto.ts`, `*.entity.ts`, `*.enum.ts`, `*.constant.ts`, `*.routes.ts`, `*.interface.ts`, `index.ts`, `main.ts`, `migrations/**`, `shared/test/**`.
@@ -330,20 +239,9 @@ These are **floors, not targets**. New code should ship with higher coverage. Sp
 
 ## 10. Operations & deployment
 
-### Local dev
+### Environment variables
 
-```bash
-cd onecgiar-pr-server
-npm ci
-cp .env.example .env   # if available; otherwise mirror keys from src/config/orm.config.ts and main.ts
-npm run start:dev      # auto-reload
-```
-
-Required env vars include (non-exhaustive): `PORT`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER_NAME`, `DB_USER_PASS`, `JWT_SKEY`, `JWT_EXPIRES`, plus RabbitMQ, AWS, Cognito, AD, CLARISA, MQAP, SharePoint variables. **NEVER print or commit these.**
-
-### Docker
-
-`Dockerfile` is multi-stage (Node 20 alpine): `base → development | production`. Use the production stage for image builds.
+`PORT`, `DB_*`, `JWT_SKEY`, `JWT_EXPIRES`, plus RabbitMQ, AWS, Cognito, AD, CLARISA, MQAP, SharePoint variables. **NEVER print or commit these.**
 
 ### Serverless (Lambda)
 
@@ -393,22 +291,3 @@ When working on a server-side feature or fix:
    - If module shape changed at the project level: refresh `../docs/trd/trd.md`.
 7. **Commit.** Use the project commit format.
 8. **Roll out.** Follow the rollout & verification checklist in the module's `task.md`.
-
----
-
-## 13. Quick reference paths
-
-- **In-tree navigation guide:** [`src/CLAUDE.md`](./src/CLAUDE.md) — folder-by-folder map, base classes, naming gotchas, anti-patterns. Read this before editing anything under `src/`.
-- Bootstrap: [`src/main.ts`](./src/main.ts)
-- Root module: [`src/app.module.ts`](./src/app.module.ts)
-- Top-level routes: [`src/main.routes.ts`](./src/main.routes.ts)
-- API routes: [`src/api/modules.routes.ts`](./src/api/modules.routes.ts)
-- ORM datasource: [`src/config/orm.config.ts`](./src/config/orm.config.ts)
-- JWT middleware: [`src/auth/Middlewares/jwt.middleware.ts`](./src/auth/Middlewares/jwt.middleware.ts)
-- Global filter: [`src/shared/handlers/error.exception.ts`](./src/shared/handlers/error.exception.ts)
-- Response interceptor: [`src/shared/Interceptors/Return-data.interceptor.ts`](./src/shared/Interceptors/Return-data.interceptor.ts)
-- Role guard: [`src/shared/guards/valid-role.guard.ts`](./src/shared/guards/valid-role.guard.ts)
-- Throttler guard: [`src/shared/guards/throttler-exclude-bilateral.guard.ts`](./src/shared/guards/throttler-exclude-bilateral.guard.ts)
-- API versioning middleware: [`src/shared/middleware/api-versioning.middleware.ts`](./src/shared/middleware/api-versioning.middleware.ts)
-- Bilateral contract: [`docs/bilateral-result-summaries.en.md`](./docs/bilateral-result-summaries.en.md)
-- Migration check script: [`scripts/check-pending-migrations.ts`](./scripts/check-pending-migrations.ts)

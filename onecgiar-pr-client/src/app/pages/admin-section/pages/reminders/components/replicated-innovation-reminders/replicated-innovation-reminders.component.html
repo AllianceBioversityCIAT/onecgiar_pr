@@ -205,7 +205,10 @@
                             [value]="ed.value"
                             (input)="setEditValue($any($event.target).value)"
                             data-testid="rir-edit-input" />
-                          <span class="text-muted-foreground text-[12px]">{{ timeZoneHintFor(ed.value) }}</span>
+                          <span class="text-muted-foreground text-[12px]" data-testid="arp-edit-utc-note">{{ copy.schedule.utcNote }}</span>
+                          @if (localEquivalentFor(ed.value); as le) {
+                            <span class="text-muted-foreground text-[12px] font-semibold" data-testid="arp-edit-local-equivalent">{{ le }}</span>
+                          }
                           @if (editError(); as ee) {
                             <span role="alert" class="text-destructive text-[12px]">{{ ee }}</span>
                           }
@@ -288,9 +291,9 @@
             {{ busy() ? copy.actions.scheduling : copy.actions.schedule }}
           </button>
           <p class="m-0 flex w-full flex-wrap gap-x-2 text-[12px] text-[var(--pr-color-accents-5)]">
-            <span [attr.data-testid]="'rir-tz-hint-' + k">{{ timeZoneHintFor(draftOf(k)) }}</span>
-            @if (utcHintFor(draftOf(k)); as utc) {
-              <span class="font-semibold text-[var(--pr-color-secondary-400)]" data-testid="arp-utc-hint">{{ utc }}</span>
+            <span [attr.data-testid]="'arp-utc-note-' + k">{{ copy.schedule.utcNote }}</span>
+            @if (localEquivalentFor(draftOf(k)); as le) {
+              <span class="font-semibold text-[var(--pr-color-secondary-400)]" [attr.data-testid]="'arp-local-equivalent-' + k">{{ le }}</span>
             }
           </p>
           @if (draftError()[k]; as de) {

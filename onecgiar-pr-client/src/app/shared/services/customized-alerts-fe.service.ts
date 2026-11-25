@@ -13,6 +13,7 @@ export interface AlertOptions {
 })
 export class CustomizedAlertsFeService {
   statusIcons = [];
+  private readonly closeTimers = new Map<string, ReturnType<typeof setTimeout>>();
   constructor() {
     this.statusIcons['error'] = 'priority_high';
     this.statusIcons['success'] = 'check';
@@ -26,6 +27,10 @@ export class CustomizedAlertsFeService {
     // P2-3030: a new alert supersedes any alert already on screen (including one still
     // playing its closing animation), so a previous alert never overlaps the new one.
     // Centered modal alerts are shown one at a time.
+    // P2-3960: pending close timers of superseded alerts are cancelled so a stale timer
+    // cannot close an alert that replaced it (same id).
+    this.closeTimers.forEach(timer => clearTimeout(timer));
+    this.closeTimers.clear();
     document.querySelectorAll('.custom_modal_container').forEach(node => node.remove());
     let alert = document.getElementById(id);
 
@@ -74,13 +79,17 @@ export class CustomizedAlertsFeService {
       this.closeAction(id);
       callback();
     });
-    if (closeIn)
-      setTimeout(() => {
+    if (closeIn) {
+      const timer = setTimeout(() => {
+        this.closeTimers.delete(id);
         this.closeAction(id);
       }, 3000);
+      this.closeTimers.set(id, timer);
+    }
 
     alert.addEventListener('animationend', () => {
       if (alert.classList.contains('delete')) {
+        if (!alert.parentNode) return;
         alert.classList.remove('animate__animated', 'animate__bounceIn', 'animate__bounceOut');
         alert.style.display = 'none';
         alert.parentNode.removeChild(alert);

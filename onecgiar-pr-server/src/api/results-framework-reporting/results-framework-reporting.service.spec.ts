@@ -1787,6 +1787,7 @@ describe('ResultsFrameworkReportingService', () => {
       organizationCode: null,
       sourceCenterAcronym: null,
       approvedProgramCodes: [],
+      namedProgramCodes: [],
       hasBilateral: false,
       hasW1w2: false,
       ...o,
@@ -1796,6 +1797,7 @@ describe('ResultsFrameworkReportingService', () => {
         id: 1,
         organizationCode: 103,
         approvedProgramCodes: ['SP01'],
+        namedProgramCodes: ['SP01'],
         hasBilateral: true,
         hasW1w2: true,
       }),
@@ -1879,6 +1881,122 @@ describe('ResultsFrameworkReportingService', () => {
       expect(byCode(byCenter, 'CENTER-16')).toBeUndefined();
       expect(byCenter.reduce((n: number, c: any) => n + c.mapped, 0)).toBe(4);
       expect(result.response.unmappedWithBilateralResults).toBe(1);
+    });
+
+    // changes/portfolio-graphs-clarity PGC-T-1 (Scenarios 4.1-4.6, 5.1). Under the
+    // old rule (per-P/A count from approved mapping) this fixture gives
+    // SP01 0, SP02 1, SP05 1, SP09 1; under the new rule SP01 3, SP02 0, SP05 0, SP09 1.
+    describe('per-P/A withBilateralResults follows the named P/As (PGC-R-4)', () => {
+      const pgcSeed = () => [
+        { official_code: 'SP01', short_name: 'One', name: 'Program One' },
+        { official_code: 'SP02', short_name: 'Two', name: 'Program Two' },
+        { official_code: 'SP05', short_name: 'Five', name: 'Program Five' },
+        { official_code: 'SP09', short_name: 'Nine', name: 'Program Nine' },
+      ];
+      const pgcRows = () => [
+        // 4.1 + 4.2 + 4.3: mapped to SP05, results name SP01 (primary) + SP09 (draft)
+        fact({
+          id: 1,
+          organizationCode: 103,
+          approvedProgramCodes: ['SP05'],
+          namedProgramCodes: ['SP01', 'SP09'],
+          hasBilateral: true,
+        }),
+        // 4.2 BUT: declined SP02 request is not returned by the repository
+        fact({
+          id: 2,
+          approvedProgramCodes: ['SP02'],
+          namedProgramCodes: ['SP01'],
+          hasBilateral: true,
+        }),
+        // 4.5: unmapped project naming SP01
+        fact({
+          id: 3,
+          approvedProgramCodes: [],
+          namedProgramCodes: ['SP01'],
+          hasBilateral: true,
+        }),
+        // 4.6: SP01 named by three results (and case/space variants)
+        fact({
+          id: 4,
+          approvedProgramCodes: ['SP01'],
+          namedProgramCodes: ['SP01', 'SP01', ' sp01 '],
+          hasBilateral: true,
+        }),
+        // 4.4: only W1/W2 results
+        fact({
+          id: 5,
+          approvedProgramCodes: ['SP09'],
+          namedProgramCodes: [],
+          hasW1w2: true,
+        }),
+      ];
+
+      it('counts per P/A by named codes and leaves every other figure as before', async () => {
+        mockClarisaInitiativesRepository.find.mockResolvedValue(pgcSeed());
+        mockClarisaProjectsRepository.getPortfolioProjectFacts.mockResolvedValue(
+          pgcRows(),
+        );
+        const { response } =
+          (await service.getPortfolioBilateralProjects()) as any;
+        const { byProgram, byCenter, totals } = response;
+
+        // new per-P/A withBilateralResults (4.1, 4.2, 4.3, 4.6)
+        expect(
+          byProgram.map((p: any) => [p.code, p.withBilateralResults]),
+        ).toEqual([
+          ['SP01', 3],
+          ['SP02', 0],
+          ['SP05', 0],
+          ['SP09', 1],
+        ]);
+        // unchanged per-P/A mapped / w1w2Contributors (4.3 still mapped, 5.1)
+        expect(
+          byProgram.map((p: any) => [p.code, p.mapped, p.w1w2Contributors]),
+        ).toEqual([
+          ['SP01', 1, 0],
+          ['SP02', 1, 0],
+          ['SP05', 1, 0],
+          ['SP09', 1, 1],
+        ]);
+        // 5.1 values the old loop gives on this fixture
+        expect(totals).toEqual({
+          mapped: 4,
+          withBilateralResults: 3,
+          w1w2Contributors: 1,
+        });
+        expect(byCode(byCenter, 'CENTER-03')).toMatchObject({
+          mapped: 1,
+          withBilateralResults: 1,
+          w1w2Contributors: 0,
+        });
+        expect(byCode(byCenter, null)).toMatchObject({
+          mapped: 3,
+          withBilateralResults: 2,
+          w1w2Contributors: 1,
+        });
+        expect(response.unmappedWithBilateralResults).toBe(1);
+      });
+
+      it('tolerates a fact row without namedProgramCodes (counts 0)', async () => {
+        mockClarisaInitiativesRepository.find.mockResolvedValue(pgcSeed());
+        const row: any = fact({
+          id: 6,
+          approvedProgramCodes: ['SP01'],
+          hasBilateral: true,
+        });
+        delete row.namedProgramCodes;
+        mockClarisaProjectsRepository.getPortfolioProjectFacts.mockResolvedValue(
+          [row],
+        );
+        const { response } =
+          (await service.getPortfolioBilateralProjects()) as any;
+        expect(byCode(response.byProgram, 'SP01')).toMatchObject({
+          mapped: 1,
+          withBilateralResults: 0,
+        });
+        expect(response.totals.withBilateralResults).toBe(1);
+      });
     });
 
     it('keeps a seed P/A with zero mapped projects (S-5.1)', async () => {
