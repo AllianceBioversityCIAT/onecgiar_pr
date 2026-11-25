@@ -26,10 +26,14 @@ describe('PendingInnovationRepository', () => {
       return { result, dataSource, sql: sqlOf(dataSource.query) };
     }
 
-    it('issues exactly one statement, with the version bound and never interpolated', async () => {
+    // RBX-R-6 (one statement) + DD-1: the bound version feeds branch A and the IPSR year join (twice)
+    it('issues exactly one statement, with the version bound twice and never interpolated', async () => {
       const { dataSource, sql } = await run();
       expect(dataSource.query).toHaveBeenCalledTimes(1);
-      expect(dataSource.query.mock.calls[0][1]).toEqual([VERSION_ID]);
+      expect(dataSource.query.mock.calls[0][1]).toEqual([
+        VERSION_ID,
+        VERSION_ID,
+      ]);
       expect(sql).not.toContain(String(VERSION_ID));
     });
 
@@ -39,16 +43,84 @@ describe('PendingInnovationRepository', () => {
       expect(sql).not.toMatch(/\b(INSERT|UPDATE|DELETE|REPLACE)\b/i);
     });
 
-    // RIR-R-1: "MUST NOT include results from any phase other than the active Reporting phase"
-    it('filters by the bound phase: r.version_id = ?', async () => {
+    // RIR-R-1 / RBX-R-2 negative: branch A is exactly today's rule, the bound phase with types 2 and 7
+    it('branch A keeps the bound phase together with Innovation Development (7) and Innovation Use (2)', async () => {
       const { sql } = await run();
-      expect(sql).toContain('r.version_id = ?');
+      expect(sql).toContain(
+        '(r.version_id = ? AND r.result_type_id IN (2, 7))',
+      );
     });
 
-    // RIR-R-1 scenario: E (type 1) excluded; only 7 and 2
-    it('restricts to Innovation Development (7) and Innovation Use (2)', async () => {
-      const { sql } = await run();
-      expect(sql).toContain('r.result_type_id IN (2, 7)');
+    // RBX-R-2: packages (type 10) come only from an open IPSR phase of the same year
+    describe('branch B: innovation packages (RBX-R-2, DD-8)', () => {
+      it('selects type 10 rows', async () => {
+        const { sql } = await run();
+        expect(sql).toContain('r.result_type_id = 10');
+      });
+
+      it('takes the version from IPSR phases only: app_module_id = 2', async () => {
+        const { sql } = await run();
+        expect(sql).toContain('app_module_id = 2');
+      });
+
+      it('requires the IPSR phase to be open: status = 1 (DD-8)', async () => {
+        const { sql } = await run();
+        expect(sql).toMatch(/\w+\.status = 1/);
+        expect(sql).toMatch(/\w+\.is_active = 1 AND \w+\.status = 1/);
+      });
+
+      it('requires the IPSR phase to be active: is_active = 1 on the version alias', async () => {
+        const { sql } = await run();
+        expect(sql).toMatch(/\w+\.app_module_id = 2 AND \w+\.is_active = 1/);
+      });
+
+      it('pins the IPSR phase_year to the bound version phase_year', async () => {
+        const { sql } = await run();
+        const m = sql.match(/(\w+)\.phase_year = (\w+)\.phase_year/);
+        expect(m).not.toBeNull();
+        const [, ipsr, bound] = m as RegExpMatchArray;
+        expect(ipsr).not.toBe(bound);
+        // the bound alias is the version row selected by the second bound parameter
+        expect(sql).toContain(`INNER JOIN version ${bound} ON ${bound}.id = ?`);
+        expect(sql).toContain(`FROM version ${ipsr}`);
+      });
+
+      it('does not filter packages by the bound version id (the Reporting version holds no packages)', async () => {
+        const { sql } = await run();
+        const branchB = sql.slice(sql.indexOf('r.result_type_id = 10'));
+        expect(
+          branchB.slice(0, branchB.indexOf('r.is_replicated')),
+        ).not.toContain('r.version_id = ?');
+      });
+    });
+
+    // RBX-R-1: listed results disappear; key is result_code (not id); an inactive entry does not exclude
+    describe('exclusion list (RBX-R-1, DD-2)', () => {
+      it('uses NOT EXISTS against replicated_innovation_reminder_exclusion', async () => {
+        const { sql } = await run();
+        expect(sql).toContain('NOT EXISTS');
+        expect(sql).toContain(
+          'FROM replicated_innovation_reminder_exclusion x',
+        );
+      });
+
+      it('keys the exclusion on result_code, not on the result id', async () => {
+        const { sql } = await run();
+        expect(sql).toContain('x.result_code = r.result_code');
+        expect(sql).not.toMatch(/x\.result_code = r\.id/);
+      });
+
+      it('only active entries exclude: x.is_active = 1', async () => {
+        const { sql } = await run();
+        expect(sql).toContain('x.is_active = 1');
+      });
+
+      it('applies to every branch: the NOT EXISTS sits outside the A/B OR group', async () => {
+        const { sql } = await run();
+        expect(sql.indexOf('NOT EXISTS')).toBeGreaterThan(
+          sql.indexOf('r.is_active = 1'),
+        );
+      });
     });
 
     // RIR-R-1 scenario: D (not replicated) excluded

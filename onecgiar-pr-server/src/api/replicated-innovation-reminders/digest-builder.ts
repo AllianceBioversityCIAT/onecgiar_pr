@@ -192,7 +192,8 @@ export function build(
     }
 
     // W1/W2. This branch covers EVERY result type other than Innovation development (7), i.e.
-    // today only Innovation Use (2), which has no developer field: routed by INNOVATION_USE_ROUTING.
+    // Innovation Use (2) and Innovation package (10), which have no developer field: routed by
+    // INNOVATION_USE_ROUTING.
     if (r.result_type_id !== INNOVATION_DEVELOPMENT) {
       if (innovationUseRouting === 'MELIA_SUMMARY') noDeveloper.push(r);
       else markUnreachable(r, 'NO_MELIA');
