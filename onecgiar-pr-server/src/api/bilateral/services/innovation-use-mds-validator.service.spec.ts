@@ -82,6 +82,57 @@ describe('InnovationUseMdsValidator', () => {
     },
   );
 
+  /**
+   * IU26-T-3 (IU26-R-9, IU26-R-12; design §10 API MDS row) — a 2026 `POST /api/bilateral/version`
+   * copy keeps the "to be determined" answers but arrives with no current-use actors and no P25
+   * measures. The validator must name the missing actors and raise no measures error; the
+   * investment checks stay as they were.
+   */
+  describe('a 2026 /version copy with no actors and no P25 measures (IU26-R-9)', () => {
+    const copy2026 = (overrides: Record<string, unknown> = {}) => ({
+      innov_use_to_be_determined: false,
+      actors: [],
+      measures: [],
+      investment_bilateral: [
+        { kind_cash: 100, is_determined: null, name: 'Project A' },
+      ],
+      ...overrides,
+    });
+    const errorTextFor = async (response: unknown) => {
+      const validator = new InnovationUseMdsValidator({
+        getInnovationUse: jest.fn().mockResolvedValue({ response }),
+      } as any);
+      const error: any = await validator.assertPersistedMds(27270).then(
+        () => null,
+        (e) => e,
+      );
+      return error ? JSON.stringify(error.response ?? error.message) : '';
+    };
+
+    it('reports the actors as missing, with no measures error and no investment error', async () => {
+      const text = await errorTextFor(copy2026());
+
+      expect(text).toContain(
+        'Actors: add at least one actor or mark innovation use as yet to be determined.',
+      );
+      expect(text).not.toContain('Quantitative measures');
+      expect(text).not.toContain('Investment');
+    });
+
+    it('reports the unanswered question when the TBD answer is absent', async () => {
+      const text = await errorTextFor(
+        copy2026({ innov_use_to_be_determined: null }),
+      );
+      expect(text).toContain(
+        'Actors: state whether innovation use is yet to be determined.',
+      );
+    });
+
+    it('passes once the centre adds a 2026 actor', async () => {
+      expect(await errorTextFor(copy2026({ actors: [{ id: 1 }] }))).toBe('');
+    });
+  });
+
   it('accepts a persisted draft without quantitative measures', async () => {
     const { measures, ...withoutMeasures } = completePersisted;
     expect(measures).toBeDefined();

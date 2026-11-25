@@ -873,6 +873,62 @@ describe('InnovationUseInfoComponent', () => {
     });
   });
 
+  // IU26-R-2 / DD-6 (client half) — for 2026+ results the cumulative key is omitted and the narrative never goes as null.
+  describe('IU26 — the 2026 payload omits new_users_added and sends an emptied narrative as an empty string', () => {
+    beforeEach(() => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      mockFieldsManagerService.isInnovationUseAgeFallback2026.set(true);
+    });
+
+    afterEach(() => {
+      mockFieldsManagerService.isInnovationUseAgeFallback2026.set(false);
+    });
+
+    it('has no new_users_added key, even when a value is stored in the body', () => {
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
+      component.innovationUseInfoBody.new_users_added = 175;
+      component.innovationUseInfoBody.use_expansion_narrative = 'Use changed after the new seed supply';
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0] as any;
+      expect(bodyArg).not.toHaveProperty('new_users_added');
+      expect(bodyArg.use_expansion_narrative).toBe('Use changed after the new seed supply');
+    });
+
+    it('sends an emptied narrative as "" and never as null', () => {
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
+      component.innovationUseInfoBody.use_expansion_narrative = null;
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0] as any;
+      expect(bodyArg.use_expansion_narrative).toBe('');
+      expect(bodyArg.use_expansion_narrative).not.toBeNull();
+    });
+
+    it('keeps an explicit "" as ""', () => {
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
+      component.innovationUseInfoBody.use_expansion_narrative = '';
+
+      component.onSaveSection();
+
+      expect((spyPATCH.mock.calls[0][0] as any).use_expansion_narrative).toBe('');
+    });
+
+    it('a pre-2026 result still sends new_users_added (null when unanswered)', () => {
+      mockFieldsManagerService.isInnovationUseAgeFallback2026.set(false);
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0] as any;
+      expect(bodyArg).toHaveProperty('new_users_added');
+      expect(bodyArg.new_users_added).toBeNull();
+      expect(bodyArg.use_expansion_narrative).toBeNull();
+    });
+  });
+
   // P2-3985 — since the legacy summary endpoint persists both keys when present, the non-P25 path
   // (which never hydrates them, so it would always send null) must leave them out of its payload.
   describe('P2-3985 — the legacy (non-P25) save does not carry the Current Use Update keys', () => {

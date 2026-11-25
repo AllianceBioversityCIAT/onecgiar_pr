@@ -1,6 +1,6 @@
 # innovation-use-info
 
-**Verified:** 2026-11-03 · qa-development-2026-ss · IFC-T-4: `saveSectionWith` sends `count_unit`/`use_nature` on every actor row; prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update keys travel on the P25 save only; prior: 2026-09-11 · branch performance-refactor · the innovation-link picker no longer wipes the links it cannot show (`linked_result` is a shared table — see the trap below); prior: 2026-09-10 · P2-3424 moves the "link to a QA'd Innovation Development result" question INTO this section, optional (PO decision, Ángel Jarrín, 10 Sep 2026).
+**Verified:** 2026-11-25 · INC-169264 (IU26-T-6, changes/innovation-use-2026-total-and-new-users, PR-1): 2026 P25 save omits `new_users_added` and sends the narrative `?? ''`; prior: 2026-11-03 · qa-development-2026-ss · IFC-T-4: `saveSectionWith` sends `count_unit`/`use_nature` on every actor row; prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update keys travel on the P25 save only; prior: 2026-09-11 · branch performance-refactor · the innovation-link picker no longer wipes the links it cannot show (`linked_result` is a shared table — see the trap below); prior: 2026-09-10 · P2-3424 moves the "link to a QA'd Innovation Development result" question INTO this section, optional (PO decision, Ángel Jarrín, 10 Sep 2026).
 
 ## What it is
 The "Innovation Use" section of the result detail (`result_type_id` 2, `prHide: 2`). It is a **host**:
@@ -24,12 +24,13 @@ hydration of `innovationUseInfoBody`, the save, and — since P2-3424 — the in
   collects that `saveSectionWith()` does not name is typed by the reporter and thrown away, with no
   error. Both halves already bit: P2-3613 (five missing keys, one of them hiding a whole block) and
   P2-3295 (`innov_use_2030_justification`). A new field lives in **both** lists or it does not exist.
-- ⚠️ **`new_users_added` / `use_expansion_narrative` are written by the server as `?? null`**, so
-  omitting them from the payload does not "leave them alone" — it blanks what was stored.
-  🛑 **P25 path only** (P2-3985). The legacy (non-P25) path never hydrates them — its GET lands in
-  `innovatonUse` — so they would always leave as `null`, and the legacy summary endpoint now persists
-  them whenever the key is present (it serves the W3/bilateral form too). There, omitting them IS what
-  leaves them alone. A spec pins it.
+- ⚠️ **`new_users_added` / `use_expansion_narrative` and the 2026 guard (IU26-R-2, DD-6).** The server writes them as `?? null`, so on
+  PRE-2026 results omitting them blanks what was stored; there the P25 path still sends both exactly as before (P2-3985).
+  🛑 **From 2026** (`fieldsManagerSE.isInnovationUseAgeFallback2026()`, phase year of the open result) the cumulative field is gone
+  from the form: the payload **omits `new_users_added`** and sends `use_expansion_narrative ?? ''`. The server (v2 PATCH and legacy
+  summary path) now keeps the stored value when the key is undefined/null for `phase_year >= 2026`; `""` and 0 are still written, so
+  clearing the narrative needs the `""`, never `null`. The legacy (non-P25) path never hydrates them, so omitting them there leaves them alone.
+  Specs pin both branches; spec mocks of `FieldsManagerService` that feed this component now need `isInnovationUseAgeFallback2026`.
 
 - ⚠️ **Every actor row leaves with `count_unit` + `use_nature`** (IFC, Farmers follow-up): `withFarmerFollowUp()` maps both
   blocks' actors to a payload copy with the two keys as `null` when unanswered. The server's existing-row save writes the

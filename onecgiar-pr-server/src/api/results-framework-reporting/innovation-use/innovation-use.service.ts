@@ -85,6 +85,18 @@ export class InnovationUseService {
     private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
   ) {}
 
+  /**
+   * IU26-R-2 / DD-6: true when the row's result sits in a 2026+ phase. The phase year rides on the
+   * row that is already being read — `obj_result.obj_version` joined by `findOne`, or the flat
+   * `phase_year` that `InnovUseExists` selects — so no extra query is needed.
+   */
+  private keepsCumulativeFields(row: any): boolean {
+    const phaseYear = Number(
+      row?.obj_result?.obj_version?.phase_year ?? row?.phase_year,
+    );
+    return Number.isFinite(phaseYear) && phaseYear >= 2026;
+  }
+
   async saveInnovationUse(
     innovationUseDto: CreateInnovationUseDto,
     resultId: number,
@@ -102,6 +114,8 @@ export class InnovationUseService {
 
       let resultExist = await this._resultsInnovationsUseRepository.findOne({
         where: { results_id: resultId, is_active: true },
+        // IU26-R-2: the phase year for the cumulative-field guard, in the same query (a join).
+        relations: { obj_result: { obj_version: true } },
       });
 
       if (!resultExist) {
@@ -231,8 +245,22 @@ export class InnovationUseService {
           innov_use_2030_justification ?? null;
         // P2-3537 §4. `?? null` and never `|| null`: with `||`, a reported 0 ("use was verified and
         // did not grow", which §5 allows explicitly) would be stored as "not answered".
-        resultExist.new_users_added = new_users_added ?? null;
-        resultExist.use_expansion_narrative = use_expansion_narrative ?? null;
+        //
+        // IU26-R-2 / DD-6: from 2026 the two cumulative fields are never erased — an omitted or
+        // null value keeps what is stored. Earlier phases keep the write above (a null clears).
+        if (
+          !this.keepsCumulativeFields(resultExist) ||
+          (new_users_added !== undefined && new_users_added !== null)
+        ) {
+          resultExist.new_users_added = new_users_added ?? null;
+        }
+        if (
+          !this.keepsCumulativeFields(resultExist) ||
+          (use_expansion_narrative !== undefined &&
+            use_expansion_narrative !== null)
+        ) {
+          resultExist.use_expansion_narrative = use_expansion_narrative ?? null;
+        }
 
         if (
           isLevelAtLeast(innovation_use_level_number, EXPLANATION_MIN_LEVEL)
@@ -859,7 +887,11 @@ export class InnovationUseService {
     if (!Number.isFinite(previousId) || previousId <= 0) return null;
 
     try {
-      const actors = await this.getActorsData(previousId);
+      const [actors, organizations, measures] = await Promise.all([
+        this.getActorsData(previousId),
+        this.getOrganizationsData(previousId),
+        this.getMeasuresData(previousId),
+      ]);
       const currentUseActors = currentUseRows(actors);
 
       // P2-3985 — the filter, the null rule and the shape are shared with the legacy summary read
@@ -870,6 +902,8 @@ export class InnovationUseService {
         previousPhaseYear,
         (row) => Number(row.how_many) || 0,
         currentUseRows,
+        organizations,
+        measures,
       );
 
       return summary ? { ...summary, actors: currentUseActors } : null;

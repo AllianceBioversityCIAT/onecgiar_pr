@@ -1,6 +1,6 @@
 import { Component, effect, inject, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NgTemplateOutlet } from '@angular/common';
+import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { Observable, throwError } from 'rxjs';
 import { BilateralApiService } from '../../../../../shared/services/api/bilateral-api.service';
 import { BilateralCreationService } from '../../../services/bilateral-creation.service';
@@ -19,14 +19,12 @@ import { INNOVATION_USE_2030_PROJECTION_COPY } from '../../../../../internationa
 import { CURRENT_USE_UPDATE_COPY } from '../../../../../internationalization/current-use-update.copy';
 import { ReportingDesignYear } from '../../../../../shared/enum/reporting-design-year.enum';
 import {
-  currentUseMismatchMessage,
-  currentUseMismatchReason,
-  hasCurrentUseMismatch,
-  isCurrentUseUpdateAnswered,
-  isCurrentUseUpdateComplete,
-  previousReportedUse,
+  isCurrentUseNarrativeComplete,
+  previousUseByCategory,
   previousUsePhaseYear,
-  totalCumulativeUse
+  PreviousUseByCategory,
+  totalsByCategory,
+  TotalsByCategory
 } from '../../../../../shared/utils/current-use-update.util';
 
 import {
@@ -96,7 +94,7 @@ const USE_LEVEL_EXPLANATION_MAX = 9;
 
 @Component({
   selector: 'app-type-innovation-use',
-  imports: [FormsModule, NgTemplateOutlet, CustomFieldsModule, EstimatesCgiarComponent],
+  imports: [FormsModule, NgTemplateOutlet, DecimalPipe, CustomFieldsModule, EstimatesCgiarComponent],
   templateUrl: './type-innovation-use.component.html',
   styleUrl: './type-innovation-use.component.scss'
 })
@@ -289,73 +287,58 @@ export class TypeInnovationUseComponent implements OnInit {
   }
 
   /**
-   * P2-3985 — the Current Use Update block of P2-3537 §4, which the W1/W2 form had and this editor never
-   * did (result #8398, W3/Bilaterals, replicated: the reporter saw none of it).
-   *
-   * 🥇 ONE condition drives the template, the MDS item and the two payload keys, so the three can never
-   * disagree:
-   * - not while the use is "to be determined" — the whole current-use block is hidden then
-   *   (`.html`, `hasActorMissingType`), and a hidden block must neither block Submit nor write;
+   * P2-3985 / IU26-R-3 — the Current Use Update block. ONE condition drives the template, the MDS item and
+   * the payload narrative, so the three can never disagree:
    * - only when the server sent `current_use_previous` — `null` means first report, or a previous phase
-   *   with no actors, and the block must be ABSENT (Yeck, 3 Sep 2026: a reconciliation against zero
-   *   actors is an error nobody could fix);
+   *   with nothing reported, and the block must be ABSENT;
    * - from the 2026 phase. An unresolved year counts as the running cycle, as `showInnovationLinkQuestion`.
+   * IU26-DD-5: "Innovation Use to be Determined" no longer hides it (the narrative still counts for the MDS).
    */
   get showCurrentUseUpdate(): boolean {
     const year = this.creationService.reportingYear();
-    return (
-      this.body.innov_use_to_be_determined !== true &&
-      !!this.body.current_use_previous &&
-      (year == null || year >= CURRENT_USE_UPDATE_MIN_PHASE_YEAR)
-    );
+    return !!this.body.current_use_previous && (year == null || year >= CURRENT_USE_UPDATE_MIN_PHASE_YEAR);
+  }
+
+  /** The result's phase year for the 2026 labels (an unresolved year is the running cycle). */
+  get phaseYear(): number {
+    return this.creationService.reportingYear() ?? CURRENT_USE_UPDATE_MIN_PHASE_YEAR;
+  }
+
+  /** IU26-R-8 — the "– total" labels and the guidance apply from the 2026 phase (always true on W3). */
+  get currentUseTotalLabels(): boolean {
+    return this.phaseYear >= CURRENT_USE_UPDATE_MIN_PHASE_YEAR;
+  }
+
+  get narrativeLabel(): string {
+    return this.currentUseCopy.narrativeLabel2026(this.phaseYear);
+  }
+
+  get guidance(): { title: string; lines: string[] } {
+    return this.currentUseCopy.guidance(this.phaseYear);
+  }
+
+  get previousUseHeading(): string {
+    return this.currentUseCopy.previousUseHeading(previousUsePhaseYear(this.body.current_use_previous));
+  }
+
+  get previousUse(): PreviousUseByCategory {
+    return previousUseByCategory(this.body.current_use_previous);
   }
 
   /**
-   * The actor rows of current use, counted the way the server counts the previous phase
-   * (`previous-phase-current-use.util.ts`): a row whose disaggregation does not apply counts its
-   * "How many", every other row counts Women + Men. Deleted rows are out. Actors only (Yeck, Q4).
+   * IU26-R-7 — read-only totals per category, never stored. Actor rows that keep the Women/Men breakdown
+   * feed their computed total (`actorTotal`), so the figure does not depend on `how_many` having been synced.
    */
-  get currentUseActorsTotal(): number {
-    return this.visibleActors.reduce(
-      (sum: number, actor: any) =>
-        sum + ((actor?.sex_and_age_disaggregation ? this.toCount(actor?.how_many) : this.actorTotal(actor)) ?? 0),
-      0
-    );
+  get totals(): TotalsByCategory {
+    const actors = (this.body.actors ?? []).map((actor: any) => (actor?.sex_and_age_disaggregation ? actor : { ...actor, how_many: this.actorTotal(actor) }));
+    return totalsByCategory(actors, this.body.organization, this.body.measures);
   }
 
-  get previousReportedUse(): number {
-    return previousReportedUse(this.body.current_use_previous);
-  }
-
-  get previousUsePhaseYear(): number | null {
-    return previousUsePhaseYear(this.body.current_use_previous);
-  }
-
-  get totalCumulativeUse(): number {
-    return totalCumulativeUse(this.body.current_use_previous, this.body.new_users_added);
-  }
-
-  get hasCurrentUseMismatch(): boolean {
-    return this.showCurrentUseUpdate && hasCurrentUseMismatch(this.currentUseActorsTotal, this.body.current_use_previous, this.body.new_users_added);
-  }
-
-  get currentUseMismatchMessage(): string {
-    return currentUseMismatchMessage(this.currentUseActorsTotal, this.body.current_use_previous, this.body.new_users_added);
-  }
-
-  get isCurrentUseUpdateComplete(): boolean {
-    return isCurrentUseUpdateComplete(
-      this.currentUseActorsTotal,
-      this.body.current_use_previous,
-      this.body.new_users_added,
-      this.body.use_expansion_narrative
-    );
-  }
-
-  /** §5: the increment cannot be negative. Goes through `onFieldChange`, so the P2-3556 load gate holds. */
-  onNewUsersAddedChange(): void {
-    if (Number(this.body.new_users_added) < 0) this.body.new_users_added = 0;
-    this.onFieldChange();
+  /** IU26-R-1: the tiles follow the same 2026 phase gate as the "– total" labels and the guidance. */
+  get hasTotals(): boolean {
+    if (!this.currentUseTotalLabels) return false;
+    const t = this.totals;
+    return t.actorsIndividuals !== null || t.households !== null || t.organizations !== null || t.measures.length > 0;
   }
 
   /**
@@ -953,9 +936,10 @@ export class TypeInnovationUseComponent implements OnInit {
     };
     // P2-3985 — only while the block is on screen. When it is not, the keys do not travel and the
     // server leaves the stored answers alone (it writes each one only when its key is present).
+    // IU26-R-2 / DD-6: `new_users_added` never travels from a 2026 form (the server guards it too); an emptied
+    // narrative goes as "" — a null would be ignored by the 2026 write guard and the old text would stay.
     if (this.showCurrentUseUpdate) {
-      payload['new_users_added'] = this.body.new_users_added ?? null;
-      payload['use_expansion_narrative'] = this.body.use_expansion_narrative ?? null;
+      payload['use_expansion_narrative'] = this.body.use_expansion_narrative ?? '';
     }
     // Omit null PK so the server can AUTO_INCREMENT on first create.
     if (this.body.result_innovation_use_id != null) {
@@ -988,8 +972,8 @@ export class TypeInnovationUseComponent implements OnInit {
    * The matching server-side gate was removed in the same change — a client-only relaxation would have
    * turned a blocked section into a section that passes locally and is refused on Submit.
    *
-   * P2-3985 — a fourth item, `use-current-update`, while the Current Use Update block is shown. It is
-   * NOT optional: it holds Submit exactly as it does on the W1/W2 form (decision of the lead, 20-Oct-2026).
+   * P2-3985 — a fourth item, `use-current-update`, while the Current Use Update block is shown (narrative only,
+   * IU26-R-5). It is NOT optional: it holds Submit (decision of the lead, 20-Oct-2026).
    * ⚠️ Client-only: the server submit gate does not check it, so a direct API call skips it.
    */
   updateMds(): void {
@@ -1034,15 +1018,8 @@ export class TypeInnovationUseComponent implements OnInit {
             {
               key: 'use-current-update',
               label: this.currentUseCopy.title,
-              // Answered counts as filled; a mismatch is reported the P2-3340 way (`invalid` + the exact
-              // gap), as the Actors item does — so the footer says what to fix and Submit refuses on it.
-              filled: isCurrentUseUpdateAnswered(this.body.new_users_added, this.body.use_expansion_narrative),
-              ...(this.hasCurrentUseMismatch
-                ? {
-                    invalid: true,
-                    invalidReason: currentUseMismatchReason(this.currentUseActorsTotal, this.body.current_use_previous, this.body.new_users_added)
-                  }
-                : {})
+              // IU26-R-5: the narrative alone (present, within the word limit). No mismatch rule.
+              filled: isCurrentUseNarrativeComplete(this.body.use_expansion_narrative)
             }
           ]
         : [])

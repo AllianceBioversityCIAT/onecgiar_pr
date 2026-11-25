@@ -1,4 +1,5 @@
 import { readFileSync } from 'fs';
+import { DecimalPipe } from '@angular/common';
 import { join } from 'path';
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -1671,18 +1672,13 @@ describe('TypeInnovationUseComponent', () => {
     });
   });
   /**
-   * P2-3985 — result #8398 (W3/Bilaterals, replicated) opens in this editor, which never had the
-   * Current Use Update block of P2-3537 §4. One getter (`showCurrentUseUpdate`) drives the template,
-   * the MDS item and the payload keys.
+   * P2-3985 / IU26 (changes/innovation-use-2026-total-and-new-users, IU26-T-7) — the Current Use Update block of
+   * the W3 editor. One getter (`showCurrentUseUpdate`) drives the template, the MDS item and the narrative key.
+   * 2026: above "Innovation Use to be Determined" and independent of it (DD-5), no cumulative fields (R-2),
+   * narrative-only MDS item (R-5), totals per category (R-7), "– total" labels and guidance (R-8).
    */
-  describe('Current Use Update (P2-3985)', () => {
-    const previous = { result_id: 11551, phase_year: 2025, total_actors: 8825 };
-    // 8825 people, one row with the breakdown and one where it does not apply.
-    const reconciledActors = () => [
-      { actor_type_id: 1, women: 4000, men: 4000, how_many: 8000, sex_and_age_disaggregation: false, is_active: true },
-      { actor_type_id: 2, how_many: 825, sex_and_age_disaggregation: true, is_active: true },
-      { actor_type_id: 3, women: 999, men: 999, is_active: false }
-    ];
+  describe('Current Use Update (P2-3985 / IU26)', () => {
+    const previous = { result_id: 11551, phase_year: 2025, total_actors: 8825, total_organizations: 4, measures: [{ unit: 'Hectares', quantity: 300 }] };
     const loadWith = (response: any) => {
       bilateralApi.GET_innovationUse.mockReturnValue(of({ response }));
       return build();
@@ -1700,83 +1696,53 @@ describe('TypeInnovationUseComponent', () => {
       expect(component.showCurrentUseUpdate).toBe(false);
     });
 
-    it('is absent without current_use_previous (first report, or no actors last round)', () => {
+    it('is absent without current_use_previous (first report, or nothing reported last round)', () => {
       loadWith({ innov_use_to_be_determined: false, current_use_previous: null });
       expect(component.showCurrentUseUpdate).toBe(false);
       expect(currentUseItem()).toBeUndefined();
     });
 
-    it('shows the block while "to be determined" is unanswered (NULL is not Yes)', () => {
-      loadWith({ innov_use_to_be_determined: null, current_use_previous: previous });
+    it('falsifier DD-5: previous + "to be determined" = Yes still shows the block, and the MDS item is missing until the narrative is filled', () => {
+      loadWith({ innov_use_to_be_determined: true, current_use_previous: previous });
       expect(component.showCurrentUseUpdate).toBe(true);
-    });
-
-    it('with "to be determined" = Yes: no MDS item and no payload keys', () => {
-      loadWith({ innov_use_to_be_determined: true, current_use_previous: previous, new_users_added: 5, use_expansion_narrative: 'x' });
-      expect(component.showCurrentUseUpdate).toBe(false);
-      expect(currentUseItem()).toBeUndefined();
-      component.onFieldChange();
-      const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
-      expect(payload).not.toHaveProperty('new_users_added');
-      expect(payload).not.toHaveProperty('use_expansion_narrative');
-    });
-
-    it('reads the figures: previous 8825 (FY2025), cumulative = previous + new', () => {
-      loadWith({ innov_use_to_be_determined: false, current_use_previous: previous, new_users_added: 10 });
-      expect(component.previousReportedUse).toBe(8825);
-      expect(component.previousUsePhaseYear).toBe(2025);
-      expect(component.totalCumulativeUse).toBe(8835);
-    });
-
-    it('sums the actors the way the server sums the previous phase: how_many when disaggregation does not apply, else women + men', () => {
-      loadWith({ innov_use_to_be_determined: false, current_use_previous: previous, actors: reconciledActors() });
-      expect(component.currentUseActorsTotal).toBe(8825);
-    });
-
-    it('MDS item is incomplete while the narrative is missing', () => {
-      loadWith({ innov_use_to_be_determined: false, current_use_previous: previous, actors: reconciledActors(), new_users_added: 0 });
       expect(currentUseItem()).toEqual({ key: 'use-current-update', label: 'Current Use Update', filled: false });
+      component.body.use_expansion_narrative = 'Use grew through the new cooperatives.';
+      component.onFieldChange();
+      expect(currentUseItem()).toEqual({ key: 'use-current-update', label: 'Current Use Update', filled: true });
     });
 
-    it('MDS item is invalid on a mismatch, and the reason names the exact gap', () => {
+    it('MDS item is satisfied by the narrative alone: no new-users answer and no mismatch, whatever the rows add up to', () => {
       loadWith({
         innov_use_to_be_determined: false,
         current_use_previous: previous,
-        actors: reconciledActors(),
-        new_users_added: 100,
-        use_expansion_narrative: 'More farmers joined.'
-      });
-      expect(currentUseItem()).toEqual({
-        key: 'use-current-update',
-        label: 'Current Use Update',
-        filled: true,
-        invalid: true,
-        invalidReason: 'the user categories add up to 8825, 100 fewer than the total cumulative use of 8925'
-      });
-      expect(component.currentUseMismatchMessage).toContain('which is 100 fewer than the total cumulative use of 8925');
-      expect(component.isCurrentUseUpdateComplete).toBe(false);
-    });
-
-    it('MDS item is complete with 8825 + 0 + narrative — a reported 0 is a valid answer', () => {
-      loadWith({
-        innov_use_to_be_determined: false,
-        current_use_previous: previous,
-        actors: reconciledActors(),
-        new_users_added: 0,
-        use_expansion_narrative: 'Use verified, it did not grow.'
+        actors: [{ actor_type_id: 1, how_many: 1, sex_and_age_disaggregation: true, is_active: true }],
+        use_expansion_narrative: 'Use verified.'
       });
       expect(currentUseItem()).toEqual({ key: 'use-current-update', label: 'Current Use Update', filled: true });
-      expect(component.isCurrentUseUpdateComplete).toBe(true);
     });
 
-    it('sends both answers while the block is shown, keeping a 0', () => {
-      loadWith({ innov_use_to_be_determined: false, current_use_previous: previous, new_users_added: 0, use_expansion_narrative: 'n' });
+    it('MDS item is not complete over the 100-word limit, nor with a blank narrative', () => {
+      loadWith({ innov_use_to_be_determined: false, current_use_previous: previous, use_expansion_narrative: 'word '.repeat(101) });
+      expect(currentUseItem().filled).toBe(false);
+      component.body.use_expansion_narrative = '   ';
+      component.updateMds();
+      expect(currentUseItem().filled).toBe(false);
+    });
+
+    it('payload: never carries new_users_added; sends the narrative, and an emptied narrative as ""', () => {
+      loadWith({ innov_use_to_be_determined: false, current_use_previous: previous, new_users_added: 7, use_expansion_narrative: 'n' });
       component.onFieldChange();
-      const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
-      expect(payload).toMatchObject({ new_users_added: 0, use_expansion_narrative: 'n' });
+      let [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+      expect(payload).not.toHaveProperty('new_users_added');
+      expect(payload).toMatchObject({ use_expansion_narrative: 'n' });
+      component.body.use_expansion_narrative = null;
+      component.onFieldChange();
+      [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+      expect(payload).toMatchObject({ use_expansion_narrative: '' });
+      expect(payload).not.toHaveProperty('new_users_added');
     });
 
-    it('does not send the keys when the block is absent, so the stored answers stay untouched', () => {
+    it('does not send the narrative when the block is absent, so the stored answer stays untouched', () => {
       loadWith({ innov_use_to_be_determined: false, current_use_previous: null, new_users_added: 3 });
       component.onFieldChange();
       const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
@@ -1784,37 +1750,129 @@ describe('TypeInnovationUseComponent', () => {
       expect(payload).not.toHaveProperty('use_expansion_narrative');
     });
 
-    it('a negative increment becomes 0, and nothing is sent before the section loaded', () => {
+    it('nothing is sent before the section loaded', () => {
       bilateralApi.GET_innovationUse.mockReturnValue(new Subject());
       build();
-      component.body = { innov_use_to_be_determined: false, current_use_previous: previous, new_users_added: -4 };
-      component.onNewUsersAddedChange();
-      expect(component.body.new_users_added).toBe(0);
+      component.body = { innov_use_to_be_determined: false, current_use_previous: previous };
+      component.onFieldChange();
       expect(autoSave.schedulePayload).not.toHaveBeenCalled();
     });
 
-    it('markup: inside the "to be determined" gate, before the Actors header, outside full metadata', () => {
+    it('previous use by category and the labels come from the shared util and copy', () => {
+      loadWith({ innov_use_to_be_determined: false, current_use_previous: previous });
+      expect(component.previousUse).toEqual({ actors: 8825, organizations: 4, measures: [{ unit: 'Hectares', quantity: 300 }] });
+      expect(component.previousUseHeading).toBe('Previous reported use (FY2025 · for reference only)');
+      expect(component.narrativeLabel).toBe('Brief narrative on how use changed in 2026');
+    });
+
+    it('totals per category: households and individuals never mixed, units matched case-insensitively, no tile without rows', () => {
+      loadWith({
+        innov_use_to_be_determined: false,
+        current_use_previous: previous,
+        actors: [
+          { actor_type_id: 1, count_unit: 'households', how_many: 1200, sex_and_age_disaggregation: true, is_active: true },
+          { actor_type_id: 1, count_unit: 'individuals', how_many: 1800, sex_and_age_disaggregation: true, is_active: true },
+          { actor_type_id: 2, women: 20, men: 25, how_many: null, sex_and_age_disaggregation: false, is_active: true },
+          { actor_type_id: 3, how_many: 999, sex_and_age_disaggregation: true, is_active: false }
+        ],
+        measures: [
+          { unit_of_measure: 'Hectares', quantity: 5400, is_active: true },
+          { unit_of_measure: ' hectares', quantity: 100, is_active: true },
+          { unit_of_measure: 'Trees planted', quantity: 2000, is_active: true }
+        ]
+      });
+      expect(component.totals).toEqual({
+        actorsIndividuals: 1845,
+        households: 1200,
+        organizations: null,
+        measures: [
+          { unit: 'Hectares', quantity: 5500 },
+          { unit: 'Trees planted', quantity: 2000 }
+        ]
+      });
+      expect(component.hasTotals).toBe(true);
+    });
+
+    it('totals are empty (no tiles) without rows', () => {
+      loadWith({ innov_use_to_be_determined: false, current_use_previous: null });
+      expect(component.hasTotals).toBe(false);
+    });
+
+    it('IU26-R-1: a 2025-phase result with rows shows no totals tiles, no guidance and no "– total" labels', () => {
+      creation.reportingYear.set(2025);
+      loadWith({
+        innov_use_to_be_determined: false,
+        current_use_previous: null,
+        actors: [{ actor_type_id: 1, how_many: 10, sex_and_age_disaggregation: true, is_active: true }],
+        organization: [{ institution_types_id: 1, how_many: 3, is_active: true }],
+        measures: [{ unit_of_measure: 'Hectares', quantity: 5, is_active: true }]
+      });
+      expect(component.currentUseTotalLabels).toBe(false);
+      expect(component.hasTotals).toBe(false);
+    });
+
+    it('IU26-R-1: a 2026-phase result with rows shows the totals tiles', () => {
+      creation.reportingYear.set(2026);
+      loadWith({
+        innov_use_to_be_determined: false,
+        current_use_previous: null,
+        actors: [{ actor_type_id: 1, how_many: 10, sex_and_age_disaggregation: true, is_active: true }]
+      });
+      expect(component.currentUseTotalLabels).toBe(true);
+      expect(component.hasTotals).toBe(true);
+    });
+
+    it('guidance never carries a NEW-users sentence, and the labels read "– total"', () => {
+      loadWith({ innov_use_to_be_determined: false, current_use_previous: previous });
+      expect(component.currentUseTotalLabels).toBe(true);
+      expect(component.guidance.title).toBe('Report 2026 use only.');
+      expect(component.guidance.lines.join(' ')).not.toMatch(/of which new/i);
+      expect(html()).not.toMatch(/New users added|new_users_added|Mismatch|Cumulative/);
+      expect(html()).toContain('currentUseCopy.howManyTotalLabel');
+      expect(html()).toContain('currentUseCopy.quantityTotalLabel');
+    });
+
+    it('DD-10: the W3 tiles format numbers like W1/W2 (1,845) and use the W1/W2 tokens, not hex', () => {
+      loadWith({
+        innov_use_to_be_determined: false,
+        current_use_previous: previous,
+        actors: [
+          { actor_type_id: 1, count_unit: 'households', how_many: 1200, sex_and_age_disaggregation: true, is_active: true },
+          { actor_type_id: 1, count_unit: 'individuals', how_many: 1800, sex_and_age_disaggregation: true, is_active: true },
+          { actor_type_id: 2, women: 20, men: 25, how_many: null, sex_and_age_disaggregation: false, is_active: true }
+        ]
+      });
       const template = html();
-      const gate = template.indexOf('@if (body.innov_use_to_be_determined !== true) {');
+      const start = template.indexOf('data-testid="iu-totals"');
+      const end = template.indexOf('data-testid="iu-guidance"');
+      const blocks = template.slice(start, end + 400);
+      // What the tile renders: the template pipes the total through `number`, which the shared pipe turns into 1,845.
+      expect(blocks).toContain('{{ totals.actorsIndividuals | number }}');
+      expect(blocks).toContain('{{ totals.households | number }}');
+      expect(blocks).toContain('{{ totals.organizations | number }}');
+      expect(blocks).toContain('{{ measure.quantity | number }}');
+      expect(new DecimalPipe('en-US').transform(component.totals.actorsIndividuals)).toBe('1,845');
+      expect(blocks).not.toMatch(/#(f3f2f7|5d5872|2b2838)/i);
+      expect(blocks).toContain('bg-[var(--pr-surface-sunken)]');
+      expect(blocks).toContain('text-ink-secondary');
+      expect(blocks).toContain('text-ink-body');
+    });
+
+    it('markup: the block sits above "Innovation Use to be Determined", outside the gate and outside full metadata', () => {
+      const template = html();
       const block = template.indexOf('@if (showCurrentUseUpdate) {');
+      const question = template.indexOf('label="Innovation Use to be Determined"');
+      const gate = template.indexOf('@if (body.innov_use_to_be_determined !== true) {');
+      const totals = template.indexOf('data-testid="iu-totals"');
       const actors = template.indexOf('label="Actors"');
       const fullMetadata = template.indexOf('@if (showAllFields()) {');
-      expect(gate).toBeGreaterThan(-1);
-      expect(block).toBeGreaterThan(gate);
-      expect(actors).toBeGreaterThan(block);
+      expect(block).toBeGreaterThan(-1);
+      expect(question).toBeGreaterThan(block);
+      expect(gate).toBeGreaterThan(question);
+      expect(totals).toBeGreaterThan(gate);
+      expect(actors).toBeGreaterThan(totals);
       expect(fullMetadata).toBeGreaterThan(actors);
-      // Same order as the W1/W2 block: previous, new users, total, narrative, mismatch error.
-      const order = [
-        'currentUseCopy.previousLabel',
-        'currentUseCopy.newUsersLabel',
-        'currentUseCopy.totalLabel',
-        'currentUseCopy.narrativeLabel',
-        '@if (hasCurrentUseMismatch) {'
-      ].map(needle => template.indexOf(needle, block));
-      expect(order.every(index => index > block && index < actors)).toBe(true);
-      expect([...order].sort((a, b) => a - b)).toEqual(order);
-      expect(template.slice(block, actors)).toContain('[maxWords]="currentUseCopy.maxNarrativeWords"');
-      expect(template.slice(block, actors)).toContain('(ngModelChange)="onNewUsersAddedChange()"');
+      expect(template.slice(block, question)).toContain('[maxWords]="currentUseCopy.maxNarrativeWords"');
     });
   });
 

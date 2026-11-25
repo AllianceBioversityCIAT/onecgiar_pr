@@ -1,6 +1,6 @@
 # innovation-use-form
 
-**Verified:** 2026-11-18 · INC-168062 (INA-T-6) · changes/innovation-use-nature-all-actors: follow-up questions shown on every actor row (scope vs mandatory, nature question, W3 shown not blocking); prior: 2026-11-12 · qa-development-2026-ss · bugfix/innovation-use-youth-required IUY-T-2 (INC-167167: empty Youth keeps Non-youth empty + hint, both grids; `validateYouth` now derives on the edited row); 2026-11-11 · changes/innovation-use-w3-hide-2030 IWH-T-1 (INC-168060: 2030 block hidden for W3/Bilaterals); quick/innovation-use-actors-sentence-ipsr (INC-168060 feedback: `narrativeActors` P25 sentence now depends on `isIpsr` — IPSR step 1 keeps "by end of 2030" (scaling ambition), Innovation Use keeps the reporting-year sentence; `isIpsr` is a static host input, so the `computed` reading it is safe); 2026-11-10 · quick/innovation-use-actors-sentence (INC-168060: P25 actors narrative now asks for actual users in the reporting year, not the 2030 projection); quick/remove-farmer-helper-note (Nicoleta: italic helper note under Q-b removed, `helper` key dropped); prior: 2026-11-03 · T-7 findings (re-click Households restores the grid; unsaved Households "How many" required); IFC-T-7 fixes (Individuals keeps a hand-set single total; Q-b gap); IFC-T-4 (changes/innovation-use-farmer-count-nature): Farmers follow-up block, gate and Households coupling (uncommitted); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update rules moved to `shared/utils/current-use-update.util.ts` (shared with the bilateral form); prior: 2026-09-11 · branch performance-refactor · 5791b85b9
+**Verified:** 2026-11-25 · INC-169264 (IU26-T-5/T-6, changes/innovation-use-2026-total-and-new-users, PR-1): the §4 Current Use Update block is rewritten for 2026 (no New users / cumulative / mismatch; previous use by category; totals grid; guidance; 2026 labels); prior: 2026-11-18 · INC-168062 (INA-T-6) · changes/innovation-use-nature-all-actors: follow-up questions shown on every actor row (scope vs mandatory, nature question, W3 shown not blocking); prior: 2026-11-12 · qa-development-2026-ss · bugfix/innovation-use-youth-required IUY-T-2 (INC-167167: empty Youth keeps Non-youth empty + hint, both grids; `validateYouth` now derives on the edited row); 2026-11-11 · changes/innovation-use-w3-hide-2030 IWH-T-1 (INC-168060: 2030 block hidden for W3/Bilaterals); quick/innovation-use-actors-sentence-ipsr (INC-168060 feedback: `narrativeActors` P25 sentence now depends on `isIpsr` — IPSR step 1 keeps "by end of 2030" (scaling ambition), Innovation Use keeps the reporting-year sentence; `isIpsr` is a static host input, so the `computed` reading it is safe); 2026-11-10 · quick/innovation-use-actors-sentence (INC-168060: P25 actors narrative now asks for actual users in the reporting year, not the 2030 projection); quick/remove-farmer-helper-note (Nicoleta: italic helper note under Q-b removed, `helper` key dropped); prior: 2026-11-03 · T-7 findings (re-click Households restores the grid; unsaved Households "How many" required); IFC-T-7 fixes (Individuals keeps a hand-set single total; Q-b gap); IFC-T-4 (changes/innovation-use-farmer-count-nature): Farmers follow-up block, gate and Households coupling (uncommitted); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update rules moved to `shared/utils/current-use-update.util.ts` (shared with the bilateral form); prior: 2026-09-11 · branch performance-refactor · 5791b85b9
 
 ## What it is
 The shared Innovation Use questionnaire: use level (0-9), narrative/actors blocks, the
@@ -20,7 +20,7 @@ The shared Innovation Use questionnaire: use level (0-9), narrative/actors block
 
 ## Where it is used
 - `src/app/pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-use-info/innovation-use-info.component.html:2`
-  — the Innovation Use result section (`isIpsr` defaults to `false`).
+  — the Innovation Use result section (`isIpsr` defaults to `false`). It also renders for results with `source_name = 'W3/Bilaterals'`, so a change here is a W3 change (root AGENTS.md §6).
 - `src/app/pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/step-n1.component.html:26`
   — IPSR Innovation Package step 1, with `[isIpsr]="true"`.
 
@@ -137,45 +137,44 @@ available`, next to the existing `Sex and age disaggregation does not apply`. Ti
 - ⚠️ **Every spec that renders this component needs `isInnovationUseAgeFallback2026` in its
   `FieldsManagerService` mock** — the template calls the gate on each render, so a mock without it
   throws before any assertion runs, **even in specs that have nothing to do with this block**. Four
-  places provide that service today: two describes in `innovation-use-form.component.spec.ts`, the
+  places provide that service today (IU26: and any other spec mocking `FieldsManagerService` that feeds `innovation-use-info` now needs it too): two describes in `innovation-use-form.component.spec.ts`, the
   `zoneless` spec, and `innovation-use-info.component.spec.ts` — that last one bit after the fact:
   its own suite was green and only the full run caught it.
 - Rounding is safe by construction: non-youth is the remainder, so the halves always add to the
   total whatever the parity (7 → 4 + 3).
 
-## §4 — the Current Use Update block (P2-3537)
+## §4 — the Current Use Update block (P2-3537, rewritten for 2026 by IU26)
 
-Rendered immediately above the actor-type fields, and only when **all three** hold: phase ≥ 2026,
-not IPSR, and `body.current_use_previous` is not null.
+Rendered above the header / "to be determined" question (IU26-R-3), and only when phase >= 2026,
+not IPSR, and `body.current_use_previous` is not null. It shows **regardless of "to be determined"**.
 
-| Field | Where it comes from |
+| Piece | Where it comes from |
 |---|---|
-| Previous reported use | `current_use_previous.total_actors`, read from the previous phase by the server |
-| New users added | typed by the reporter, `body.new_users_added` |
-| Total cumulative use | **calculated**, `previous + new`. Never typed |
-| Narrative | `body.use_expansion_narrative`, 100-word cap |
+| Previous reported use, by category | `current_use_previous` (`total_actors`, `total_organizations`, `measures[{unit, quantity}]`) via `previousUseByCategory()`; a category without data is omitted. Heading `previousUseHeading()` ("for reference only") |
+| Narrative | `body.use_expansion_narrative`, label "Brief narrative on how use changed in {year}", 100-word cap |
+| Totals grid | `currentUseTotals()`, read-only, never stored, `data-testid="iu-totals"`, 4 cols / 2 on narrow; hidden when TBD or when no rows |
+| Guidance block | `currentUseGuidance()` (`data-testid="iu-guidance"`), above the rows |
 
-- 🥇 **`current_use_previous === null` means the block is ABSENT, not empty.** The server sends null
-  both for a first report and for a previous phase that reported organisations but no actors.
-  Rendering it in the second case would show a reconciliation against zero actors that nothing the
-  reporter does can fix — they could never submit (Yeck, 3 Sep 2026). Two specs pin it.
-- 🥇 **`actorsTotal()` counts ACTORS only.** Not organisations, not other measures — Yeck's Q4
-  decision, so next year's "previous use" stays a figure whose meaning can be read. A spec fails if
-  organisations ever get folded in.
-- **A reported 0 is a valid answer** and still requires the narrative (§5: use was verified and did
-  not grow). Completion therefore tests "answered", never "greater than zero" — a spec fails on the
-  stricter version.
-- The mismatch error is driven off a **getter**, which is what gives §5's "the error appears as soon
-  as the totals diverge, not only on submit" for free.
-- Deleted actor rows (`is_active === false`) are excluded from the sum.
-- **P2-3985** — the arithmetic, the completion rule and the mismatch message live in
-  `shared/utils/current-use-update.util.ts` (copy in `internationalization/current-use-update.copy.ts`),
-  shared with the W3/bilateral `type-innovation-use`. This component keeps its own gate and its own
-  `actorsTotal()`; the methods delegate in one line. Change a rule there, not here.
-- ⚠️ **The evidence for the increment (field 4) is NOT built.** It goes in the existing Evidence
-  section behind one more marker (Yeck's Q3), and it is blocked by a real defect: the phase rollover
-  drops 8 of the 14 evidence markers (`W-20260903-12`), so the trail would break on that side while
-  the figure stayed perfect.
+- 🛑 **There is no "New users added", no cumulative total and no mismatch error any more (2026).** `onNewUsersAddedChange`,
+  `currentUseDifference`, `hasCurrentUseMismatch`, `currentUseMismatchMessage` and `actorsTotal` were deleted. The body key
+  `new_users_added` is never sent for 2026 (see `innovation-use-info`). The cumulative arithmetic survives only as pre-2026
+  history in git; do not restore it for 2026.
+- 🥇 **`current_use_previous === null` still means the block is ABSENT.** What changed is the server rule: it is now null only
+  when actors, organizations and measures are ALL empty, so an orgs-only previous phase shows the block (IU26-R-3).
+- **Gate:** `isCurrentUse2026()` = `!isIpsr && fieldsManagerSE.isInnovationUseAgeFallback2026()` (phase year, never portfolio).
+  It also drives `howManyLabel()` ("How many – total") / `quantityLabel()` ("Quantity – total"), the 2026 narrative label,
+  and dropping the word "expected" from the organizations/other-use description (2026 current use only; IPSR, 2030 and 2025 keep it).
+- **2026 question label:** `FieldsManagerService` field `innovation-use` label comes from `CURRENT_USE_UPDATE_COPY.question2026(year)`
+  ("Innovation use in {year} supported by evidence (calculated from the categories below)") with an empty description
+  (no "Depending…") in 2026; older phases keep the old label. Only the Innovation Use form reads that key, so IPSR step 1 is untouched.
+- **Totals:** `totalsByCategory()` in `shared/utils/current-use-update.util.ts`; current-use rows only (never the 2030 projection),
+  active rows only; Households = `count_unit === 'households'`, every other actor row counts as individuals; measure units group by
+  trimmed lower-case text; disaggregated rows use Women + Men, "does not apply" rows use their typed `how_many`.
+- **A reported 0 is not asserted any more:** completion is `isCurrentUseNarrativeComplete()` (narrative present and within 100 words).
+- **Strings:** all new copy lives in `CURRENT_USE_UPDATE_COPY` (`internationalization/current-use-update.copy.ts`, IU26-DD-10), shared with the
+  W3 form. Change a rule or a string there, not here. The "NEW users" guidance sentence is PR-2, not here.
+- ⚠️ **Historical (pre-2026 / PR-2):** the P2-3537 §4 reconciliation (previous + new = cumulative, mismatch error) and the evidence-for-the-increment
+  question (never built, blocked by the evidence-marker rollover defect W-20260903-12) are not part of the 2026 form.
 
 ## Children without their own file
 | Component | What it does | Trap |

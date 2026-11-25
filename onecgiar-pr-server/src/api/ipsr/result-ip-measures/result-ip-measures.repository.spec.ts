@@ -149,4 +149,37 @@ describe('ResultIpMeasureRepository (unit)', () => {
       expect(sql).toContain('result_id = 2000');
     });
   });
+
+  describe('Innovation Use 2026 stop-copy (IU26-R-9)', () => {
+    const baseConfig = {
+      phase: 5,
+      user: { id: 77 } as any,
+      old_result_id: 1000,
+      new_result_id: 2000,
+    } as any;
+    const withIpsr = { ...baseConfig, new_ipsr_id: 3000 } as any;
+    const norm = (sql: string) => sql.replace(/\s+/g, ' ').trim();
+
+    it.each(['findQuery', 'insertQuery'] as const)(
+      'copies only section 2 in the %s when phase_year is 2026',
+      (key) => {
+        const sql = norm(
+          repo.createQueries({ ...baseConfig, phase_year: 2026 })[key],
+        );
+        expect(sql).toContain('AND is_active > 0 AND section_id = 2');
+      },
+    );
+
+    it.each([2025, undefined])(
+      'copies every section when phase_year is %s (and for IPSR configs)',
+      (phase_year) => {
+        const { findQuery, insertQuery } = repo.createQueries({
+          ...withIpsr,
+          phase_year,
+        });
+        expect(norm(findQuery)).not.toContain('section_id = 2');
+        expect(norm(insertQuery)).not.toContain('section_id = 2');
+      },
+    );
+  });
 });

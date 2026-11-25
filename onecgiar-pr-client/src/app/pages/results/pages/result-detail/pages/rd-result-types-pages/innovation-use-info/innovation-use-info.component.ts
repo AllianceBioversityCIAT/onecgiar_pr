@@ -506,11 +506,18 @@ export class InnovationUseInfoComponent implements CanComponentDeactivate {
       // P2-3985 — P25 only (added below). The non-P25 path never hydrates them (`innovatonUse`
       // receives the GET), so they always leave as `null`, and since P2-3985 the legacy endpoint
       // persists them when the key is present: sending them there would blank them on every save.
+      // IU26 (DD-6, client half) — for 2026+ results `new_users_added` is OMITTED (the cumulative field is gone
+      // from the form and the stored value must survive; the server never writes undefined/null over it), and an
+      // emptied narrative goes as "" rather than null so clearing it still works under that server guard.
+      // The year gate is `isInnovationUseAgeFallback2026` (phase_year of the open result, P-14), already
+      // resolved by the time anything can be saved. Pre-2026 sends both exactly as before.
       ...(this.fieldsManagerSE.isP25()
-        ? {
-            new_users_added: this.innovationUseInfoBody.new_users_added ?? null,
-            use_expansion_narrative: this.innovationUseInfoBody.use_expansion_narrative ?? null
-          }
+        ? this.fieldsManagerSE.isInnovationUseAgeFallback2026()
+          ? { use_expansion_narrative: this.innovationUseInfoBody.use_expansion_narrative ?? '' }
+          : {
+              new_users_added: this.innovationUseInfoBody.new_users_added ?? null,
+              use_expansion_narrative: this.innovationUseInfoBody.use_expansion_narrative ?? null
+            }
         : {}),
       investment_programs,
       investment_bilateral,

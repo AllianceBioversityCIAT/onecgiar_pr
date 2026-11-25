@@ -5,11 +5,10 @@ import { InnovationUseService } from './innovation-use.service';
  *
  * Two decisions of 3 Sep 2026 are pinned here, and both have a cost if they drift:
  *
- * - The figure counts **actors only**. If organisations or other measures ever get added to it,
- *   next year's "previous use" becomes a number nobody can decompose ("523 users" made of people,
- *   organisations and hectares).
- * - `null` means the block is NOT rendered. That is what keeps a reporter who legitimately files
- *   only organisations from facing a reconciliation error they can never satisfy.
+ * - `total_actors` counts **actors only**; organisations and measures are separate fields (IU26-R-4),
+ *   never added into it, so next year's figure stays decomposable.
+ * - `null` means the block is NOT rendered: nothing at all (no actors, organisations or measures)
+ *   was reported as current use (IU26-R-3 supersedes the 3 Sep "no actors, no block" rule).
  *
  * Built off the prototype for the same reason as the 2030 sibling: the constructor is enormous.
  */
@@ -19,10 +18,16 @@ describe('InnovationUseService — previous-phase current use (P2-3537)', () => 
     ...extra,
   });
 
-  function makeService(actors: any[] = []) {
+  function makeService(
+    actors: any[] = [],
+    organizations: any[] = [],
+    measures: any[] = [],
+  ) {
     const service: any = Object.create(InnovationUseService.prototype);
     service.logger = { error: jest.fn(), warn: jest.fn() };
     service.getActorsData = jest.fn().mockResolvedValue(actors);
+    service.getOrganizationsData = jest.fn().mockResolvedValue(organizations);
+    service.getMeasuresData = jest.fn().mockResolvedValue(measures);
     return service;
   }
 
@@ -69,14 +74,28 @@ describe('InnovationUseService — previous-phase current use (P2-3537)', () => 
     expect(previous.actors).toHaveLength(1);
   });
 
-  it('returns null when the previous phase reported organisations but no actors', async () => {
-    // Yeck's decision (Q4, 3 Sep 2026): no actors -> no block. Rendering it would show a
-    // reconciliation against zero actors that the reporter could never resolve.
-    const service = makeService([actor(2, { how_many: 12 })]);
+  it('returns null when the previous phase reported only 2030 projection rows', async () => {
+    const service = makeService(
+      [actor(2, { how_many: 12 })],
+      [{ section_id: 2, institution_roles_id: 5, how_many: 4 }],
+    );
 
     await expect(
       service.getPreviousPhaseCurrentUse(41, 2025),
     ).resolves.toBeNull();
+  });
+
+  it('IU26-R-3: keeps the block when the previous phase reported organisations but no actors', async () => {
+    const service = makeService(
+      [],
+      [{ section_id: 1, institution_roles_id: 5, how_many: 9 }],
+    );
+
+    const previous = await service.getPreviousPhaseCurrentUse(41, 2025);
+
+    expect(previous.total_actors).toBe(0);
+    expect(previous.total_organizations).toBe(9);
+    expect(previous.actors).toEqual([]);
   });
 
   it('counts a row whose disaggregation does not apply, where how_many was typed', async () => {

@@ -244,6 +244,7 @@ describe('SummaryService', () => {
 
       expect(mockResultRepository.findOne).toHaveBeenCalledWith({
         where: { id: 5 },
+        relations: { obj_version: true },
       });
       expect(mockInnoDevService.saveAnticipatedInnoUser).toHaveBeenCalledWith(
         5,
@@ -314,6 +315,65 @@ describe('SummaryService', () => {
           innovation_use_level_id: null,
         }),
       );
+    });
+
+    // IU26-R-2 / DD-6 — cumulative fields never erased for 2026+; earlier phases keep today's write.
+    describe('cumulative fields (IU26-R-2)', () => {
+      const arrange = (phaseYear: number) => {
+        mockResultRepository.findOne.mockResolvedValueOnce({
+          id: 5,
+          obj_version: { phase_year: phaseYear },
+        });
+        mockInnoDevService.saveAnticipatedInnoUser.mockResolvedValueOnce({});
+        mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce({
+          result_innovation_use_id: 1,
+          results_id: 5,
+          new_users_added: 845,
+          use_expansion_narrative: 'stored narrative',
+        });
+      };
+      const savedRow = () =>
+        mockResultsInnovationsUseRepository.save.mock.calls.at(-1)?.[0];
+
+      it('cumulative: 2026 result, keys omitted -> stored values kept', async () => {
+        arrange(2026);
+        await service.saveInnovationUse({} as any, 5, user);
+        expect(savedRow().new_users_added).toBe(845);
+        expect(savedRow().use_expansion_narrative).toBe('stored narrative');
+      });
+
+      it('cumulative: 2026 result, explicit null -> stored values kept', async () => {
+        arrange(2026);
+        await service.saveInnovationUse(
+          { new_users_added: null, use_expansion_narrative: null } as any,
+          5,
+          user,
+        );
+        expect(savedRow().new_users_added).toBe(845);
+        expect(savedRow().use_expansion_narrative).toBe('stored narrative');
+      });
+
+      it('cumulative: 2025 result, explicit null -> cleared as today', async () => {
+        arrange(2025);
+        await service.saveInnovationUse(
+          { new_users_added: null, use_expansion_narrative: null } as any,
+          5,
+          user,
+        );
+        expect(savedRow().new_users_added).toBeNull();
+        expect(savedRow().use_expansion_narrative).toBeNull();
+      });
+
+      it('cumulative: 2026 result, value 0 and empty narrative -> written', async () => {
+        arrange(2026);
+        await service.saveInnovationUse(
+          { new_users_added: 0, use_expansion_narrative: '' } as any,
+          5,
+          user,
+        );
+        expect(savedRow().new_users_added).toBe(0);
+        expect(savedRow().use_expansion_narrative).toBe('');
+      });
     });
 
     // P2-3390. The three "Investment (USD)" tables reach this endpoint as the flat contract and are
@@ -826,6 +886,8 @@ describe('SummaryService', () => {
         result_id: 41,
         phase_year: 2025,
         total_actors: 500,
+        total_organizations: 0,
+        measures: [],
       });
       expect(mockResultActorRepository.find).toHaveBeenLastCalledWith({
         where: { result_id: 41, is_active: true },
@@ -860,6 +922,8 @@ describe('SummaryService', () => {
         result_id: 41,
         phase_year: 2025,
         total_actors: 240,
+        total_organizations: 0,
+        measures: [],
       });
     });
 

@@ -480,4 +480,40 @@ describe('ResultActorRepository (unit)', () => {
       expect(persistedColumnNames()).not.toContain('zz_guard_probe_flag');
     });
   });
+
+  // IU26-T-3 (IU26-R-9) — a 2026 Innovation Use copy starts without current-use rows: only the
+  // 2030 projection (section_id = 2) travels. Absent `phase_year` keeps today's copy.
+  describe('Innovation Use 2026 stop-copy (IU26-R-9)', () => {
+    const SECTION_2 = 'AND section_id = 2';
+
+    it.each(['findQuery', 'insertQuery'] as const)(
+      'copies only section 2 in the %s when phase_year is 2026',
+      (key) => {
+        const sql = normalize(
+          repo.createQueries({ ...config, phase_year: 2026 })[key],
+        );
+        expect(sql).toContain(`AND is_active > 0 ${SECTION_2}`);
+      },
+    );
+
+    it.each([2025, undefined])(
+      'copies every section when phase_year is %s',
+      (phase_year) => {
+        const { findQuery, insertQuery } = repo.createQueries({
+          ...config,
+          phase_year,
+        });
+        expect(normalize(findQuery)).not.toContain('section_id = 2');
+        expect(normalize(insertQuery)).not.toContain('section_id = 2');
+      },
+    );
+
+    it('keeps the filter out of the read-back', () => {
+      const { returnQuery } = repo.createQueries({
+        ...config,
+        phase_year: 2026,
+      });
+      expect(normalize(returnQuery)).not.toContain('section_id = 2');
+    });
+  });
 });

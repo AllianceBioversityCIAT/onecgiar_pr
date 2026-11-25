@@ -4,6 +4,7 @@ import { UpdateVersioningDto } from './dto/update-versioning.dto';
 import { Version } from './entities/version.entity';
 import { VersionRepository } from './versioning.repository';
 import { Result, SourceEnum } from '../results/entities/result.entity';
+import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultRepository } from '../results/result.repository';
 import { ApplicationModules } from './entities/application-modules.entity';
 import { ApplicationModulesRepository } from './repositories/application-modules.repository';
@@ -339,6 +340,13 @@ export class VersioningService {
         user: user,
         entity_id: entity_id,
         same_portfolio_phase_change: same_portfolio_phase_change,
+        // IU26-R-9: only Innovation Use copies start without current-use rows in a 2026+ phase
+        // (the actor / P25 measure / organization repositories read this); type 7 and the rest
+        // keep the full copy.
+        ...(Number.parseInt(`${result.result_type_id}`, 10) ===
+        ResultTypeEnum.INNOVATION_USE
+          ? { phase_year: Number(phase.phase_year) }
+          : {}),
       };
       await this._resultByInitiativesRepository.replicate(manager, config);
 
@@ -369,6 +377,9 @@ export class VersioningService {
           // every Innovation Use reached the new phase with no actors or measures and the
           // reporter saw last year's figures as gone (W3 result 27270, 2026-10-14). Decision:
           // the new phase starts PRE-FILLED and editable, for W1/W2 and W3 alike.
+          // IU26-R-9 reverts that for a 2026+ phase: `config.phase_year` makes these two copies
+          // (and the organizations copy below) carry only the 2030 projection; the legacy measures
+          // and the IU answers above stay as today (DD-11).
           await this._resultActorRepository.replicate(manager, config);
           await this._resultIpMeasureRepository.replicate(manager, config);
           break;

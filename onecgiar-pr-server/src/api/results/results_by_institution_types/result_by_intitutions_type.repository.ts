@@ -18,6 +18,13 @@ export class ResultByIntitutionsTypeRepository
   createQueries(
     config: ReplicableConfigInterface<ResultsByInstitutionType>,
   ): ConfigCustomQueryInterface {
+    // IU26-R-9: a 2026+ Innovation Use copy drops the Innovation Use organizations (role 5) that
+    // are not the 2030 projection. Partner roles 1/2 and every other row are copied as today.
+    // NULL-safe: a NULL role is kept, a role-5 row with a NULL section is dropped.
+    const innovationUseFilter =
+      config.phase_year >= 2026
+        ? 'AND (rbit.institution_roles_id IS NULL OR rbit.institution_roles_id <> 5 OR rbit.section_id = 2)'
+        : '';
     return {
       findQuery: `
       select 
@@ -38,7 +45,7 @@ export class ResultByIntitutionsTypeRepository
         rbit.section_id
         from results_by_institution_type rbit WHERE  rbit.results_id = ${
           config.old_result_id
-        } and rbit.is_active > 0
+        } and rbit.is_active > 0 ${innovationUseFilter}
       `,
       insertQuery: `
       insert into results_by_institution_type 
@@ -73,7 +80,7 @@ export class ResultByIntitutionsTypeRepository
         rbit.section_id
         from results_by_institution_type rbit WHERE  rbit.results_id = ${
           config.old_result_id
-        } and rbit.is_active > 0`,
+        } and rbit.is_active > 0 ${innovationUseFilter}`,
       returnQuery: `
       select 
         rbit.*

@@ -7,18 +7,88 @@ import { ResultCoreInnovUseSectionEnum } from '../../../results-framework-report
  * `SummaryModule`: injecting the v2 service into `SummaryService` would close a circular dependency.
  *
  * The rules are the ones of P2-3537 §4 (Yeck, 3 Sep 2026):
- * - only the current-use actors count, never organisations, measures or the 2030 projection rows
- *   (`section_id = 2`) that share the table. Which rows are "current use" depends on the writer:
+ * - only current-use rows count, never the 2030 projection rows (`section_id = 2`) that share the table. Which rows are "current use" depends on the writer:
  *   the v2 writer stamps `section_id = 1`, while the legacy one (bilateral editor,
  *   `innovation_dev.service`) leaves it NULL — so the legacy read keeps every non-2030 row, the same
  *   rule its own `getInnovationUse` applies, and the v2 read passes `currentUseRows`;
- * - `null` when there is no previous phase or it reported no actors — that is what tells the screen
- *   not to render the block at all.
+ * - IU26-R-4: organizations (role 5, active) and P25 measures (grouped by normalised unit) join the
+ *   figure, each read with the same per-caller row `pick` (P-25);
+ * - `null` when there is no previous phase or it reported no actors, organizations or measures —
+ *   that is what tells the screen not to render the block at all.
  */
 export interface PreviousPhaseCurrentUse {
   result_id: number;
   phase_year: number | null;
   total_actors: number;
+  total_organizations: number;
+  measures: PreviousPhaseMeasure[];
+}
+
+export interface PreviousPhaseMeasure {
+  unit: string;
+  quantity: number;
+}
+
+/** Raw `results_by_institution_type` row, as far as the previous-use figure reads it. */
+export interface CurrentUseOrganizationRow {
+  section_id?: number | string | null;
+  institution_roles_id?: number | string | null;
+  is_active?: boolean | number | null;
+  how_many?: number | string | null;
+}
+
+/** Raw P25 `result_ip_measure` row, as far as the previous-use figure reads it. */
+export interface CurrentUseMeasureRow {
+  section_id?: number | string | null;
+  is_active?: boolean | number | null;
+  unit_of_measure?: string | null;
+  quantity?: number | string | null;
+}
+
+/** Innovation Use organizations are role 5; the table also holds the result's partner rows. */
+const INNOVATION_USE_ORGANIZATION_ROLE = 5;
+
+const isActiveRow = (row: { is_active?: boolean | number | null }) =>
+  row?.is_active === undefined ||
+  row?.is_active === null ||
+  Number(row.is_active) !== 0;
+
+/** Sums the active role-5 organization rows that `pick` keeps. */
+export function summarizeOrganizations(
+  organizations: CurrentUseOrganizationRow[] | null | undefined,
+  pick: (rows: any[]) => any[],
+): { rows: number; total: number } {
+  const rows = pick(
+    (organizations ?? []).filter(
+      (row) =>
+        Number(row?.institution_roles_id) ===
+          INNOVATION_USE_ORGANIZATION_ROLE && isActiveRow(row),
+    ),
+  );
+  return {
+    rows: rows.length,
+    total: rows.reduce((sum, row) => sum + (Number(row.how_many) || 0), 0),
+  };
+}
+
+/**
+ * One line per unit. Units are free text (P-7), so they group by `lower(trim(unit))` and the
+ * first-seen spelling (trimmed) is the label. Blank units are skipped.
+ */
+export function summarizeMeasures(
+  measures: CurrentUseMeasureRow[] | null | undefined,
+  pick: (rows: any[]) => any[],
+): PreviousPhaseMeasure[] {
+  const lines = new Map<string, PreviousPhaseMeasure>();
+  for (const row of pick((measures ?? []).filter(isActiveRow))) {
+    const label = String(row.unit_of_measure ?? '').trim();
+    if (!label) continue;
+    const key = label.toLowerCase();
+    const line = lines.get(key);
+    if (line) line.quantity += Number(row.quantity) || 0;
+    else lines.set(key, { unit: label, quantity: Number(row.quantity) || 0 });
+  }
+  return [...lines.values()];
 }
 
 export interface CurrentUseActorRow {
@@ -66,13 +136,18 @@ export function summarizePreviousPhaseCurrentUse(
   previousResultId: unknown,
   previousPhaseYear: unknown,
   count: (row: CurrentUseActorRow) => number = currentUseActorCount,
-  pick: (rows: CurrentUseActorRow[]) => CurrentUseActorRow[] = notFutureRows,
+  pick: (rows: any[]) => any[] = notFutureRows,
+  organizations?: CurrentUseOrganizationRow[] | null,
+  measures?: CurrentUseMeasureRow[] | null,
 ): PreviousPhaseCurrentUse | null {
   const previousId = Number(previousResultId);
   if (!Number.isFinite(previousId) || previousId <= 0) return null;
 
   const rows = pick(actors ?? []);
-  if (!rows.length) return null;
+  const orgs = summarizeOrganizations(organizations, pick);
+  const measureLines = summarizeMeasures(measures, pick);
+  // IU26-R-3: the block shows when the previous phase reported an actor, an organization or a measure.
+  if (!rows.length && !orgs.rows && !measureLines.length) return null;
 
   const year = Number(previousPhaseYear);
   return {
@@ -80,5 +155,7 @@ export function summarizePreviousPhaseCurrentUse(
     phase_year:
       previousPhaseYear != null && Number.isFinite(year) ? year : null,
     total_actors: rows.reduce((sum, row) => sum + count(row), 0),
+    total_organizations: orgs.total,
+    measures: measureLines,
   };
 }
