@@ -1,6 +1,9 @@
 // @akili-spec changes/replicated-innovation-reminders
 import { InternalServerErrorException, Logger } from '@nestjs/common';
-import { ReminderDispatcher } from './reminder-dispatcher.service';
+import {
+  ReminderDispatcher,
+  buildResultUrl,
+} from './reminder-dispatcher.service';
 import {
   ReplicatedReminderKind,
   ReplicatedReminderStatus,
@@ -587,6 +590,57 @@ describe('ReminderDispatcher', () => {
       process.env.RESULTS_URL = originalUrl;
     });
 
+    it('renders a package row with the ipsr link and a type-2 row with result-detail in one message', async () => {
+      const originalUrl = process.env.RESULTS_URL;
+      process.env.RESULTS_URL = 'https://x/result/result-detail/';
+      const { dispatcher, emailService } = setup({
+        rows: [
+          baseRow({
+            result_id: 1,
+            result_code: 9001,
+            result_type_id: 10,
+            version_id: 9,
+            developer_text: 'Ann <ann@example.org>',
+          }),
+          baseRow({
+            result_id: 2,
+            result_code: 9002,
+            result_type_id: 2,
+            version_id: 9,
+            developer_text: 'Ann <ann@example.org>',
+          }),
+        ],
+        active: [{ email: 'ann@example.org', name: 'Ann' }],
+        templates: {
+          [T_MELIA]:
+            '{{#each results}}{{resultTypeName}}|{{{resultUrl}}};{{/each}}',
+        },
+      });
+      await dispatcher.dispatch(CAMPAIGN_ID);
+      expect(emailService.sendEmail).toHaveBeenCalledTimes(1);
+      const body = bodyOf(emailService.sendEmail.mock.calls[0]);
+      process.env.RESULTS_URL = originalUrl;
+      expect(body).toContain(
+        'Innovation package|https://x/ipsr/detail/9001/general-information?phase=9;',
+      );
+      expect(body).toContain(
+        'Innovation use|https://x/result/result-detail/9002/general-information?phase=9;',
+      );
+    });
+
+    it('passes previousYear and nextNextYear to the template for a 2026 campaign', async () => {
+      const { dispatcher, emailService } = setup({
+        rows: makeRows(1),
+        templates: {
+          [T_Q4]: '{{previousYear}}|{{phaseYear}}|{{nextNextYear}}',
+        },
+      });
+      await dispatcher.dispatch(CAMPAIGN_ID);
+      expect(bodyOf(emailService.sendEmail.mock.calls[0])).toBe(
+        '2025|2026|2028',
+      );
+    });
+
     it('a multi-address message is ONE email to all its To addresses (prod)', async () => {
       const { dispatcher, emailService, campaignRepo } = setup(mixed());
       await dispatcher.dispatch(CAMPAIGN_ID);
@@ -886,5 +940,31 @@ describe('ReminderDispatcher', () => {
         allowRetry: false,
       });
     });
+  });
+});
+
+describe('buildResultUrl', () => {
+  const RD = 'https://x/result/result-detail/';
+  it.each([
+    [10, RD, 'https://x/ipsr/detail/9001/general-information?phase=9'],
+    [
+      10,
+      'https://x/result/result-detail',
+      'https://x/ipsr/detail/9001/general-information?phase=9',
+    ],
+    [
+      10,
+      'https://prms.test/result/',
+      'https://prms.test/result/9001/general-information?phase=9',
+    ],
+    [2, RD, 'https://x/result/result-detail/9001/general-information?phase=9'],
+    [7, RD, 'https://x/result/result-detail/9001/general-information?phase=9'],
+  ])('type %s with base %s -> %s', (typeId, base, expected) => {
+    expect(buildResultUrl(base, typeId, 9001, 9)).toBe(expected);
+  });
+
+  it('does not throw when the base is undefined', () => {
+    expect(() => buildResultUrl(undefined, 10, 9001, 9)).not.toThrow();
+    expect(() => buildResultUrl(undefined, 2, 9001, 9)).not.toThrow();
   });
 });

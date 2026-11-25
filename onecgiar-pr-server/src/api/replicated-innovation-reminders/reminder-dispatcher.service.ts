@@ -68,7 +68,30 @@ const DEFAULTS = { batchSize: 25, pauseMs: 2000, staleMinutes: 60 };
 const RESULT_TYPE_NAMES: Record<number, string> = {
   2: 'Innovation use',
   7: 'Innovation development',
+  10: 'Innovation package',
 };
+const INNOVATION_PACKAGE_TYPE_ID = 10;
+
+/**
+ * Link to a result in the email. An Innovation package (type 10) opens in the
+ * IPSR detail page: when the base ends in `result/result-detail` (slash or
+ * not) that segment becomes `ipsr/detail/`. Any other base shape, and every
+ * other result type, keeps `${base}${code}/general-information?phase=${v}`
+ * unchanged (RBX-R-3).
+ */
+export function buildResultUrl(
+  resultsUrl: string | undefined,
+  typeId: number,
+  code: number | string,
+  versionId: number | string,
+): string {
+  const tail = `${code}/general-information?phase=${versionId}`;
+  if (typeId === INNOVATION_PACKAGE_TYPE_ID && typeof resultsUrl === 'string') {
+    const m = /^(.*)result\/result-detail\/?$/.exec(resultsUrl);
+    if (m) return `${m[1]}ipsr/detail/${tail}`;
+  }
+  return `${resultsUrl}${tail}`;
+}
 const LAST_ERROR_MAX = 500;
 /** `last_error` of a non-prod run with nowhere to redirect to; the service maps it to 412. */
 export const EMPTY_TEST_RECIPIENT_ERROR = 'test recipient not configured';
@@ -420,6 +443,8 @@ export class ReminderDispatcher {
         leadName: message.greetingName,
         phaseYear,
         nextYear: phaseYear + 1,
+        previousYear: phaseYear - 1,
+        nextNextYear: phaseYear + 2,
         resultCount: message.results.length,
         spCode: message.spCode,
         spName: message.spName ?? '',
@@ -430,7 +455,12 @@ export class ReminderDispatcher {
           resultTypeName: RESULT_TYPE_NAMES[r.result_type_id] ?? '',
           spCode: r.initiative_code,
           spName: r.initiative_short_name ?? '',
-          resultUrl: `${env.RESULTS_URL}${r.result_code}/general-information?phase=${r.version_id}`,
+          resultUrl: buildResultUrl(
+            env.RESULTS_URL,
+            r.result_type_id,
+            r.result_code,
+            r.version_id,
+          ),
           developerText: r.developerText ?? '',
         })),
         ...(redirectTo !== null

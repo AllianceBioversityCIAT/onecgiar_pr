@@ -22,8 +22,10 @@
       <button hlmBtn size="sm" type="button" [disabled]="busy()" (click)="requestSend(c)" [attr.data-testid]="p + '-send-btn'">
         {{ copy.actions.sendNow }}
       </button>
-      <hlm-popover align="end" sideOffset="4" [state]="menuFor() === p + '-' + c.id ? 'open' : 'closed'" (stateChanged)="onMenuState(p + '-' + c.id, $event)">
+      <!-- quick/reminders-kebab-menu-anchor: without attachTo the popover falls back to the global (centered) position -->
+      <hlm-popover align="end" sideOffset="4" [attachTo]="moreBtn" [state]="menuFor() === p + '-' + c.id ? 'open' : 'closed'" (stateChanged)="onMenuState(p + '-' + c.id, $event)">
         <button
+          #moreBtn
           hlmBtn
           variant="ghost"
           size="sm"
