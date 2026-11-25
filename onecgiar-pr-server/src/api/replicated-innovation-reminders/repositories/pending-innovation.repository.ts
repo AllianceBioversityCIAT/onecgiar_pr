@@ -34,8 +34,17 @@ export class PendingInnovationRepository {
   constructor(private readonly dataSource: DataSource) {}
 
   /**
-   * Pending replicated innovations of one phase, one row per result (`RIR-R-1`), W1/W2 AND W3
-   * (the `source <> 'API'` filter was dropped at T-11; `source` is returned instead).
+   * Pending replicated innovations of one campaign, one row per result (`RIR-R-1`, `RBX-R-1`,
+   * `RBX-R-2`), W1/W2 AND W3 (the `source <> 'API'` filter was dropped at T-11; `source` is
+   * returned instead).
+   *
+   * - Branch A: types 2 and 7 of the bound Reporting phase (`version_id = ?`), unchanged.
+   * - Branch B (DD-1, DD-8): type 10 (innovation packages) of the open IPSR versions
+   *   (`app_module_id = 2`, `is_active = 1`, `status = 1`) whose `phase_year` equals the bound
+   *   version's. With no such IPSR phase the branch is empty and nothing errors. `versionId` is
+   *   bound twice: once for branch A and once to read the bound version's `phase_year`.
+   * - Exclusion (DD-2): `NOT EXISTS` an active `replicated_innovation_reminder_exclusion` row on
+   *   `result_code` (not `id`, so it survives replication); it applies to both branches.
    *
    * - Owner SP = `results_by_inititiative.initiative_role_id = 1` and active (`RIR-P-2`);
    *   `inititiative_id` is the load-bearing DB typo.
@@ -86,14 +95,33 @@ export class PendingInnovationRepository {
         )
       LEFT JOIN clarisa_center lcc ON lcc.code = lrc.center_id
       LEFT JOIN clarisa_institutions lci ON lci.id = lcc.institutionId
-      WHERE r.version_id = ?
-        AND r.result_type_id IN (2, 7)
+      WHERE (
+          (r.version_id = ? AND r.result_type_id IN (2, 7))
+          OR (
+            r.result_type_id = 10
+            AND r.version_id IN (
+              SELECT ipv.id
+              FROM version ipv
+              INNER JOIN version rpv ON rpv.id = ?
+              WHERE ipv.app_module_id = 2
+                AND ipv.is_active = 1
+                AND ipv.status = 1
+                AND ipv.phase_year = rpv.phase_year
+            )
+          )
+        )
         AND r.is_replicated = 1
         AND r.status_id = 1
         AND r.is_active = 1
+        AND NOT EXISTS (
+          SELECT 1
+          FROM replicated_innovation_reminder_exclusion x
+          WHERE x.result_code = r.result_code
+            AND x.is_active = 1
+        )
       ORDER BY ci.official_code ASC, r.result_code ASC, r.id ASC
       `,
-      [versionId],
+      [versionId, versionId],
     );
 
     return rows.map((row) => ({
