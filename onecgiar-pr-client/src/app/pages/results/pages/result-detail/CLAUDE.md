@@ -1,6 +1,6 @@
 # result-detail
 
-**Verified:** 2026-10-19 · JuanGuzman-io/investigate-p2-3969-chrome · `bugfix/result-detail-not-found-navigation` (P2-3969): chips de fase por módulo y redirect de tipo 10 a IPSR; prior: 2026-09-25 · bugfix/p2-3542-section-bar-toc-tabs · b0d320f5d · `fieldFeedbackList` pliega gaps de secciones fuera de pantalla (P2-3542); prior: 2026-09-16 · performance-refactor · 01891aebd · reserva de 88px bajo la barra y pliegue suspendido con un dropdown abierto; prior: 2026-09-11 · branch qa-development-2026-ss · changes/unsaved-changes-alert `UCA-T-12` (new "Unsaved-changes guard" section documenting `CanComponentDeactivate`, the routing-node fix, and the recurring child-mutation bug class); prior: 2026-09-11 · branch performance-refactor · 624d4a017 (P2-3659: `Next` guarda antes de navegar); prior: 2026-09-04 · qa-development-2026 · 2b7232fff (adds the one-line pointer to the shared `pr-viewport-page` mixin, spec `changes/sp-shell-app-viewport` SAV-T-6; no code change); prior: 2026-09-03 · 6963df5af
+**Verified:** 2026-11-25 · fix/result-detail-required-counter (P2-4123): la barra no pinta números intermedios al llegar a una sección (`feedbackLoading` + `feedbackReady`); prior: 2026-10-19 · JuanGuzman-io/investigate-p2-3969-chrome · `bugfix/result-detail-not-found-navigation` (P2-3969): chips de fase por módulo y redirect de tipo 10 a IPSR; prior: 2026-09-25 · bugfix/p2-3542-section-bar-toc-tabs · b0d320f5d · `fieldFeedbackList` pliega gaps de secciones fuera de pantalla (P2-3542); prior: 2026-09-16 · performance-refactor · 01891aebd · reserva de 88px bajo la barra y pliegue suspendido con un dropdown abierto; prior: 2026-09-11 · branch qa-development-2026-ss · changes/unsaved-changes-alert `UCA-T-12` (new "Unsaved-changes guard" section documenting `CanComponentDeactivate`, the routing-node fix, and the recurring child-mutation bug class); prior: 2026-09-11 · branch performance-refactor · 624d4a017 (P2-3659: `Next` guarda antes de navegar); prior: 2026-09-04 · qa-development-2026 · 2b7232fff (adds the one-line pointer to the shared `pr-viewport-page` mixin, spec `changes/sp-shell-app-viewport` SAV-T-6; no code change); prior: 2026-09-03 · 6963df5af
 
 ## Qué es
 
@@ -96,6 +96,18 @@ y `mandatoryFieldsTotal` igual que un gap del DOM, así que ningún consumidor d
 ring, popover, "N alerts" del save button) necesita cambio. El publisher, su gate y sus dos
 excepciones viven en [`pages/rd-contributors-and-partners/CLAUDE.md`](pages/rd-contributors-and-partners/CLAUDE.md)
 — no duplicado aquí.
+
+## El contador no pinta valores de paso (P2-4123)
+
+Al cambiar de sección el escaneo veía, en orden: el conteo de la sección anterior, el esqueleto de
+carga (todo vacío) y los campos llenándose en varios cuadros. Medido en prtest (resultado 10174,
+Contributors & Partners): `7 → 3 → 1` en ~300 ms. Ahora:
+- El escaneo publica `DataControlService.feedbackLoading` (hay `.rd-loading` dentro del contenedor).
+- La barra nace con `feedbackReady = false` y muestra «Checking fields…» (sin número ni aro) hasta
+  que la carga terminó **y** el conteo se quedó quieto `FEEDBACK_SETTLE_MS` (350 ms). Desde ahí es
+  en vivo, como siempre. Solo cubre la llegada.
+- ⚠️ Una sección sin `appSectionSkeleton` no se traba: con `feedbackLoading` en falso igual
+  arranca el temporizador.
 
 ## Not-found, chips de fase y redirect a IPSR (P2-3969, `docs/specs/bugfix/result-detail-not-found-navigation`)
 

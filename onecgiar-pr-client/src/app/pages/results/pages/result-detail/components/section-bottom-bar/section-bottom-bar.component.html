@@ -69,6 +69,17 @@
         <i class="material-icons-round text-[18px]" aria-hidden="true">visibility</i>
         View only
       </span>
+    } @else if (!feedbackReady()) {
+      <!-- P2-4123: the section is still arriving (skeleton on, or fields still filling in), so any
+           number here would be a value on its way somewhere else. Neutral placeholder, same pill
+           family, no count and no ring — the real figure replaces it once it holds still. -->
+      <span
+        class="inline-flex items-center gap-[8px] rounded-full bg-[var(--pr-surface-app)] px-[10px] py-[4px] text-[14px] font-medium text-[var(--pr-text-secondary)]"
+        role="status"
+        data-testid="section-bottom-bar-checking">
+        <i class="material-icons-round text-[18px]" aria-hidden="true">hourglass_empty</i>
+        Checking fields…
+      </span>
     } @else if (isComplete()) {
       <!-- Un solo indicador: el aro ES el icono del estado. Antes había dos píldoras seguidas —
              "2 of 7 required" y "5 fields missing" — diciendo lo mismo con dos formas distintas. -->
