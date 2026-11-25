@@ -2160,3 +2160,57 @@ describe('InnovationUseFormComponent — IWH — 2030 block by source', () => {
     expect(JSON.stringify(component.body.innovation_use_2030)).toBe(listBefore);
   });
 });
+
+/**
+ * P2-4125 — "Current core innovation use" any-of rule.
+ *
+ * The live green check (`validation_innovation_use_P25`, current-use block) keeps the section red
+ * until, with "This is yet to be determined" off, at least one active actor, organization or other
+ * measure exists (documented in `onecgiar-pr-server/src/api/qa-catalog/definitions/sections/innovation-use.ts`,
+ * REVIEW D13). The form had no marker for it, so the bottom-bar alert said "Section complete" while
+ * the rail stayed grey. These tests pin the predicate and the marker that feeds the DOM scan.
+ */
+describe('InnovationUseFormComponent — current use any-of rule (P2-4125)', () => {
+  const complete = (body: any) => InnovationUseFormComponent.prototype.isCurrentUseGroupComplete.call({ body });
+  const emptyUse = () => ({ actors: [], organization: [], measures: [] });
+
+  it('is incomplete when the three lists are empty', () => {
+    expect(complete({ innovatonUse: emptyUse() })).toBe(false);
+  });
+
+  it('is incomplete when the only rows were added but never given a type, or were removed', () => {
+    const use = emptyUse();
+    use.actors.push({ actor_type_id: null } as never, { actor_type_id: 2, is_active: false } as never);
+    use.organization.push({ institution_types_id: null } as never);
+    use.measures.push({ unit_of_measure: '  ', quantity: null } as never);
+    expect(complete({ innovatonUse: use })).toBe(false);
+  });
+
+  it.each([
+    ['an actor with a type', { actors: [{ actor_type_id: 3 }] }],
+    ['an organization with a type', { organization: [{ institution_types_id: 7 }] }],
+    ['a measure with a unit', { measures: [{ unit_of_measure: 'hectares' }] }],
+    ['a measure with a quantity', { measures: [{ quantity: 0 }] }]
+  ])('is complete with %s', (_name, lists) => {
+    expect(complete({ innovatonUse: { ...emptyUse(), ...lists } })).toBe(true);
+  });
+
+  it('is complete when the reporter ticked "This is yet to be determined"', () => {
+    expect(complete({ innov_use_to_be_determined: true, innovatonUse: emptyUse() })).toBe(true);
+  });
+
+  it('tolerates a body without the innovatonUse object', () => {
+    expect(complete({})).toBe(false);
+  });
+
+  it('renders a scan marker for the rule in the current-use block, P25 only and never in IPSR', () => {
+    const { readFileSync } = require('fs');
+    const html: string = readFileSync(require('path').join(__dirname, 'innovation-use-form.component.html'), 'utf8');
+    const marker = html.indexOf('[isComplete]="isCurrentUseGroupComplete()"');
+    expect(marker).toBeGreaterThan(-1);
+    // Inside the current-use block (before the use-level ladder) and fenced to P25 + not IPSR.
+    expect(marker).toBeLessThan(html.indexOf('How would you assess the current use level of the innovation?'));
+    const fence = html.lastIndexOf('@if', marker);
+    expect(html.slice(fence, marker)).toContain('this.fieldsManagerSE.isP25() && !this.isIpsr');
+  });
+});
