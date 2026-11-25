@@ -417,3 +417,32 @@
 - `npm run migration:run` again → applied again, COMMIT
 - `npm run migration:check` → Total 504, Executed 513, Pending 0 — "No pending migrations found" (no drift on unrelated entities; the 9 extra executed rows are migrations from other branches already in `prdb`)
 - **Result:** up/down verified; T-10 DoD "migration up/down verified locally; migration:check green" met. Note: `prdb` now holds the 6 nullable columns — additive, invisible to code without the entities
+
+### IU26-T-9 / PR-2 — PRTest browser checks (Leader, 2026-11-25, after the performance-refactor deploy; read-only, nothing saved)
+
+| Check | Result | IDs |
+|---|---|---|
+| W1/W2 2026 with 2025 previous | ✅ CUU above the question; "Previous reported use (FY2025 · for reference only)" Actors: 1,200; narrative label "Brief narrative on how use changed in 2026", 0/100; 2026 question; no "Depending"; guidance with the NEW sentence; no New users / cumulative | code 6433 (id 11496), phase 36 |
+| W1/W2 totals + NEW (local, unsaved) | ✅ added an actor row (women 70 + men 50): tile "Actors - individuals 120 / Of which new: not available"; NEW 150 → red border + "New users (150) cannot be higher than the total (120)." and the pending-field count 4 → 5 | 6433 |
+| W3 2026 in result detail | ✅ W3/Bilaterals: CUU + FY2025 previous shown; no "Of which NEW" input, no NEW sentence, no cumulative fields | code 8427 (id 11808) |
+| 2025 result | ✅ unchanged: no CUU, no NEW, no tiles, no guidance; "Depending on the innovation…" and "expected" present | 6433, phase 34 |
+| IPSR step 3, 2026 package | ✅ 2026 question; tiles Actors - individuals / Organizations with "Of which new" and **no Households**; NEW input per row; no narrative; no "expected". Previous use not shown — this package has no 2025 twin with rows (cannot confirm the `result_code` + `previous_phase` join with this data) | code 9733 (id 12201), phase 37 |
+| Not done | ~1024 px layout (window resize did not change the viewport); W3 full-metadata form on the bilateral centre page; IPSR package with a 2025 twin; `/version` copy row counts (writes — Santiago); IPSR Save blocking (needs Save) | — |
+
+Note: tab with result 6433 holds local unsaved test edits — close it choosing "Leave", never Save.
+
+### Spec amendment — IU26-R-14 (approved by Santiago 2026-11-25: "haz los que creas profesionalmente")
+
+- `requirements.md` R-14 rewritten to the QA catalog only, with an amendment note: drawer clause removed (drawer is W3-only, R-12); "2025 catalog still has it" removed; PDF deferred to a follow-up ticket (payload source outside this repo). Scope table row aligned. Nicoleta informed in the closing email
+- **IU26-T-15 → `[x]`**: catalog part PASSed (Reviewer); the drawer and PDF parts are out of the amended R-14
+- **Follow-ups (not in this spec):** (1) PDF NEW — find the producer of `innovation_use_actors` for `alliance-ibd-pdf-viewer`; (2) **bug, pre-existing:** `result.repository.ts:3886` `getInnovationUseBilateralResultById` LEFT JOINs actors / institutions / legacy measures without `is_active` → returns deleted rows on `/api/bilateral/*`; fix before running T-8 in PROD, with a bilateral change-log entry and a notice to Juanda (Angel to ticket)
+
+## Closing status (2026-11-25)
+
+| Task | Status |
+|---|---|
+| T-1 … T-7, T-10 … T-15 | `[x]` |
+| T-8 cleanup SQL | `[~]` script Reviewer-PASSed (attempt 4); TEST dry run + PROD run by Santiago |
+| T-9 docs + PRTest | `[~]` docs done; browser checks done (table above); pending ~1024 px layout, W3 full-metadata form, Santiago/Nicoleta acceptance |
+| Commits | PR-1 `b77c9dec0`, PR-2 `f106093d4` on `qa-development-2026-ss`; merged to `performance-refactor` `ae006d670` (PRTest deployed) |
+| Budget | tasks 15/15; LOC added ≈ 3,200 (PR-1 ≈ 1,980 + PR-2 ≈ 1,240) vs ~1,550 (tripwire 2,015) — **exceeded**, mostly tests; continued on Santiago's explicit instruction ("esta spec queda hoy … ambas partes"); review rounds ≈ 30 vs 23 (+4 tripwire = 27) — exceeded for the same reason |

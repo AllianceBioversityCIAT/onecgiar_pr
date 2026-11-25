@@ -325,7 +325,7 @@
   - **Consumers:** `step-n3-current-use.component.spec.ts`, `step-n3-current-use.zoneless.spec.ts`.
 - **Definition of done:** specs green; `npm run build` clean; a PRTest screenshot of a 2026 package.
 
-### [~] IU26-T-15 — Review surfaces: QA catalog, drawer, PDF
+### [x] IU26-T-15 — Review surfaces: QA catalog, drawer, PDF
 
 - **Type:** server + client
 - **Description:**

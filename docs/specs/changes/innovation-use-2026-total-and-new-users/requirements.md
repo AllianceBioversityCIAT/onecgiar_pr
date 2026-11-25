@@ -70,7 +70,7 @@ From 2026, Innovation Use reports **the total use in the reporting year, support
 | Phase replication (W1/W2, W3 incl. `POST /api/bilateral/version`) | Stop copying current-use rows | — |
 | IPSR step 3 "Current use of the core innovation" | — | Totals, NEW, previous use, empty start, copy |
 | PROD cleanup of copied rows | Script + backup + dry run | — |
-| QA field catalog, review drawer, result PDF | — | NEW shown; removed fields hidden for 2026 |
+| QA field catalog (drawer and PDF: see IU26-R-14 amendment) | — | NEW listed; removed fields hidden for 2026 |
 
 ### 4.3 Out of scope
 
@@ -322,12 +322,18 @@ For 2026 innovation packages, step 3 "Current use of the core innovation" SHALL:
 
 ### Requirement IU26-R-14: Review surfaces `[PR-2]`
 
-The QA field catalog, the result-review drawer and the result PDF SHALL show NEW per row and the category totals for 2026 W1/W2 and IPSR results. They SHALL stop showing "New users added" and "Total cumulative" for 2026 results.
+The QA field catalog SHALL list NEW per row for 2026 W1/W2 and IPSR step-3 current-use rows, and SHALL stop listing "New users added" and "Total cumulative" for 2026.
 
-#### Scenario: Drawer
-- GIVEN a 2026 W1/W2 result with NEW 300 on a Households row
-- WHEN a QA reviewer opens the review drawer
-- THEN the row shows "Of which NEW users: 300"
+> **Amended 2026-11-25 (execute-time, approved by Santiago; Nicoleta informed):**
+> - **Drawer clause removed.** The result-review drawer (`innovation-use-content`) only opens W3/bilateral results, and W3 never has NEW (IU26-R-12), so the former scenario "2026 W1/W2 result with NEW 300 … the drawer shows it" had no host screen. If a W1/W2 review surface needs NEW, it is new scope.
+> - **"The 2025 catalog still has it" removed** (T-15 falsifier): `new_users_added` existed only from 2026 and the catalog covers 2026 only.
+> - **PDF deferred to a follow-up:** the pdf-viewer renders actor rows (P-18 settled true), but the payload that feeds it is not produced in this repo; adding NEW needs that source first. Separate ticket, outside this spec.
+
+#### Scenario: QA catalog
+- GIVEN the 2026 QA field catalog
+- WHEN a reviewer or the AI QA reads the Innovation Use fields
+- THEN each current-use actor, organization and measure row (W1/W2 and IPSR step 3) has an optional "Of which NEW users" item
+- AND there is no "New users added" item
 
 ## 7. Non-Functional Requirements
 
