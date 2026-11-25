@@ -1,4 +1,5 @@
 import {
+  hasAnyPreviousFigure,
   isCurrentUseNarrativeAnswered,
   isCurrentUseNarrativeComplete,
   previousUseByCategory,
@@ -155,5 +156,18 @@ describe('current-use-update util', () => {
         { unit: 'Projects', newUsers: null }
       ]);
     });
+  });
+});
+
+describe('hasAnyPreviousFigure (IU26 follow-up)', () => {
+  it('is false for null and for all-zero / blank figures', () => {
+    expect(hasAnyPreviousFigure(null)).toBe(false);
+    expect(hasAnyPreviousFigure({ total_actors: 0, total_organizations: '0', measures: [{ unit: 'Hectares', quantity: 0 }, { unit: ' ', quantity: 5 }] })).toBe(false);
+  });
+
+  it('is true when actors, organizations or a measure line has data', () => {
+    expect(hasAnyPreviousFigure({ total_actors: 3 })).toBe(true);
+    expect(hasAnyPreviousFigure({ total_organizations: 1 })).toBe(true);
+    expect(hasAnyPreviousFigure({ measures: [{ unit: 'Hectares', quantity: 2 }] })).toBe(true);
   });
 });

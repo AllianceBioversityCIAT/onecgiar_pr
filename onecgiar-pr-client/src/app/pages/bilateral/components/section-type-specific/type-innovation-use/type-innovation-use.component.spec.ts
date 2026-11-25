@@ -1765,6 +1765,25 @@ describe('TypeInnovationUseComponent', () => {
       expect(component.narrativeLabel).toBe('Brief narrative on how use changed in 2026');
     });
 
+    // The spec overrides the template with an empty div, so the heading rule is pinned on the getter the template
+    // reads (`@if (hasPreviousUse)`) and on the template source.
+    it('IU26 follow-up: the CUU header carries no description (the 2026 model has no cumulative total)', () => {
+      expect(html()).not.toContain('currentUseCopy.description');
+      expect(html()).toContain('@if (hasPreviousUse)');
+    });
+
+    it('IU26 follow-up: a previous with only zero figures hides the "Previous reported use" heading', () => {
+      loadWith({ innov_use_to_be_determined: false, current_use_previous: { phase_year: 2025, total_actors: 0, total_organizations: 0, measures: [{ unit: 'Hectares', quantity: 0 }] } });
+      expect(component.showCurrentUseUpdate).toBe(true);
+      expect(component.hasPreviousUse).toBe(false);
+    });
+
+    it('IU26 follow-up: a previous with figures still shows the heading and the figures', () => {
+      loadWith({ innov_use_to_be_determined: false, current_use_previous: previous });
+      expect(component.hasPreviousUse).toBe(true);
+      expect(component.previousUse.actors).toBe(8825);
+    });
+
     it('totals per category: households and individuals never mixed, units matched case-insensitively, no tile without rows', () => {
       loadWith({
         innov_use_to_be_determined: false,

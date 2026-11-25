@@ -157,6 +157,7 @@ P2-3556 (load gate), P2-3390 (the three Investment tables).
   ⚠️ Current-use lookups by type/unit now skip section-2 rows, and the legacy GET splits them out; before
   this, a section-2 row would have shown up (and been re-saved) as current use.
 
+- **IU26 follow-up (2026-11-25):** the CUU header passes no `description` (the copy key was removed; it described the cumulative model), and the "Previous reported use" block renders only when `hasPreviousUse` (`hasAnyPreviousFigure` in the shared util) — an all-zero previous shows the narrative alone.
 - **P2-3985 / IU26 — Current Use Update** (IU26-R-3, R-5, R-7, R-8, DD-5): one getter, `showCurrentUseUpdate`
   (= `current_use_previous` present + phase >= 2026 or unresolved), drives the template, the MDS item and the payload narrative.
   🛑 It no longer depends on "Innovation Use to be Determined": the block sits ABOVE the TBD question and shows either way (the TBD

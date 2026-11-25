@@ -29,12 +29,12 @@
         <app-pr-field-header
           [label]="currentUseCopy.title"
           [useColon]="false"
-          [description]="currentUseCopy.description"
           [showDescriptionLabel]="false"
           [required]="true">
         </app-pr-field-header>
 
-        <div class="flex flex-col gap-1 text-[13px]">
+        @if (hasPreviousUse) {
+        <div class="flex flex-col gap-1 text-[13px]" data-testid="iu-previous-use">
           <span class="font-semibold">{{ previousUseHeading }}</span>
           @if (previousUse.actors !== null) {
             <span>{{ currentUseCopy.categoryLabels.actors }}: <strong class="font-mono tabular-nums">{{ previousUse.actors }}</strong></span>
@@ -46,6 +46,7 @@
             <span>{{ measure.unit }}: <strong class="font-mono tabular-nums">{{ measure.quantity }}</strong></span>
           }
         </div>
+        }
 
         <app-pr-textarea
           [label]="narrativeLabel"

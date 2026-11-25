@@ -54,6 +54,12 @@ export function previousUseByCategory(previous: CurrentUsePrevious | null | unde
   return { actors: actors > 0 ? actors : null, organizations: organizations > 0 ? organizations : null, measures };
 }
 
+/** IU26 follow-up — true when the previous phase has at least one figure to show (actors, organizations or a measure line). */
+export function hasAnyPreviousFigure(previous: CurrentUsePrevious | null | undefined): boolean {
+  const byCategory = previousUseByCategory(previous);
+  return byCategory.actors !== null || byCategory.organizations !== null || byCategory.measures.length > 0;
+}
+
 /**
  * IU26-R-7 — totals per category from the current rows; never stored. Active rows only. A category without
  * rows is `null` / empty so the caller draws no tile. Households = `count_unit === 'households'`; every other

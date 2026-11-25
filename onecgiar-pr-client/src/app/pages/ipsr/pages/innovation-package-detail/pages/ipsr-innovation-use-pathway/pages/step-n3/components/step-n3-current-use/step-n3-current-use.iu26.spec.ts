@@ -73,6 +73,20 @@ describe('StepN3CurrentUseComponent — IU26', () => {
       expect(q('iu-previous-measures').textContent).toContain('Hectares');
     });
 
+    it('draws no previous-use heading when the previous holds only zero figures', () => {
+      const body = buildBody();
+      body.current_use_previous = { result_id: 1, phase_year: 2025, total_actors: 0, total_organizations: 0, measures: [{ unit: 'Hectares', quantity: 0 }] };
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        declarations: [StepN3CurrentUseComponent],
+        imports: [HttpClientTestingModule, CommonModule],
+        schemas: [NO_ERRORS_SCHEMA]
+      });
+      setup(2026, body);
+      expect(q('iu-previous-use')).toBeNull();
+      expect(el().textContent).not.toContain('Previous reported use');
+    });
+
     it('shows totals tiles without a Households tile', () => {
       expect(q('iu-totals')).toBeTruthy();
       expect(q('iu-total-actors-individuals').textContent).toContain('100');
