@@ -11,6 +11,7 @@ import {
   newUsersExceedsMessage,
   newUsersExceedsTotal,
   newUsersValue,
+  hasAnyPreviousFigure,
   previousUseByCategory,
   previousUsePhaseYear,
   totalsByCategory
@@ -215,6 +216,10 @@ export class StepN3CurrentUseComponent implements OnInit {
   }
 
   /** IU26-R-4 — the previous phase's figures per category, for reference only (null when the server sent none). */
+  hasPreviousUse(): boolean {
+    return hasAnyPreviousFigure(this.body?.current_use_previous);
+  }
+
   previousUseByCategory(): PreviousUseByCategory | null {
     const previous = this.body?.current_use_previous;
     return previous ? previousUseByCategory(previous) : null;

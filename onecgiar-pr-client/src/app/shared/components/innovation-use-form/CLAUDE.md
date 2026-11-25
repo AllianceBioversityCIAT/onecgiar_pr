@@ -157,10 +157,11 @@ available`, next to the existing `Sex and age disaggregation does not apply`. Ti
 - Rounding is safe by construction: non-youth is the remainder, so the halves always add to the
   total whatever the parity (7 → 4 + 3).
 
+
 ## §4 — the Current Use Update block (P2-3537, rewritten for 2026 by IU26)
 
 Rendered above the header / "to be determined" question (IU26-R-3), and only when phase >= 2026,
-not IPSR, and `body.current_use_previous` is not null. It shows **regardless of "to be determined"**.
+not IPSR, and `body.current_use_previous` is not null. It shows **regardless of "to be determined"**. IU26 follow-up: the "Previous reported use" heading + figures render only when `hasPreviousUse()` (`hasAnyPreviousFigure`); an all-zero previous leaves the narrative alone.
 
 | Piece | Where it comes from |
 |---|---|

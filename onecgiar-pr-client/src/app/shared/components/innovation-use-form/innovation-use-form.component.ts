@@ -10,6 +10,7 @@ import {
   newUsersByCategory,
   newUsersExceedsMessage,
   newUsersExceedsTotal,
+  hasAnyPreviousFigure,
   previousUseByCategory,
   totalsByCategory,
   type NewUsersByCategory,
@@ -272,6 +273,10 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
   }
 
   /** IU26-R-4 — the previous phase's figures per category, for reference only. */
+  hasPreviousUse(): boolean {
+    return hasAnyPreviousFigure(this.body?.current_use_previous);
+  }
+
   previousUseByCategory(): PreviousUseByCategory {
     return previousUseByCategory(this.body?.current_use_previous);
   }

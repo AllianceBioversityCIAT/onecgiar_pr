@@ -6,6 +6,7 @@
     <app-pr-field-header [label]="cuuCopy.title" [useColon]="false" [showDescriptionLabel]="false"></app-pr-field-header>
 
     @let previousUse = previousUseByCategory();
+    @if (hasPreviousUse()) {
     <div class="current_use_update__figure" data-testid="iu-previous-use">
       <strong>{{ previousUseHeading() }}</strong>
       @if (previousUse.actors !== null) {
@@ -23,6 +24,7 @@
         </div>
       }
     </div>
+    }
 
     <app-pr-textarea
       [label]="currentUseNarrativeLabel()"

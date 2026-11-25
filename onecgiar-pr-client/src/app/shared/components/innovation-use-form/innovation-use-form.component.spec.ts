@@ -1325,6 +1325,15 @@ describe('InnovationUseFormComponent', () => {
       expect(lines).toEqual(['Hectares 4,100', 'Trees planted 500']);
     });
 
+    it('IU26 follow-up: a previous with only zero figures draws no heading, the narrative stays', () => {
+      body.current_use_previous = { phase_year: 2025, total_actors: 0, total_organizations: 0, measures: [{ unit: 'Hectares', quantity: 0 }] };
+      const el = render();
+      expect(cuu(el)).not.toBeNull();
+      expect(el.querySelector('[data-testid="iu-previous-use"]')).toBeNull();
+      expect(cuu(el).textContent).not.toContain('Previous reported use');
+      expect(cuu(el).querySelector('app-pr-textarea')).not.toBeNull();
+    });
+
     it('IU26-R-3: organizations only still shows the CUU with "Organizations: N" and no Actors line', () => {
       body.current_use_previous = { phase_year: 2025, total_actors: 0, total_organizations: 4, measures: [] };
       const el = render();

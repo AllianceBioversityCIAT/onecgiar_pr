@@ -20,6 +20,7 @@ import { CURRENT_USE_UPDATE_COPY } from '../../../../../internationalization/cur
 import { ReportingDesignYear } from '../../../../../shared/enum/reporting-design-year.enum';
 import {
   isCurrentUseNarrativeComplete,
+  hasAnyPreviousFigure,
   previousUseByCategory,
   previousUsePhaseYear,
   PreviousUseByCategory,
@@ -319,6 +320,10 @@ export class TypeInnovationUseComponent implements OnInit {
 
   get previousUseHeading(): string {
     return this.currentUseCopy.previousUseHeading(previousUsePhaseYear(this.body.current_use_previous));
+  }
+
+  get hasPreviousUse(): boolean {
+    return hasAnyPreviousFigure(this.body.current_use_previous);
   }
 
   get previousUse(): PreviousUseByCategory {

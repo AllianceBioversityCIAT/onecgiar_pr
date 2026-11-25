@@ -6,8 +6,6 @@
  */
 export const CURRENT_USE_UPDATE_COPY = {
   title: 'Current Use Update',
-  description:
-    'This innovation was already reported before, so only the change since then is asked for here. The user categories below hold the cumulative total.',
   previousLabel: 'Previous reported use:',
   newUsersLabel: 'New users added during this reporting period',
   totalLabel: 'Total cumulative current use to date:',
