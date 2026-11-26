@@ -2109,3 +2109,130 @@ describe('TypeInnovationUseComponent', () => {
     });
   });
 });
+
+/**
+ * IWA-T-1 (changes/innovation-use-2026-w3-pooled-alignment) — these tests render the REAL template (no
+ * `overrideTemplate`): the claims are about DOM order, what is on screen and what the buttons say.
+ */
+describe('TypeInnovationUseComponent — W3 2026 pooled alignment (real template)', () => {
+  let fixture: ComponentFixture<TypeInnovationUseComponent>;
+  let component: TypeInnovationUseComponent;
+  let creation: any;
+  let autoSave: any;
+  let expandableState: any;
+  let bilateralApi: any;
+
+  const rows = () => ({
+    actors: [{ actor_type_id: 1, how_many: 3, sex_and_age_disaggregation: true, addressing_demands: 'x', is_active: true }],
+    organization: [{ institution_types_id: 20, how_many: 2, addressing_demands: 'y', is_active: true }]
+  });
+
+  const open = (year: number, extra: Record<string, unknown> = {}) => {
+    creation.reportingYear.set(year);
+    bilateralApi.GET_innovationUse.mockReturnValue(of({ response: { innov_use_to_be_determined: false, ...rows(), ...extra } }));
+    fixture = TestBed.createComponent(TypeInnovationUseComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  };
+
+  const root = (): HTMLElement => fixture.nativeElement;
+  const headers = () => Array.from(root().querySelectorAll('app-pr-field-header')).map(h => (h.textContent ?? '').trim());
+  const headerIndex = (label: string) => headers().findIndex(t => t.startsWith(label));
+  const headerCount = (label: string) => headers().filter(t => t.startsWith(label)).length;
+  const buttonLabels = () => Array.from(root().querySelectorAll('app-add-button')).map(b => (b.textContent ?? '').trim().replace(/add$/, ''));
+  const expandFullMetadata = () => {
+    component.showAllFields.set(true);
+    fixture.detectChanges();
+  };
+
+  beforeEach(async () => {
+    autoSave = { isReadOnly: signal(false), fieldStatus: signal<Record<string, string>>({}), schedulePayload: jest.fn(), openSection: signal<string | null>(null) };
+    creation = { currentResultId: signal<number | null>(123), reportingYear: signal<number | null>(2026), isEditableByCenterUser: () => true };
+    expandableState = { getShowAllFields: jest.fn().mockReturnValue(false), setShowAllFields: jest.fn() };
+    bilateralApi = {
+      GET_actorsTypes: jest.fn().mockReturnValue(of({ response: [{ actor_type_id: 1, name: 'Farmer' }] })),
+      GET_institutionsTypeTree: jest.fn().mockReturnValue(of({ response: [{ code: 20, name: 'Private sector', childrens: [] }] })),
+      GET_innovationUse: jest.fn().mockReturnValue(of({ response: {} })),
+      PATCH_innovationUse: jest.fn().mockReturnValue(of({}))
+    };
+    await TestBed.configureTestingModule({
+      imports: [TypeInnovationUseComponent],
+      providers: [
+        { provide: BilateralApiService, useValue: bilateralApi },
+        { provide: BilateralCreationService, useValue: creation },
+        { provide: BilateralMdsTrackerService, useValue: { setSectionFields: jest.fn() } },
+        { provide: BilateralAutoSaveService, useValue: autoSave },
+        { provide: BilateralExpandableStateService, useValue: expandableState },
+        { provide: InnovationControlListService, useValue: { useLevelsList: [{ id: '1', level: 0, name: 'No use' }] } },
+        { provide: QaInnovationDevelopmentResultsService, useValue: { options: signal([]), load: jest.fn() } }
+      ]
+    }).compileComponents();
+  });
+
+  it('IWA-R-1: 2026 with full metadata collapsed lists Actors, Organizations, Other measures in that order, Organizations once', () => {
+    open(2026);
+    expect(component.showAllFields()).toBe(false);
+    const actors = headerIndex('Actors');
+    const orgs = headerIndex('Organizations');
+    const others = headerIndex('Other quantitative measures');
+    expect(actors).toBeGreaterThanOrEqual(0);
+    expect(orgs).toBeGreaterThan(actors);
+    expect(others).toBeGreaterThan(orgs);
+    expect(headerCount('Organizations')).toBe(1);
+    expandFullMetadata();
+    expect(headerCount('Organizations')).toBe(1);
+  });
+
+  it('IWA-R-1: 2025 keeps Organizations inside full metadata only', () => {
+    open(2025);
+    expect(headerCount('Organizations')).toBe(0);
+    expandFullMetadata();
+    expect(headerCount('Organizations')).toBe(1);
+  });
+
+  it('IWA-R-1: 2026 with "to be determined" ticked renders no Organizations in the main block', () => {
+    open(2026, { innov_use_to_be_determined: true });
+    expect(headerCount('Organizations')).toBe(0);
+  });
+
+  it('IWA-R-2: "Addressing demands" is hidden on actor and organization cards in 2026, shown in 2025', () => {
+    open(2026);
+    expect(root().textContent).not.toContain('Addressing demands');
+    expandFullMetadata();
+    expect(root().textContent).not.toContain('Addressing demands');
+    fixture.destroy();
+    open(2025);
+    expandFullMetadata();
+    expect((root().textContent ?? '').match(/Addressing demands/g)?.length).toBe(2);
+  });
+
+  it('IWA-R-2: a hidden addressing_demands is still sent, untouched, when the row is edited (actor and organization)', () => {
+    open(2026);
+    component.visibleActors[0].how_many = 9;
+    component.visibleOrganizations[0].how_many = 7;
+    component.onFieldChange();
+    const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+    expect((payload as any).innovatonUse.actors[0].addressing_demands).toBe('x');
+    expect((payload as any).innovatonUse.actors[0].how_many).toBe(9);
+    expect((payload as any).innovatonUse.organization[0].addressing_demands).toBe('y');
+  });
+
+  it('IWA-R-3: 2026 buttons read Add actor / Add organization / Add other; 2025 keeps "Add another …"', () => {
+    open(2026);
+    expect(buttonLabels()).toEqual(expect.arrayContaining(['Add actor', 'Add organization', 'Add other']));
+    expect(buttonLabels()).not.toContain('Add another actor');
+    expect(buttonLabels()).not.toContain('Add another organization');
+    fixture.destroy();
+    open(2025);
+    expandFullMetadata();
+    expect(buttonLabels()).toEqual(expect.arrayContaining(['Add another actor', 'Add another organization', 'Add other']));
+  });
+
+  it('IWA-R-1: Organizations never enter the MDS field list in 2026 (pre-change list)', () => {
+    const tracker = { setSectionFields: jest.fn() };
+    TestBed.overrideProvider(BilateralMdsTrackerService, { useValue: tracker });
+    open(2026, { current_use_previous: null });
+    const keys = tracker.setSectionFields.mock.calls.at(-1)[1].map((f: any) => f.key);
+    expect(keys).toEqual(['use-actors', 'use-measures', 'use-investment']);
+  });
+});

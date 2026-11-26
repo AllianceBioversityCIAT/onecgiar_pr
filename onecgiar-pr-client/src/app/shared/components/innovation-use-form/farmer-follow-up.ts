@@ -43,13 +43,13 @@ export const FARMER_FOLLOW_UP_COPY = {
       value: FARMER_USE_NATURE.INFORMATION_RECEIVED,
       label: 'Actors who received information, advice or inputs',
       description:
-        'Advisories delivered face-to-face, by SMS, radio/media or a digital platform; climate advisories; market information; dietary guidelines; starter kits, vouchers or other incentives. Receipt is documented; application of the innovation is not confirmed.'
+        'Advisories delivered face-to-face, by SMS, radio/media or a digital platform; market information; dietary guidelines; starter kits, vouchers or other incentives. Receipt is documented; application of the innovation is not confirmed.'
     },
     {
       value: FARMER_USE_NATURE.INNOVATION_APPLIED,
       label: 'Actors who applied the innovation',
       description:
-        'Grew a variety, applied a practice, actively used a digital tool or service, took up a product. Application is supported by the attached evidence (survey, plot observation, purchase records, platform logs).'
+        'Grew a variety, applied a practice, took up a product. Application is supported by the attached evidence (survey, plot observation, purchase records, platform logs).'
     }
   ]
 } as const;
