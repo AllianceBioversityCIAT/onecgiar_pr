@@ -46,7 +46,9 @@ const tagField = (
 const IMPACT_AREA_LABEL =
   'Which component of the Impact Area is this result intended to impact?';
 
-// One control list per impact area (decided 2026-10-06, Santiago): no join filter on the binding.
+// One control list per impact area (decided 2026-10-06, Santiago). P2-4108: each list is CLOSED to its own area's component ids
+// (closed-control-lists.ts) and a closed list is a row filter of the read (QRF-DD-13), so each field reads only the score rows of
+// its own area, as the form shows them. `is_active` leaves out the rows the form deselected, like the form's own read.
 // QAC-T-26: the form shows the component picker only when the tag is Principal (3), the same gate as the requirement
 // (rd-general-information.component.html:146 gender, :195 climate, :244 nutrition, :297 environment, :346 poverty;
 // each `@if (<tag>_tag_id == 3)`), so `visible_when` equals `required_when`.
@@ -73,6 +75,7 @@ const impactAreaField = (
     table: 'result_impact_area_score',
     fk_to_result: 'result_id',
     value_column: 'impact_area_score_id',
+    filter: { is_active: true },
   },
 });
 
