@@ -1,0 +1,32 @@
+diff --git a/onecgiar-pr-server/package.json b/onecgiar-pr-server/package.json
+index 89c71f50a..e02f40696 100644
+--- a/onecgiar-pr-server/package.json
++++ b/onecgiar-pr-server/package.json
+@@ -16,7 +16,7 @@
+     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+     "test": "jest --forceExit",
+     "test:watch": "jest --watch",
+-    "test:cov": "jest --coverage",
++    "test:cov": "jest --coverage --logHeapUsage",
+     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+     "test:e2e": "jest --verbose false --config ./test/jest-e2e.json --detectOpenHandles",
+     "typeorm": "ts-node ./node_modules/typeorm/cli.js",
+@@ -144,10 +144,17 @@
+       "cobertura",
+       "lcov"
+     ],
++    "maxWorkers": 2,
++    "workerIdleMemoryLimit": "1GB",
+     "rootDir": "src",
+     "testRegex": ".*\\.spec\\.ts$",
+     "transform": {
+-      "^.+\\.(t|j)s$": "ts-jest"
++      "^.+\\.(t|j)s$": [
++        "ts-jest",
++        {
++          "isolatedModules": true
++        }
++      ]
+     },
+     "collectCoverageFrom": [
+       "**/*.(t|j)s",

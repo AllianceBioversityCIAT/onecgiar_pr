@@ -572,3 +572,16 @@ Leader setup: `akili doctor --agents` → implementer/reviewer CURRENT; `leader.
 - **RBX-T-8:** all three steps are recorded.
   - Still open (user): review the copy and forward it to Nicoleta before she schedules the PROD send (DEP-2).
   - The task stays open on that DoD item alone.
+
+### RBX-T-5 / RBX-T-8: HITL. Copy review and closure (2026-11-26)
+
+- **prdb re-check** (user, DBeaver screenshots in session): `replicated_innovation_reminder_exclusion` active rows = **114**; the 4 RIR templates `has_breeding = 0`.
+- **Admin › Reminders on PRTest** (user screenshot): pending **131**, without a reachable recipient **4**; the 2026-11-26 Q4 notice shows 18 sent · 4 unreachable.
+- **Real campaign-14 emails** (Leader, Microsoft 365 connector, read-only; addresses not copied here):
+  - CENTER (IWMI): no breeding paragraph; closure "mid-February 2027".
+  - MELIA_SUMMARY (SP08): no breeding paragraph; closure "end of January 2027"; developer column present.
+  - DEVELOPER (package 8057): To = its Lead contact with one MELIA in copy; row `8057 · Innovation package · SP07 – Policy Innovations`; links to `ipsr/detail/8057/general-information?phase=37`.
+  - No unrendered `{{…}}` in any of them.
+- **Package link** (Leader, Claude in Chrome, user's PRTest session, read-only): opens the IPSR 2026 detail of 8057 (Editing, SP07).
+- **Cosmetic notes, not changed (user accepted the copy as is):** "1 innovation(s)" does not singularise; the greeting uses the `ad_users` "Surname, Name" form; the Center copy says "reported in 2025" while the developer/MELIA copy says "reported in previous years" (v3 wording).
+- **Copy approved by the user** ("copy aprobado", 2026-11-26). RBX-T-5 and RBX-T-8 closed. DEP-2 stays open outside this spec: Nicoleta reviews the copy before she schedules the PROD send.
