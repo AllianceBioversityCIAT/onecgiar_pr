@@ -358,9 +358,6 @@
 
   <!-- No in-section Save: every change is staged and the footer's Save draft persists the section
      (explicit-save model, 2026-09-03). The old button only re-staged what was already staged. -->
-  <!-- One actor card and one organization card, shared by current use and the 2030 Use Projection
-       (P2-3428) so the two lists cannot drift. `required` is true only for the MDS actors above; the
-       projection lives in full metadata and shows no REQUIRED marker. -->
   <!-- IWA-R-1 — Organizations (optional). One definition, rendered in the main block (2026+) or in full metadata (before 2026). -->
   <ng-template #organizationsBlock>
     <div>
@@ -381,6 +378,8 @@
     </div>
   </ng-template>
 
+  <!-- One actor card and one organization card for the current-use rows (P2-3428; the 2030 Use Projection
+       that also used them was removed for W3 in INC-168060). `required` is true only for the MDS actors. -->
   <ng-template #actorCard let-actor let-required="required">
     <div class="flex items-start gap-2">
       <div class="min-w-0 flex-1">
