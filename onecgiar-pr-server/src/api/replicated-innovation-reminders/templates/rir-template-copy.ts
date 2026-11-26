@@ -5,7 +5,8 @@
  * ## FROZEN
  *
  * Do not edit `buildRirTemplatesV2()` or `buildRirTemplatesV3()` once released. A later copy
- * change adds a new version (`buildRirTemplatesV4`) and a new migration. Editing a version here
+ * change adds a new version (v4 is the latest: `buildRirTemplatesV4`, v3 minus the breeding
+ * paragraph, shipped by `1793700000000`) and a new migration. Editing a version here
  * breaks the migration that seeded it and the `down` that restores it.
  *
  * - v2 reproduces the bodies in PROD before SR-167303: the output of the builders of
@@ -20,6 +21,7 @@
  *   the Center SP column header for the 2026-11-25 copy (design.md section 6.5). Years are
  *   Handlebars variables (`phaseYear`, `previousYear`, `nextYear`, `nextNextYear`), so the copy
  *   is year-agnostic (DD-4).
+ * - v4 is derived from v3 at call time by removing the breeding paragraph (RBX-R-8).
  *
  * Pure functions: no I/O.
  */
@@ -270,4 +272,33 @@ export function buildRirTemplatesV3(): RirTemplateBodies {
     [RIR_MELIA_TEMPLATE_NAME]: melia,
     [RIR_CENTER_TEMPLATE_NAME]: center,
   };
+}
+
+// ---------------------------------------------------------------------------------------
+// v4 (SR-167303, Nicoleta's answer of 2026-11-26): v3 without the breeding paragraph.
+// B4T contacts the Centers about breeding lines and varieties itself, so no email mentions them.
+// Everything else (intros, column header, dates, links) is v3, byte for byte.
+// ---------------------------------------------------------------------------------------
+
+/** The breeding paragraph of a v3 tail and the blank line after it. */
+const BREEDING_PARAGRAPH =
+  /<p>If (?:you|your Center) reported breeding lines[^]*?<\/p>\n\n/;
+
+function withoutBreedingParagraph(body: string): string {
+  const out = body.replace(BREEDING_PARAGRAPH, '');
+  if (out === body) {
+    // v3 is frozen, so this only fires if someone edits it; fail instead of shipping v3 as v4.
+    throw new Error('RIR copy v4: breeding paragraph not found in the v3 body');
+  }
+  return out;
+}
+
+export function buildRirTemplatesV4(): RirTemplateBodies {
+  const v3 = buildRirTemplatesV3();
+  return Object.fromEntries(
+    Object.entries(v3).map(([name, body]) => [
+      name,
+      withoutBreedingParagraph(body),
+    ]),
+  );
 }
