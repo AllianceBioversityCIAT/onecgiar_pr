@@ -222,7 +222,7 @@ Fill `Review:` using the table in `general-setup/task.md`.
 - **Skills:** —
 - **Definition of done:**
   - [ ] The three steps are recorded in `execution.md`, with the counts quoted.
-  - [ ] P-6 is settled.
+  - [x] P-6 is settled (2026-11-26: the PRTest email links 8057 to `ipsr/detail/8057/general-information?phase=37`, which opens the package; see `execution.md` → RBX-T-8 step 3 check).
   - [ ] Copy reviewed by the user. The first real PROD send happens only after Nicoleta's look (DEP-2).
 
 ### Pivot P-1 (2026-11-26) — Nicoleta's answers to RBX-OQ-1 and RBX-OQ-4
@@ -267,7 +267,7 @@ Recorded in `execution.md` § Pivot P-1. RBX-T-1..T-4 stay done; v3 is applied o
 - **Description:** (0) `npm run migration:check` against prdb (moved here from RBX-T-7 on 2026-11-26: no local MySQL, probe recorded in RBX-T-7). (1) prdb: `1793700000000` up → down → up; after up no body contains "breeding" (case-insensitive), after down the bodies equal v3. (2) Dry-run preview on prdb: W1/W2 packages with a lead contact appear in DEVELOPER messages to that address with MELIA in CC; packages without one in MELIA summaries. (3) PRTest Send now to the redirect address: the "Intended recipients" notice of a package email names the lead contact and the MELIA CC. Supersedes RBX-T-5 step 1's "contain Breeding for Tomorrow" check for the final state.
 - **Implements:** RBX-R-7, RBX-R-8 (real data, human check)
 - **Depends on:** RBX-T-6, RBX-T-7
-- **Definition of done:** [ ] three steps recorded in `execution.md` · [ ] copy reviewed by the user before Nicoleta schedules
+- **Definition of done:** [x] three steps recorded in `execution.md` · [ ] copy reviewed by the user before Nicoleta schedules
 
 ## 4. Dependency graph
 

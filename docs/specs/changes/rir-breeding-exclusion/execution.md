@@ -529,3 +529,46 @@ Leader setup: `akili doctor --agents` → implementer/reviewer CURRENT; `leader.
   - The 4 W1/W2 packages without a lead contact went to their SP's MELIA summary.
 - **Step 2 result:** PASS (RBX-R-7 on real data: lead contact as To with MELIA in CC; no lead contact → MELIA summary; RBX-R-6 total unchanged).
 - **Step 3 (PRTest Send now):** needs this branch deployed to PRTest, which needs a commit + push. Waiting for the user's explicit go-ahead.
+
+### RBX-T-8: HITL. Step 3 (pre-check): local render of the real messages with the prdb v4 templates (2026-11-26, Leader-run, read-only, nothing sent)
+
+- **Method:** a scratchpad script compiles the four `template` rows read from prdb with the `plan(36)` messages, using the same template data shape as `sendMessage`. HTML is written to the session scratchpad with addresses masked. No email is sent.
+- **DEVELOPER (package to its lead contact):** to 1, cc 1, 1 package row. No breeding text. "end of January 2027" present. No unrendered `{{…}}`.
+- **MELIA_SUMMARY with a package:** 5 rows (1 package). No "breeding lines" paragraph; the only "Breeding" hits are the SP name "SP01 – Breeding for Tomorrow" (data, not copy).
+- **CENTER:** 3 rows. No paragraph; "mid-February 2027" present. Again only the SP01 name matches.
+- **Not observable locally:** the package link. The local `.env` has no `RESULTS_URL`, so the render shows `undefined8057/general-information?phase=37` (a local artifact, not a code path difference). The link shape stays covered by the RBX-T-4 `buildResultUrl` specs and by the PRTest check (P-6).
+- **Remaining for step 3:** Send now on PRTest, run by the user (needs an authenticated admin session, and it sends mail to the redirect address). Check the package link opens `ipsr/detail/…`.
+
+### RBX-T-8: HITL. Step 3: real dispatch on PRTest (2026-11-26, user-authorised: "hazlo tu mismo te autorizo")
+
+- **Why the Leader used the cron path:**
+  - Send now needs an authenticated admin session; the Leader has neither a browser nor credentials, and does not forge a JWT.
+  - Instead, the Leader checked prdb read-only: `rir_test_recipient_email` set = 1, no open campaign on version 36.
+  - It then inserted one campaign row: `INSERT INTO replicated_innovation_reminder_campaign (version_id, kind, scheduled_at, status) VALUES (36, 'Q4_NOTICE', UTC_TIMESTAMP(), 'PENDING')` → **id 14**, scheduled 2026-11-26 21:59:19 UTC.
+  - PRTest's hourly cron (`CronExpression.EVERY_HOUR`) dispatched it with the deployed `performance-refactor` code and PRTest's own env.
+- **Result (prdb, read-only poll):** campaign 14 `SENT` at 2026-11-26 22:00:01 UTC · sent 18 · skipped 0 · failed 0 · unreachable 4 · last_error null.
+- **Send log by type:** CENTER 9, DEVELOPER 2, MELIA_SUMMARY 7. All 18 are `redirected` (non-prod: every email went to the test address).
+- **Agreement with step 2:** identical to the `plan(36)` preview (DEVELOPER 2 / MELIA_SUMMARY 7 / CENTER 9, unreachable 4). RBX-R-6 holds across preview and real dispatch on the deployed code.
+- **Open (user):**
+  - Open the DEVELOPER email carrying the package in the test inbox. "Intended recipients" should name the lead contact, with MELIA in copy.
+  - Click the package link; it should open `ipsr/detail/…`. This settles P-6.
+  - Read the copy: no breeding paragraph.
+
+### RBX-T-8: HITL. Step 3 check: the real email and the package link (2026-11-26, Leader-run, read-only)
+
+- **Method:**
+  - The test inbox was read through the Microsoft 365 connector. The 18 campaign-14 emails arrived at 17:00 UTC (22:00 in the prdb `sent_at`, which is stored in local time). Every one carries the "Intended recipients (test message)" notice.
+  - PRTest was opened in the user's logged-in Chrome session (Claude in Chrome), reading only; nothing was clicked or saved.
+  - Addresses are not copied into this log.
+- **DEVELOPER email with package 8057** (campaign 14):
+  - "Intended recipients": To = the package's lead contact (IWMI), with one SP MELIA in copy. **RBX-R-7 holds on the deployed code.**
+  - Greeting: the lead contact's own name from `ad_users`, not "colleague".
+  - Row: `8057 · Innovation package · SP07 – Policy Innovations`. Both links go to `https://prtest.ciat.cgiar.org/ipsr/detail/8057/general-information?phase=37`.
+  - Copy: no breeding paragraph, no "varieties"; the closure reads "end of January 2027". **RBX-R-8 holds.**
+- **Package link:**
+  - In the user's PRTest session the URL opens the IPSR detail of 8057: phase "IPSR 2026", tab "General information", the same title, status Editing, submitter SP07.
+  - **P-6 settled:** a package link opens `ipsr/detail/…`, not result-detail.
+- **Step 3 result:** PASS.
+- **RBX-T-8:** all three steps are recorded.
+  - Still open (user): review the copy and forward it to Nicoleta before she schedules the PROD send (DEP-2).
+  - The task stays open on that DoD item alone.
