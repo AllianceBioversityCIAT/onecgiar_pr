@@ -655,3 +655,92 @@ describe('build with opted-in Centers (RCF-T-2)', () => {
     expect(out.unreachable).toEqual([]);
   });
 });
+
+// SR-167303 (Nicoleta, 2026-11-26): Innovation packages go to the Lead contact person, MELIA in copy.
+describe('build: innovation packages (type 10)', () => {
+  const pkg = (over: Partial<PendingInnovationRowV2> = {}) =>
+    row({ result_type_id: 10, developer_text: null, ...over });
+
+  it('sends a package to its lead contact, with the SP MELIA in copy and the lead name as greeting', () => {
+    const out = build(
+      input({
+        rows: [pkg({ lead_email: 'Lia@X.org ', lead_name: 'Lia Lead' })],
+        meliaByInitiative: new Map([[1, mel('m1@x.org', 'm2@x.org')]]),
+      }),
+    );
+    expect(out.unreachable).toEqual([]);
+    expect(out.messages).toHaveLength(1);
+    const [m] = out.messages;
+    expect(m.type).toBe('DEVELOPER');
+    expect(m.messageKey).toBe('DEVELOPER:lia@x.org');
+    expect(m.to).toEqual(['lia@x.org']);
+    expect(m.cc).toEqual(['m1@x.org', 'm2@x.org']);
+    expect(m.greetingName).toBe('Lia Lead');
+  });
+
+  it('does not require a PRMS account for the lead contact', () => {
+    const out = build(
+      input({
+        rows: [pkg({ lead_email: 'lia@x.org', lead_name: 'Lia' })],
+        activeUsers: new Map(),
+      }),
+    );
+    expect(out.messages.map((m) => m.to)).toEqual([['lia@x.org']]);
+  });
+
+  it('merges a package into the same email when the lead contact also develops an innovation', () => {
+    const out = build(
+      input({
+        rows: [
+          row({
+            result_id: 1,
+            result_code: 100,
+            developer_text: 'Lia <lia@x.org>',
+          }),
+          pkg({
+            result_id: 2,
+            result_code: 200,
+            lead_email: 'lia@x.org',
+            lead_name: 'Lia AD',
+          }),
+        ],
+        activeUsers: users('lia@x.org'),
+      }),
+    );
+    expect(out.messages).toHaveLength(1);
+    expect(out.messages[0].results.map((r) => r.result_id)).toEqual([1, 2]);
+    // The PRMS account name wins over the AD display name.
+    expect(out.messages[0].greetingName).toBe('User lia');
+  });
+
+  it('falls back to the MELIA summary when the package has no lead contact', () => {
+    const out = build(
+      input({
+        rows: [pkg({ lead_email: null })],
+        meliaByInitiative: new Map([[1, mel('m1@x.org')]]),
+      }),
+    );
+    expect(out.messages).toHaveLength(1);
+    expect(out.messages[0].type).toBe('MELIA_SUMMARY');
+    expect(out.messages[0].to).toEqual(['m1@x.org']);
+  });
+
+  it('is unreachable when it has no lead contact and the SP has no MELIA', () => {
+    const out = build(input({ rows: [pkg({ lead_email: '  ' })] }));
+    expect(out.messages).toEqual([]);
+    expect(out.unreachable.map((u) => u.reason)).toEqual(['NO_MELIA']);
+  });
+
+  it('still goes to the Center focal points when its lead Center is opted in', () => {
+    const out = build(
+      input({
+        rows: [pkg({ lead_email: 'lia@x.org', lead_center_code: 'C1' })],
+        optedInCenters: new Set(['C1']),
+        centerMelByCenter: new Map([['C1', mel('c@x.org')]]),
+      }),
+    );
+    expect(out.messages.map((m) => [m.type, m.to])).toEqual([
+      ['CENTER', ['c@x.org']],
+    ]);
+  });
+});
