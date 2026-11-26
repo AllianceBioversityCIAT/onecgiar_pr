@@ -7,7 +7,8 @@
 | Spec Path | `changes/rir-breeding-exclusion` |
 | Depth | Standard |
 | Approval Mode | gated |
-| Requirements | `requirements.md` (RBX-R-1 … RBX-R-6), approved 2026-11-25 |
+| Requirements | `requirements.md` (RBX-R-1 … RBX-R-6), approved 2026-11-25; RBX-R-7 and RBX-R-8 added by Pivot P-1, approved 2026-11-26 |
+| Amended | 2026-11-26 during `/akili-validate`: §2, §3, §6.2, §6.4, §6.5, §6.6 and DD-9/DD-10 brought in line with Pivot P-1 (packages to the Lead contact person; copy v4 without the breeding paragraph) |
 | Verified at | `093655d2c` (`origin/qa-development-2026-ss`) |
 | Skills | `nestjs-expert`; backend route: data change via raw-SQL repository + TypeORM migration (no `backend-routing.md` in this repo — project conventions) |
 
@@ -26,12 +27,13 @@ Admin GET / preview / cron / Send now
         └── ReminderDispatcher.plan(versionId)          (unchanged entry)
               └── PendingInnovationRepository.findPending(versionId)   ← DD-1, DD-2
                     rows (2/7 Reporting  ∪  10 IPSR same year) − exclusion list
-              └── digest-builder.build(...)              (unchanged routing; 10 → MELIA branch)
+              └── digest-builder.build(...)              ← DD-9 (P-1): W1/W2 type 10 → lead contact (DEVELOPER:<email>)
         └── dispatch(): template data per row            ← DD-3, DD-4
               resultTypeName (10 = "Innovation package"), resultUrl (buildResultUrl),
               previousYear / nextNextYear
 template table rows  ← migration 1793600000000 (v3 up / v2 down)   ← DD-5, DD-6
 replicated_innovation_reminder_exclusion  ← same migration (table + 114-code seed)
+template table rows  ← migration 1793700000000 (v4 up / v3 down)   ← DD-10 (P-1)
 ```
 
 ## 3. Extended Directory Structure
@@ -40,13 +42,16 @@ replicated_innovation_reminder_exclusion  ← same migration (table + 114-code s
 onecgiar-pr-server/src/
 ├── api/replicated-innovation-reminders/
 │   ├── entities/replicated-innovation-reminder-exclusion.entity.ts      NEW (DD-2)
-│   ├── templates/rir-template-copy.ts                                    NEW (DD-5): frozen v2 + v3 builders
+│   ├── templates/rir-template-copy.ts                                    NEW (DD-5): frozen v2 + v3 builders; v4 derived (DD-10)
 │   ├── templates/rir-template-copy.spec.ts                               NEW
 │   ├── templates/rir-breeding-exclusion-codes.ts                         NEW (DD-2): the 114 codes + reason
 │   ├── templates/rir-breeding-exclusion-codes.spec.ts                    NEW
+│   ├── digest-builder.ts (+ .spec.ts)                                    MODIFIED (DD-9, Pivot P-1)
 │   ├── repositories/pending-innovation.repository.ts (+ .spec.ts)        MODIFIED (DD-1)
 │   └── reminder-dispatcher.service.ts (+ .spec.ts)                       MODIFIED (DD-3, DD-4)
-└── migrations/1793600000000-RIR-BreedingExclusionCopyV3.ts               NEW (DD-6)
+└── migrations/
+    ├── 1793600000000-RIR-BreedingExclusionCopyV3.ts                      NEW (DD-6)
+    └── 1793700000000-RIR-CopyV4NoBreedingNote.ts                         NEW (DD-10, Pivot P-1)
 ```
 
 ## 4. Data Model
@@ -82,7 +87,14 @@ An IPSR phase "active" means `is_active = 1` and `status = 1` (open). When IPSR 
 
 ### 6.2 Routing
 
-No change. Type 10 is not 7, so in `digest-builder` it takes the non-type-7 branch (P-5): W1/W2 go to the MELIA summary and W3 to the Center. The RCF opt-in runs first, as today. Only the comment there is updated to name type 10.
+*(Amended for Pivot P-1, RBX-R-7. The original text, "No change … W1/W2 go to the MELIA summary", is superseded.)*
+
+Order inside `digest-builder.build` for each row:
+
+1. **RCF opt-in first** (unchanged): a row led by an opted-in Center goes to that Center's email, whatever its type or source.
+2. **W3** (`source = 'API'`) (unchanged): to the lead Center, or unreachable `NO_CENTER`.
+3. **W1/W2 type 10 (new, DD-9):** to the package's **Lead contact person**, the `lead_email` that `findPending` already returns (`result.lead_contact_person_id` → active `ad_users.mail`). It shares the per-person `DEVELOPER:<email>` message with any type-7 that person develops, and the active MELIA of every SP listed is in CC (the recipient is removed from their own CC). No PRMS account is required. The greeting uses the PRMS account name, else the AD display name (`lead_name`), else "colleague". With no lead address, the package falls back to the SP MELIA summary, and to unreachable `NO_MELIA` when that SP has no MELIA.
+4. **W1/W2 type 2 / type 7:** unchanged (`INNOVATION_USE_ROUTING`, developer parsing).
 
 ### 6.3 Presentation (DD-3, DD-4)
 
@@ -94,14 +106,17 @@ No change. Type 10 is not 7, so in `digest-builder` it takes the non-type-7 bran
 
 ### 6.4 Copy (DD-5)
 
-`templates/rir-template-copy.ts` exports `buildRirTemplatesV2()` and `buildRirTemplatesV3()`. Each returns the four bodies keyed by template name.
+`templates/rir-template-copy.ts` exports `buildRirTemplatesV2()`, `buildRirTemplatesV3()` and, since Pivot P-1, `buildRirTemplatesV4()`. Each returns the four bodies keyed by template name.
 
 - **v2** reproduces the bodies in PROD today. That is the `1791700000000` builders' output with the `1791900000000` linked-cell replacement and the `1793400000000-RCF-CenterRouting` Center-intro replacement (`{{resultCount}} bilateral innovation(s)` → `{{resultCount}} innovation(s)`) applied. Its spec proves this by running all three landed migrations against a capturing fake query runner (DD-7). *(Amended 2026-11-25 during RBX-T-1: the RCF migration was missing from this list; found by the T-1 Reviewer.)*
 - **v3** reuses the v2 shell head unchanged (header, styles, redirect notice, kind label, linked ID) and swaps the intros, tails and Center SP header for Nicoleta's 25-Nov text (§6.5).
+- **v4 (DD-10, Pivot P-1)** is derived at call time: v3 with its single breeding paragraph removed (`<p>If (you|your Center) reported breeding lines…</p>`). It throws if the paragraph is not found, so a drift in v3 fails loudly. Nothing else changes (RBX-R-8).
 
 The file header states that it is **frozen**: a later copy change adds a new version and a new migration and never edits v2 or v3. That keeps the migration reproducible.
 
 ### 6.5 v3 text (verbatim targets; years are Handlebars variables)
+
+*Pivot P-1: the breeding paragraphs below (developer/MELIA item 3, Center item 1) are **superseded by RBX-R-8**. They exist in v3 (the `down` target of `1793700000000`) and are absent from v4, the copy in effect.*
 
 **Developer digest (Q4 and final share one body), and the MELIA summary body.**
 
@@ -143,6 +158,12 @@ The file header states that it is **frozen**: a later copy change adds a new ver
 
 It re-runs safely: a second `up` changes no row count and rewrites identical bodies.
 
+`1793700000000-RIR-CopyV4NoBreedingNote` (DD-10, Pivot P-1):
+
+- **`up`:** UPDATE the four template rows by name to the v4 bodies.
+- **`down`:** UPDATE them back to the v3 bodies, byte for byte.
+- It touches no exclusion row and re-runs safely.
+
 ## 7. Frontend / UX Component Architecture
 
 None. No client change.
@@ -163,6 +184,8 @@ None. `/api/bilateral/*` is untouched, so the W3 form ↔ API ↔ Fetcher rule d
 | DD-6 | One migration for table, seed and copy | One `down`, one release step. Rejected: two migrations, which would need two prdb up/down/up checks | R-5 |
 | DD-7 | v2 equality proven by executing the three landed migrations that write RIR template bodies (`1791700000000`, `1791900000000`, `1793400000000`) against a capturing fake runner (amended 2026-11-25) | Byte-exact `down` without editing landed migrations (`src/CLAUDE.md` §9: never edit a migration in master) | R-5 |
 | DD-8 | IPSR "active" = `is_active = 1` and `status = 1` | Do not remind about packages in a closed phase. Rejected: `is_active` only | R-2 |
+| DD-9 | (Pivot P-1) W1/W2 packages routed to the lead contact inside the existing per-person DEVELOPER message | Nicoleta's answer to OQ-1. Reusing `DEVELOPER:<email>` keeps one email per person and needs no new message type or template. `lead_email` was already selected. Rejected: a new PACKAGE message type (a fifth template, and two emails for a person who is both lead and developer) | R-7 |
+| DD-10 | (Pivot P-1) v4 as a derivation of frozen v3 plus a new migration | v3 was already applied on prdb (migration id 574), and the copy module is frozen. Rejected: editing v3 or `1793600000000` | R-8 |
 
 **Reversion challenge (Step 2.3).** DD-5 replaces the v2 copy, which is already delivered behaviour. Question: what does removing v2 break? Two things:
 
