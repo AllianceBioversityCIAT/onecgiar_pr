@@ -225,12 +225,58 @@ Fill `Review:` using the table in `general-setup/task.md`.
   - [ ] P-6 is settled.
   - [ ] Copy reviewed by the user. The first real PROD send happens only after Nicoleta's look (DEP-2).
 
+### Pivot P-1 (2026-11-26) — Nicoleta's answers to RBX-OQ-1 and RBX-OQ-4
+
+Recorded in `execution.md` § Pivot P-1. RBX-T-1..T-4 stay done; v3 is applied on prdb (migration id 574), so the copy change is a v4 plus a new migration, never an edit of v3 (frozen module, P-11 spirit).
+
+> Process note: a draft of RBX-T-6 and RBX-T-7 was written by the Leader session **before** this Pivot was approved (AKILI order skipped). It is in the working tree, uncommitted, and is treated as an Implementer draft: it does not count as done until the Pivot is approved and the Reviewer passes it.
+
+### [x] RBX-T-6 — Package routing to the Lead contact person
+
+- **Type:** logic (pure builder)
+- **Description:** In `digest-builder.ts` `build`, a W1/W2 type-10 row (after the RCF opt-in check) goes to `byDeveloper` keyed by the normalised `lead_email` (already selected by `findPending`: `ad_users.mail` with `is_active = 1`), with the AD display name kept for the greeting when the address has no PRMS account name. No `lead_email` → `noDeveloper` (MELIA summary). Type 2 keeps INNOVATION_USE_ROUTING. No repository or dispatcher change.
+- **Implements:** RBX-R-7 (all scenarios)
+- **Depends on:** — · **Blocks:** RBX-T-8
+- **Estimate:** S
+- **Review:** full (Reviewer)
+- **Verification:**
+  - **Falsifier:** route type 10 back through INNOVATION_USE_ROUTING → the "lead contact" specs fail; drop the `leadNames` fallback → the greeting spec fails; move the type-10 branch above the opt-in check → the "opted-in Center still wins" spec fails.
+  - **Red run:** the Implementer records each falsifier's observed red in `execution.md`. Command: `npx jest src/api/replicated-innovation-reminders/digest-builder --maxWorkers=2 --silent`.
+  - **Consumers:** `ReminderDispatcher.plan` (dispatch, dry-run preview, admin counts): one build path, so RBX-R-6 holds. The existing dispatcher spec with a type-10 row and no `lead_email` (MELIA render) must stay green.
+- **Skills:** `nestjs-expert`, `tdd`
+- **Definition of done:** [x] specs green · [x] reds recorded · [x] Reviewer PASS
+
+### [x] RBX-T-7 — Copy v4 (no breeding paragraph) and migration `1793700000000-RIR-CopyV4NoBreedingNote`
+
+- **Type:** data (copy + migration)
+- **Description:** Append `buildRirTemplatesV4()` to `templates/rir-template-copy.ts` = each v3 body with the breeding paragraph removed (throws if it is not found, so an edited v3 can never ship as v4). New migration: `up` writes v4 to the four RIR rows by name, `down` writes v3. v2/v3 builders untouched.
+- **Implements:** RBX-R-8
+- **Depends on:** — · **Blocks:** RBX-T-8
+- **Estimate:** S
+- **Review:** full (Reviewer)
+- **Verification:**
+  - **Falsifier:** make `buildRirTemplatesV4` return v3 → the "no breeding text" spec fails; swap up/down in the migration → the migration spec fails.
+  - **Red run:** recorded in `execution.md`. Command: `npx jest src/api/replicated-innovation-reminders/templates --maxWorkers=2 --silent`.
+  - **Consumers:** none (migration only). `npm run build` + `npm run migration:check` (the latter moved to RBX-T-8 step (0) on 2026-11-26: no local MySQL; probe in `execution.md` → RBX-T-7).
+- **Skills:** `nestjs-expert`
+- **Definition of done:** [x] specs green · [x] build green (migration:check deferred to RBX-T-8 (0)) · [x] Reviewer PASS
+
+### RBX-T-8 — HITL: prdb v4 migration, package routing in the preview, PRTest render
+
+- **Type:** rollout (user-run DB steps)
+- **Description:** (0) `npm run migration:check` against prdb (moved here from RBX-T-7 on 2026-11-26: no local MySQL, probe recorded in RBX-T-7). (1) prdb: `1793700000000` up → down → up; after up no body contains "breeding" (case-insensitive), after down the bodies equal v3. (2) Dry-run preview on prdb: W1/W2 packages with a lead contact appear in DEVELOPER messages to that address with MELIA in CC; packages without one in MELIA summaries. (3) PRTest Send now to the redirect address: the "Intended recipients" notice of a package email names the lead contact and the MELIA CC. Supersedes RBX-T-5 step 1's "contain Breeding for Tomorrow" check for the final state.
+- **Implements:** RBX-R-7, RBX-R-8 (real data, human check)
+- **Depends on:** RBX-T-6, RBX-T-7
+- **Definition of done:** [ ] three steps recorded in `execution.md` · [ ] copy reviewed by the user before Nicoleta schedules
+
 ## 4. Dependency graph
 
 ```
 RBX-T-1 ──► RBX-T-2 ──┐
 RBX-T-3 ──────────────┼──► RBX-T-5 (HITL)
 RBX-T-4 ──────────────┘
+RBX-T-6 ──┐
+RBX-T-7 ──┴──► RBX-T-8 (HITL)          (Pivot P-1)
 ```
 
 RBX-T-1, T-3 and T-4 are independent. They run sequentially in one worktree (one test run at a time).
