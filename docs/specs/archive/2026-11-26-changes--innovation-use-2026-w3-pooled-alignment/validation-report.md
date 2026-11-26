@@ -1,6 +1,8 @@
 # Validation Report — Innovation Use 2026: W3/Bilateral aligned with the pooled form
 
-**Verdict: PASS for code, NOT archive-ready yet.** 0 FAIL · 4 WARN · 0 BLOCKED. Every automated check is green. The open item is **IWA-T-3**: the PRTest check, the live API spot check and Nicoleta's acceptance. It runs after the merge and deploy.
+**Verdict: PASS, archive-ready** (updated 2026-11-26 after IWA-T-3). 0 FAIL. IWA-T-3 passed on PRTest at `5d7089975` (see `execution.md`). What remains is Nicoleta's acceptance, outside the repo.
+
+> Original verdict, before T-3: PASS for code, not archive-ready. 0 FAIL · 4 WARN · 0 BLOCKED; the open item was IWA-T-3.
 
 ## 1. Document Control
 
@@ -33,7 +35,7 @@
 |---|---|---|---|
 | IWA-T-1 | `[x]` | `execution.md`: red quoted (3 of 7), green 193/193, Leader re-run, 2 falsifier probes, Reviewer `PASS`, commit `63c79f70e` | PASS |
 | IWA-T-2 | `[x]` | `execution.md`: red quoted, green 478/478, grep 0 hits in production code, 2 falsifier probes, Reviewer `PASS`, commit `e5654d462`; Verification amendment approved at the gate | PASS |
-| IWA-T-3 | `[ ]` | Blocked by design until the merge to `performance-refactor` and the PRTest deploy | WARN (expected, blocks archive) |
+| IWA-T-3 | `[x]` | PRTest check at `5d7089975` (Claude in Chrome, read-only): 2026 order, labels, no Addressing demands, never twice, 2025 parity, 6433 copy, console clean. Evidence in `evidence/` | PASS |
 
 ## 4. File Existence
 
@@ -147,8 +149,13 @@ Lint is clean. There are no spec violations.
 
 ## 12. Archive Readiness Recommendation
 
-**Not yet.** The code is conformant and ready to merge: no FAIL, every clause is tested, and build and lint are green. Archive after IWA-T-3 is recorded in `execution.md` and Santiago confirms at the HITL pause; Nicoleta's acceptance can follow outside the repo. Then run:
+**Yes** (updated after IWA-T-3). Before T-3 the answer was **not yet**: the code is conformant and ready to merge: no FAIL, every clause is tested, and build and lint are green. Archive after IWA-T-3 is recorded in `execution.md` and Santiago confirms at the HITL pause; Nicoleta's acceptance can follow outside the repo. Then run:
 
 ```text
 /akili-archive changes/innovation-use-2026-w3-pooled-alignment
 ```
+
+
+## Addendum — IWA-T-3 (2026-11-26)
+
+The PRTest check passed (`execution.md` IWA-T-3). New finding for `/akili-archive`: premise **P-7 is false**. Result-detail renders the pooled `app-innovation-use-form` for W3 results; only `/bilateral/<centre>/result/<code>` uses `app-type-innovation-use`. Both entry points now show the same layout, so there is no remediation, but correct the premise ledger and the folder `CLAUDE.md` wording at archive. The design WARN (visual) is resolved for the 2026 W3 main block (screenshot `evidence/t3-w3-8427-2026-main-block.jpg`).
