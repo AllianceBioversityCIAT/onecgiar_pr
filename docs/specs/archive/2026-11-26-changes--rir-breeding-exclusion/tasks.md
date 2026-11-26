@@ -17,7 +17,7 @@ This list implements `requirements.md` (RBX-R-1 … R-6) per `design.md` (DD-1 �
 
 - [x] `requirements.md` approved (2026-11-25)
 - [x] `design.md` approved (2026-11-25)
-- [ ] Open questions: RBX-OQ-1..4 are with Nicoleta. Each has a default written down, so none of them blocks execution. Any answer that changes a default is a Pivot on RBX-R-2 / R-4 / R-1.
+- [x] Open questions (answered 2026-11-26, folded into Pivot P-1): RBX-OQ-1..4 are with Nicoleta. Each has a default written down, so none of them blocks execution. Any answer that changes a default is a Pivot on RBX-R-2 / R-4 / R-1.
 - [x] No conflicting in-flight spec touches this module. The active specs under `docs/specs/changes/` are unrelated (listed 2026-11-25).
 - [x] Migration name `1793600000000` is above the latest on every branch (`1793500000000`, listed 2026-11-25). **Stale the same day:** IU26 also landed `1793600000000-AddNewUsersToInnovationUseRows`. Kept, because TypeORM keys on the migration name (see `execution.md`, pre-commit finding).
 
@@ -192,7 +192,7 @@ Fill `Review:` using the table in `general-setup/task.md`.
   - [x] Spec green; the existing pins are unchanged and green.
   - [x] Lint clean; `npm run build` green.
 
-### RBX-T-5 — HITL: prdb migration, real-data counts, PRTest render
+### [x] RBX-T-5 — HITL: prdb migration, real-data counts, PRTest render
 
 - **Type:** rollout (user-run DB steps; the agent prepares the SQL and checks)
 - **Description:**
@@ -221,9 +221,9 @@ Fill `Review:` using the table in `general-setup/task.md`.
   - **Consumers:** none
 - **Skills:** —
 - **Definition of done:**
-  - [ ] The three steps are recorded in `execution.md`, with the counts quoted.
+  - [x] The three steps are recorded in `execution.md`, with the counts quoted.
   - [x] P-6 is settled (2026-11-26: the PRTest email links 8057 to `ipsr/detail/8057/general-information?phase=37`, which opens the package; see `execution.md` → RBX-T-8 step 3 check).
-  - [ ] Copy reviewed by the user. The first real PROD send happens only after Nicoleta's look (DEP-2).
+  - [x] Copy reviewed by the user (approved 2026-11-26). The first real PROD send happens only after Nicoleta's look (DEP-2).
 
 ### Pivot P-1 (2026-11-26) — Nicoleta's answers to RBX-OQ-1 and RBX-OQ-4
 
@@ -261,13 +261,13 @@ Recorded in `execution.md` § Pivot P-1. RBX-T-1..T-4 stay done; v3 is applied o
 - **Skills:** `nestjs-expert`
 - **Definition of done:** [x] specs green · [x] build green (migration:check deferred to RBX-T-8 (0)) · [x] Reviewer PASS
 
-### RBX-T-8 — HITL: prdb v4 migration, package routing in the preview, PRTest render
+### [x] RBX-T-8 — HITL: prdb v4 migration, package routing in the preview, PRTest render
 
 - **Type:** rollout (user-run DB steps)
 - **Description:** (0) `npm run migration:check` against prdb (moved here from RBX-T-7 on 2026-11-26: no local MySQL, probe recorded in RBX-T-7). (1) prdb: `1793700000000` up → down → up; after up no body contains "breeding" (case-insensitive), after down the bodies equal v3. (2) Dry-run preview on prdb: W1/W2 packages with a lead contact appear in DEVELOPER messages to that address with MELIA in CC; packages without one in MELIA summaries. (3) PRTest Send now to the redirect address: the "Intended recipients" notice of a package email names the lead contact and the MELIA CC. Supersedes RBX-T-5 step 1's "contain Breeding for Tomorrow" check for the final state.
 - **Implements:** RBX-R-7, RBX-R-8 (real data, human check)
 - **Depends on:** RBX-T-6, RBX-T-7
-- **Definition of done:** [x] three steps recorded in `execution.md` · [ ] copy reviewed by the user before Nicoleta schedules
+- **Definition of done:** [x] three steps recorded in `execution.md` · [x] copy reviewed by the user (approved 2026-11-26); Nicoleta looks before she schedules PROD
 
 ## 4. Dependency graph
 
