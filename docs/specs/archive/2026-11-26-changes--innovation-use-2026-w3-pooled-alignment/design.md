@@ -93,6 +93,8 @@ Blast-radius triggers fired:
 | P-7 | The same W3 component also renders in result-detail for W3 results (IU26 note), so both entry points change together | live-path | IU26 `execution.md` T-? RISK note: "this shared result-detail form also renders for `source_name = 'W3/Bilaterals'`"; W3 test result 8427 checked there in IU26 PRTest table | 990646d3e | Second entry point unchanged (Low) | — |
 | P-8 | W1/W2 renders the same descriptions (pooled code shows them), contrary to Nicoleta's observation | data-env | `innovation-use-form.component.html:994-1007` loops `farmerFollowUpCopy.useNatureOptions` with `option.description`; text identical on `origin/master`, `origin/staging`, `origin/performance-refactor` (`git show <b>:…/farmer-follow-up.ts`) | 990646d3e | None — DD-5 removes the text from both either way (Low) | — |
 
+> **P-7 refuted at IWA-T-3 (2026-11-26, PRTest, Claude in Chrome):** `/result/result-detail/8427/…` renders the pooled `app-innovation-use-form`; only `/bilateral/<centre>/result/<code>` renders `app-type-innovation-use` (sole host: `section-type-specific.component.html`). Effect: none. Result-detail already had the pooled layout, so both entry points now agree. Premise count: 7 verified · 1 refuted.
+
 ## 12. Budget (tripwire)
 
 | Expected | Value |

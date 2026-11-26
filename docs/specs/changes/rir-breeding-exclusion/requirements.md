@@ -10,7 +10,7 @@
 | Deliverable | software |
 | Depth | Standard |
 | Approval Mode | gated |
-| Status | approved (2026-11-25) |
+| Status | approved (2026-11-25) · **Pivot P-1 (2026-11-26): RBX-R-7, RBX-R-8 approved by the user 2026-11-26** |
 | Ticket | SR-167303 (follow-up of INC-165323) |
 | Proposal | `proposal.md`, approved by the user on 2026-11-25 |
 | Extends | `archive/2026-10-26-changes--replicated-innovation-reminders` (RIR-R-1, RIR-R-11), `archive/2026-11-23-changes--rir-center-focal-routing` (RCF-R-2) |
@@ -108,7 +108,7 @@ The system MUST keep an exclusion list of `result_code`s, each with a reason and
 
 ### Requirement RBX-R-2: Innovation packages in the universe (MUST)
 
-*(Modifies RIR-R-1.)* A result of type 10 MUST be pending when it is replicated, in Editing, active, has an active owner SP, is not excluded (RBX-R-1), and belongs to an **active IPSR phase whose `phase_year` equals the campaign year**. Types 2 and 7 keep their RIR-R-1 rule unchanged (bound Reporting phase). Packages MUST be classified by source and routed exactly like other non-type-7 results (RIR-R-4 and RIR-OQ-7: W1/W2 to the P/A MELIA summary, W3 to the Center, RCF opt-in first).
+*(Modifies RIR-R-1.)* A result of type 10 MUST be pending when it is replicated, in Editing, active, has an active owner SP, is not excluded (RBX-R-1), and belongs to an **active IPSR phase whose `phase_year` equals the campaign year**. Types 2 and 7 keep their RIR-R-1 rule unchanged (bound Reporting phase). Packages MUST be classified by source and routed exactly like other non-type-7 results (RIR-R-4 and RIR-OQ-7: W1/W2 to the P/A MELIA summary, W3 to the Center, RCF opt-in first). **Routing clause superseded for W1/W2 packages by RBX-R-7 (Pivot P-1).** Selection is unchanged.
 
 #### Scenario: Package selection
 
@@ -147,7 +147,7 @@ In every message that lists a package, its type MUST read "Innovation package", 
 
 ### Requirement RBX-R-4: Email copy v3 (MUST)
 
-*(Modifies RIR-R-11.)* The four RIR templates MUST carry Nicoleta's 25-Nov copy. The shell stays as it is: header, styles, redirect notice, kind label, disclaimer, and the Result ID as a link.
+*(Modifies RIR-R-11.)* **The breeding paragraph is superseded by RBX-R-8 (Pivot P-1); everything else in v3 stands.** The four RIR templates MUST carry Nicoleta's 25-Nov copy. The shell stays as it is: header, styles, redirect notice, kind label, disclaimer, and the Result ID as a link.
 
 | Template | Change |
 |---|---|
@@ -185,6 +185,39 @@ The schema change, the seed and the copy change MUST ship in one migration with 
 
 The Admin > Reminders pending and unreachable totals, the dry-run preview and the real dispatch SHOULD read the same selection, so that excluded results and packages are reflected identically in all three. RIR already satisfies this through one shared build path; RBX MUST NOT add a second selection.
 
+### Requirement RBX-R-7: Innovation packages go to the Lead contact person (MUST) — Pivot P-1
+
+*(Supersedes the W1/W2 routing clause of RBX-R-2. Source: Nicoleta, 2026-11-26, answer to RBX-OQ-1: "Email should go to Lead contact person, copy P/A MELIA".)* A W1/W2 pending package whose lead Center is not opted in (RCF-R-2 still comes first) MUST be sent to its **Lead contact person** (`result.lead_contact_person_id` → active `ad_users` row, its `mail`), with the active MELIA focal points of its owner SP in copy. It MUST share the per-person email (`DEVELOPER:<email>`) with any innovation that person develops, so a person never gets two emails of one campaign. A PRMS account is NOT required for the lead contact (the field is an AD lookup). When the package has no lead contact with an address, it MUST fall back to the MELIA summary of its SP (RIR-OQ-7), and to unreachable `NO_MELIA` when that SP has no MELIA.
+
+#### Scenario: Package to its lead contact
+
+- GIVEN a W1/W2 package whose lead contact is Lia (active AD row, `lia@x.org`) and whose SP has MELIA m1, m2
+- WHEN the campaign is built
+- THEN Lia receives one email listing the package, greeted by her PRMS account name if she has one, else her AD display name
+- AND m1, m2 are in copy
+- BUT if Lia also develops a type-7 innovation of the campaign, both rows are in that single email.
+
+#### Scenario: No lead contact
+
+- GIVEN a W1/W2 package with no lead contact address
+- THEN it is listed in its SP's MELIA summary, or is unreachable `NO_MELIA` when the SP has no MELIA.
+
+#### Scenario: Opted-in Center still wins
+
+- GIVEN a package led by an opted-in Center
+- THEN it goes to that Center's focal points (RCF-R-2), not to the lead contact.
+
+### Requirement RBX-R-8: Email copy v4 without the breeding paragraph (MUST) — Pivot P-1
+
+*(Supersedes the breeding paragraph of RBX-R-4. Source: Nicoleta, 2026-11-26: "I've removed the breeding info in the notifications. B4T manages communication on this topic to centers".)* The four RIR templates MUST carry v3 minus its breeding paragraph, and nothing else changes. Because v3 is already applied on prdb (migration id 574) and the copy module is frozen, v4 MUST ship as a new migration (`up` = v4, `down` = v3 byte for byte). The breeding results stay excluded from the lists (RBX-R-1).
+
+#### Scenario: No breeding text
+
+- GIVEN the v4 templates
+- THEN no template mentions breeding lines, varieties or Breeding for Tomorrow
+- AND each v4 body equals its v3 body with exactly that one paragraph removed
+- AND the closures still read "end of January {nextYear}" (developer, MELIA) and "mid-February {nextYear}" (Center).
+
 ## 7. Non-Functional Requirements
 
 | Dimension | Target |
@@ -213,10 +246,12 @@ The Admin > Reminders pending and unreachable totals, the dry-run preview and th
 
 | ID | Item | Default if unanswered |
 |---|---|---|
-| RBX-OQ-1 | Packages routing = P/A MELIA (asked Nicoleta 25-Nov) | Yes. No routing change is needed |
-| RBX-OQ-2 | The January vs mid-February closure difference is intentional (asked) | Keep her wording |
-| RBX-OQ-3 | About 35 SP01 "Not an innovation" rows: exclude too? (asked) | Not seeded. Adding them later is a row insert |
-| RBX-OQ-4 | The breeding paragraph shown in red | Plain paragraph |
+| RBX-OQ-1 | Packages routing = P/A MELIA (asked Nicoleta 25-Nov) | **Answered 26-Nov: No — To = Lead contact person, CC = P/A MELIA. Default changed → Pivot P-1, RBX-R-7** |
+| RBX-OQ-2 | The January vs mid-February closure difference is intentional (asked) | **Answered 26-Nov: yes, intended (W3/bilateral can be updated until 10 Feb). Default kept** |
+| RBX-OQ-3 | About 35 SP01 "Not an innovation" rows: exclude too? (asked) | **Answered 26-Nov: no, keep them in the notification. Default kept** |
+| RBX-OQ-4 | The breeding paragraph shown in red | **Superseded 26-Nov: the paragraph is removed altogether → Pivot P-1, RBX-R-8** |
+| RBX-OQ-5 | Nicoleta says "116 breeding results"; the sheet seeded holds 114 codes | Open. Keep 114; adding codes later is a row insert (no code change) |
+| RBX-OQ-6 | Center closure text: "mid-February" (her copy) or "10 February" (her answer) | Open. Keep her copy ("mid-February") |
 | DEP-1 | Cristian promotes staging → master in time for Fri 27-Nov | Escalate to the user if not |
 | DEP-2 | The first real send happens only after Nicoleta sees the PRTest render | Inherited from RIR |
 
@@ -227,6 +262,8 @@ The Admin > Reminders pending and unreachable totals, the dry-run preview and th
 | RBX-R-1 | Exclusion list | MUST |
 | RBX-R-2 | Innovation packages in the universe | MUST |
 | RBX-R-3 | Package presentation | MUST |
+| RBX-R-7 | Innovation packages go to the Lead contact person (Pivot P-1) | MUST |
+| RBX-R-8 | Email copy v4 without the breeding paragraph (Pivot P-1) | MUST |
 | RBX-R-4 | Email copy v3 | MUST |
 | RBX-R-5 | Reversible rollout | MUST |
 | RBX-R-6 | Counts agree | SHOULD |

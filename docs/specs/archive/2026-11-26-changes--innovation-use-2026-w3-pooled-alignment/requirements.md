@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Module | `bilateral` — W3 Innovation Use form (`type-innovation-use`), also mounted in result-detail for W3 results |
+| Module | `bilateral` — W3 Innovation Use form (`type-innovation-use`), mounted in the centre editor `/bilateral/<centre>/result/<code>`. *Corrected at archive 2026-11-26: result-detail renders the pooled `innovation-use-form` for W3 results, not this component (P-7 refuted, execution.md IWA-T-3)* |
 | Spec path | `changes/innovation-use-2026-w3-pooled-alignment` |
 | Type | Change |
 | Deliverable | software |

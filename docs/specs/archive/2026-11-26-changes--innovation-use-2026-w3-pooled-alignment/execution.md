@@ -122,3 +122,38 @@ The Leader's falsifier probes above closed the only owed item (the two falsifier
 **Final verification:** jest 478/478 green · 0 phrase hits in production code.
 
 **Continue gate (2026-11-26, Santiago: "sí a las dos"):** the spec-tension amendment is approved, and the commit of T-2 is approved. Execute-time spec edit: `tasks.md` → IWA-T-2 **Verification** grep is now scoped with `':!*.spec.ts' ':!*.md'`, with the reason inline. This does not change the meaning of IWA-R-4 or of the DoD ("0 hits in code"). IWA-T-3 is blocked until the merge to `performance-refactor` and the PRTest deploy; next steps are `/akili-test` and `/akili-validate`.
+
+### IWA-T-3 — PRTest check, ticket reply, IU26 link
+
+| Field | Value |
+|---|---|
+| Final status | **PASS** (Nicoleta's acceptance pending outside the repo) |
+| Date | 2026-11-26 |
+| Deployed commit | `5d7089975`: merge into `performance-refactor`, GitHub Actions `reporting-tool-dev-cicd` run 45854604783, success, started 16:00 UTC, 11 min 28 s |
+| Method | Claude in Chrome on Santiago's PRTest session. Read-only: no Save, no rows added. The only interaction was the "Complete full metadata" toggle, a UI state that is not saved, and it was restored afterwards |
+
+**Checks**
+
+| Screen | Check | Observed | Result |
+|---|---|---|---|
+| W3 editor `/bilateral/CIP/result/8427?phase=36` (2026), full metadata collapsed | Order | Field headers: Current Use Update → Actors → **Organizations** → Other quantitative measures → investment fields | PASS (IWA-R-1) |
+| same | Labels | Buttons `Add actor`, `Add organization`, `Add other` | PASS (IWA-R-3). Not a stale deploy (falsifier) |
+| same | Addressing demands | 0 occurrences | PASS (IWA-R-2) |
+| same, full metadata expanded | Never twice | 1 "Organizations" header; still 0 "Addressing demands" | PASS (IWA-R-1) |
+| same | Console | No errors or exceptions (`NG0…`/`ExpressionChanged` filter) | PASS |
+| W3 editor `/bilateral/CIP/result/8427?phase=34` (2025, read-only) | 2025 parity | Collapsed: Actors → Other measures, buttons `Add another actor` / `Add other`. Expanded: Organizations in full metadata, `Add another organization`, "Addressing demands" shown | PASS (IWA-R-1 2025, IWA-R-2 2025, IWA-R-3 2025) |
+| W1/W2 `/result/result-detail/6433/innovation-use-info?phase=36` | Farmers copy | Both descriptions match the approved text word for word; neither phrase is present; 6 nature blocks rendered | PASS (IWA-R-4) |
+
+Evidence: `evidence/t3-w3-8427-2026-main-block.jpg`, `evidence/t3-pooled-6433-farmers-copy.jpg`.
+
+**Not checked live (accepted):**
+- The Organizations tile updating when a row is added (test-report gap G-1), and the W3 rendering of the nature descriptions. Result 8427 has no actor or organization rows, and adding one triggers the W3 autosave on a shared test result. Covered by Tester tests A and D (jest) and by the shared constant shown on 6433.
+- The `/api/bilateral` before/after byte comparison: the "before" was no longer available once deployed. Covered by the empty server diff and Tester test E.
+
+**Finding — premise P-7 is false (no impact on this spec).** Result-detail (`/result/result-detail/8427/...`) renders the **pooled** `app-innovation-use-form` for W3 result 8427, not `app-type-innovation-use`. Only the centre editor `/bilateral/<centre>/result/<code>` uses the W3 component. Result-detail already showed Actors → Organizations → Other measures with pooled labels, so both entry points now agree. Record for `/akili-archive` (premise ledger and the folder `CLAUDE.md` "also mounted in result-detail" wording).
+
+**P-8 settled:** pooled 6433 renders the Farmers nature descriptions, so they were visible on W1/W2 before the copy change too. Nicoleta's "not listed for pooled" was not what the code did. The removal satisfies both readings.
+
+**Ticket reply:** drafted for Santiago (SR-169264, public Reply in Freshservice); Santiago sends it.
+
+**IU26 link:** added to `changes/innovation-use-2026-total-and-new-users/execution.md`.

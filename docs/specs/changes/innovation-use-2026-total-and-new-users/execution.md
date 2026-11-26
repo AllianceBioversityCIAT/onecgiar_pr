@@ -446,3 +446,7 @@ Note: tab with result 6433 holds local unsaved test edits — close it choosing 
 | T-9 docs + PRTest | `[~]` docs done; browser checks done (table above); pending ~1024 px layout, W3 full-metadata form, Santiago/Nicoleta acceptance |
 | Commits | PR-1 `b77c9dec0`, PR-2 `f106093d4` on `qa-development-2026-ss`; merged to `performance-refactor` `ae006d670` (PRTest deployed) |
 | Budget | tasks 15/15; LOC added ≈ 3,200 (PR-1 ≈ 1,980 + PR-2 ≈ 1,240) vs ~1,550 (tripwire 2,015) — **exceeded**, mostly tests; continued on Santiago's explicit instruction ("esta spec queda hoy … ambas partes"); review rounds ≈ 30 vs 23 (+4 tripwire = 27) — exceeded for the same reason |
+
+## Follow-up spec (2026-11-26)
+
+Nicoleta's PRTest feedback on SR/INC-169264 (W3 Organizations in the main block, no "Addressing demands", pooled button labels, Farmers copy without two examples) is handled in `changes/innovation-use-2026-w3-pooled-alignment`. Merged to `performance-refactor` `5d7089975`; PRTest check PASS, recorded in that spec's `execution.md` (IWA-T-3).

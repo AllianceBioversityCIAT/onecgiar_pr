@@ -66,7 +66,7 @@
 - **Consumers:** `innovation-use-form.component.spec.ts:2027,2032` (updated here). The W3 component reads the same constant (`type-innovation-use.component.ts:33,128`) and has no text assertion. The archive proposal is history and stays as is. The server holds labels only (`label-sources.ts:403`).
 - **Definition of done:** grep 0 hits in code; specs green; red quoted; `CLAUDE.md` amended.
 
-### [ ] IWA-T-3 — PRTest check, ticket reply, IU26 link
+### [x] IWA-T-3 — PRTest check, ticket reply, IU26 link
 
 - **Type:** rollout / docs
 - **Description:** After merging into `performance-refactor` and deploying to PRTest, do a read-only browser check (never Save on test results):

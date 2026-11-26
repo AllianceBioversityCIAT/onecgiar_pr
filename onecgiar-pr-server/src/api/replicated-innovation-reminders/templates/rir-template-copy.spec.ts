@@ -13,6 +13,7 @@ import {
   RIR_Q4_TEMPLATE_NAME,
   buildRirTemplatesV2,
   buildRirTemplatesV3,
+  buildRirTemplatesV4,
 } from './rir-template-copy';
 
 const ALL_NAMES = [
@@ -314,5 +315,59 @@ describe('rir-template-copy', () => {
       expect(html).toContain('<p class="kind">Q4 notice</p>');
       expect(html).toContain(DISCLAIMER);
     });
+  });
+});
+
+// SR-167303 (Nicoleta, 2026-11-26): v4 = v3 without the breeding paragraph.
+describe('rir-template-copy v4', () => {
+  const v3 = buildRirTemplatesV3();
+  const v4 = buildRirTemplatesV4();
+
+  it.each(ALL_NAMES)(
+    '%s has no breeding text and is v3 minus exactly one paragraph',
+    (name) => {
+      expect(v4[name]).not.toMatch(/breeding/i);
+      expect(v4[name]).not.toMatch(/varieties/i);
+      expect(v4[name]).not.toMatch(/Breeding for Tomorrow/);
+      const removed = v3[name].length - v4[name].length;
+      expect(removed).toBeGreaterThan(0);
+      const para = v3[name].match(
+        /<p>If (?:you|your Center) reported breeding lines[^]*?<\/p>\n\n/,
+      );
+      expect(para).not.toBeNull();
+      expect(v3[name].replace(para![0], '')).toBe(v4[name]);
+    },
+  );
+
+  it('keeps the closing dates: end of January for developers/MELIA, mid-February for Centers', () => {
+    const ctx = {
+      phaseYear: 2026,
+      nextYear: 2027,
+      nextNextYear: 2028,
+      previousYear: 2025,
+      results: [],
+    };
+    expect(handlebars.compile(v4[RIR_Q4_TEMPLATE_NAME])(ctx)).toContain(
+      'at the end of January 2027',
+    );
+    expect(handlebars.compile(v4[RIR_MELIA_TEMPLATE_NAME])(ctx)).toContain(
+      'at the end of January 2027',
+    );
+    expect(handlebars.compile(v4[RIR_CENTER_TEMPLATE_NAME])(ctx)).toContain(
+      'in mid-February 2027',
+    );
+  });
+
+  it('the v4 migration writes v4 up and restores v3 down, by name', async () => {
+    const { RIRCopyV4NoBreedingNote1793700000000: M } = await import(
+      '../../../migrations/1793700000000-RIR-CopyV4NoBreedingNote'
+    );
+    const runner = new FakeTemplateRunner();
+    await new M().up(runner as any);
+    for (const name of ALL_NAMES)
+      expect(runner.bodies.get(name)).toBe(v4[name]);
+    await new M().down(runner as any);
+    for (const name of ALL_NAMES)
+      expect(runner.bodies.get(name)).toBe(v3[name]);
   });
 });
