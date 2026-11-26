@@ -133,8 +133,16 @@
           <app-no-data-text title="No actors added"></app-no-data-text>
         }
 
-        <app-add-button name="Add another actor" (clickEvent)="addActor()"></app-add-button>
+        <app-add-button [name]="currentUseTotalLabels ? 'Add actor' : 'Add another actor'" (clickEvent)="addActor()"></app-add-button>
       </div>
+
+      <!-- IWA-R-1 — from 2026 the optional Organizations block sits in the main block, between Actors and the
+           other measures (pooled order). Optional: never in `updateMds()` or the submit gate. Before 2026 it
+           stays in full metadata. The same template feeds both positions; `currentUseTotalLabels` makes them
+           mutually exclusive, so it never renders twice. Hidden with the actors while the use is "to be determined". -->
+      @if (currentUseTotalLabels) {
+        <ng-container *ngTemplateOutlet="organizationsBlock"></ng-container>
+      }
     }
 
     <!-- P2-3428: this optional field used to live inside the full-metadata toggle. It stays above the
@@ -209,22 +217,9 @@
     <!-- Everything below the toggle is optional full metadata and counts for nothing in the MDS tracker. -->
     @if (showAllFields()) {
       <div class="flex flex-col gap-[18px]">
-        <div>
-          <app-pr-field-header label="Organizations" description="Types of organizations involved in innovation use, with counts." [required]="false">
-          </app-pr-field-header>
-
-          @for (organization of visibleOrganizations; track $index) {
-            <div class="mb-3 flex flex-col gap-3 rounded-md border border-[#E0E0E0] p-3">
-              <ng-container *ngTemplateOutlet="organizationCard; context: { $implicit: organization }"></ng-container>
-            </div>
-          }
-
-          @if (!visibleOrganizations.length) {
-            <app-no-data-text title="No organizations added"></app-no-data-text>
-          }
-
-          <app-add-button name="Add another organization" (clickEvent)="addOrganization()"></app-add-button>
-        </div>
+        @if (!currentUseTotalLabels) {
+          <ng-container *ngTemplateOutlet="organizationsBlock"></ng-container>
+        }
 
         <!-- P2-3785 AC1 — the use level is NOT part of the bilateral MDS (Nicoleta Trifa, #INC-163204
            point 4a, 21-Sep-2026): it is out of `updateMds()` and the server submit gate. It first stayed
@@ -366,6 +361,26 @@
   <!-- One actor card and one organization card, shared by current use and the 2030 Use Projection
        (P2-3428) so the two lists cannot drift. `required` is true only for the MDS actors above; the
        projection lives in full metadata and shows no REQUIRED marker. -->
+  <!-- IWA-R-1 — Organizations (optional). One definition, rendered in the main block (2026+) or in full metadata (before 2026). -->
+  <ng-template #organizationsBlock>
+    <div>
+      <app-pr-field-header label="Organizations" description="Types of organizations involved in innovation use, with counts." [required]="false">
+      </app-pr-field-header>
+
+      @for (organization of visibleOrganizations; track $index) {
+        <div class="mb-3 flex flex-col gap-3 rounded-md border border-[#E0E0E0] p-3">
+          <ng-container *ngTemplateOutlet="organizationCard; context: { $implicit: organization }"></ng-container>
+        </div>
+      }
+
+      @if (!visibleOrganizations.length) {
+        <app-no-data-text title="No organizations added"></app-no-data-text>
+      }
+
+      <app-add-button [name]="currentUseTotalLabels ? 'Add organization' : 'Add another organization'" (clickEvent)="addOrganization()"></app-add-button>
+    </div>
+  </ng-template>
+
   <ng-template #actorCard let-actor let-required="required">
     <div class="flex items-start gap-2">
       <div class="min-w-0 flex-1">
@@ -521,13 +536,16 @@
         (ngModelChange)="onFieldChange()"></app-pr-input>
     }
 
-    <app-pr-textarea
-      label="Addressing demands"
-      [required]="false"
-      placeholder="Describe how this actor addresses the innovation's demand..."
-      [(ngModel)]="actor.addressing_demands"
-      (ngModelChange)="onFieldChange()">
-    </app-pr-textarea>
+    <!-- IWA-R-2 — hidden from 2026 (pooled parity); the stored value stays on the row and is sent back as loaded. -->
+    @if (!currentUseTotalLabels) {
+      <app-pr-textarea
+        label="Addressing demands"
+        [required]="false"
+        placeholder="Describe how this actor addresses the innovation's demand..."
+        [(ngModel)]="actor.addressing_demands"
+        (ngModelChange)="onFieldChange()">
+      </app-pr-textarea>
+    }
   </ng-template>
 
   <ng-template #organizationCard let-organization>
@@ -590,12 +608,15 @@
       [(ngModel)]="organization.how_many"
       (ngModelChange)="onFieldChange()"></app-pr-input>
 
-    <app-pr-textarea
-      label="Addressing demands"
-      [required]="false"
-      placeholder="Describe how this organization addresses the innovation's demand..."
-      [(ngModel)]="organization.addressing_demands"
-      (ngModelChange)="onFieldChange()">
-    </app-pr-textarea>
+    <!-- IWA-R-2 — hidden from 2026 (pooled parity); the stored value stays on the row and is sent back as loaded. -->
+    @if (!currentUseTotalLabels) {
+      <app-pr-textarea
+        label="Addressing demands"
+        [required]="false"
+        placeholder="Describe how this organization addresses the innovation's demand..."
+        [(ngModel)]="organization.addressing_demands"
+        (ngModelChange)="onFieldChange()">
+      </app-pr-textarea>
+    }
   </ng-template>
 </div>
