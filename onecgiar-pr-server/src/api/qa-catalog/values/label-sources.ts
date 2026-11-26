@@ -249,7 +249,7 @@ const QUESTION = named(
   'question_text',
 );
 
-/** No area filter: the field may hold other areas' ids (P-12, a separate bugfix). */
+/** One table source for the five per-area lists; each list is closed to its own area's ids (P2-4108, closed-control-lists.ts). */
 const IMPACT_COMPONENT = named('impact_areas_scores_components', 'id', 'name');
 
 const CAPDEV_TERM = named('capdevs_term', 'capdev_term_id', 'name');
