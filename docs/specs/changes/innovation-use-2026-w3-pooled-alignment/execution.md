@@ -77,4 +77,48 @@ The Leader's falsifier probes above closed the only owed item (the two falsifier
 
 **Final verification:** jest 193/193 green · build green · client-only diff.
 
-**Continue gate (2026-11-26, Santiago):** LOC budget overrun accepted ("acepto el sobrecosto"); commit of T-1 approved; continue with IWA-T-2.
+**Continue gate (2026-11-26, Santiago):** LOC budget overrun accepted ("acepto el sobrecosto"); commit of T-1 approved (`63c79f70e`); continue with IWA-T-2.
+
+### IWA-T-2 — Remove the two examples from the shared Farmers copy
+
+| Field | Value |
+|---|---|
+| Final status | **PASS** |
+| Date | 2026-11-26 |
+| Attempts | 1 |
+| Requirements covered | IWA-R-4 (phrases gone on both screens, rest word for word, one place only) |
+| Skills / effort | `angular-developer` (as in task) · effort `low` (copy-only edit; deviation from the `medium` default because the task is mechanical) |
+
+**Attempt 1**
+
+- **Files changed:** `onecgiar-pr-client/src/app/shared/components/innovation-use-form/farmer-follow-up.ts`, `…/innovation-use-form.component.spec.ts`, `…/innovation-use-form/CLAUDE.md`. 3 files, +14 / −6.
+- **Red (Implementer, new assertion added before the constant changed):** `Tests: 1 failed`. The failing test is `does not contain the removed examples (IWA-R-4)`, with `Expected substring: not "climate advisories; "` at `innovation-use-form.component.spec.ts:2041:33`.
+- **Green (Implementer):** `Test Suites: 5 passed, 5 total · Tests: 478 passed, 478 total` (innovation-use-form and W3 type-innovation-use folders).
+- **Grep (Implementer):** `git grep -n "climate advisories\|actively used a digital tool" -- onecgiar-pr-client onecgiar-pr-server` → 3 hits: `innovation-use-form/CLAUDE.md:73` (the amendment note) and `innovation-use-form.component.spec.ts:2041,2042` (the new `not.toContain` assertions). No hits in production code.
+- **Evidence re-run (Leader, inline, non-author): VERIFIED**
+  - jest on both folders → `Tests: 478 passed, 478 total`.
+  - `git grep … ':!*.spec.ts' ':!*.md'` → 0 hits (exit 1).
+- **Falsifier probes (Leader, temporary mutations, file restored from backup; diff stat identical afterwards):**
+  - Drop `market information; ` → the exact-equality expectation fails.
+  - Put `climate advisories; ` back → the new assertion fails with `Expected substring: not "climate advisories; "`.
+- **Reviewer verdict:** `STATUS: PASS`. Both descriptions match the task's "Expected text after" character for character; labels and codes are untouched; the tests read the imported constant, so the Disqualifier does not apply.
+- **runtime events:** none.
+
+**Spec tension (Reviewer, carried to the continue gate):** the task's Verification line requires `git grep` over both packages to return 0 hits. The same task requires an assertion that neither phrase appears, and that assertion necessarily contains the phrases. Both cannot hold. The DoD reads "grep 0 hits **in code**", which production code meets (the grep excluding `*.spec.ts` and `*.md` returns 0 hits). A one-line amendment to the Verification line is proposed at the gate.
+
+**ADVISORY (Reviewer, 4R — not gating):**
+
+- RISK/traceability: record the grep scope and the reason for it (done above).
+- READABILITY: the `CLAUDE.md:73` amendment quotes the removed phrases word for word, which adds an avoidable grep hit.
+
+**Decisions made:** effort `low` instead of `medium` (copy-only). No execute-time spec edits.
+
+**Issues encountered:** none.
+
+**spawns:** Implementer 15 calls, 67,154 tokens, ended complete · Reviewer 7 calls, 63,958 tokens, ended complete.
+
+**Budget running totals:** tasks 2/3 · LOC +194/−38 (budget ≈180; overrun accepted at the T-1 gate) · review rounds 2/4.
+
+**Final verification:** jest 478/478 green · 0 phrase hits in production code.
+
+**Continue gate (2026-11-26, Santiago: "sí a las dos"):** the spec-tension amendment is approved, and the commit of T-2 is approved. Execute-time spec edit: `tasks.md` → IWA-T-2 **Verification** grep is now scoped with `':!*.spec.ts' ':!*.md'`, with the reason inline. This does not change the meaning of IWA-R-4 or of the DoD ("0 hits in code"). IWA-T-3 is blocked until the merge to `performance-refactor` and the PRTest deploy; next steps are `/akili-test` and `/akili-validate`.

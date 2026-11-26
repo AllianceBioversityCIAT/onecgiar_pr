@@ -2024,15 +2024,23 @@ describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
       expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[0].label).toBe('Actors who received information, advice or inputs');
       expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[0].value).toBe('information_received');
       expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[0].description).toBe(
-        'Advisories delivered face-to-face, by SMS, radio/media or a digital platform; climate advisories; market information; dietary guidelines; starter kits, vouchers or other incentives. Receipt is documented; application of the innovation is not confirmed.'
+        'Advisories delivered face-to-face, by SMS, radio/media or a digital platform; market information; dietary guidelines; starter kits, vouchers or other incentives. Receipt is documented; application of the innovation is not confirmed.'
       );
       expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[1].label).toBe('Actors who applied the innovation');
       expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[1].value).toBe('innovation_applied');
       expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[1].description).toBe(
-        'Grew a variety, applied a practice, actively used a digital tool or service, took up a product. Application is supported by the attached evidence (survey, plot observation, purchase records, platform logs).'
+        'Grew a variety, applied a practice, took up a product. Application is supported by the attached evidence (survey, plot observation, purchase records, platform logs).'
       );
       expect('helper' in FARMER_FOLLOW_UP_COPY).toBe(false);
       expect(FARMERS_ACTOR_TYPE_ID).toBe(1);
+    });
+
+    it('does not contain the removed examples (IWA-R-4)', () => {
+      const descriptions = FARMER_FOLLOW_UP_COPY.useNatureOptions.map(o => o.description);
+      for (const description of descriptions) {
+        expect(description).not.toContain('climate advisories; ');
+        expect(description).not.toContain('actively used a digital tool or service, ');
+      }
     });
   });
 

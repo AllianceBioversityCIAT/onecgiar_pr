@@ -45,7 +45,7 @@
 - **Not provable here:** spacing and look on the real page → IWA-T-3 human check.
 - **Definition of done:** tests 1–7 green; red quoted; build green; `CLAUDE.md` updated; no server file touched (`git diff --stat` shows client only).
 
-### [ ] IWA-T-2 — Remove the two examples from the shared Farmers copy
+### [x] IWA-T-2 — Remove the two examples from the shared Farmers copy
 
 - **Type:** client
 - **Description:** In `FARMER_FOLLOW_UP_COPY`, remove `climate advisories; ` from the `information_received` description and `actively used a digital tool or service, ` from the `innovation_applied` description. The rest stays word for word. Update the two pinned expectations in the W1/W2 spec, and add an assertion that neither phrase appears. Update the folder `CLAUDE.md` note ("verbatim from mockup") with the amendment: INC-169264, Nicoleta, 2026-11-26.
@@ -59,7 +59,7 @@
 - **Expected text after:**
   - information_received: `Advisories delivered face-to-face, by SMS, radio/media or a digital platform; market information; dietary guidelines; starter kits, vouchers or other incentives. Receipt is documented; application of the innovation is not confirmed.`
   - innovation_applied: `Grew a variety, applied a practice, took up a product. Application is supported by the attached evidence (survey, plot observation, purchase records, platform logs).`
-- **Verification:** `cd onecgiar-pr-client && npx jest src/app/shared/components/innovation-use-form src/app/pages/bilateral/components/section-type-specific/type-innovation-use` green. `git grep -n "climate advisories\|actively used a digital tool" -- onecgiar-pr-client onecgiar-pr-server` → 0 hits.
+- **Verification:** `cd onecgiar-pr-client && npx jest src/app/shared/components/innovation-use-form src/app/pages/bilateral/components/section-type-specific/type-innovation-use` green. `git grep -n "climate advisories\|actively used a digital tool" -- onecgiar-pr-client onecgiar-pr-server ':!*.spec.ts' ':!*.md'` → 0 hits (amended 2026-11-26: the required "does not contain" assertion necessarily holds both phrases).
 - **Falsifier:** put either phrase back → the new "does not contain" assertion fails. Delete an extra word (for example `market information; `) → the exact-equality expectation fails.
 - **Red run (observed baseline, 990646d3e):** `git grep -n "climate advisories\|actively used a digital tool" -- onecgiar-pr-client onecgiar-pr-server` → 4 hits (`farmer-follow-up.ts:46,52`, `innovation-use-form.component.spec.ts:2027,2032`). The new "does not contain" assertion is red against the current constant; the Implementer quotes the jest red.
 - **Disqualifier:** an assertion against a copy of the string written inside the test, rather than the imported constant, is a plumbing test and not evidence.
