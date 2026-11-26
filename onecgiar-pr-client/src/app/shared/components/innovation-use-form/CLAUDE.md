@@ -1,6 +1,6 @@
 # innovation-use-form
 
-**Verified:** 2026-11-18 · INC-168062 (INA-T-6) · changes/innovation-use-nature-all-actors: follow-up questions shown on every actor row (scope vs mandatory, nature question, W3 shown not blocking); prior: 2026-11-12 · qa-development-2026-ss · bugfix/innovation-use-youth-required IUY-T-2 (INC-167167: empty Youth keeps Non-youth empty + hint, both grids; `validateYouth` now derives on the edited row); 2026-11-11 · changes/innovation-use-w3-hide-2030 IWH-T-1 (INC-168060: 2030 block hidden for W3/Bilaterals); quick/innovation-use-actors-sentence-ipsr (INC-168060 feedback: `narrativeActors` P25 sentence now depends on `isIpsr` — IPSR step 1 keeps "by end of 2030" (scaling ambition), Innovation Use keeps the reporting-year sentence; `isIpsr` is a static host input, so the `computed` reading it is safe); 2026-11-10 · quick/innovation-use-actors-sentence (INC-168060: P25 actors narrative now asks for actual users in the reporting year, not the 2030 projection); quick/remove-farmer-helper-note (Nicoleta: italic helper note under Q-b removed, `helper` key dropped); prior: 2026-11-03 · T-7 findings (re-click Households restores the grid; unsaved Households "How many" required); IFC-T-7 fixes (Individuals keeps a hand-set single total; Q-b gap); IFC-T-4 (changes/innovation-use-farmer-count-nature): Farmers follow-up block, gate and Households coupling (uncommitted); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update rules moved to `shared/utils/current-use-update.util.ts` (shared with the bilateral form); prior: 2026-09-11 · branch performance-refactor · 5791b85b9
+**Verified:** 2026-11-25 · fix/result-detail-required-counter (P2-4125): marcador «at least one actor, organization or other measure» en el bloque de uso actual; prior: 2026-11-18 · INC-168062 (INA-T-6) · changes/innovation-use-nature-all-actors: follow-up questions shown on every actor row (scope vs mandatory, nature question, W3 shown not blocking); prior: 2026-11-12 · qa-development-2026-ss · bugfix/innovation-use-youth-required IUY-T-2 (INC-167167: empty Youth keeps Non-youth empty + hint, both grids; `validateYouth` now derives on the edited row); 2026-11-11 · changes/innovation-use-w3-hide-2030 IWH-T-1 (INC-168060: 2030 block hidden for W3/Bilaterals); quick/innovation-use-actors-sentence-ipsr (INC-168060 feedback: `narrativeActors` P25 sentence now depends on `isIpsr` — IPSR step 1 keeps "by end of 2030" (scaling ambition), Innovation Use keeps the reporting-year sentence; `isIpsr` is a static host input, so the `computed` reading it is safe); 2026-11-10 · quick/innovation-use-actors-sentence (INC-168060: P25 actors narrative now asks for actual users in the reporting year, not the 2030 projection); quick/remove-farmer-helper-note (Nicoleta: italic helper note under Q-b removed, `helper` key dropped); prior: 2026-11-03 · T-7 findings (re-click Households restores the grid; unsaved Households "How many" required); IFC-T-7 fixes (Individuals keeps a hand-set single total; Q-b gap); IFC-T-4 (changes/innovation-use-farmer-count-nature): Farmers follow-up block, gate and Households coupling (uncommitted); prior: 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update rules moved to `shared/utils/current-use-update.util.ts` (shared with the bilateral form); prior: 2026-09-11 · branch performance-refactor · 5791b85b9
 
 ## What it is
 The shared Innovation Use questionnaire: use level (0-9), narrative/actors blocks, the
@@ -62,6 +62,20 @@ The shared Innovation Use questionnaire: use level (0-9), narrative/actors block
   renders a `*` marker in `--pr-field-required-fg` while the value is null. 🛑 That marker is **purely
   visual**: it emits no `.pr-field.mandatory` / `.pr-input.mandatory`, because this field is already
   counted once by the directive above — adding those classes would turn "1 field missing" into "2".
+
+## Any-of rule of the current-use block (P2-4125)
+
+The live green check (`validation_innovation_use_P25`, REVIEW D13 in the server's
+`qa-catalog/definitions/sections/innovation-use.ts`) keeps the section red until, with "This is yet to be
+determined" off, at least one active actor, organization or other measure exists. The three list headers are
+`[required]="false"`, so nothing told the bottom bar: it said "Section complete" while the rail stayed grey.
+- Hidden `appFeedbackValidation` marker right above the "Actors" header, fenced `isP25() && !isIpsr` (the
+  function is per PORTFOLIO, so here the portfolio axis is the right one, unlike the phase-year gates above).
+- `isCurrentUseGroupComplete()`: tbd ticked, or an active row with a value (actor type / organization type /
+  measure unit or quantity). An empty row from "Add actor" does not count.
+- The marker sits inside the `@if` that hides the lists when tbd is ticked, so ticking it drops the marker too.
+- ⚠️ The "Current core innovation use…" card itself still paints green (its radio has a value), even with the
+  group empty. Not changed: that card is `app-pr-radio-button`, shared app-wide.
 
 ## Follow-up questions block (IFC `changes/innovation-use-farmer-count-nature` + INA `changes/innovation-use-nature-all-actors`)
 

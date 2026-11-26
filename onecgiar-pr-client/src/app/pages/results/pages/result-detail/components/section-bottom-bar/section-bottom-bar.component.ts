@@ -127,6 +127,36 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   readonly missingFields = computed(() => this.dataControlSE.fieldFeedbackList());
 
   /**
+   * P2-4123 — whether the count is the section's real answer yet.
+   *
+   * The scan reads the live DOM, and a freshly opened section goes through several states before
+   * it settles: the previous section's count is still in the signal, then the skeleton shows every
+   * field empty, then the GET lands and the fields fill in over a few frames (measured on prtest,
+   * result 10174, Contributors & Partners: 7 -> 3 -> 1 within ~300ms). Painting each of those read
+   * as a counter running down. So a new bar shows no number until the section is out of its
+   * loading skeleton AND the count has held still for `FEEDBACK_SETTLE_MS`. From then on it is
+   * live again, as the reporter types — this only covers the arrival.
+   */
+  static readonly FEEDBACK_SETTLE_MS = 350;
+  readonly feedbackReady = signal(false);
+  private settleTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly settleFeedback = effect(() => {
+    const loading = this.dataControlSE.feedbackLoading();
+    this.missingFields();
+    this.dataControlSE.mandatoryFieldsTotal();
+    untracked(() => {
+      if (this.feedbackReady()) return;
+      if (this.settleTimer) clearTimeout(this.settleTimer);
+      this.settleTimer = null;
+      if (loading) return;
+      this.settleTimer = setTimeout(() => {
+        this.settleTimer = null;
+        this.feedbackReady.set(true);
+      }, SectionBottomBarComponent.FEEDBACK_SETTLE_MS);
+    });
+  });
+
+  /**
    * ── Progreso de la sección ──────────────────────────────────────────────
    * "6 fields missing" es un número sin escala: no dice si son 6 de 7 o 6 de 30. El anillo pone el
    * denominador que el escaneo ya conocía y nadie mostraba.
@@ -276,6 +306,7 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
    */
   ngOnDestroy(): void {
     if (this.pendingCloseTimer) clearTimeout(this.pendingCloseTimer);
+    if (this.settleTimer) clearTimeout(this.settleTimer);
     this.slotSE.syncSlot.set(null);
     this.hostRef.nativeElement.remove();
   }

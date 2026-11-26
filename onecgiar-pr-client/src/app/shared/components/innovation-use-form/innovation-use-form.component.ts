@@ -665,6 +665,28 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     return list;
   }
 
+  /**
+   * P2-4125 — the "Current core innovation use" group is answered when "This is yet to be
+   * determined" is ticked, or when at least one active actor, organization or other measure
+   * carries a value. Mirrors the any-of rule of the live green check `validation_innovation_use_P25`
+   * (current-use block; see REVIEW D13 in the server's `qa-catalog/definitions/sections/innovation-use.ts`).
+   * Without a marker for it the bottom bar said "Section complete" while the rail stayed grey.
+   * A row only counts once it has its type (actor / organization) or a unit or quantity (measure):
+   * an empty row added with "Add actor" is not an answer, and from there the row's own required
+   * fields take over the alert.
+   */
+  isCurrentUseGroupComplete(): boolean {
+    if (this.body?.innov_use_to_be_determined === true) return true;
+    const use = this.body?.innovatonUse;
+    const active = (list: unknown) => (Array.isArray(list) ? list.filter(item => item && item.is_active !== false) : []);
+    const hasValue = (value: unknown) => value !== null && value !== undefined && String(value).trim() !== '';
+    return (
+      active(use?.actors).some(item => hasValue(item.actor_type_id)) ||
+      active(use?.organization).some(item => hasValue(item.institution_types_id)) ||
+      active(use?.measures).some(item => hasValue(item.unit_of_measure) || hasValue(item.quantity))
+    );
+  }
+
   hasElementsWithId(list, attr, significantFields?: string[]) {
     if (!Array.isArray(list)) return 0;
     const finalList = this.api.rolesSE.readOnly
