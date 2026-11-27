@@ -472,3 +472,151 @@ No task in this spec accounts for them, and they are outside the TRC-T-7 diff. T
 ### Running totals after TRC-T-7
 
 Tasks 6 / 7 (T-6 pending its re-run of steps 13/14) · review rounds 7, against the 6 budgeted in design §12. The extra round is the Pivot rework, which the user approved (Pivot Protocol). LOC no longer tracked (user decision).
+
+### TRC-T-6 — Re-run of steps 13/14 after TRC-T-7 (2026-11-27)
+
+The environment matches the first run (own `ng serve` on localhost:4200 against the PRTest API, temporary local `environment.ts`). The live bundle was confirmed to carry the fix: `pr-multi-select.onSelectOption` source contains `viewModel`, so the bundle is not stale. Port note: the first `ng serve` (PID 3388, started 8:01 by this session) had kept serving after the host reaped its shell wrapper for low memory. It was reused because it rebuilt on the T-7 change, then stopped at the end. Nothing was saved in this re-run; every change was discarded with a forced reload.
+
+| # | Step | Observed | Result |
+|---|---|---|---|
+| 13' | 8803: panel untick SP05 → **Yes** → reopen the panel | `scienceSelected = []`, chip gone, **SP05 box unticked** (DOM `input.checked = false`, also visible in the zoomed screenshot) | **PASS** |
+| 13'' | 8803 (fresh load): panel untick SP05 → **Cancel** → reopen (regression check on the veto path the fix touched) | `scienceSelected = [54]`, SP05 box still ticked | PASS |
+| 14' | 9164: panel untick CIAT → **Yes** → reopen the panel | `contributing_center = []`, Lead `null`, **CIAT box unticked** (DOM `input.checked = false`) | **PASS** |
+
+Server state after the re-run (read through the API):
+
+- 9164: `CENTER-03 / from_toc 1 / lead 1`; SPs `SP05, SP09, SP12` (`from_toc 1`).
+- 8803: `CENTER-13 / from_toc 1`; `SP05 / from_toc 1`.
+
+Both are unchanged from before TRC-T-6.
+
+Cleanup:
+
+- Chrome tab closed.
+- `ng serve` (PID 3388) stopped; port 4200 free.
+- `onecgiar-pr-client/src/environments/environment.ts` restored from the backup (`apiBaseUrl: 'http://localhost:3000/'`, `elastic.baseUrl: ''`).
+
+**TRC-T-6 overall (superseded, see Attempt 2):** every step in the task description now passes:
+
+- chip and panel open the dialog;
+- Yes removes the chip and the tick;
+- Cancel keeps the item and the tick;
+- save and reload keep the removal (Centers, step 8);
+- Center: the Lead is cleared and never set to the sentinel;
+- only Other(s) Centers: no red message.
+
+The SP save-and-reload was skipped on purpose (see step-13 note in the first run).
+
+### TRC-T-6 — Evidence review, attempt 1: Reviewer FAIL (verbatim issues)
+
+1. **Discovered Issue:** "Remove the last ToC SP via chip … Yes removes" was never observed. Step 11 was chip → Cancel only; the only SP Yes was via the panel (13/13'); chip Yes was observed only for a Center (step 9), which goes through a different handler. **Violated Rule:** tasks.md TRC-T-6 Description; requirements.md TRC-S-1.1. **Remediation:** on 8803, chip X on SP05 → Yes; record that the chip disappears with no further interaction and `scienceSelected = []`; discard with a forced reload.
+2. **Discovered Issue:** "TRC-T-6 overall: every step in the task description now passes" is not true: the SP save + reload was not run, and the SP chip → Yes was missing. **Violated Rule:** tasks.md TRC-T-6 Falsifier and DoD. **Remediation:** reword as "all steps pass except: SP save + reload Not Done (reason)" and name the residual risk: the SP ToC prefill re-adding a removed SP on reload (the SP side of P-11) has not been exercised.
+
+Reviewer ADVISORY:
+
+- Record `leadCenterCode` in the sentinel-only state (the S-2.1 AND-clause).
+- Say explicitly that `token` **and** `user` were present in localhost:4200 storage.
+- Check whether the "Unsaved changes" badge arms a leave-page guard (UX ticket if so).
+- The intermittent CENTER-03 re-bucketing is a data-loss risk that needs its own ticket.
+
+### TRC-T-6 — Attempt 2 (rework, 2026-11-27)
+
+Environment: same as before (own `ng serve` against the PRTest API, temporary local `environment.ts`). The live bundle carries the TRC-T-7 fix (`onSelectOption` contains `viewModel`) and `scienceDeselectGuard`. Session: `localStorage` on `localhost:4200` holds both `token` and `user` (`user.id = 575`), as the client `CLAUDE.md` §9 requires. The user placed them there. Nothing was saved; every change was discarded with a forced reload.
+
+| # | Step | Observed | Result |
+|---|---|---|---|
+| 15 | 8803: chip X on SP05 (the only ToC SP, ToC-planned, confirm armed) | The dialog opens (`#toc-science-program-remove-confirm.active`); while it is open `scienceSelected = [54]` and the chip is still visible | PASS |
+| 16 | **Yes** | Dialog closed, `scienceSelected = []`, chip gone with no further interaction (TRC-S-1.1, DD-7 zoneless repaint) | **PASS** |
+| 17 | 9164: chip X on CIAT → **Yes**, then tick only "Other(s)" (sentinel, no Other center) | `contributing_center = ['__OTHER_CENTERS__']`, `otherCentersSelected = []`, **`leadCenterCode = null`** (the sentinel is not auto-assigned, TRC-S-2.1 AND-clause / DD-8), `contributingCentersComplete = false`, message "Please select at least one Contributing CGIAR Center." | **PASS** |
+
+Server state after attempt 2 (API read): 9164 `CENTER-03 / from_toc 1 / lead 1`, SPs `SP05, SP09, SP12` (`from_toc 1`); 8803 `CENTER-13 / from_toc 1`, `SP05 / from_toc 1`. Both unchanged.
+
+Cleanup:
+
+- Tab closed.
+- `ng serve` stopped. A leftover `ng.js serve` Node process (PID 12020, this session's) was killed by command line; port 4200 is free.
+- `environment.ts` restored from the backup (`http://localhost:3000/`, `elastic.baseUrl: ''`).
+
+**TRC-T-6 overall (corrected; supersedes the "TRC-T-6 overall" line in the re-run block above):** every step in the task description passes in the browser except one.
+
+**Not Done:** SP save + reload. Reason: on the only results with exactly one ToC SP, that SP is a *pending* contributing initiative. Removing it and re-adding it to restore the data can change its acceptance state or send a contribution request to that SP.
+
+**Residual risk:** the SP side of P-11 has not been exercised on reload. That risk is that the SP ToC prefill re-adds a manually removed SP (`preselectScienceEffect`, `rd-contributors-and-partners.component.ts:800` / `:812`, the SP prefill and its hydration guard; corrected per the attempt-2 Reviewer advisory). The Center side was exercised (step 8: the removal persisted and the ToC prefill did not re-add it). The PATCH body is unchanged (NFR-1).
+
+Coverage of the work order:
+
+| Clause | Steps |
+|---|---|
+| SP chip → dialog → Yes removes | 15, 16 |
+| SP panel → Yes removes chip and tick | 13' |
+| Cancel keeps the item and the tick | 11, 12, 13'' |
+| Center chip and panel, Yes and Cancel | 1–5, 9, 14' |
+| Lead cleared, never the sentinel | 5, 17 |
+| Save + reload (Centers) | 8 |
+| Only Other(s) Centers → no red message | 7 |
+| Sentinel alone stays incomplete | 6, 17 |
+
+**Tickets to open (outside this spec, from TRC-T-6):**
+
+- The intermittent re-bucketing of a `from_toc=1` Center into "Other" when ToC references load empty. Risk: a silent `from_toc=false` save (data loss).
+- The `general-interceptor` skips `auth` when `environment.elastic.baseUrl` is `''`. It only bites a local stub, but it costs a session to diagnose.
+- The Lead center is not recomputed when the "Other(s)" cascade clears its Center.
+- The "Unsaved changes" badge appears on opening the dialog / panel even when the user cancels. Check whether it arms the leave-page guard.
+
+### TRC-T-6 — Closing record
+
+| Field | Value |
+|---|---|
+| Final status | PASS (attempt 2), with one Not Done item recorded (SP save + reload; the residual risk is named in Attempt 2) |
+| Date | 2026-11-27 |
+| Attempts | Evidence attempt 1: Reviewer FAIL (2 issues). Attempt 2: Reviewer PASS. Effort bumped to high on the rework |
+| Requirements covered | TRC-R-1, TRC-R-2, TRC-R-3 end to end (browser) |
+| Review | `skip-eligible` claim **not earned**: condition 2 (fully deterministic verification) fails for a manual gate, and override (c) applies (derived evidence a later gate consumes). So a conformance Reviewer ran. Plan and report did not match, which is reported at this gate |
+| Evidence re-run | The browser observations are the evidence. The server state was re-read through the API after every run (9164 / 8803 unchanged) → VERIFIED |
+
+Reviewer attempt 2: **PASS**. Both attempt-1 issues are closed with observed evidence (steps 15–17). The corrected overall line does not overclaim. Every work-order clause maps to an observed step. The server state is unchanged.
+
+ADVISORY applied in this same commit:
+
+- The residual-risk pointer is corrected to `preselectScienceEffect` (`component.ts:800` / `:812`).
+- The old overall line is marked "(superseded, see Attempt 2)".
+- `tasks.md` Status and the TRC-T-7 re-run sub-item are updated.
+
+**Note on step 8 and TRC-T-7:** the Centers save + reload (step 8) ran on the pre-TRC-T-7 bundle. It still holds, because TRC-T-7 only adds a `viewModel` write inside the veto branch, which cannot affect the PATCH body.
+
+**Order slip (Leader):** `tasks.md` was flipped to `[x]` a few seconds before this closing record was appended, the reverse of the evidence-before-checkbox rule. The Reviewer PASS and all evidence already existed (attempt-2 block and the Reviewer report in this session) and are recorded here in the same commit. No state was lost.
+
+`spawns: reviewer (attempt 1) 5 calls, 43390 tokens, ended fail; reviewer (attempt 2) 9 calls, 110984 tokens, ended complete`
+
+## Summary
+
+| Task | Result | Commit |
+|---|---|---|
+| TRC-T-1 Science Program: confirm instead of block | PASS (1 attempt) | `d53d57716` |
+| TRC-T-2 Center: confirm instead of block, lead, auto-assign guard | PASS (1 attempt) | `cc4988d36` |
+| TRC-T-3 `pr-multi-select` opt-in `deselectGuard` | PASS (1 attempt) | `5f39987d1` |
+| TRC-T-4 Wire the panel deselect guards | PASS (1 attempt) | `55b6a4a28` |
+| TRC-T-5 Relax P2-3249: any Contributing Center counts | PASS (1 attempt) | `70b9ec2eb` |
+| TRC-T-7 Untick the box after a confirmed panel removal (Pivot) | PASS (1 attempt) | `a04b8e749` |
+| TRC-T-6 Manual browser check (HITL) | PASS (attempt 2), with SP save + reload Not Done | this commit |
+
+Budget (design §12):
+
+- Tasks 7 against 6: +1 from the Pivot, approved by the user.
+- Review rounds 9 against 6: T-1..T-5 one each, T-7 one, T-6 two, plus the Pivot. The user approved raising and then dropping the LOC limits after the two tripwires.
+- LOC: no longer tracked after the second tripwire (user decision).
+
+Pending for `/akili-archive` / follow-up (not in this spec):
+
+- On `staging`, run `akili doctor --agents --fix`: `leader.md` `primary-instructions` is OUTDATED.
+- Tickets:
+  - `scripts/run-ct-batched.js:93`: `spawnSync('npx')` without `shell: true` fails every batch on Windows.
+  - `impact-level-info.component.spec.ts` E4 PATCH green-check reload test fails on HEAD.
+  - `pr-multi-select`: re-activating a logically deleted item through the flat checkbox or a group label does nothing.
+  - Intermittent re-bucketing of a `from_toc=1` Center into "Other" (silent `from_toc=false` save risk).
+  - The `general-interceptor` skips `auth` when `elastic.baseUrl` is `''`.
+  - The Lead center is not recomputed after the "Other(s)" cascade clears it.
+  - The "Unsaved changes" badge appears on opening the dialog / panel; check whether it arms the leave-page guard.
+- Residual risk: the SP side of P-11 on reload (SP save + reload not exercised).
+- Unattributed working-tree changes left untouched: `onecgiar-pr-server` RIR template files and migration `1793800000000-RIR-CopyV5CenterClosingDate.ts`, belonging to another session.
+- CodeGraph re-index pending (`pr-multi-select` and `rd-contributors-and-partners` changed).

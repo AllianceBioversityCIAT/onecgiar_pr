@@ -7,7 +7,7 @@
 | Module / feature | `results` → `rd-contributors-and-partners` (+ additive `pr-multi-select` input) |
 | Linked spec | [`requirements.md`](./requirements.md) + [`design.md`](./design.md) (revision 4) |
 | Owner / driver | Santiago Sanchez |
-| Status | blocked — Pivot on TRC-T-6 (panel Yes leaves the box ticked), awaiting approval |
+| Status | complete (T-1..T-7 done; Pivot on TRC-T-6 resolved by TRC-T-7) |
 | Approval Mode | gated |
 | Budget (design §12) | 6 tasks (5 code + 1 manual) · ≈380 LOC · 6 review rounds — tripwire for `/akili-execute` |
 
@@ -168,9 +168,9 @@ Common rules for every task:
   - [ ] Reds (a), (c) quoted, then green; (b) green.
   - [ ] Existing CT cases green (`pr-multi-select.cy.ts`, `selection.cy.ts`); `contract.cy.ts` shows no new reds beyond the 12 known.
   - [ ] `npx jest pr-multi-select repro-p2-3308` and the `rd-contributors-and-partners` folder green; `npm run build` green.
-  - [ ] TRC-T-6 steps 13/14 re-run in the browser after this task.
+  - [x] TRC-T-6 steps 13/14 re-run in the browser after this task.
 
-### TRC-T-6 [~] — Manual browser check (HITL)
+### TRC-T-6 [x] — Manual browser check (HITL)
 
 - **Type:** rollout
 - **Description:** On a real ToC-mapped 2026 result, own `ng serve` (inject `token` **and** `user`): remove the last ToC SP via chip and via panel → dialog; Yes removes (chip and tick); Cancel keeps (tick still visible); save + reload → still removed; repeat for a Center (lead cleared, not the sentinel); only Other(s) Centers → no red message.
