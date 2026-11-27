@@ -1010,7 +1010,10 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   }
 
   tryAutoAssignLeadCenter() {
-    const contributingCentersUnion = this.getContributingCentersUnion();
+    // TRC-DD-8: the W1/W2 "Other(s)" sentinel is a UI-shape control, never a selectable Lead center. Without this, a
+    // confirmed removal of the last ToC-origin Center (union = [sentinel]) would auto-assign `'__OTHER_CENTERS__'`.
+    // Scoped to auto-assign only: `getContributingCentersUnion` keeps its other callers' semantics.
+    const contributingCentersUnion = this.getContributingCentersUnion().filter(c => c.code !== this.OTHER_CENTERS_CODE);
     if (contributingCentersUnion.length !== 1) {
       return;
     }

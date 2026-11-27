@@ -316,18 +316,51 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
     });
 
-    it('TOC-SP-AC-2: blocks deleting the last remaining ToC-planned Science Program and shows the alert', () => {
+    it('TOC-SP-AC-2 (TRC-S-1.1): the last ToC-planned Science Program opens a confirm dialog, and removes only on Yes', () => {
       mockRdPartnersSE.scienceSelected = [SP01];
       mockRdPartnersSE.tocReferenceSynergyInitiativeIds.set([1]);
 
       component.deleteScience(0);
 
+      // Nothing removed while the dialog is open.
       expect(mockRdPartnersSE.scienceSelected).toEqual([SP01]);
       expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
-      const alertConfig = mockCustomizedAlertsFeSE.show.mock.calls[0][0];
-      expect(alertConfig.id).toBe('toc-science-program-min');
+      const [alertConfig, onConfirm] = mockCustomizedAlertsFeSE.show.mock.calls[0];
+      expect(alertConfig.id).toBe('toc-science-program-remove-confirm');
       expect(alertConfig.status).toBe('warning');
-      expect(alertConfig.confirmText).toBeUndefined();
+      expect(alertConfig.title).toBe('Science Program mapped in the Theory of Change');
+      expect(alertConfig.description).toBe('This Science Program is mapped in the Theory of Change for the selected indicator. Are you sure you want to remove it?');
+      expect(alertConfig.confirmText).toBe('Yes, remove it');
+
+      onConfirm();
+      expect(mockRdPartnersSE.scienceSelected).toEqual([]);
+    });
+
+    it('TRC-S-1.2: not calling the confirm callback (Cancel / backdrop) leaves scienceSelected and otherScienceSelected untouched', () => {
+      mockRdPartnersSE.scienceSelected = [SP01];
+      mockRdPartnersSE.otherScienceSelected = [OTHER_SP];
+      mockRdPartnersSE.tocReferenceSynergyInitiativeIds.set([1]);
+      const sciBefore = [...mockRdPartnersSE.scienceSelected];
+      const otherBefore = [...mockRdPartnersSE.otherScienceSelected];
+
+      component.deleteScience(0);
+
+      expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
+      expect(mockRdPartnersSE.scienceSelected).toEqual(sciBefore);
+      expect(mockRdPartnersSE.otherScienceSelected).toEqual(otherBefore);
+    });
+
+    it('TRC-DD-3: a confirm callback firing after the item is already gone is a no-op', () => {
+      mockRdPartnersSE.scienceSelected = [SP01];
+      mockRdPartnersSE.tocReferenceSynergyInitiativeIds.set([1]);
+      component.deleteScience(0);
+      const onConfirm = mockCustomizedAlertsFeSE.show.mock.calls[0][1];
+      const replacement = [{ id: 9, official_code: 'SP09' }];
+      mockRdPartnersSE.scienceSelected = replacement;
+
+      onConfirm();
+
+      expect(mockRdPartnersSE.scienceSelected).toBe(replacement);
     });
 
     it('TOC-SP-AC-3: no ToC-planned Science Programs — deletes all chips unrestricted, guard never fires even at zero remaining', () => {
@@ -364,7 +397,7 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
     });
 
-    it('TOC-SP-AC-5 (TOC-SP-DD-4): 2 ToC-origin SPs + 1 Other SP — delete SP1 succeeds, delete SP2 (last ToC-origin) is blocked', () => {
+    it('TOC-SP-AC-5 (TOC-SP-DD-4): 2 ToC-origin SPs + 1 Other SP — delete SP1 succeeds, delete SP2 (last ToC-origin) asks to confirm', () => {
       const SP02 = { id: 2, official_code: 'SP02', short_name: 'Science Program 2' };
       const SENTINEL = { id: component.OTHER_SP_CODE };
       // Sentinel present alongside the ToC-origin SPs — the split UI shape when Other(s) has entries.
@@ -377,15 +410,14 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(mockRdPartnersSE.scienceSelected).toEqual([SP02, SENTINEL]);
       expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
 
-      // Delete SP2 (now index 0, the last remaining ToC-origin SP): blocked, even though an
-      // "Other" SP is still selected — the old combined-count formula (1 ToC + 1 Other = 2,
-      // 2-1=1>0) would have wrongly allowed this.
+      // Delete SP2 (now index 0, the last remaining ToC-origin SP): asks for confirmation, even though an
+      // "Other" SP is still selected (the count is ToC-origin only).
       component.deleteScience(0);
       expect(mockRdPartnersSE.scienceSelected).toEqual([SP02, SENTINEL]);
       expect(mockRdPartnersSE.otherScienceSelected).toEqual([OTHER_SP]);
       expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
       const alertConfig = mockCustomizedAlertsFeSE.show.mock.calls[0][0];
-      expect(alertConfig.id).toBe('toc-science-program-min');
+      expect(alertConfig.id).toBe('toc-science-program-remove-confirm');
     });
 
     it('TOC-SP-AC-6 (TOC-SP-DD-4): 0 ToC-origin edge state — deleting the Other SP always succeeds', () => {
@@ -423,12 +455,12 @@ describe('RdContributorsAndPartnersComponent', () => {
   });
 
   /**
-   * TOC-C-T-1 (docs/specs/changes/toc-center-guard): block removing the last real Contributing
-   * CGIAR Center (combined across `contributing_center` minus the `OTHER_CENTERS_CODE` sentinel,
-   * and `otherCentersSelected`) while the result's ToC has planned Centers. Mirrors TOC-SP-T-1's
-   * guard shape exactly, substituting Centers-specific signals.
+   * TOC-C-T-1 (docs/specs/changes/toc-center-guard), reworked by TRC-R-2 (changes/toc-sp-removal-confirm):
+   * removing the last real ToC-origin Contributing CGIAR Center (`contributing_center` minus the
+   * `OTHER_CENTERS_CODE` sentinel) while the result's ToC has planned Centers now opens a confirm dialog
+   * instead of blocking. Mirrors the Science Program describe above.
    */
-  describe('TOC-C-T-1 — minimum Contributing CGIAR Center guard', () => {
+  describe('TOC-C-T-1 — last ToC-origin Contributing CGIAR Center confirm (TRC-R-2)', () => {
     const C1 = { code: 'C1', name: 'Center 1' };
     const C2 = { code: 'C2', name: 'Center 2' };
     const C3 = { code: 'C3', name: 'Center 3' };
@@ -455,18 +487,67 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
     });
 
-    it('TOC-C-AC-2: blocks deleting the last remaining ToC-planned Center and shows the alert', () => {
+    it('TOC-C-AC-2 (TRC-S-2.1): the last ToC-planned Center opens a confirm dialog, and removes (with the lead side effects) only on Yes', () => {
       mockRdPartnersSE.partnersBody.contributing_center = [C1];
       mockRdPartnersSE.tocReferenceCenterInstitutionIds.set([1]);
+      mockRdPartnersSE.leadCenterCode = 'C1';
 
       component.deleteContributingCenter(0);
 
+      // Nothing removed, no lead recompute while the dialog is open.
       expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual([C1]);
+      expect(mockRdPartnersSE.leadCenterCode).toBe('C1');
+      expect(mockRdPartnersSE.setPossibleLeadCenters).not.toHaveBeenCalled();
       expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
-      const alertConfig = mockCustomizedAlertsFeSE.show.mock.calls[0][0];
-      expect(alertConfig.id).toBe('toc-center-min');
+      const [alertConfig, onConfirm] = mockCustomizedAlertsFeSE.show.mock.calls[0];
+      expect(alertConfig.id).toBe('toc-center-remove-confirm');
       expect(alertConfig.status).toBe('warning');
-      expect(alertConfig.confirmText).toBeUndefined();
+      expect(alertConfig.title).toBe('Contributing CGIAR Center mapped in the Theory of Change');
+      expect(alertConfig.description).toBe(
+        'This Contributing CGIAR Center is mapped in the Theory of Change for the selected indicator. Are you sure you want to remove it?'
+      );
+      expect(alertConfig.confirmText).toBe('Yes, remove it');
+
+      onConfirm();
+      expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual([]);
+      expect(mockRdPartnersSE.leadCenterCode).toBeNull();
+      // lead options recomputed after confirmed removal
+      expect(mockRdPartnersSE.setPossibleLeadCenters).toHaveBeenCalledWith(true);
+    });
+
+    it('TRC-S-2.2: not calling the confirm callback (Cancel / backdrop) leaves contributing_center, otherCentersSelected and leadCenterCode untouched, and does not recompute leads', () => {
+      mockRdPartnersSE.partnersBody.contributing_center = [C1];
+      mockRdPartnersSE.otherCentersSelected = [OTHER_C];
+      mockRdPartnersSE.leadCenterCode = 'C1';
+      mockRdPartnersSE.tocReferenceCenterInstitutionIds.set([1]);
+      const centersBefore = [...mockRdPartnersSE.partnersBody.contributing_center];
+      const otherBefore = [...mockRdPartnersSE.otherCentersSelected];
+
+      component.deleteContributingCenter(0);
+
+      expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
+      expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual(centersBefore);
+      expect(mockRdPartnersSE.otherCentersSelected).toEqual(otherBefore);
+      expect(mockRdPartnersSE.leadCenterCode).toBe('C1');
+      expect(mockRdPartnersSE.setPossibleLeadCenters).not.toHaveBeenCalled();
+    });
+
+    it('TRC-DD-3: a confirm callback firing after the Center is already gone is a no-op with no side effect', () => {
+      mockRdPartnersSE.partnersBody.contributing_center = [C1];
+      mockRdPartnersSE.tocReferenceCenterInstitutionIds.set([1]);
+      component.deleteContributingCenter(0, true);
+      const onConfirm = mockCustomizedAlertsFeSE.show.mock.calls[0][1];
+      const replacement = [{ code: 'C9', name: 'Center 9' }];
+      mockRdPartnersSE.partnersBody.contributing_center = replacement;
+      mockRdPartnersSE.leadCenterCode = 'C9';
+      mockRdPartnersSE.updatingLeadData = false;
+
+      onConfirm();
+
+      expect(mockRdPartnersSE.partnersBody.contributing_center).toBe(replacement);
+      expect(mockRdPartnersSE.leadCenterCode).toBe('C9');
+      expect(mockRdPartnersSE.updatingLeadData).toBe(false);
+      expect(mockRdPartnersSE.setPossibleLeadCenters).not.toHaveBeenCalled();
     });
 
     it('TOC-C-AC-3: no ToC-planned Centers — deletes all chips unrestricted, guard never fires even at zero remaining', () => {
@@ -503,7 +584,7 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
     });
 
-    it('TOC-C-AC-7 (TOC-C-DD-5): 2 ToC-origin Centers + 1 Other Center — delete C1 succeeds, delete C2 (last ToC-origin) is blocked', () => {
+    it('TOC-C-AC-7 (TOC-C-DD-5): 2 ToC-origin Centers + 1 Other Center — delete C1 succeeds, delete C2 (last ToC-origin) asks to confirm', () => {
       const SENTINEL = { code: component.OTHER_CENTERS_CODE };
       // Sentinel present alongside the ToC-origin Centers — the split UI shape when Other(s) has entries.
       mockRdPartnersSE.partnersBody.contributing_center = [C1, C2, SENTINEL];
@@ -515,7 +596,7 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual([C2, SENTINEL]);
       expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
 
-      // Delete C2 (now index 0, the last remaining ToC-origin Center): blocked, even though an
+      // Delete C2 (now index 0, the last remaining ToC-origin Center): asks for confirmation, even though an
       // "Other" Center is still selected — the old combined-count formula (1 ToC + 1 Other = 2,
       // 2-1=1>0) would have wrongly allowed this.
       component.deleteContributingCenter(0);
@@ -523,7 +604,7 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(mockRdPartnersSE.otherCentersSelected).toEqual([OTHER_C]);
       expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
       const alertConfig = mockCustomizedAlertsFeSE.show.mock.calls[0][0];
-      expect(alertConfig.id).toBe('toc-center-min');
+      expect(alertConfig.id).toBe('toc-center-remove-confirm');
     });
 
     it('TOC-C-AC-8 (TOC-C-DD-5): 0 ToC-origin edge state — deleting the Other Center always succeeds', () => {
@@ -570,7 +651,7 @@ describe('RdContributorsAndPartnersComponent', () => {
         expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
       });
 
-      it('blocks deleting the last remaining Center', () => {
+      it('asks to confirm before deleting the last remaining Center', () => {
         mockRdPartnersSE.partnersBody.contributing_center = [C1];
         mockRdPartnersSE.tocReferenceCenterInstitutionIds.set([1]);
 
@@ -579,7 +660,7 @@ describe('RdContributorsAndPartnersComponent', () => {
         expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual([C1]);
         expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
         const alertConfig = mockCustomizedAlertsFeSE.show.mock.calls[0][0];
-        expect(alertConfig.id).toBe('toc-center-min');
+        expect(alertConfig.id).toBe('toc-center-remove-confirm');
       });
     });
   });
@@ -1563,12 +1644,10 @@ describe('RdContributorsAndPartnersComponent — Suppress ToC "not found" notes 
   });
 });
 
-// ----- P2-3249: "Contributing CGIAR Centers" mandatory + at least one centre from the ToC -----
+// ----- P2-3249: "Contributing CGIAR Centers" mandatory; any real centre counts (relaxed 2026-11-27) -----
 /**
- * The rule has THREE preconditions and they are disjoint (decision recorded on P2-3249, 2026-08-28):
- *   2026 split + ToC brings centres  → only a ToC-bucket centre satisfies it ("Other(s)" never does);
- *   2026 split + ToC brings none     → the "Other(s)" dropdown IS the field, so any centre satisfies it;
- *   pre-2026 flat dropdown           → no ToC bucket exists, so any centre satisfies it.
+ * One rule in every shape (Santiago, 2026-11-27, supersedes the P2-3249 ToC-only minimum): the field is complete
+ * when at least one real centre is selected, ToC or "Other(s)". The "Other(s)" sentinel is a UI toggle, not a centre.
  *
  * `isContributorsPartners2026` is mocked as a SIGNAL on purpose: `isCP2026` is a `computed()`, so a plain
  * function returning a constant would let the first read cache forever and the phase flip would be a no-op.
@@ -1660,10 +1739,6 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
       fixture.detectChanges();
     });
 
-    it('requires a ToC centre', () => {
-      expect(component.requiresTocCenter).toBe(true);
-    });
-
     it('is incomplete with nothing selected', () => {
       svc.partnersBody.contributing_center = [];
       expect(component.contributingCentersComplete).toBe(false);
@@ -1681,14 +1756,19 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
       expect(component.contributingCentersComplete).toBe(true);
     });
 
-    // THE ticket. "Other(s)" centres must not satisfy the minimum on their own.
-    it('is INCOMPLETE when every ToC centre is removed and only "Other(s)" centres remain', () => {
+    it('is COMPLETE when every ToC centre is removed and only "Other(s)" centres remain', () => {
       svc.partnersBody.contributing_center = [{ code: component.OTHER_CENTERS_CODE }];
       svc.otherCentersSelected = [
         { code: 'ZZZ', institutionId: 99 },
         { code: 'YYY', institutionId: 98 }
       ];
       expect(component.otherCentersSelectedCount).toBe(2);
+      expect(component.contributingCentersComplete).toBe(true);
+    });
+
+    it('is INCOMPLETE with only the "Other(s)" sentinel ticked and no Other(s) centre picked', () => {
+      svc.partnersBody.contributing_center = [{ code: component.OTHER_CENTERS_CODE }];
+      svc.otherCentersSelected = [];
       expect(component.contributingCentersComplete).toBe(false);
     });
 
@@ -1705,9 +1785,8 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
 
     // The missing-fields LABEL lives as a static attribute in the template (the directive freezes a bound one),
     // so it is asserted against the rendered DOM in rd-contributors-and-partners.zoneless.spec.ts.
-    it('names the ToC condition in the inline validation message', () => {
-      expect(component.contributingCentersValidationMessage).toContain('Theory of Change');
-      expect(component.contributingCentersValidationMessage).toContain('Other(s)');
+    it('uses the generic message, with no ToC or Other(s) condition in it', () => {
+      expect(component.contributingCentersValidationMessage).toBe('Please select at least one Contributing CGIAR Center.');
     });
   });
 
@@ -1717,9 +1796,8 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
       fixture.detectChanges();
     });
 
-    it('does not require a ToC centre — that would be impossible to satisfy', () => {
+    it('has no ToC reference centres', () => {
       expect(component.hasReferenceCenters()).toBe(false);
-      expect(component.requiresTocCenter).toBe(false);
     });
 
     it('is incomplete with nothing selected — "Other(s)" is mandatory here', () => {
@@ -1746,10 +1824,9 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
       fixture.detectChanges();
     });
 
-    it('never requires a ToC centre — the flat path has no ToC bucket, even when the ToC has centres', () => {
+    it('is the flat path even when the ToC has centres', () => {
       expect(component.isCP2026()).toBe(false);
       expect(component.hasReferenceCenters()).toBe(true);
-      expect(component.requiresTocCenter).toBe(false);
     });
 
     it('is incomplete with nothing selected', () => {
@@ -1764,14 +1841,14 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
   });
 
   // ⚠️ Legacy `from_toc = 0` rows: the column is NOT NULL DEFAULT 0, so a result saved before the 2026 split
-  // loads every centre into "Other(s)". Documented and deliberate: the rule fires and the user re-picks a ToC centre.
-  it('reports a legacy result (every centre bucketed as Other) as incomplete, but never blocks the PATCH', () => {
+  // loads every centre into "Other(s)". Since 2026-11-27 any centre counts, so such a result is complete.
+  it('reports a legacy result (every centre bucketed as Other) as complete, and never blocks the PATCH', () => {
     svc.tocReferenceCenterInstitutionIds.set([11, 22]);
     fixture.detectChanges();
     svc.partnersBody.contributing_center = [{ code: component.OTHER_CENTERS_CODE }];
     svc.otherCentersSelected = [{ code: 'C1', institutionId: 11, from_toc: 0 }];
 
-    expect(component.contributingCentersComplete).toBe(false);
+    expect(component.contributingCentersComplete).toBe(true);
 
     // Save draft still goes through: this is feedback (src/CLAUDE.md §21.5 layer 1), not a hard gate.
     component.onSaveSection();

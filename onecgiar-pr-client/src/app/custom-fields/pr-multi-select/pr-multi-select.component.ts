@@ -1,6 +1,6 @@
 import { Component, ElementRef, NgZone, ViewChild, forwardRef, inject, input, output, signal, OnChanges, SimpleChanges, computed, OnDestroy, OnInit } from '@angular/core';
 import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { ControlValueAccessor, NG_VALUE_ACCESSOR, NgModel } from '@angular/forms';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { RolesService } from '../../shared/services/global/roles.service';
@@ -65,6 +65,17 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges, 
   // picker. Off by default — the other ~78 existing call sites are visually unchanged. See
   // `pr-multi-select/CLAUDE.md`.
   readonly resultPickerStyle = input<boolean>(false);
+
+  /**
+   * TRC-DD-9: opt-in hook that lets a parent veto a PANEL deselect. Called only when an ACTIVE item is
+   * being removed (never for the `logicalDeletion` re-activation of an inactive one). When it returns
+   * `true` the component keeps `value` untouched, emits nothing, and puts the tick back: the checkbox
+   * paths pass their native element and the component writes `checked = true` (P-10: no model-side
+   * change re-ticks a recycled CDK row). Applies to flat and group mode. `null` (default, every other
+   * instance) is today's behaviour. NOT consulted by "Select all / Unselect all" or the chip X
+   * (`removeOption`) — the consumer must not enable those where it needs the guard.
+   */
+  readonly deselectGuard = input<((option: any) => boolean) | null>(null);
 
   /** Must match `.options.result_picker_style .option` min-height in `pr-multi-select.component.scss`
    * (52px) when `resultPickerStyle` is on; 30px (the `custom-fields.scss` global row height) otherwise.
@@ -463,7 +474,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges, 
     );
   }
 
-  onSelectOption(option) {
+  onSelectOption(option, cb?: HTMLInputElement, ngModel?: NgModel) {
     this.selectAll = null;
 
     if (option?.disabled) return;
@@ -482,6 +493,16 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges, 
     } else {
       // Option is being deselected
       const valueItemFind = this.value.find(valueItem => valueItem[optionValue] == option[optionValue]);
+      const isReactivation = this.logicalDeletion() && !valueItemFind.new && valueItemFind.is_active === false;
+      if (!isReactivation && this.deselectGuard()?.(option)) {
+        option.selected = true;
+        if (cb) cb.checked = true;
+        // The user's untick left this row's NgModel.viewModel at `false`; the veto put the option back to `true`,
+        // so a later confirmed removal (`option.selected = false`) would compare `false` vs `false` and never
+        // repaint the box. Re-syncing viewModel makes that removal a real change (TRC-DD-9, amended 2026-11-27).
+        if (ngModel) ngModel.viewModel = true;
+        return;
+      }
       if (this.logicalDeletion() && !valueItemFind.new) {
         const updated = this.value.map(item => {
           if (item[optionValue] == option[optionValue]) {

@@ -14,6 +14,7 @@ import {
   buildRirTemplatesV2,
   buildRirTemplatesV3,
   buildRirTemplatesV4,
+  buildRirTemplatesV5,
 } from './rir-template-copy';
 
 const ALL_NAMES = [
@@ -369,5 +370,55 @@ describe('rir-template-copy v4', () => {
     await new M().down(runner as any);
     for (const name of ALL_NAMES)
       expect(runner.bodies.get(name)).toBe(v3[name]);
+  });
+});
+
+describe('rir-template-copy v5', () => {
+  const v4 = buildRirTemplatesV4();
+  const v5 = buildRirTemplatesV5();
+  const ctx = {
+    phaseYear: 2026,
+    nextYear: 2027,
+    nextNextYear: 2028,
+    previousYear: 2025,
+    results: [],
+  };
+
+  it('Center email closes "on 10 February" and no longer says mid-February', () => {
+    const html = handlebars.compile(v5[RIR_CENTER_TEMPLATE_NAME])(ctx);
+    expect(html).toContain(
+      "with the status 'Inactive – not updated' on 10 February 2027.",
+    );
+    expect(html).not.toContain('mid-February');
+    expect(
+      v4[RIR_CENTER_TEMPLATE_NAME].replace(
+        'in mid-February {{nextYear}}',
+        'on 10 February {{nextYear}}',
+      ),
+    ).toBe(v5[RIR_CENTER_TEMPLATE_NAME]);
+  });
+
+  it.each([
+    RIR_Q4_TEMPLATE_NAME,
+    RIR_FINAL_TEMPLATE_NAME,
+    RIR_MELIA_TEMPLATE_NAME,
+  ])('%s is v4 byte for byte (end of January)', (name) => {
+    expect(v5[name]).toBe(v4[name]);
+    expect(handlebars.compile(v5[name])(ctx)).toContain(
+      'at the end of January 2027',
+    );
+  });
+
+  it('the v5 migration writes v5 up and restores v4 down, by name', async () => {
+    const { RIRCopyV5CenterClosingDate1793800000000: M } = await import(
+      '../../../migrations/1793800000000-RIR-CopyV5CenterClosingDate'
+    );
+    const runner = new FakeTemplateRunner();
+    await new M().up(runner as any);
+    for (const name of ALL_NAMES)
+      expect(runner.bodies.get(name)).toBe(v5[name]);
+    await new M().down(runner as any);
+    for (const name of ALL_NAMES)
+      expect(runner.bodies.get(name)).toBe(v4[name]);
   });
 });

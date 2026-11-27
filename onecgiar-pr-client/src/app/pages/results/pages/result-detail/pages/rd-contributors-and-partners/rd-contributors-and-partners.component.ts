@@ -533,34 +533,16 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
   noCentersNote = 'No CGIAR Centers related to the established HLO/Outcomes were found';
   noLeadCentersNote = 'Please select at least one contributing center to choose a lead center';
 
-  // ----- P2-3249: "Contributing CGIAR Centers" is mandatory, and under the 2026 ToC split at least one
-  //                selected centre must keep coming FROM the ToC -----
+  // ----- P2-3249: "Contributing CGIAR Centers" is mandatory; ANY real centre counts (relaxed 2026-11-27) -----
   /**
-   * TWO rules with DISJOINT preconditions. This is the decision recorded on P2-3249 (2026-08-28) that
-   * resolves the apparent contradiction with P2-3324 / P2-3326 — 🛑 do not re-litigate it here:
+   * One rule in every shape of the field (2026 split with or without ToC centres, unmapped, pre-2026 flat):
+   * at least one REAL centre selected, whether it came from the ToC bucket or from "Other(s)". The "Other(s)"
+   * sentinel is a UI toggle, not a centre, and never counts. Decision: Santiago, 2026-11-27, which supersedes
+   * the earlier P2-3249 rule that demanded one ToC-origin centre. 🛑 do not re-introduce a ToC-only minimum here.
    *
-   * | precondition                            | rule                                                          |
-   * |-----------------------------------------|---------------------------------------------------------------|
-   * | 2026 split AND the ToC brings centres   | ≥1 centre must stay in the ToC bucket. "Other(s)" picks may be |
-   * |                                         | added but can NEVER satisfy the minimum on their own.         |
-   * | 2026 split AND the ToC brings none      | dropdown 1 is not even painted and the "Other(s)" selector     |
-   * |                                         | carries the "Contributing CGIAR Centers" label, so ANY centre |
-   * |                                         | satisfies it (P2-3324 / P2-3326 branch).                      |
-   * | pre-2026 flat dropdown (`html:128-140`) | no ToC bucket exists → ANY centre satisfies it.               |
-   *
-   * ⚠️ Origin is read from the SAME bucketing the user sees on screen — `applyTocMappingOnLoad`
-   * (`rd-contributors-and-partners.service.ts:417-435`), i.e. the persisted `from_toc` flag. That column
-   * is `NOT NULL DEFAULT 0` (`1782418095648-AddFromTocToContributorsPartners.ts:10`), so a result saved
-   * before the 2026 split shipped carries `from_toc = 0` on every centre and they all load into
-   * "Other(s)". Those results DO fail this rule, on purpose: `from_toc = 0` is indistinguishable from
-   * "the user deliberately kept only Other(s) centres", which is exactly the state the ticket exists to
-   * catch, so a legacy exemption would switch the rule off for its own use case. Nothing is silently
-   * blocked — this is the section's client-side mandatory-field FEEDBACK (see `src/CLAUDE.md` §21.5
-   * layer 1: it feeds "N fields missing" and the "Section complete" indicator), NOT a hard gate on
-   * Save draft. The PATCH still goes through, so no result that used to save stops saving.
+   * ⚠️ This is the section's client-side mandatory-field FEEDBACK (see `src/CLAUDE.md` §21.5 layer 1: it feeds
+   * "N fields missing" and the "Section complete" indicator), NOT a hard gate on Save draft.
    */
-  readonly contributingCentersRequiredNote =
-    'At least one Contributing CGIAR Center coming from the Theory of Change must remain selected. Centers added through "Other(s)" do not satisfy this on their own.';
   readonly contributingCentersEmptyNote = 'Please select at least one Contributing CGIAR Center.';
 
   /** Real centres in the ToC bucket (dropdown 1), i.e. `contributing_center` minus the UI-only "Other(s)" sentinel. */
@@ -568,14 +550,9 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
     return (this.rdPartnersSE.partnersBody?.contributing_center || []).filter((c: any) => c?.code !== this.OTHER_CENTERS_CODE).length;
   }
 
-  /** Centres picked in the "Other(s)" dropdown (dropdown 2). Never counts towards the ToC minimum. */
+  /** Centres picked in the "Other(s)" dropdown (dropdown 2). */
   get otherCentersSelectedCount(): number {
     return (this.rdPartnersSE.otherCentersSelected || []).length;
-  }
-
-  /** True when the ToC minimum applies, i.e. only in the 2026 split AND only when the ToC actually brought centres. */
-  get requiresTocCenter(): boolean {
-    return this.isCP2026() && this.hasReferenceCenters();
   }
 
   /**
@@ -584,19 +561,15 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
    * this getter is bound from ONE marker placed outside both branches.
    */
   get contributingCentersComplete(): boolean {
-    if (this.requiresTocCenter) return this.tocCentersSelectedCount > 0;
     return this.tocCentersSelectedCount + this.otherCentersSelectedCount > 0;
   }
 
   /**
    * Inline validation message under the dropdowns (P2-3249 AC: "display a clear validation message").
-   *
-   * ⚠️ The companion label for the bottom bar's "Still missing" list is NOT a getter: `appFeedbackValidation`
-   * writes `labelText` into the DOM once in `ngOnInit` and never again, so a bound label freezes on first render.
-   * The template carries the two wordings as static attributes on two `@if`-branched markers instead.
+   * Same wording in every shape; it never mentions the Theory of Change or Other(s).
    */
   get contributingCentersValidationMessage(): string {
-    return this.requiresTocCenter ? this.contributingCentersRequiredNote : this.contributingCentersEmptyNote;
+    return this.contributingCentersEmptyNote;
   }
 
   // "Other(s) CGIAR Centers" is a special item at the END of the first dropdown's list (per Excel), not an outside
@@ -679,36 +652,62 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
     this.rdPartnersSE.setPossibleLeadCenters(true);
   }
 
-  // ----- TOC-C-T-1: guard against removing the last ToC-planned Contributing CGIAR Center -----
+  // ----- TRC-R-2 (changes/toc-sp-removal-confirm): confirm, instead of block, removing the last ToC-origin Center -----
+  // (Replaces TOC-C-T-1's blocking `blockIfLastCenter`; TOC-C-DD-3/4/5 still define what counts, see below.)
 
   // Real (non-sentinel) Center count — TOC-C-DD-5: scoped to ToC-origin (`contributing_center`)
-  // only. `otherCentersSelected` is deliberately NOT added: the floor is "at least 1 ToC-origin
-  // Center remains", independent of how many "Other" Centers exist.
+  // only. `otherCentersSelected` is deliberately NOT added: the question is "is this the last ToC-origin
+  // Center", independent of how many "Other" Centers exist.
   private getRealCenterCount(): number {
     const realCentersSelected = (this.rdPartnersSE.partnersBody?.contributing_center || []).filter((c: any) => c?.code !== this.OTHER_CENTERS_CODE);
     return realCentersSelected.length;
   }
 
   // Same `planned_result !== false` guard already used in this file's @if branches (bugfix/toc-unmapped-orange-notes),
-  // combined with the live ToC Center-institution-id set already exposed by the service (see `hasReferenceCenters`, :146).
+  // combined with the live ToC Center-institution-id set already exposed by the service (see `hasReferenceCenters`).
   private get hasTocPlannedCenter(): boolean {
     return (
       this.rdPartnersSE.partnersBody?.result_toc_result?.planned_result !== false && this.rdPartnersSE.tocReferenceCenterInstitutionIds().length > 0
     );
   }
 
-  // Returns true (and shows the blocking alert) when the deletion must be blocked.
-  private blockIfLastCenter(willRemoveCount: number): boolean {
-    if (!this.hasTocPlannedCenter) return false;
-    if (this.getRealCenterCount() - willRemoveCount > 0) return false;
+  // TRC-DD-1: side-effect-free. True when removing one more ToC-origin Center would leave none on a ToC-planned result.
+  private shouldConfirmLastCenter(): boolean {
+    return this.hasTocPlannedCenter && this.getRealCenterCount() - 1 <= 0;
+  }
 
-    this.customizedAlertsFeSE.show({
-      id: 'toc-center-min',
-      title: 'Indicator with Contributing CGIAR Centers mapped in ToC',
-      description: 'At least one Contributing CGIAR Center is required for this result.',
-      status: 'warning'
-    });
-    return true;
+  // TRC-DD-2 / DD-3 / DD-4 / DD-7: one removal path for the immediate and the confirmed removal. Removes by identity and
+  // returns early, BEFORE any side effect (including `updatingLeadData`), if the item is already gone (the dialog lives on
+  // app-root and can outlive this view; two quick chip clicks can open two same-id dialogs).
+  // `setPossibleLeadCenters(true)` lives here (moved from the chip's `(click)`) so that opening the dialog has no side effect.
+  // markForCheck: the app is zoneless and the alert callback is a native listener.
+  private removeCenterItem(item: any, updateComponent: boolean) {
+    const currentCenters = this.rdPartnersSE.partnersBody?.contributing_center || [];
+    if (!currentCenters.includes(item)) return;
+
+    if (updateComponent) {
+      this.rdPartnersSE.updatingLeadData = true;
+    }
+
+    // Reassign a NEW array reference (not splice) so the multi-select ngModel refreshes and object identity stays predictable.
+    this.rdPartnersSE.partnersBody.contributing_center = currentCenters.filter((c: any) => c !== item);
+    if (this.rdPartnersSE.leadCenterCode === item.code) {
+      //always should happen
+      this.rdPartnersSE.leadCenterCode = null;
+    }
+    // P2-2998: removing the "Other(s)" chip hides the second dropdown and clears its selection.
+    if (!this.showOtherCenters) this.rdPartnersSE.otherCentersSelected = [];
+    if (updateComponent) {
+      setTimeout(() => {
+        // P2-3322 (2026): this delayed write is what re-shows the Lead partner/center select. It repaints because
+        // `updatingLeadData` is signal-backed on the service — a plain field would leave the select hidden under
+        // zoneless change detection (a `setTimeout` notifies nothing).
+        this.rdPartnersSE.updatingLeadData = false;
+      }, 50);
+    }
+    // Recompute lead-center eligibility now that a center is gone (TRC-DD-4).
+    this.rdPartnersSE.setPossibleLeadCenters(true);
+    this.cdr.markForCheck();
   }
 
   deleteOtherCenter(index: number) {
@@ -839,11 +838,10 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
     if (!this.showOtherScience) this.rdPartnersSE.otherScienceSelected = [];
   }
 
-  // ----- TOC-SP-T-1: guard against removing the last ToC-planned Contributing Science Program -----
+  // ----- TRC-R-1 (changes/toc-sp-removal-confirm): confirm, instead of block, removing the last ToC-origin Science Program -----
 
-  // Real (non-sentinel) Science Program count — TOC-SP-DD-4: scoped to ToC-origin
-  // (`scienceSelected`) only. `otherScienceSelected` is deliberately NOT added: the floor is
-  // "at least 1 ToC-origin Science Program remains", independent of how many "Other" ones exist.
+  // Real (non-sentinel) Science Program count, scoped to ToC-origin (`scienceSelected`) only.
+  // `otherScienceSelected` is deliberately NOT added: the question is "is this the last ToC-origin one".
   private getRealScienceCount(): number {
     const realScienceSelected = (this.rdPartnersSE.scienceSelected || []).filter((sp: any) => sp?.id !== this.OTHER_SP_CODE);
     return realScienceSelected.length;
@@ -857,36 +855,74 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
     );
   }
 
-  // Returns true (and shows the blocking alert) when the deletion must be blocked.
-  private blockIfLastScience(willRemoveCount: number): boolean {
-    if (!this.hasTocPlannedScience) return false;
-    if (this.getRealScienceCount() - willRemoveCount > 0) return false;
+  // TRC-DD-1: side-effect-free. True when removing one more ToC-origin Science Program would leave none on a ToC-planned result.
+  private shouldConfirmLastScience(): boolean {
+    return this.hasTocPlannedScience && this.getRealScienceCount() - 1 <= 0;
+  }
 
-    this.customizedAlertsFeSE.show({
-      id: 'toc-science-program-min',
-      title: 'Indicator with Science Programs mapped in ToC',
-      description: 'At least one Contributing Science Program is required for this result.',
-      status: 'warning'
-    });
-    return true;
+  // TRC-DD-1: shared confirm dialog for the last ToC-origin Science Program / Center (TRC-R-1 / TRC-R-2).
+  // `customizedAlertsFeSE.show` runs `onConfirm` only on "Yes"; Cancel and the backdrop only close it. Static copy (TRC-DD-6).
+  private confirmRemoval(kind: 'science' | 'center', onConfirm: () => void) {
+    const copy =
+      kind === 'science'
+        ? {
+            id: 'toc-science-program-remove-confirm',
+            title: 'Science Program mapped in the Theory of Change',
+            description: 'This Science Program is mapped in the Theory of Change for the selected indicator. Are you sure you want to remove it?'
+          }
+        : {
+            id: 'toc-center-remove-confirm',
+            title: 'Contributing CGIAR Center mapped in the Theory of Change',
+            description: 'This Contributing CGIAR Center is mapped in the Theory of Change for the selected indicator. Are you sure you want to remove it?'
+          };
+    this.customizedAlertsFeSE.show({ ...copy, status: 'warning', confirmText: 'Yes, remove it' }, onConfirm);
+  }
+
+  // TRC-DD-2 / DD-3 / DD-7: one removal path for the immediate and the confirmed removal. Removes by identity and
+  // returns early if the item is already gone (the dialog lives on app-root and can outlive this view).
+  // markForCheck: the app is zoneless and the alert callback is a native listener, so nothing else schedules a repaint.
+  private removeScienceItem(item: any) {
+    const current = this.rdPartnersSE.scienceSelected || [];
+    if (!current.includes(item)) return;
+    // A manual removal doesn't change the ToC ref signature, so the reconciliation won't re-add it (until the node changes).
+    // Reassign a NEW array reference (not splice in place) so the multi-select ngModel refreshes and the chip stays removed.
+    this.rdPartnersSE.scienceSelected = current.filter((sp: any) => sp !== item);
+    if (!this.showOtherScience) this.rdPartnersSE.otherScienceSelected = [];
+    this.cdr.markForCheck();
   }
 
   deleteScience(index: number) {
-    const current = this.rdPartnersSE.scienceSelected || [];
-    // TOC-SP-DD-3 (supersedes TOC-SP-DD-2's sentinel-cascade blocking): the "Other(s)" sentinel is a
-    // UI-shape control, not itself a Contributing Science Program, so removing it must always succeed —
-    // the guard only applies to removing a real (non-sentinel) chip.
-    const isRemovingOtherSentinel = current[index]?.id === this.OTHER_SP_CODE;
-    if (!isRemovingOtherSentinel && this.blockIfLastScience(1)) return;
-
-    // A manual removal doesn't change the ToC ref signature, so the reconciliation won't re-add it (until the node changes).
-    // Reassign a NEW array reference (not splice in place) so the multi-select ngModel refreshes and the chip stays removed.
-    this.rdPartnersSE.scienceSelected = current.filter((_: any, i: number) => i !== index);
-    if (!this.showOtherScience) this.rdPartnersSE.otherScienceSelected = [];
+    const item = (this.rdPartnersSE.scienceSelected || [])[index];
+    // The "Other(s)" sentinel is a UI-shape control, not itself a Contributing Science Program: always removed immediately.
+    const isRemovingOtherSentinel = item?.id === this.OTHER_SP_CODE;
+    if (isRemovingOtherSentinel || !this.shouldConfirmLastScience()) {
+      this.removeScienceItem(item);
+      return;
+    }
+    this.confirmRemoval('science', () => this.removeScienceItem(item));
   }
 
+  // TRC-DD-9: `pr-multi-select.deselectGuard` for the Science Program panel. Called with the panel's option CLONE, so the model item
+  // is matched by `id`. Returns true (the untick is vetoed) only after opening the dialog; no other side effect.
+  scienceDeselectGuard = (option: any): boolean => {
+    if (option?.id === this.OTHER_SP_CODE || !this.shouldConfirmLastScience()) return false;
+    const match = (this.rdPartnersSE.scienceSelected || []).find((sp: any) => sp?.id == option?.id);
+    if (!match) return false;
+    this.confirmRemoval('science', () => this.removeScienceItem(match));
+    return true;
+  };
+
+  // TRC-DD-9: same for the Contributing CGIAR Centers panels; the model item is matched by `code`.
+  centerDeselectGuard = (option: any): boolean => {
+    if (option?.code === this.OTHER_CENTERS_CODE || !this.shouldConfirmLastCenter()) return false;
+    const match = (this.rdPartnersSE.partnersBody?.contributing_center || []).find((c: any) => c?.code == option?.code);
+    if (!match) return false;
+    this.confirmRemoval('center', () => this.removeCenterItem(match, false));
+    return true;
+  };
+
   deleteOtherScience(index: number) {
-    // TOC-SP-DD-4: removing an "Other" Science Program never affects the ToC-origin floor — no guard call here at all.
+    // Removing an "Other" Science Program never asks for confirmation (TRC-S-1.3).
     this.rdPartnersSE.otherScienceSelected = (this.rdPartnersSE.otherScienceSelected || []).filter((_: any, i: number) => i !== index);
   }
 
@@ -939,36 +975,15 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
 
   deleteContributingCenter(index: number, updateComponent: boolean = false) {
     // A manual removal doesn't change the ToC ref signature, so the reconciliation won't re-add it (until the node changes).
-    // TOC-C-DD-4 (supersedes TOC-C-DD-3): the "Other(s)" sentinel is a UI-shape control, not itself a
-    // Contributing CGIAR Center, so removing it must always succeed — the guard only applies to removing
-    // a real (non-sentinel) chip.
-    const currentCenters = this.rdPartnersSE.partnersBody?.contributing_center || [];
-    const isRemovingOtherSentinel = currentCenters[index]?.code === this.OTHER_CENTERS_CODE;
-    if (!isRemovingOtherSentinel && this.blockIfLastCenter(1)) return;
-
-    if (updateComponent) {
-      this.rdPartnersSE.updatingLeadData = true;
+    // TOC-C-DD-4: the "Other(s)" sentinel is a UI-shape control, not itself a Contributing CGIAR Center,
+    // so removing it must always succeed immediately — the confirmation only applies to a real (non-sentinel) chip.
+    const item = (this.rdPartnersSE.partnersBody?.contributing_center || [])[index];
+    const isRemovingOtherSentinel = item?.code === this.OTHER_CENTERS_CODE;
+    if (isRemovingOtherSentinel || !this.shouldConfirmLastCenter()) {
+      this.removeCenterItem(item, updateComponent);
+      return;
     }
-
-    // Reassign a NEW array reference (not splice) so the multi-select ngModel refreshes and object identity stays predictable.
-    const deletedCenter = (this.rdPartnersSE.partnersBody?.contributing_center || []).slice(index, index + 1);
-    this.rdPartnersSE.partnersBody.contributing_center = (this.rdPartnersSE.partnersBody?.contributing_center || []).filter(
-      (_: any, i: number) => i !== index
-    );
-    if (deletedCenter.length === 1 && this.rdPartnersSE.leadCenterCode === deletedCenter[0].code) {
-      //always should happen
-      this.rdPartnersSE.leadCenterCode = null;
-    }
-    // P2-2998: removing the "Other(s)" chip hides the second dropdown and clears its selection.
-    if (!this.showOtherCenters) this.rdPartnersSE.otherCentersSelected = [];
-    if (updateComponent) {
-      setTimeout(() => {
-        // P2-3322 (2026): this delayed write is what re-shows the Lead partner/center select. It repaints because
-        // `updatingLeadData` is signal-backed on the service — a plain field would leave the select hidden under
-        // zoneless change detection (a `setTimeout` notifies nothing).
-        this.rdPartnersSE.updatingLeadData = false;
-      }, 50);
-    }
+    this.confirmRemoval('center', () => this.removeCenterItem(item, updateComponent));
   }
 
   get validateGranTitle() {

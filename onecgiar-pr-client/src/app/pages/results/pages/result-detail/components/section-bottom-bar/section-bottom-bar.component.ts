@@ -237,8 +237,8 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
    * (the only section with hidden ToC tabs) is P22-only and this bar's autosave/live-completeness
    * behavior is scoped to P25 — moot. (2) The one business rule known to lack a DOM marker
    * (Contributing CGIAR Centers) now has one — see `rd-contributors-and-partners.component.html`'s
-   * `appFeedbackValidation` markers bound to `[isComplete]="contributingCentersComplete"` (P2-3249)
-   * — so the scan reflects that rule correctly today, verified by that component's own
+   * `appFeedbackValidation` marker bound to `[isComplete]="contributingCentersComplete"` (P2-3249)
+   * — so the scan reflects that rule (any Contributing Center counts) today, verified by that component's own
    * `*.zoneless.spec.ts` running the real scan against the real template.
    *
    * Trade-off accepted: the green check stays authoritative for the SIDEBAR RAIL and for gating
