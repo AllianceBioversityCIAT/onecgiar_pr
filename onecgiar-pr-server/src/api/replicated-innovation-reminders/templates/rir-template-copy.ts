@@ -5,7 +5,8 @@
  * ## FROZEN
  *
  * Do not edit `buildRirTemplatesV2()` or `buildRirTemplatesV3()` once released. A later copy
- * change adds a new version (v4 is the latest: `buildRirTemplatesV4`, v3 minus the breeding
+ * change adds a new version (v5 is the latest: `buildRirTemplatesV5`, v4 with "10 February" in the
+ * Center email, shipped by `1793800000000`; v4 is v3 minus the breeding
  * paragraph, shipped by `1793700000000`) and a new migration. Editing a version here
  * breaks the migration that seeded it and the `down` that restores it.
  *
@@ -301,4 +302,26 @@ export function buildRirTemplatesV4(): RirTemplateBodies {
       withoutBreedingParagraph(body),
     ]),
   );
+}
+
+// ---------------------------------------------------------------------------------------
+// v5 (SR-167303, Nicoleta's answer of 2026-11-27: "Pls make it 10 Feb in the email"): v4 with
+// the exact closing date in the Center email. Only the Center tail mentions mid-February; the
+// developer and MELIA bodies are v4, byte for byte.
+// ---------------------------------------------------------------------------------------
+
+const MID_FEBRUARY = 'in mid-February {{nextYear}}';
+const TEN_FEBRUARY = 'on 10 February {{nextYear}}';
+
+export function buildRirTemplatesV5(): RirTemplateBodies {
+  const v4 = buildRirTemplatesV4();
+  const center = v4[RIR_CENTER_TEMPLATE_NAME];
+  const out = center.replace(MID_FEBRUARY, TEN_FEBRUARY);
+  if (out === center) {
+    // v4 is frozen, so this only fires if someone edits it; fail instead of shipping v4 as v5.
+    throw new Error(
+      'RIR copy v5: "mid-February" not found in the v4 Center body',
+    );
+  }
+  return { ...v4, [RIR_CENTER_TEMPLATE_NAME]: out };
 }
