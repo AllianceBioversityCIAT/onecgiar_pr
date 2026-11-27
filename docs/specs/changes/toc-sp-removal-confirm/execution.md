@@ -163,3 +163,59 @@
 - T-1 adds a 6-case zoneless describe that mounts the real alert service.
 
 Execution stopped for the user. Not auto-approved.
+
+**Tripwire decision (user, 2026-11-27):** "Continue, raise budget". The test LOC budget is raised to about 800, and the production budget (≈110) and review rounds (6) are unchanged. Execution resumes with TRC-T-2.
+
+### TRC-T-2 — Center: confirm instead of block, lead side effects, auto-assign guard
+
+| Field | Value |
+|---|---|
+| Final status | PASS |
+| Date | 2026-11-27 |
+| Attempts | 1 |
+| Requirements covered | TRC-R-2 (S-2.1, S-2.2, S-2.3) |
+| Skills / effort | `angular-developer`, `tdd` (task defaults) · effort high (service method shared with IPSR, template side effect moved) · Implementer T2 wrapper, Reviewer T3 wrapper |
+
+**Attempt 1**
+
+- Files changed (`onecgiar-pr-client/src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/`): `rd-contributors-and-partners.component.ts`, `.component.html`, `.service.ts`, `.component.spec.ts`, `.service.spec.ts`, `.zoneless.spec.ts`, `CLAUDE.md`.
+- Implementer verification: folder Jest 14 suites / 385 tests passed; `npx jest ipsr-contributors` 6 suites / 118 tests passed (the disqualifier did not fire); `npm run build` succeeded (only the existing `pdfjs-dist` CommonJS warning); lint clean.
+- Red (b), on the unmodified service:
+  - `TRC-DD-8: ...[sentinel] never auto-assigns the sentinel as Lead` failed with `Expected: not "__OTHER_CENTERS__"`.
+  - `TRC-DD-8 / P-12 ... [C1, sentinel] ... auto-assigns C1` failed with `Expected: "C1"`, `Received: null`.
+- Red (a): with the second statement put back on `html:185`, the zoneless TRC-S-2.2 Cancel case failed. It received `"C1"` against `expect(rdPartnersSE.leadCenterCode).toBeNull()`. The first (a) attempt was green because the fixture had `otherCentersSelected = [C2]`, and a union of two Centers hid the effect. With an empty Other list, as the brief specifies, it went red. The fixture requirement is recorded in the folder `CLAUDE.md`.
+- Red (c): with `setPossibleLeadCenters` removed from `removeCenterItem`, `TOC-C-AC-2` failed with `Expected: true, Number of calls: 0`.
+- Evidence re-run (Leader inline, no worker active): folder Jest `14 passed / 385 passed`; `ipsr-contributors` `6 passed / 118 passed` → **VERIFIED**. The Leader did not re-run the build.
+- Reviewer: **PASS**. Findings:
+  - S-2.1, S-2.2, S-2.3 and DD-1..4, DD-7, DD-8 conform.
+  - The copy and id match requirements.md:98 word for word.
+  - The sentinel filter applies to auto-assign only; `getContributingCentersUnion` is unchanged.
+  - No `blockIfLast*` or `toc-center-min` remains in code.
+  - P-1 holds: the template is the only non-spec caller.
+  - Order is preserved: the same body runs, then `setPossibleLeadCenters(true)`, then `markForCheck`. The recompute that the old template ran after a blocked delete is gone, which is what DD-4 intends.
+  - The out-of-range index no-op is acceptable under DD-3.
+- Runtime events: none.
+
+`spawns: implementer 43 calls, 166611 tokens, ended complete; reviewer 7 calls, 70139 tokens, ended complete`
+
+**Assumptions (Implementer, no owed item):**
+
+- In TRC-S-2.3, removing the Lead `C1` while `[C2]` remains leaves the lead as `'C2'`: the recompute auto-assigns the only remaining Center, as it did before. The test asserts this.
+- `deleteContributingCenter` with an out-of-range index is now a no-op. Before, it ran side effects with an empty filter.
+
+**ADVISORY (4R, non-gating):**
+
+- Both `[advisory-grade]` items were met: the early return comes before `updatingLeadData`, and the SUPERSEDED banner for `TOC-C-DD-*` plus a § TRC-R-2 section are in the folder `CLAUDE.md`.
+- Reliability: a programmatic call with an out-of-range index on a ToC-planned result with one ToC-origin Center opens a dialog for an `undefined` item; Yes does nothing. Suggestion: return at the top of `deleteContributingCenter` when `item` is undefined.
+- Readability: with `updateComponent = true`, `updatingLeadData` has two timers (50ms in `removeCenterItem`, 25ms in `setPossibleLeadCenters`). It works because the 50ms timer fires last; a one-line comment would help.
+
+### Running totals after TRC-T-2 (budget tripwire)
+
+| Metric | Actual (since `c12bb4d29`) | Budget |
+|---|---|---|
+| Tasks | 3 / 6 | 6 |
+| LOC production | +119 / −76 | ≈110 |
+| LOC test | +675 / −24 | ≈800 (raised by the user after wave 1) |
+| Review rounds | 3 | 6 |
+
+**BUDGET TRIPWIRE FIRED (production).** Production insertions (+119) now exceed the ≈110 estimate, and T-4 (guard wiring) is still to come. T-5 mostly deletes code (`requiresTocCenter`, a note, a marker branch), so net production is +43. The test budget (≈800) is not exceeded yet, but T-4 and T-5 will likely exceed it. The cause: each new `remove*Item` method is a full copy of an existing body, plus the side-effect-free predicates and the shared dialog. Stopped for the user; not auto-approved.

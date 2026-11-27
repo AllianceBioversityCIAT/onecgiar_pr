@@ -516,6 +516,30 @@ describe('RdContributorsAndPartnersService', () => {
 
       expect(service.leadCenterCode).toBeNull();
     });
+
+    // TRC-DD-8 (changes/toc-sp-removal-confirm): the W1/W2 "Other(s)" sentinel is a UI-shape control, never a lead.
+    it('TRC-DD-8: a union that is only the "Other(s)" sentinel (no Other centers) never auto-assigns the sentinel as Lead', () => {
+      service.partnersBody.is_lead_by_partner = false;
+      service.partnersBody.contributing_center = [{ code: service.OTHER_CENTERS_CODE }] as any;
+      service.otherCentersSelected = [];
+      service.leadCenterCode = null;
+
+      service.tryAutoAssignLeadCenter();
+
+      expect(service.leadCenterCode).not.toBe('__OTHER_CENTERS__');
+      expect(service.leadCenterCode).toBeNull();
+    });
+
+    it('TRC-DD-8 / P-12 (accepted widening): [C1, sentinel] with no Other centers and a null lead auto-assigns C1', () => {
+      service.partnersBody.is_lead_by_partner = false;
+      service.partnersBody.contributing_center = [{ code: 'C1', name: 'Center One' }, { code: service.OTHER_CENTERS_CODE }] as any;
+      service.otherCentersSelected = [];
+      service.leadCenterCode = null;
+
+      service.tryAutoAssignLeadCenter();
+
+      expect(service.leadCenterCode).toBe('C1');
+    });
   });
 
   /**

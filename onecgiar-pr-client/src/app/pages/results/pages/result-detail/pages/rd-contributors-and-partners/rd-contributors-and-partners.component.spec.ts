@@ -455,12 +455,12 @@ describe('RdContributorsAndPartnersComponent', () => {
   });
 
   /**
-   * TOC-C-T-1 (docs/specs/changes/toc-center-guard): block removing the last real Contributing
-   * CGIAR Center (combined across `contributing_center` minus the `OTHER_CENTERS_CODE` sentinel,
-   * and `otherCentersSelected`) while the result's ToC has planned Centers. Mirrors TOC-SP-T-1's
-   * guard shape exactly, substituting Centers-specific signals.
+   * TOC-C-T-1 (docs/specs/changes/toc-center-guard), reworked by TRC-R-2 (changes/toc-sp-removal-confirm):
+   * removing the last real ToC-origin Contributing CGIAR Center (`contributing_center` minus the
+   * `OTHER_CENTERS_CODE` sentinel) while the result's ToC has planned Centers now opens a confirm dialog
+   * instead of blocking. Mirrors the Science Program describe above.
    */
-  describe('TOC-C-T-1 — minimum Contributing CGIAR Center guard', () => {
+  describe('TOC-C-T-1 — last ToC-origin Contributing CGIAR Center confirm (TRC-R-2)', () => {
     const C1 = { code: 'C1', name: 'Center 1' };
     const C2 = { code: 'C2', name: 'Center 2' };
     const C3 = { code: 'C3', name: 'Center 3' };
@@ -487,18 +487,67 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
     });
 
-    it('TOC-C-AC-2: blocks deleting the last remaining ToC-planned Center and shows the alert', () => {
+    it('TOC-C-AC-2 (TRC-S-2.1): the last ToC-planned Center opens a confirm dialog, and removes (with the lead side effects) only on Yes', () => {
       mockRdPartnersSE.partnersBody.contributing_center = [C1];
       mockRdPartnersSE.tocReferenceCenterInstitutionIds.set([1]);
+      mockRdPartnersSE.leadCenterCode = 'C1';
 
       component.deleteContributingCenter(0);
 
+      // Nothing removed, no lead recompute while the dialog is open.
       expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual([C1]);
+      expect(mockRdPartnersSE.leadCenterCode).toBe('C1');
+      expect(mockRdPartnersSE.setPossibleLeadCenters).not.toHaveBeenCalled();
       expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
-      const alertConfig = mockCustomizedAlertsFeSE.show.mock.calls[0][0];
-      expect(alertConfig.id).toBe('toc-center-min');
+      const [alertConfig, onConfirm] = mockCustomizedAlertsFeSE.show.mock.calls[0];
+      expect(alertConfig.id).toBe('toc-center-remove-confirm');
       expect(alertConfig.status).toBe('warning');
-      expect(alertConfig.confirmText).toBeUndefined();
+      expect(alertConfig.title).toBe('Contributing CGIAR Center mapped in the Theory of Change');
+      expect(alertConfig.description).toBe(
+        'This Contributing CGIAR Center is mapped in the Theory of Change for the selected indicator. Are you sure you want to remove it?'
+      );
+      expect(alertConfig.confirmText).toBe('Yes, remove it');
+
+      onConfirm();
+      expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual([]);
+      expect(mockRdPartnersSE.leadCenterCode).toBeNull();
+      // lead options recomputed after confirmed removal
+      expect(mockRdPartnersSE.setPossibleLeadCenters).toHaveBeenCalledWith(true);
+    });
+
+    it('TRC-S-2.2: not calling the confirm callback (Cancel / backdrop) leaves contributing_center, otherCentersSelected and leadCenterCode untouched, and does not recompute leads', () => {
+      mockRdPartnersSE.partnersBody.contributing_center = [C1];
+      mockRdPartnersSE.otherCentersSelected = [OTHER_C];
+      mockRdPartnersSE.leadCenterCode = 'C1';
+      mockRdPartnersSE.tocReferenceCenterInstitutionIds.set([1]);
+      const centersBefore = [...mockRdPartnersSE.partnersBody.contributing_center];
+      const otherBefore = [...mockRdPartnersSE.otherCentersSelected];
+
+      component.deleteContributingCenter(0);
+
+      expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
+      expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual(centersBefore);
+      expect(mockRdPartnersSE.otherCentersSelected).toEqual(otherBefore);
+      expect(mockRdPartnersSE.leadCenterCode).toBe('C1');
+      expect(mockRdPartnersSE.setPossibleLeadCenters).not.toHaveBeenCalled();
+    });
+
+    it('TRC-DD-3: a confirm callback firing after the Center is already gone is a no-op with no side effect', () => {
+      mockRdPartnersSE.partnersBody.contributing_center = [C1];
+      mockRdPartnersSE.tocReferenceCenterInstitutionIds.set([1]);
+      component.deleteContributingCenter(0, true);
+      const onConfirm = mockCustomizedAlertsFeSE.show.mock.calls[0][1];
+      const replacement = [{ code: 'C9', name: 'Center 9' }];
+      mockRdPartnersSE.partnersBody.contributing_center = replacement;
+      mockRdPartnersSE.leadCenterCode = 'C9';
+      mockRdPartnersSE.updatingLeadData = false;
+
+      onConfirm();
+
+      expect(mockRdPartnersSE.partnersBody.contributing_center).toBe(replacement);
+      expect(mockRdPartnersSE.leadCenterCode).toBe('C9');
+      expect(mockRdPartnersSE.updatingLeadData).toBe(false);
+      expect(mockRdPartnersSE.setPossibleLeadCenters).not.toHaveBeenCalled();
     });
 
     it('TOC-C-AC-3: no ToC-planned Centers — deletes all chips unrestricted, guard never fires even at zero remaining', () => {
@@ -535,7 +584,7 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
     });
 
-    it('TOC-C-AC-7 (TOC-C-DD-5): 2 ToC-origin Centers + 1 Other Center — delete C1 succeeds, delete C2 (last ToC-origin) is blocked', () => {
+    it('TOC-C-AC-7 (TOC-C-DD-5): 2 ToC-origin Centers + 1 Other Center — delete C1 succeeds, delete C2 (last ToC-origin) asks to confirm', () => {
       const SENTINEL = { code: component.OTHER_CENTERS_CODE };
       // Sentinel present alongside the ToC-origin Centers — the split UI shape when Other(s) has entries.
       mockRdPartnersSE.partnersBody.contributing_center = [C1, C2, SENTINEL];
@@ -547,7 +596,7 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual([C2, SENTINEL]);
       expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
 
-      // Delete C2 (now index 0, the last remaining ToC-origin Center): blocked, even though an
+      // Delete C2 (now index 0, the last remaining ToC-origin Center): asks for confirmation, even though an
       // "Other" Center is still selected — the old combined-count formula (1 ToC + 1 Other = 2,
       // 2-1=1>0) would have wrongly allowed this.
       component.deleteContributingCenter(0);
@@ -555,7 +604,7 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(mockRdPartnersSE.otherCentersSelected).toEqual([OTHER_C]);
       expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
       const alertConfig = mockCustomizedAlertsFeSE.show.mock.calls[0][0];
-      expect(alertConfig.id).toBe('toc-center-min');
+      expect(alertConfig.id).toBe('toc-center-remove-confirm');
     });
 
     it('TOC-C-AC-8 (TOC-C-DD-5): 0 ToC-origin edge state — deleting the Other Center always succeeds', () => {
@@ -602,7 +651,7 @@ describe('RdContributorsAndPartnersComponent', () => {
         expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
       });
 
-      it('blocks deleting the last remaining Center', () => {
+      it('asks to confirm before deleting the last remaining Center', () => {
         mockRdPartnersSE.partnersBody.contributing_center = [C1];
         mockRdPartnersSE.tocReferenceCenterInstitutionIds.set([1]);
 
@@ -611,7 +660,7 @@ describe('RdContributorsAndPartnersComponent', () => {
         expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual([C1]);
         expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
         const alertConfig = mockCustomizedAlertsFeSE.show.mock.calls[0][0];
-        expect(alertConfig.id).toBe('toc-center-min');
+        expect(alertConfig.id).toBe('toc-center-remove-confirm');
       });
     });
   });

@@ -7,7 +7,7 @@
 | Module / feature | `results` → `rd-contributors-and-partners` (+ additive `pr-multi-select` input) |
 | Linked spec | [`requirements.md`](./requirements.md) + [`design.md`](./design.md) (revision 4) |
 | Owner / driver | Santiago Sanchez |
-| Status | in-progress (T-1, T-3 done) |
+| Status | in-progress (T-1, T-2, T-3 done) |
 | Approval Mode | gated |
 | Budget (design §12) | 6 tasks (5 code + 1 manual) · ≈380 LOC · 6 review rounds — tripwire for `/akili-execute` |
 
@@ -52,7 +52,7 @@ Common rules for every task:
   - [ ] Zoneless setup appends `<app-root>` and removes `.custom_modal_container` after each test.
   - [ ] Jest (folder) green, lint clean.
 
-### TRC-T-2 — Center: confirm instead of block, lead side effects, auto-assign guard
+### TRC-T-2 [x] — Center: confirm instead of block, lead side effects, auto-assign guard
 
 - **Type:** client
 - **Description:** Same shape for Centers (`shouldConfirmLastCenter`, `removeCenterItem(item, updateComponent)` with early return before any side effect). Move `this.rdPartnersSE.setPossibleLeadCenters(true)` from `component.html:185` into the end of `removeCenterItem` (before `markForCheck`). In the service, `tryAutoAssignLeadCenter` ignores `OTHER_CENTERS_CODE`. Update stale `TOC-C-*` comments.

@@ -679,36 +679,62 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
     this.rdPartnersSE.setPossibleLeadCenters(true);
   }
 
-  // ----- TOC-C-T-1: guard against removing the last ToC-planned Contributing CGIAR Center -----
+  // ----- TRC-R-2 (changes/toc-sp-removal-confirm): confirm, instead of block, removing the last ToC-origin Center -----
+  // (Replaces TOC-C-T-1's blocking `blockIfLastCenter`; TOC-C-DD-3/4/5 still define what counts, see below.)
 
   // Real (non-sentinel) Center count — TOC-C-DD-5: scoped to ToC-origin (`contributing_center`)
-  // only. `otherCentersSelected` is deliberately NOT added: the floor is "at least 1 ToC-origin
-  // Center remains", independent of how many "Other" Centers exist.
+  // only. `otherCentersSelected` is deliberately NOT added: the question is "is this the last ToC-origin
+  // Center", independent of how many "Other" Centers exist.
   private getRealCenterCount(): number {
     const realCentersSelected = (this.rdPartnersSE.partnersBody?.contributing_center || []).filter((c: any) => c?.code !== this.OTHER_CENTERS_CODE);
     return realCentersSelected.length;
   }
 
   // Same `planned_result !== false` guard already used in this file's @if branches (bugfix/toc-unmapped-orange-notes),
-  // combined with the live ToC Center-institution-id set already exposed by the service (see `hasReferenceCenters`, :146).
+  // combined with the live ToC Center-institution-id set already exposed by the service (see `hasReferenceCenters`).
   private get hasTocPlannedCenter(): boolean {
     return (
       this.rdPartnersSE.partnersBody?.result_toc_result?.planned_result !== false && this.rdPartnersSE.tocReferenceCenterInstitutionIds().length > 0
     );
   }
 
-  // Returns true (and shows the blocking alert) when the deletion must be blocked.
-  private blockIfLastCenter(willRemoveCount: number): boolean {
-    if (!this.hasTocPlannedCenter) return false;
-    if (this.getRealCenterCount() - willRemoveCount > 0) return false;
+  // TRC-DD-1: side-effect-free. True when removing one more ToC-origin Center would leave none on a ToC-planned result.
+  private shouldConfirmLastCenter(): boolean {
+    return this.hasTocPlannedCenter && this.getRealCenterCount() - 1 <= 0;
+  }
 
-    this.customizedAlertsFeSE.show({
-      id: 'toc-center-min',
-      title: 'Indicator with Contributing CGIAR Centers mapped in ToC',
-      description: 'At least one Contributing CGIAR Center is required for this result.',
-      status: 'warning'
-    });
-    return true;
+  // TRC-DD-2 / DD-3 / DD-4 / DD-7: one removal path for the immediate and the confirmed removal. Removes by identity and
+  // returns early, BEFORE any side effect (including `updatingLeadData`), if the item is already gone (the dialog lives on
+  // app-root and can outlive this view; two quick chip clicks can open two same-id dialogs).
+  // `setPossibleLeadCenters(true)` lives here (moved from the chip's `(click)`) so that opening the dialog has no side effect.
+  // markForCheck: the app is zoneless and the alert callback is a native listener.
+  private removeCenterItem(item: any, updateComponent: boolean) {
+    const currentCenters = this.rdPartnersSE.partnersBody?.contributing_center || [];
+    if (!currentCenters.includes(item)) return;
+
+    if (updateComponent) {
+      this.rdPartnersSE.updatingLeadData = true;
+    }
+
+    // Reassign a NEW array reference (not splice) so the multi-select ngModel refreshes and object identity stays predictable.
+    this.rdPartnersSE.partnersBody.contributing_center = currentCenters.filter((c: any) => c !== item);
+    if (this.rdPartnersSE.leadCenterCode === item.code) {
+      //always should happen
+      this.rdPartnersSE.leadCenterCode = null;
+    }
+    // P2-2998: removing the "Other(s)" chip hides the second dropdown and clears its selection.
+    if (!this.showOtherCenters) this.rdPartnersSE.otherCentersSelected = [];
+    if (updateComponent) {
+      setTimeout(() => {
+        // P2-3322 (2026): this delayed write is what re-shows the Lead partner/center select. It repaints because
+        // `updatingLeadData` is signal-backed on the service — a plain field would leave the select hidden under
+        // zoneless change detection (a `setTimeout` notifies nothing).
+        this.rdPartnersSE.updatingLeadData = false;
+      }, 50);
+    }
+    // Recompute lead-center eligibility now that a center is gone (TRC-DD-4).
+    this.rdPartnersSE.setPossibleLeadCenters(true);
+    this.cdr.markForCheck();
   }
 
   deleteOtherCenter(index: number) {
@@ -957,36 +983,15 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
 
   deleteContributingCenter(index: number, updateComponent: boolean = false) {
     // A manual removal doesn't change the ToC ref signature, so the reconciliation won't re-add it (until the node changes).
-    // TOC-C-DD-4 (supersedes TOC-C-DD-3): the "Other(s)" sentinel is a UI-shape control, not itself a
-    // Contributing CGIAR Center, so removing it must always succeed — the guard only applies to removing
-    // a real (non-sentinel) chip.
-    const currentCenters = this.rdPartnersSE.partnersBody?.contributing_center || [];
-    const isRemovingOtherSentinel = currentCenters[index]?.code === this.OTHER_CENTERS_CODE;
-    if (!isRemovingOtherSentinel && this.blockIfLastCenter(1)) return;
-
-    if (updateComponent) {
-      this.rdPartnersSE.updatingLeadData = true;
+    // TOC-C-DD-4: the "Other(s)" sentinel is a UI-shape control, not itself a Contributing CGIAR Center,
+    // so removing it must always succeed immediately — the confirmation only applies to a real (non-sentinel) chip.
+    const item = (this.rdPartnersSE.partnersBody?.contributing_center || [])[index];
+    const isRemovingOtherSentinel = item?.code === this.OTHER_CENTERS_CODE;
+    if (isRemovingOtherSentinel || !this.shouldConfirmLastCenter()) {
+      this.removeCenterItem(item, updateComponent);
+      return;
     }
-
-    // Reassign a NEW array reference (not splice) so the multi-select ngModel refreshes and object identity stays predictable.
-    const deletedCenter = (this.rdPartnersSE.partnersBody?.contributing_center || []).slice(index, index + 1);
-    this.rdPartnersSE.partnersBody.contributing_center = (this.rdPartnersSE.partnersBody?.contributing_center || []).filter(
-      (_: any, i: number) => i !== index
-    );
-    if (deletedCenter.length === 1 && this.rdPartnersSE.leadCenterCode === deletedCenter[0].code) {
-      //always should happen
-      this.rdPartnersSE.leadCenterCode = null;
-    }
-    // P2-2998: removing the "Other(s)" chip hides the second dropdown and clears its selection.
-    if (!this.showOtherCenters) this.rdPartnersSE.otherCentersSelected = [];
-    if (updateComponent) {
-      setTimeout(() => {
-        // P2-3322 (2026): this delayed write is what re-shows the Lead partner/center select. It repaints because
-        // `updatingLeadData` is signal-backed on the service — a plain field would leave the select hidden under
-        // zoneless change detection (a `setTimeout` notifies nothing).
-        this.rdPartnersSE.updatingLeadData = false;
-      }, 50);
-    }
+    this.confirmRemoval('center', () => this.removeCenterItem(item, updateComponent));
   }
 
   get validateGranTitle() {

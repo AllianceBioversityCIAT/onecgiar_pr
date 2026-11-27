@@ -126,7 +126,7 @@ describe('RdContributorsAndPartnersComponent — lead selects under zoneless cha
     expect(leadCenterSelectEl()).toBeTruthy();
     expect(centerChipDeleteEl()).toBeTruthy();
 
-    // Real flow: `(click)="deleteContributingCenter(i); rdPartnersSE.setPossibleLeadCenters(true)"`.
+    // Real flow: `(click)="deleteContributingCenter(i)"`; the lead recompute now lives in `removeCenterItem` (TRC-DD-4).
     centerChipDeleteEl().click();
     await fixture.whenStable();
 
@@ -1059,5 +1059,181 @@ describe('RdContributorsAndPartnersComponent — last ToC Science Program remova
     expect(dialog()).toBeNull();
     expect(rdPartnersSE.otherScienceSelected).toEqual([]);
     expect(rdPartnersSE.scienceSelected).toEqual([SP7]);
+  });
+});
+
+/**
+ * TRC-R-2 (changes/toc-sp-removal-confirm) — the confirm dialog for removing the last ToC-origin Contributing CGIAR Center.
+ *
+ * Same harness as TRC-R-1 (real `CustomizedAlertsFeService` in `<app-root>`, no `detectChanges` after "Yes"). The Center
+ * path asserts what the user sees and what the lead becomes: the removal, the lead clear/recompute, and that Cancel (and
+ * merely opening the dialog) leaves the lead untouched (TRC-DD-4: the recompute moved out of the chip's `(click)`).
+ */
+describe('RdContributorsAndPartnersComponent — last ToC Center removal dialog under zoneless change detection (TRC-R-2)', () => {
+  let fixture: ComponentFixture<RdContributorsAndPartnersComponent>;
+  let rdPartnersSE: RdContributorsAndPartnersService;
+  let appRoot: HTMLElement;
+
+  const C1 = { code: 'C1', name: 'Center 1', acronym: 'C1', full_name: 'Center 1', institutionId: 11 };
+  const C2 = { code: 'C2', name: 'Center 2', acronym: 'C2', full_name: 'Center 2', institutionId: 22 };
+  const DIALOG_ID = 'toc-center-remove-confirm';
+  const CENTER_SELECT = 'app-pr-multi-select[label="Contributing CGIAR Centers"]';
+
+  const chipNames = (): string[] =>
+    Array.from(fixture.nativeElement.querySelectorAll(`${CENTER_SELECT} .pr_chip_selected .name`)).map((el: any) => el.textContent.trim());
+  const chipX = (i = 0): HTMLElement => fixture.nativeElement.querySelectorAll(`${CENTER_SELECT} .pr_chip_selected i`)[i];
+  const dialog = () => document.getElementById(DIALOG_ID);
+  const tick = async (ms: number) => {
+    await new Promise(resolve => setTimeout(resolve, ms));
+    await fixture.whenStable();
+  };
+
+  const repaint = async () => {
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    await fixture.whenStable();
+  };
+
+  /** Seeds the state that reaches the dialog: ToC-planned, planned_result true, ToC reference Center ids present. */
+  const seed = async (selected: any[], tocIds: number[], lead: string | null) => {
+    rdPartnersSE.partnersBody.result_toc_result = { planned_result: true } as any;
+    rdPartnersSE.tocReferenceCenterInstitutionIds.set(tocIds);
+    rdPartnersSE.partnersBody.contributing_center = selected;
+    rdPartnersSE.partnersBody.is_lead_by_partner = false;
+    rdPartnersSE.leadCenterCode = lead;
+    await repaint();
+  };
+
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+    appRoot = document.createElement('app-root');
+    document.body.appendChild(appRoot);
+
+    const currentResult = { id: 4243, result_code: 'R-4243', version_id: 1, portfolio: 'P26', initiative_id: 5, initiative_official_code: 'INIT-05', status: null };
+    const apiMock = {
+      dataControlSE: {
+        currentResult,
+        currentResultSignal: signal(currentResult),
+        currentResultSectionName: signal(''),
+        findClassTenSeconds: jest.fn().mockResolvedValue(true),
+        isKnowledgeProduct: false,
+        showPartnersRequest: false
+      },
+      resultsSE: {
+        GET_resultById: jest.fn().mockReturnValue(of({ response: currentResult })),
+        GET_generalInformationByResultId: jest.fn().mockReturnValue(of({ response: {} })),
+        GET_AllWithoutResults: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] }))
+      },
+      rolesSE: { readOnly: false, isAdmin: false, platformIsClosed: false }
+    };
+
+    await TestBed.configureTestingModule({
+      declarations: [RdContributorsAndPartnersComponent],
+      imports: [CommonModule, TermPipe],
+      providers: [
+        provideZonelessChangeDetection(),
+        RdContributorsAndPartnersService,
+        { provide: ApiService, useValue: apiMock },
+        { provide: RolesService, useValue: { readOnly: false } },
+        { provide: InstitutionsService, useValue: { loadedInstitutions: new BehaviorSubject<boolean>(false), institutionsList: [], institutionsWithoutCentersList: [] } },
+        { provide: CentersService, useValue: { centersList: [C1, C2], centers: signal<any[]>([C1, C2]), loadedCenters: new BehaviorSubject(true), getData: jest.fn().mockResolvedValue([]) } },
+        // NOTE: the REAL CustomizedAlertsFeService (providedIn root) is deliberately not mocked.
+        { provide: ResultLevelService, useValue: { currentResultLevelId: 2 } },
+        { provide: InnovationUseResultsService, useValue: { resultsList: [] } },
+        {
+          provide: FieldsManagerService,
+          useValue: { isContributorsPartners2026: () => true, isLeadContactPersonMandatory2026: () => false, fields: () => ({}), isP25: () => false, activeIndicatorsLength: () => 0, hasSelectedIndicator: () => false }
+        }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+
+    rdPartnersSE = TestBed.inject(RdContributorsAndPartnersService);
+    jest.spyOn(rdPartnersSE, 'getSectionInformation').mockImplementation(() => undefined as any);
+    jest.spyOn(rdPartnersSE, 'loadFilteredBilateralProjects').mockImplementation(() => undefined as any);
+
+    fixture = TestBed.createComponent(RdContributorsAndPartnersComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // After the first detectChanges: `ngOnInit` calls `resetState()`.
+    rdPartnersSE.sectionHydratedFromToc.set(true);
+    rdPartnersSE.tocSelectionTouched.set(false);
+  });
+
+  afterEach(async () => {
+    await tick(80); // let the removal's own `updatingLeadData` timer settle before tearing down
+    document.querySelectorAll('.custom_modal_container').forEach(node => node.remove());
+    appRoot.remove();
+  });
+
+  it('TRC-S-2.1: the chip stays while the dialog is open; after "Yes, remove it" it is gone, the lead is cleared and the sentinel is never auto-assigned', async () => {
+    const sentinel = { code: fixture.componentInstance.OTHER_CENTERS_CODE, name: 'Other(s) CGIAR Centers', acronym: 'Other(s)' };
+    // Last ToC-origin Center, also the Lead; the "Other(s)" sentinel is present but no Other center was picked.
+    await seed([{ ...C1 }, sentinel], [11], 'C1');
+    const c1 = rdPartnersSE.partnersBody.contributing_center[0];
+    expect(chipNames()).toEqual(['C1', 'Other(s)']);
+
+    chipX(0).click();
+    await fixture.whenStable();
+
+    expect(dialog()).toBeTruthy();
+    expect(dialog()!.querySelector('.title')!.textContent).toBe('Contributing CGIAR Center mapped in the Theory of Change');
+    expect(document.getElementById(`confirm-${DIALOG_ID}`)!.textContent!.trim()).toBe('Yes, remove it');
+    expect(rdPartnersSE.partnersBody.contributing_center).toContain(c1);
+    expect(rdPartnersSE.leadCenterCode).toBe('C1');
+    expect(chipNames()).toEqual(['C1', 'Other(s)']);
+
+    document.getElementById(`confirm-${DIALOG_ID}`)!.click();
+    await fixture.whenStable(); // NOT detectChanges
+
+    expect(rdPartnersSE.partnersBody.contributing_center).toEqual([sentinel]);
+    expect(rdPartnersSE.leadCenterCode).toBeNull();
+    expect(rdPartnersSE.leadCenterCode).not.toBe('__OTHER_CENTERS__');
+    expect(chipNames()).toEqual(['Other(s)']);
+  });
+
+  it('TRC-S-2.2: Cancel and the backdrop leave contributing_center, otherCentersSelected and leadCenterCode identical (no auto-assign on open)', async () => {
+    // Lead null and exactly ONE real Center: an eager `setPossibleLeadCenters(true)` on the chip click would auto-assign C1.
+    await seed([{ ...C1 }], [11], null);
+    // No Other center: the union must be exactly [C1] for the eager recompute to be observable (a second center would mask it).
+    const other: any[] = [];
+    rdPartnersSE.otherCentersSelected = other as any;
+    const before = [...rdPartnersSE.partnersBody.contributing_center];
+
+    chipX().click();
+    await fixture.whenStable();
+    expect(dialog()).toBeTruthy();
+    expect(rdPartnersSE.leadCenterCode).toBeNull();
+    document.getElementById(`cancel-${DIALOG_ID}`)!.click();
+    await fixture.whenStable();
+    expect(rdPartnersSE.partnersBody.contributing_center).toEqual(before);
+    expect(rdPartnersSE.otherCentersSelected).toBe(other);
+    expect(rdPartnersSE.leadCenterCode).toBeNull();
+    expect(chipNames()).toEqual(['C1']);
+
+    chipX().click();
+    document.getElementById(`bg-${DIALOG_ID}`)!.click();
+    await fixture.whenStable();
+    expect(rdPartnersSE.partnersBody.contributing_center).toEqual(before);
+    expect(rdPartnersSE.otherCentersSelected).toBe(other);
+    expect(rdPartnersSE.leadCenterCode).toBeNull();
+  });
+
+  it('TRC-S-2.3: not the last ToC-origin Center removes immediately, no dialog, and the lead options are recomputed', async () => {
+    await seed([{ ...C1 }, { ...C2 }], [11, 22], 'C1');
+    const spy = jest.spyOn(rdPartnersSE, 'setPossibleLeadCenters');
+
+    chipX(0).click();
+    await fixture.whenStable();
+
+    expect(dialog()).toBeNull();
+    expect(rdPartnersSE.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C2']);
+    // The removed Lead was cleared, then the recompute auto-assigned the only remaining Center.
+    expect(rdPartnersSE.leadCenterCode).toBe('C2');
+    expect(spy).toHaveBeenCalledWith(true);
+    expect(chipNames()).toEqual(['C2']);
   });
 });
