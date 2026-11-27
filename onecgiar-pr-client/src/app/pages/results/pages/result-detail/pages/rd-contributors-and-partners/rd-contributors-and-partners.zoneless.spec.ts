@@ -873,3 +873,191 @@ describe('RdContributorsAndPartnersComponent — centres catalogue error + Retry
     });
   });
 });
+
+/**
+ * TRC-R-1 (changes/toc-sp-removal-confirm) — the confirm dialog for removing the last ToC-origin Science Program.
+ *
+ * Uses the REAL `CustomizedAlertsFeService`, which inserts its markup into `<app-root>` and attaches NATIVE
+ * click listeners. The app is zoneless, so a native-listener callback that only writes plain fields schedules
+ * no change detection: without `cdr.markForCheck()` in `removeScienceItem` the chip would stay on screen after
+ * "Yes, remove it" (TRC-DD-7 / P-3). No assertion here calls `detectChanges` after the click, on purpose.
+ */
+describe('RdContributorsAndPartnersComponent — last ToC Science Program removal dialog under zoneless change detection (TRC-R-1)', () => {
+  let fixture: ComponentFixture<RdContributorsAndPartnersComponent>;
+  let rdPartnersSE: RdContributorsAndPartnersService;
+  let appRoot: HTMLElement;
+
+  const SP7 = { id: 7, official_code: 'SP07', name: 'Breeding', short_name: 'Breeding', full_name: 'SP07 - Breeding' };
+  const SP8 = { id: 8, official_code: 'SP08', name: 'Climate', short_name: 'Climate', full_name: 'SP08 - Climate' };
+  const DIALOG_ID = 'toc-science-program-remove-confirm';
+  const SP_SELECT = 'app-pr-multi-select[label="Contributing Science Programs/Accelerators"]';
+
+  const chipNames = (): string[] =>
+    Array.from(fixture.nativeElement.querySelectorAll(`${SP_SELECT} .pr_chip_selected .name`)).map((el: any) => el.textContent.trim());
+  const chipX = (i = 0): HTMLElement => fixture.nativeElement.querySelectorAll(`${SP_SELECT} .pr_chip_selected i`)[i];
+  const dialog = () => document.getElementById(DIALOG_ID);
+
+  const repaint = async () => {
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    await fixture.whenStable();
+  };
+
+  /** Seeds the only state that reaches the dialog: ToC-planned, planned_result true, synergy ids present. */
+  const seed = async (selected: any[], tocIds: number[]) => {
+    rdPartnersSE.partnersBody.result_toc_result = { planned_result: true } as any;
+    rdPartnersSE.tocReferenceSynergyInitiativeIds.set(tocIds);
+    rdPartnersSE.scienceSelected = selected;
+    await repaint();
+  };
+
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+    // The real alert service inserts into the first <app-root> (customized-alerts-fe.service.ts:37-38).
+    appRoot = document.createElement('app-root');
+    document.body.appendChild(appRoot);
+
+    const currentResult = { id: 4242, result_code: 'R-4242', version_id: 1, portfolio: 'P26', initiative_id: 5, initiative_official_code: 'INIT-05', status: null };
+    const apiMock = {
+      dataControlSE: {
+        currentResult,
+        currentResultSignal: signal(currentResult),
+        currentResultSectionName: signal(''),
+        findClassTenSeconds: jest.fn().mockResolvedValue(true),
+        isKnowledgeProduct: false,
+        showPartnersRequest: false
+      },
+      resultsSE: {
+        GET_resultById: jest.fn().mockReturnValue(of({ response: currentResult })),
+        GET_generalInformationByResultId: jest.fn().mockReturnValue(of({ response: {} })),
+        GET_AllWithoutResults: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [SP7, SP8] })),
+        GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] }))
+      },
+      rolesSE: { readOnly: false, isAdmin: false, platformIsClosed: false }
+    };
+
+    await TestBed.configureTestingModule({
+      declarations: [RdContributorsAndPartnersComponent],
+      imports: [CommonModule, TermPipe],
+      providers: [
+        provideZonelessChangeDetection(),
+        RdContributorsAndPartnersService,
+        { provide: ApiService, useValue: apiMock },
+        { provide: RolesService, useValue: { readOnly: false } },
+        { provide: InstitutionsService, useValue: { loadedInstitutions: new BehaviorSubject<boolean>(false), institutionsList: [], institutionsWithoutCentersList: [] } },
+        { provide: CentersService, useValue: { centersList: [], centers: signal<any[]>([]), loadedCenters: new BehaviorSubject(true), getData: jest.fn().mockResolvedValue([]) } },
+        // NOTE: the REAL CustomizedAlertsFeService (providedIn root) is deliberately not mocked.
+        { provide: ResultLevelService, useValue: { currentResultLevelId: 2 } },
+        { provide: InnovationUseResultsService, useValue: { resultsList: [] } },
+        {
+          provide: FieldsManagerService,
+          useValue: { isContributorsPartners2026: () => true, isLeadContactPersonMandatory2026: () => false, fields: () => ({}), isP25: () => false, activeIndicatorsLength: () => 0, hasSelectedIndicator: () => false }
+        }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+
+    rdPartnersSE = TestBed.inject(RdContributorsAndPartnersService);
+    jest.spyOn(rdPartnersSE, 'getSectionInformation').mockImplementation(() => undefined as any);
+    jest.spyOn(rdPartnersSE, 'loadFilteredBilateralProjects').mockImplementation(() => undefined as any);
+
+    fixture = TestBed.createComponent(RdContributorsAndPartnersComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // After the first detectChanges: `ngOnInit` calls `resetState()`.
+    rdPartnersSE.sectionHydratedFromToc.set(true);
+    rdPartnersSE.tocSelectionTouched.set(false);
+  });
+
+  afterEach(() => {
+    document.querySelectorAll('.custom_modal_container').forEach(node => node.remove());
+    appRoot.remove();
+  });
+
+  it('TRC-S-1.1: the chip stays while the dialog is open, and disappears after "Yes, remove it" with no detectChanges', async () => {
+    await seed([SP7], [7]);
+    expect(chipNames()).toEqual(['SP07 - Breeding']);
+
+    chipX().click();
+    // Let the repaint scheduled by the chip's own (click) listener flush BEFORE the user answers the dialog.
+    // Otherwise that pending pass would also pick up the removal and mask a missing markForCheck.
+    await fixture.whenStable();
+
+    // Dialog open, nothing removed yet.
+    expect(dialog()).toBeTruthy();
+    expect(dialog()!.querySelector('.title')!.textContent).toBe('Science Program mapped in the Theory of Change');
+    expect(document.getElementById(`confirm-${DIALOG_ID}`)!.textContent!.trim()).toBe('Yes, remove it');
+    expect(rdPartnersSE.scienceSelected).toEqual([SP7]);
+    expect(chipNames()).toEqual(['SP07 - Breeding']);
+
+    document.getElementById(`confirm-${DIALOG_ID}`)!.click();
+    await fixture.whenStable(); // NOT detectChanges: the repaint must come from the component itself.
+
+    expect(rdPartnersSE.scienceSelected).toEqual([]);
+    expect(chipNames()).toEqual([]);
+  });
+
+  it('TRC-S-1.2: Cancel and the backdrop leave scienceSelected and otherScienceSelected identical', async () => {
+    await seed([SP7], [7]);
+    const other = [{ id: 99, official_code: 'SP99' }];
+    rdPartnersSE.otherScienceSelected = other as any;
+    const sciBefore = [...rdPartnersSE.scienceSelected];
+
+    chipX().click();
+    document.getElementById(`cancel-${DIALOG_ID}`)!.click();
+    await fixture.whenStable();
+    expect(rdPartnersSE.scienceSelected).toEqual(sciBefore);
+    expect(rdPartnersSE.otherScienceSelected).toBe(other);
+    expect(chipNames()).toEqual(['SP07 - Breeding']);
+
+    chipX().click();
+    document.getElementById(`bg-${DIALOG_ID}`)!.click();
+    await fixture.whenStable();
+    expect(rdPartnersSE.scienceSelected).toEqual(sciBefore);
+    expect(rdPartnersSE.otherScienceSelected).toBe(other);
+  });
+
+  it('TRC-S-1.3: not the last ToC-origin Science Program removes immediately, no dialog', async () => {
+    await seed([SP7, SP8], [7, 8]);
+
+    chipX(0).click();
+    await fixture.whenStable();
+
+    expect(dialog()).toBeNull();
+    expect(rdPartnersSE.scienceSelected).toEqual([SP8]);
+    expect(chipNames()).toEqual(['SP08 - Climate']);
+  });
+
+  it('TRC-S-1.3: a result that is not ToC-planned removes immediately, no dialog', async () => {
+    await seed([SP7], [7]);
+    rdPartnersSE.partnersBody.result_toc_result = { planned_result: false } as any;
+    // planned_result === false hides the ToC dropdown, so drive the handler directly.
+    fixture.componentInstance.deleteScience(0);
+
+    expect(dialog()).toBeNull();
+    expect(rdPartnersSE.scienceSelected).toEqual([]);
+  });
+
+  it('TRC-S-1.3: the "Other(s)" sentinel is removed immediately, no dialog', async () => {
+    const sentinel = { id: fixture.componentInstance.OTHER_SP_CODE, official_code: 'Other(s)' };
+    await seed([sentinel], [7]);
+
+    fixture.componentInstance.deleteScience(0);
+
+    expect(dialog()).toBeNull();
+    expect(rdPartnersSE.scienceSelected).toEqual([]);
+  });
+
+  it('TRC-S-1.3: deleteOtherScience never opens the dialog', async () => {
+    await seed([SP7], [7]);
+    rdPartnersSE.otherScienceSelected = [{ id: 99, official_code: 'SP99' }] as any;
+
+    fixture.componentInstance.deleteOtherScience(0);
+
+    expect(dialog()).toBeNull();
+    expect(rdPartnersSE.otherScienceSelected).toEqual([]);
+    expect(rdPartnersSE.scienceSelected).toEqual([SP7]);
+  });
+});

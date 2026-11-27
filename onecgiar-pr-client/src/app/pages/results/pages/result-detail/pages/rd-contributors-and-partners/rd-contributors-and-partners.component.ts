@@ -839,11 +839,10 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
     if (!this.showOtherScience) this.rdPartnersSE.otherScienceSelected = [];
   }
 
-  // ----- TOC-SP-T-1: guard against removing the last ToC-planned Contributing Science Program -----
+  // ----- TRC-R-1 (changes/toc-sp-removal-confirm): confirm, instead of block, removing the last ToC-origin Science Program -----
 
-  // Real (non-sentinel) Science Program count — TOC-SP-DD-4: scoped to ToC-origin
-  // (`scienceSelected`) only. `otherScienceSelected` is deliberately NOT added: the floor is
-  // "at least 1 ToC-origin Science Program remains", independent of how many "Other" ones exist.
+  // Real (non-sentinel) Science Program count, scoped to ToC-origin (`scienceSelected`) only.
+  // `otherScienceSelected` is deliberately NOT added: the question is "is this the last ToC-origin one".
   private getRealScienceCount(): number {
     const realScienceSelected = (this.rdPartnersSE.scienceSelected || []).filter((sp: any) => sp?.id !== this.OTHER_SP_CODE);
     return realScienceSelected.length;
@@ -857,36 +856,55 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
     );
   }
 
-  // Returns true (and shows the blocking alert) when the deletion must be blocked.
-  private blockIfLastScience(willRemoveCount: number): boolean {
-    if (!this.hasTocPlannedScience) return false;
-    if (this.getRealScienceCount() - willRemoveCount > 0) return false;
+  // TRC-DD-1: side-effect-free. True when removing one more ToC-origin Science Program would leave none on a ToC-planned result.
+  private shouldConfirmLastScience(): boolean {
+    return this.hasTocPlannedScience && this.getRealScienceCount() - 1 <= 0;
+  }
 
-    this.customizedAlertsFeSE.show({
-      id: 'toc-science-program-min',
-      title: 'Indicator with Science Programs mapped in ToC',
-      description: 'At least one Contributing Science Program is required for this result.',
-      status: 'warning'
-    });
-    return true;
+  // TRC-DD-1: shared confirm dialog for the last ToC-origin Science Program / Center (TRC-R-1 / TRC-R-2).
+  // `customizedAlertsFeSE.show` runs `onConfirm` only on "Yes"; Cancel and the backdrop only close it. Static copy (TRC-DD-6).
+  private confirmRemoval(kind: 'science' | 'center', onConfirm: () => void) {
+    const copy =
+      kind === 'science'
+        ? {
+            id: 'toc-science-program-remove-confirm',
+            title: 'Science Program mapped in the Theory of Change',
+            description: 'This Science Program is mapped in the Theory of Change for the selected indicator. Are you sure you want to remove it?'
+          }
+        : {
+            id: 'toc-center-remove-confirm',
+            title: 'Contributing CGIAR Center mapped in the Theory of Change',
+            description: 'This Contributing CGIAR Center is mapped in the Theory of Change for the selected indicator. Are you sure you want to remove it?'
+          };
+    this.customizedAlertsFeSE.show({ ...copy, status: 'warning', confirmText: 'Yes, remove it' }, onConfirm);
+  }
+
+  // TRC-DD-2 / DD-3 / DD-7: one removal path for the immediate and the confirmed removal. Removes by identity and
+  // returns early if the item is already gone (the dialog lives on app-root and can outlive this view).
+  // markForCheck: the app is zoneless and the alert callback is a native listener, so nothing else schedules a repaint.
+  private removeScienceItem(item: any) {
+    const current = this.rdPartnersSE.scienceSelected || [];
+    if (!current.includes(item)) return;
+    // A manual removal doesn't change the ToC ref signature, so the reconciliation won't re-add it (until the node changes).
+    // Reassign a NEW array reference (not splice in place) so the multi-select ngModel refreshes and the chip stays removed.
+    this.rdPartnersSE.scienceSelected = current.filter((sp: any) => sp !== item);
+    if (!this.showOtherScience) this.rdPartnersSE.otherScienceSelected = [];
+    this.cdr.markForCheck();
   }
 
   deleteScience(index: number) {
-    const current = this.rdPartnersSE.scienceSelected || [];
-    // TOC-SP-DD-3 (supersedes TOC-SP-DD-2's sentinel-cascade blocking): the "Other(s)" sentinel is a
-    // UI-shape control, not itself a Contributing Science Program, so removing it must always succeed —
-    // the guard only applies to removing a real (non-sentinel) chip.
-    const isRemovingOtherSentinel = current[index]?.id === this.OTHER_SP_CODE;
-    if (!isRemovingOtherSentinel && this.blockIfLastScience(1)) return;
-
-    // A manual removal doesn't change the ToC ref signature, so the reconciliation won't re-add it (until the node changes).
-    // Reassign a NEW array reference (not splice in place) so the multi-select ngModel refreshes and the chip stays removed.
-    this.rdPartnersSE.scienceSelected = current.filter((_: any, i: number) => i !== index);
-    if (!this.showOtherScience) this.rdPartnersSE.otherScienceSelected = [];
+    const item = (this.rdPartnersSE.scienceSelected || [])[index];
+    // The "Other(s)" sentinel is a UI-shape control, not itself a Contributing Science Program: always removed immediately.
+    const isRemovingOtherSentinel = item?.id === this.OTHER_SP_CODE;
+    if (isRemovingOtherSentinel || !this.shouldConfirmLastScience()) {
+      this.removeScienceItem(item);
+      return;
+    }
+    this.confirmRemoval('science', () => this.removeScienceItem(item));
   }
 
   deleteOtherScience(index: number) {
-    // TOC-SP-DD-4: removing an "Other" Science Program never affects the ToC-origin floor — no guard call here at all.
+    // Removing an "Other" Science Program never asks for confirmation (TRC-S-1.3).
     this.rdPartnersSE.otherScienceSelected = (this.rdPartnersSE.otherScienceSelected || []).filter((_: any, i: number) => i !== index);
   }
 

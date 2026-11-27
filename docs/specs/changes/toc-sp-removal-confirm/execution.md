@@ -1,0 +1,165 @@
+# Execution Log — Confirm, don't block, removal of ToC-mapped contributors
+
+## 1. Document Control
+
+| Field | Value |
+|---|---|
+| Spec path | `changes/toc-sp-removal-confirm` |
+| Branch | `qa-development-2026-ss` (base `c12bb4d29`) |
+| Approval Mode | gated |
+| Leader | Claude Code, `opus` (T1) |
+| Implementer / Reviewer wrappers | `.claude/agents/akili-implementer.md` (T2) / `akili-reviewer.md` (T3) |
+| Started | 2026-11-27 |
+| Budget (design §12) | 6 tasks · ≈380 LOC · 6 review rounds |
+
+### Pre-flight (2026-11-27)
+
+- `git status` at start: clean apart from the untracked spec folders `changes/portfolio-selection-breakdown/` and `changes/toc-sp-removal-confirm/`. `portfolio-selection-breakdown` does not reference `rd-contributors-and-partners`, so there is no conflicting in-flight spec.
+- `akili doctor --agents`: the implementer, reviewer and tester personas are current. `leader.md` `primary-instructions` is reported OUTDATED (matched 2.36.0). Pending item for the apply-capable branch (`staging`): run `akili doctor --agents --fix`. Not applied on this branch (shared-file write discipline).
+- `docs/specs/kaizen-log.md` does not exist, so there are no Active Lessons to carry.
+- Wave 1: TRC-T-1 and TRC-T-3 ran in parallel. Their folders are disjoint; T-1 runs Jest only, and T-3 owns `npm run build` and `test:ct`.
+
+## 2. Task Execution History
+
+### TRC-T-1 — Science Program: confirm instead of block
+
+| Field | Value |
+|---|---|
+| Final status | PASS |
+| Date | 2026-11-27 |
+| Attempts | 1 |
+| Requirements covered | TRC-R-1 (S-1.1, S-1.2, S-1.3), TRC-NFR-2, TRC-NFR-3 |
+| Skills / effort | `angular-developer`, `tdd` (task defaults) · effort medium · Implementer T2 wrapper, Reviewer T3 wrapper |
+
+**Attempt 1**
+
+- Files changed (`onecgiar-pr-client/src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/`): `rd-contributors-and-partners.component.ts`, `rd-contributors-and-partners.component.spec.ts`, `rd-contributors-and-partners.zoneless.spec.ts`, `CLAUDE.md`.
+- Implementer verification: folder Jest `Test Suites: 14 passed, 14 total / Tests: 378 passed, 378 total`; `npx ng lint --quiet` → `All files pass linting.`
+- Red 1 (spec updated, component original):
+
+  ```
+  ● ... TOC-SP-AC-2 (TRC-S-1.1): the last ToC-planned Science Program opens a confirm dialog, and removes only on Yes
+      Expected: "toc-science-program-remove-confirm"
+      Received: "toc-science-program-min"
+      > 329 |       expect(alertConfig.id).toBe('toc-science-program-remove-confirm');
+  ● ... TRC-DD-3: a confirm callback firing after the item is already gone is a no-op
+      TypeError: onConfirm is not a function     (not a behavioral red; the old code passes no callback)
+  ● ... TOC-SP-AC-5 ...
+      Expected: "toc-science-program-remove-confirm"
+      Received: "toc-science-program-min"
+      > 420 |       expect(alertConfig.id).toBe('toc-science-program-remove-confirm');
+  ```
+
+  The first failing assertion is the id, not `confirmText`, because the old alert has neither.
+- Red 2 (zoneless case (a), with `cdr.markForCheck()` removed):
+
+  ```
+  ● ... TRC-S-1.1: the chip stays while the dialog is open, and disappears after "Yes, remove it" with no detectChanges
+      - Array []
+      + Array [ "SP07 - Breeding", ]
+      > 999 |     expect(chipNames()).toEqual([]);
+  ```
+
+- Falsifier (b) (removal before `show`) and falsifier (c) (sentinel exemption dropped) were both observed red. The component was restored after each.
+- Evidence re-run (Leader inline, after both workers finished): folder Jest `14 passed / 378 passed` → **VERIFIED**.
+- Reviewer: **PASS**. Findings:
+  - The copy, ids, `confirmText` and status match TRC-R-1 and TRC-R-2 word for word.
+  - The control flow matches design §8, including the DD-3 identity early return and the DD-7 `markForCheck`.
+  - No `blockIfLastScience` or `toc-science-program-min` remains in `src`.
+  - Disqualifier ruling: the `await fixture.whenStable()` between the chip click and the dialog click is legitimate. It lets the repaint scheduled by the chip's own `(click)` finish, because that repaint would otherwise hide a missing `markForCheck`. There is no `detectChanges` after Yes, and Red 2 proves the case.
+- Runtime events: none.
+
+`spawns: implementer 31 calls, 209882 tokens, ended complete; reviewer 10 calls, 123281 tokens, ended complete`
+
+**Not Done / Assumptions.** Copied from the Implementer's report. These are assumptions only, with no owed item and no blocker.
+
+- Zoneless test needs a flush before the dialog click. Without `await fixture.whenStable()` after the chip click, falsifier (a) stayed green, because the chip-click repaint masked the missing `markForCheck`. This is not a manual `detectChanges`. It is documented in the folder `CLAUDE.md`.
+- `deleteScience` with an out-of-range index resolves `item` to `undefined` and is a no-op. This matches the old filter-by-index.
+- Left untouched on purpose: `component.html`, the Center path (TRC-T-2), `pr-multi-select/` (TRC-T-3), and the Center text in `CLAUDE.md`.
+
+**ADVISORY (4R, non-gating):**
+
+- Readability: `component.spec.ts:280-284` keeps a stale TOC-SP-T-1 doc comment ("block … combined") above the wrong describe, and the describe at `:293` is still titled "guard". This was already the case before the change.
+- Reliability: two quick clicks on the chip X can open two dialogs with the same DOM id. The DD-3 early return makes the second Yes do nothing.
+- Readability: the zoneless S-1.3 exemption tests call the handlers directly instead of clicking.
+
+**Decisions:** `confirmRemoval` already accepts both kinds, with the Center copy and id from TRC-R-2, so TRC-T-2 reuses it. This was a Leader addition marked `[advisory-grade]`, and the Reviewer confirmed it.
+
+### TRC-T-3 — `pr-multi-select`: opt-in `deselectGuard` input
+
+| Field | Value |
+|---|---|
+| Final status | PASS |
+| Date | 2026-11-27 |
+| Attempts | 1 |
+| Requirements covered | TRC-R-1 S-1.4, TRC-R-2 S-2.4 (component side), "must NOT change any other instance" |
+| Skills / effort | `angular-developer`, `spartan`, `tdd` (task defaults) · effort high (shared component, ~80 instances) · Implementer T2 wrapper, Reviewer T3 wrapper |
+
+**Attempt 1**
+
+- Files changed (`onecgiar-pr-client/src/app/custom-fields/pr-multi-select/`): `pr-multi-select.component.ts`, `pr-multi-select.component.html`, `pr-multi-select.cy.ts`, `pr-multi-select.component.spec.ts`, `CLAUDE.md`.
+- Red (a): the guard was implemented without the native `cb.checked = true` write, then `npx cypress run --component --spec src/app/custom-fields/pr-multi-select/pr-multi-select.cy.ts` gave `18 passing, 5 failing`:
+
+  ```
+  1) PrMultiSelectComponent deselectGuard (CT)
+       hook returns true, checkbox click, flat: keeps the DOM tick, value and no emit:
+     AssertionError: Timed out retrying after 10000ms: expected '<input.pr-native-check.ng-untouched.ng-valid.ng-dirty>' to be 'checked'
+     at Context.<anonymous> (webpack://angular/./src/app/custom-fields/pr-multi-select/pr-multi-select.cy.ts:340:37)
+  2) ... after an intercepted untick, a later real untick still removes it (NgModel in sync), flat:   (cy.ts:362:37)
+  3) ... hook returns true, checkbox click, group: ...   (cy.ts:340:37)
+  4) ... after an intercepted untick, a later real untick still removes it (NgModel in sync), group:   (cy.ts:362:37)
+  5) logicalDeletion re-activation of an inactive item does not call the hook:
+     AssertionError: expected false to equal true   (cy.ts:399:85)
+  ```
+
+  - Reds 1–4 confirm P-10.
+  - Red 5 was a defect in the test, not the guard. Re-activating through the checkbox never works: ngModel flips `selected` before the handler runs, so the handler computes `is_active = !true`. The test now re-activates through the label click.
+  - The Reviewer confirmed that the label-click test still goes through the re-activation branch and still catches falsifier (c).
+- Green:
+  - `pr-multi-select.cy.ts`: 23 passing.
+  - `pr-multi-select.selection.cy.ts`: 7 passing.
+  - `pr-multi-select.contract.cy.ts`: 32 passing, 12 failing.
+  - Baseline with the HEAD `.ts` and `.html` swapped in: also 32 passing, 12 failing, and the same 12 tests (sections 2.2 ×4, 2.3 ×3, 2.6, 2.8 ×2, 2.10, isStatic).
+  - Jest `pr-multi-select repro-p2-3308`: 4 suites and 16 tests passed.
+  - `npm run build`: exit 0. Lint clean.
+- Disqualifier checked: NgModel stays in sync. A later real untick still removes the item in flat and group mode.
+- Evidence re-run (Leader inline, after both workers finished): Jest `pr-multi-select repro-p2-3308` → `4 passed / 16 passed` → **VERIFIED**. The Leader did not re-run CT or the build.
+- Reviewer: **PASS**. Findings:
+  - With the input unset, the code takes provably the same path as before (`null?.()` counts as "not vetoed").
+  - The guard is consulted only when an active item is removed.
+  - On `true` it re-ticks the option in both the model and the DOM, leaves `value` unchanged and emits nothing.
+  - `#cb` is passed only on the two checkbox paths.
+  - The folder `CLAUDE.md` covers flat and group mode and the select-all and chip-X bypass.
+- Runtime events: none. After its hand-back the worker still held a background job, presumably the full `test:ct`. The Leader stopped it with TaskStop and confirmed that no Cypress or `ng` process was left running.
+
+`spawns: implementer 82 calls, 181151 tokens, ended complete; reviewer 4 calls, 43134 tokens, ended complete`
+
+**Not Done / Assumptions.** Copied from the Implementer's report. No owed item, no blocker.
+
+- The Implementer ran the pr-multi-select CT specs, not the full `npm run test:ct`. The full run did not finish within the 590s timeout and printed no results. The contract spec alone takes about 15 minutes.
+- The 12 reds in the contract file are a baseline that already differs from the "9 known" in the brief. The extra 3 may relate to the `focusin` listener added for P2-3678. This was not verified.
+
+**Leader decision:** the scoped CT run meets the intent of the Definition of Done. HEAD shows the same 12 failures, so the change caused no new failures, and no other `custom-fields/` file was touched. The full `npm run test:ct` is still owed once before TRC-T-4 merges. It is raised at the gate.
+
+**ADVISORY (4R, non-gating):**
+
+- Risk: run the full `npm run test:ct` once while no worker is active, before T-4.
+- Reliability (existing behavior, out of scope): re-activating a logically deleted item does nothing when done through the flat checkbox or a group label. Candidate for a separate ticket.
+- Readability: the folder `CLAUDE.md` (around line 46) still says "9 rojos conocidos" for `contract.cy.ts`. The verified baseline is 12.
+- Readability: the guard receives the panel `option`, not the `value` item. Worth saying in the JSDoc.
+- Risk: select-all and the chip X skip the guard. T-4 must keep them disabled on the guarded dropdowns.
+
+### Running totals after wave 1 (budget tripwire)
+
+| Metric | Actual | Budget (design §12) |
+|---|---|---|
+| Tasks | 2 / 6 | 6 |
+| LOC | +498 / −41 (production +65/−30, test +411/−9, docs +22/−2) | ≈380 (≈110 production, ≈270 test) |
+| Review rounds | 2 | 6 |
+
+**BUDGET TRIPWIRE FIRED.** After 2 of 6 tasks, test code is already at 411 lines, against about 270 budgeted for the whole spec, and 4 tasks remain. Production code is within budget. The cause is the per-task test matrices:
+
+- T-3 adds 140 lines of CT for the 4 guard combinations, NgModel sync and logicalDeletion.
+- T-1 adds a 6-case zoneless describe that mounts the real alert service.
+
+Execution stopped for the user. Not auto-approved.

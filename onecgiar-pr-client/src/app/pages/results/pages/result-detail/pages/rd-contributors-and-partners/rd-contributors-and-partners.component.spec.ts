@@ -316,18 +316,51 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
     });
 
-    it('TOC-SP-AC-2: blocks deleting the last remaining ToC-planned Science Program and shows the alert', () => {
+    it('TOC-SP-AC-2 (TRC-S-1.1): the last ToC-planned Science Program opens a confirm dialog, and removes only on Yes', () => {
       mockRdPartnersSE.scienceSelected = [SP01];
       mockRdPartnersSE.tocReferenceSynergyInitiativeIds.set([1]);
 
       component.deleteScience(0);
 
+      // Nothing removed while the dialog is open.
       expect(mockRdPartnersSE.scienceSelected).toEqual([SP01]);
       expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
-      const alertConfig = mockCustomizedAlertsFeSE.show.mock.calls[0][0];
-      expect(alertConfig.id).toBe('toc-science-program-min');
+      const [alertConfig, onConfirm] = mockCustomizedAlertsFeSE.show.mock.calls[0];
+      expect(alertConfig.id).toBe('toc-science-program-remove-confirm');
       expect(alertConfig.status).toBe('warning');
-      expect(alertConfig.confirmText).toBeUndefined();
+      expect(alertConfig.title).toBe('Science Program mapped in the Theory of Change');
+      expect(alertConfig.description).toBe('This Science Program is mapped in the Theory of Change for the selected indicator. Are you sure you want to remove it?');
+      expect(alertConfig.confirmText).toBe('Yes, remove it');
+
+      onConfirm();
+      expect(mockRdPartnersSE.scienceSelected).toEqual([]);
+    });
+
+    it('TRC-S-1.2: not calling the confirm callback (Cancel / backdrop) leaves scienceSelected and otherScienceSelected untouched', () => {
+      mockRdPartnersSE.scienceSelected = [SP01];
+      mockRdPartnersSE.otherScienceSelected = [OTHER_SP];
+      mockRdPartnersSE.tocReferenceSynergyInitiativeIds.set([1]);
+      const sciBefore = [...mockRdPartnersSE.scienceSelected];
+      const otherBefore = [...mockRdPartnersSE.otherScienceSelected];
+
+      component.deleteScience(0);
+
+      expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
+      expect(mockRdPartnersSE.scienceSelected).toEqual(sciBefore);
+      expect(mockRdPartnersSE.otherScienceSelected).toEqual(otherBefore);
+    });
+
+    it('TRC-DD-3: a confirm callback firing after the item is already gone is a no-op', () => {
+      mockRdPartnersSE.scienceSelected = [SP01];
+      mockRdPartnersSE.tocReferenceSynergyInitiativeIds.set([1]);
+      component.deleteScience(0);
+      const onConfirm = mockCustomizedAlertsFeSE.show.mock.calls[0][1];
+      const replacement = [{ id: 9, official_code: 'SP09' }];
+      mockRdPartnersSE.scienceSelected = replacement;
+
+      onConfirm();
+
+      expect(mockRdPartnersSE.scienceSelected).toBe(replacement);
     });
 
     it('TOC-SP-AC-3: no ToC-planned Science Programs — deletes all chips unrestricted, guard never fires even at zero remaining', () => {
@@ -364,7 +397,7 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
     });
 
-    it('TOC-SP-AC-5 (TOC-SP-DD-4): 2 ToC-origin SPs + 1 Other SP — delete SP1 succeeds, delete SP2 (last ToC-origin) is blocked', () => {
+    it('TOC-SP-AC-5 (TOC-SP-DD-4): 2 ToC-origin SPs + 1 Other SP — delete SP1 succeeds, delete SP2 (last ToC-origin) asks to confirm', () => {
       const SP02 = { id: 2, official_code: 'SP02', short_name: 'Science Program 2' };
       const SENTINEL = { id: component.OTHER_SP_CODE };
       // Sentinel present alongside the ToC-origin SPs — the split UI shape when Other(s) has entries.
@@ -377,15 +410,14 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(mockRdPartnersSE.scienceSelected).toEqual([SP02, SENTINEL]);
       expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
 
-      // Delete SP2 (now index 0, the last remaining ToC-origin SP): blocked, even though an
-      // "Other" SP is still selected — the old combined-count formula (1 ToC + 1 Other = 2,
-      // 2-1=1>0) would have wrongly allowed this.
+      // Delete SP2 (now index 0, the last remaining ToC-origin SP): asks for confirmation, even though an
+      // "Other" SP is still selected (the count is ToC-origin only).
       component.deleteScience(0);
       expect(mockRdPartnersSE.scienceSelected).toEqual([SP02, SENTINEL]);
       expect(mockRdPartnersSE.otherScienceSelected).toEqual([OTHER_SP]);
       expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
       const alertConfig = mockCustomizedAlertsFeSE.show.mock.calls[0][0];
-      expect(alertConfig.id).toBe('toc-science-program-min');
+      expect(alertConfig.id).toBe('toc-science-program-remove-confirm');
     });
 
     it('TOC-SP-AC-6 (TOC-SP-DD-4): 0 ToC-origin edge state — deleting the Other SP always succeeds', () => {
