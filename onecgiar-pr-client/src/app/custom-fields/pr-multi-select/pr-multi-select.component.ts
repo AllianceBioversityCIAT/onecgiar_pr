@@ -66,6 +66,17 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges, 
   // `pr-multi-select/CLAUDE.md`.
   readonly resultPickerStyle = input<boolean>(false);
 
+  /**
+   * TRC-DD-9: opt-in hook that lets a parent veto a PANEL deselect. Called only when an ACTIVE item is
+   * being removed (never for the `logicalDeletion` re-activation of an inactive one). When it returns
+   * `true` the component keeps `value` untouched, emits nothing, and puts the tick back: the checkbox
+   * paths pass their native element and the component writes `checked = true` (P-10: no model-side
+   * change re-ticks a recycled CDK row). Applies to flat and group mode. `null` (default, every other
+   * instance) is today's behaviour. NOT consulted by "Select all / Unselect all" or the chip X
+   * (`removeOption`) — the consumer must not enable those where it needs the guard.
+   */
+  readonly deselectGuard = input<((option: any) => boolean) | null>(null);
+
   /** Must match `.options.result_picker_style .option` min-height in `pr-multi-select.component.scss`
    * (52px) when `resultPickerStyle` is on; 30px (the `custom-fields.scss` global row height) otherwise.
    * Drives the flat-mode `cdk-virtual-scroll-viewport [itemSize]` — same paired-value pattern as
@@ -463,7 +474,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges, 
     );
   }
 
-  onSelectOption(option) {
+  onSelectOption(option, cb?: HTMLInputElement) {
     this.selectAll = null;
 
     if (option?.disabled) return;
@@ -482,6 +493,12 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges, 
     } else {
       // Option is being deselected
       const valueItemFind = this.value.find(valueItem => valueItem[optionValue] == option[optionValue]);
+      const isReactivation = this.logicalDeletion() && !valueItemFind.new && valueItemFind.is_active === false;
+      if (!isReactivation && this.deselectGuard()?.(option)) {
+        option.selected = true;
+        if (cb) cb.checked = true;
+        return;
+      }
       if (this.logicalDeletion() && !valueItemFind.new) {
         const updated = this.value.map(item => {
           if (item[optionValue] == option[optionValue]) {
