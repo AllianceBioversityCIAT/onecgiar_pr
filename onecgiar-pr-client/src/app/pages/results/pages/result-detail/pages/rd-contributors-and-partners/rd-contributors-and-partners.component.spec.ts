@@ -1644,12 +1644,10 @@ describe('RdContributorsAndPartnersComponent — Suppress ToC "not found" notes 
   });
 });
 
-// ----- P2-3249: "Contributing CGIAR Centers" mandatory + at least one centre from the ToC -----
+// ----- P2-3249: "Contributing CGIAR Centers" mandatory; any real centre counts (relaxed 2026-11-27) -----
 /**
- * The rule has THREE preconditions and they are disjoint (decision recorded on P2-3249, 2026-08-28):
- *   2026 split + ToC brings centres  → only a ToC-bucket centre satisfies it ("Other(s)" never does);
- *   2026 split + ToC brings none     → the "Other(s)" dropdown IS the field, so any centre satisfies it;
- *   pre-2026 flat dropdown           → no ToC bucket exists, so any centre satisfies it.
+ * One rule in every shape (Santiago, 2026-11-27, supersedes the P2-3249 ToC-only minimum): the field is complete
+ * when at least one real centre is selected, ToC or "Other(s)". The "Other(s)" sentinel is a UI toggle, not a centre.
  *
  * `isContributorsPartners2026` is mocked as a SIGNAL on purpose: `isCP2026` is a `computed()`, so a plain
  * function returning a constant would let the first read cache forever and the phase flip would be a no-op.
@@ -1741,10 +1739,6 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
       fixture.detectChanges();
     });
 
-    it('requires a ToC centre', () => {
-      expect(component.requiresTocCenter).toBe(true);
-    });
-
     it('is incomplete with nothing selected', () => {
       svc.partnersBody.contributing_center = [];
       expect(component.contributingCentersComplete).toBe(false);
@@ -1762,14 +1756,19 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
       expect(component.contributingCentersComplete).toBe(true);
     });
 
-    // THE ticket. "Other(s)" centres must not satisfy the minimum on their own.
-    it('is INCOMPLETE when every ToC centre is removed and only "Other(s)" centres remain', () => {
+    it('is COMPLETE when every ToC centre is removed and only "Other(s)" centres remain', () => {
       svc.partnersBody.contributing_center = [{ code: component.OTHER_CENTERS_CODE }];
       svc.otherCentersSelected = [
         { code: 'ZZZ', institutionId: 99 },
         { code: 'YYY', institutionId: 98 }
       ];
       expect(component.otherCentersSelectedCount).toBe(2);
+      expect(component.contributingCentersComplete).toBe(true);
+    });
+
+    it('is INCOMPLETE with only the "Other(s)" sentinel ticked and no Other(s) centre picked', () => {
+      svc.partnersBody.contributing_center = [{ code: component.OTHER_CENTERS_CODE }];
+      svc.otherCentersSelected = [];
       expect(component.contributingCentersComplete).toBe(false);
     });
 
@@ -1786,9 +1785,8 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
 
     // The missing-fields LABEL lives as a static attribute in the template (the directive freezes a bound one),
     // so it is asserted against the rendered DOM in rd-contributors-and-partners.zoneless.spec.ts.
-    it('names the ToC condition in the inline validation message', () => {
-      expect(component.contributingCentersValidationMessage).toContain('Theory of Change');
-      expect(component.contributingCentersValidationMessage).toContain('Other(s)');
+    it('uses the generic message, with no ToC or Other(s) condition in it', () => {
+      expect(component.contributingCentersValidationMessage).toBe('Please select at least one Contributing CGIAR Center.');
     });
   });
 
@@ -1798,9 +1796,8 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
       fixture.detectChanges();
     });
 
-    it('does not require a ToC centre — that would be impossible to satisfy', () => {
+    it('has no ToC reference centres', () => {
       expect(component.hasReferenceCenters()).toBe(false);
-      expect(component.requiresTocCenter).toBe(false);
     });
 
     it('is incomplete with nothing selected — "Other(s)" is mandatory here', () => {
@@ -1827,10 +1824,9 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
       fixture.detectChanges();
     });
 
-    it('never requires a ToC centre — the flat path has no ToC bucket, even when the ToC has centres', () => {
+    it('is the flat path even when the ToC has centres', () => {
       expect(component.isCP2026()).toBe(false);
       expect(component.hasReferenceCenters()).toBe(true);
-      expect(component.requiresTocCenter).toBe(false);
     });
 
     it('is incomplete with nothing selected', () => {
@@ -1845,14 +1841,14 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
   });
 
   // ⚠️ Legacy `from_toc = 0` rows: the column is NOT NULL DEFAULT 0, so a result saved before the 2026 split
-  // loads every centre into "Other(s)". Documented and deliberate: the rule fires and the user re-picks a ToC centre.
-  it('reports a legacy result (every centre bucketed as Other) as incomplete, but never blocks the PATCH', () => {
+  // loads every centre into "Other(s)". Since 2026-11-27 any centre counts, so such a result is complete.
+  it('reports a legacy result (every centre bucketed as Other) as complete, and never blocks the PATCH', () => {
     svc.tocReferenceCenterInstitutionIds.set([11, 22]);
     fixture.detectChanges();
     svc.partnersBody.contributing_center = [{ code: component.OTHER_CENTERS_CODE }];
     svc.otherCentersSelected = [{ code: 'C1', institutionId: 11, from_toc: 0 }];
 
-    expect(component.contributingCentersComplete).toBe(false);
+    expect(component.contributingCentersComplete).toBe(true);
 
     // Save draft still goes through: this is feedback (src/CLAUDE.md §21.5 layer 1), not a hard gate.
     component.onSaveSection();

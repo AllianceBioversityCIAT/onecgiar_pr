@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-11-27 · branch qa-development-2026-ss · cc4988d36 + uncommitted · spec `changes/toc-sp-removal-confirm` TRC-T-4: the SP panel and both Contributing Center dropdowns bind `[deselectGuard]` so unticking the last ToC-origin item in the PANEL opens the same confirm dialog (see § TRC-DD-9); prior: 2026-11-27 · d53d57716 + uncommitted · spec `changes/toc-sp-removal-confirm` TRC-T-2: removing the last ToC-origin Center now opens a confirm dialog instead of the `toc-center-min` block; the chip's lead recompute moved into `removeCenterItem`; `tryAutoAssignLeadCenter` ignores the Other(s) sentinel (see § TRC-R-2); prior: 2026-11-27 TRC-T-1 (Science Program half, § TRC-R-1); prior: 2026-11-19 · branch qa-development-2026-ss · 262dfcf38 + uncommitted · spec `changes/toc-kpi-option-readability` TKR-T-3: the KPI select of `multiple-wps-content` takes `[wrapOptions]="true"` and the 2026 selected-KPI block shows the full statement in `app-clamped-text` (3 lines, label from `CLAMPED_TEXT_COPY.kpiStatementLabel`) before Unit of measurement (see § TKR-T-3); prior: 2026-11-01 · branch qa-development-2026-ss · (uncommitted) · spec `results/impact-results-reporting/result-detail-impact` IRD-T-8 F-6: the P2-3171 "inherited from HLO/Outcome in the ToC" partners note is hidden when `isImpactResult()`; prior: 2026-10-31 · qa-development-2026-ss · (uncommitted) · spec `results/impact-results-reporting/result-detail-impact` IRD-T-5: `isImpactResult` computed, ToC + generic linked-results blocks out via `@if`, link fields dropped from the PATCH (see § IRD-T-5); prior: 2026-10-30 · qa-development-2026-ss · (uncommitted) · spec `bugfix/w3-projects-by-program` WPP-T-2: centres-catalogue error + Retry, and the "No CGIAR Centers related…" note waits for `planned_result === true` (see § WPP-R-2/R-3); prior: 2026-10-13 · qa-development-2026-ss · spec `results/program-full-names-labels-part-2` PF2-T-6: SP chips render via `spChipLabel` (`scienceProgramLabel`; the Other(s) sentinel keeps its text); prior: 2026-09-28 · qa-development-2026-ss · (uncommitted) · `applyTocMappingOnLoad()`'s External Partners split extracted into public `reclassifyPartnersFromToc()` so IPSR's own load path can call it (see note below); prior: 2026-09-25 · bugfix/p2-3542-section-bar-toc-tabs · b0d320f5d · `CPMultipleWPsComponent` publica al piso los gaps de las pestañas ToC no renderizadas (P2-3542); prior: 2026-09-16 · performance-refactor · 01891aebd · el color de las tarjetas sigue al contador (P2-3738); prior: 2026-09-11 · branch qa-development-2026-ss · bugfix/toc-hlo-outcome-locked BUG-T-1
+**Verified:** 2026-11-27 · branch qa-development-2026-ss · 55b6a4a28 + uncommitted · spec `changes/toc-sp-removal-confirm` TRC-T-5: P2-3249 relaxed, any Contributing Center counts (ToC or Other(s)), the sentinel still does not; `requiresTocCenter` and `contributingCentersRequiredNote` removed, ONE marker labelled "Contributing CGIAR Centers" (see § TRC-R-3); prior: 2026-11-27 · cc4988d36 + uncommitted · spec `changes/toc-sp-removal-confirm` TRC-T-4: the SP panel and both Contributing Center dropdowns bind `[deselectGuard]` so unticking the last ToC-origin item in the PANEL opens the same confirm dialog (see § TRC-DD-9); prior: 2026-11-27 · d53d57716 + uncommitted · spec `changes/toc-sp-removal-confirm` TRC-T-2: removing the last ToC-origin Center now opens a confirm dialog instead of the `toc-center-min` block; the chip's lead recompute moved into `removeCenterItem`; `tryAutoAssignLeadCenter` ignores the Other(s) sentinel (see § TRC-R-2); prior: 2026-11-27 TRC-T-1 (Science Program half, § TRC-R-1); prior: 2026-11-19 · branch qa-development-2026-ss · 262dfcf38 + uncommitted · spec `changes/toc-kpi-option-readability` TKR-T-3: the KPI select of `multiple-wps-content` takes `[wrapOptions]="true"` and the 2026 selected-KPI block shows the full statement in `app-clamped-text` (3 lines, label from `CLAMPED_TEXT_COPY.kpiStatementLabel`) before Unit of measurement (see § TKR-T-3); prior: 2026-11-01 · branch qa-development-2026-ss · (uncommitted) · spec `results/impact-results-reporting/result-detail-impact` IRD-T-8 F-6: the P2-3171 "inherited from HLO/Outcome in the ToC" partners note is hidden when `isImpactResult()`; prior: 2026-10-31 · qa-development-2026-ss · (uncommitted) · spec `results/impact-results-reporting/result-detail-impact` IRD-T-5: `isImpactResult` computed, ToC + generic linked-results blocks out via `@if`, link fields dropped from the PATCH (see § IRD-T-5); prior: 2026-10-30 · qa-development-2026-ss · (uncommitted) · spec `bugfix/w3-projects-by-program` WPP-T-2: centres-catalogue error + Retry, and the "No CGIAR Centers related…" note waits for `planned_result === true` (see § WPP-R-2/R-3); prior: 2026-10-13 · qa-development-2026-ss · spec `results/program-full-names-labels-part-2` PF2-T-6: SP chips render via `spChipLabel` (`scienceProgramLabel`; the Other(s) sentinel keeps its text); prior: 2026-09-28 · qa-development-2026-ss · (uncommitted) · `applyTocMappingOnLoad()`'s External Partners split extracted into public `reclassifyPartnersFromToc()` so IPSR's own load path can call it (see note below); prior: 2026-09-25 · bugfix/p2-3542-section-bar-toc-tabs · b0d320f5d · `CPMultipleWPsComponent` publica al piso los gaps de las pestañas ToC no renderizadas (P2-3542); prior: 2026-09-16 · performance-refactor · 01891aebd · el color de las tarjetas sigue al contador (P2-3738); prior: 2026-09-11 · branch qa-development-2026-ss · bugfix/toc-hlo-outcome-locked BUG-T-1
 (removed P2-3235's `tocAlignmentReadOnly()` ToC-alignment lock on the Level/HLO/Outcome/Output
 selects — explicit PO override (santiago.sanchez@cgiar.org, `proposal.md` §11), not a defect fix;
 these selects are now gated only by `editable` + the role read-only handling already inside
@@ -344,21 +344,19 @@ defecto ni algo que arreglar.
 
 - ⚠️ **`appFeedbackValidation` congela `labelText`.** La directiva escribe el texto en el DOM UNA vez, en
   `ngOnInit` (`shared/directives/feedback-validation.directive.ts:16-19`); `ngDoCheck` sólo sincroniza
-  `.complete`. Un `[labelText]="getter"` se queda con el valor del primer render — aquí siempre el que NO
-  menciona la ToC, porque los ids de la ToC resuelven después de construir la vista. Por eso "Contributing
-  CGIAR Centers" lleva **dos** marcadores con label estático bajo un `@if` (`html:210-222`), no uno con binding.
-  🛑 Sólo `[isComplete]` es bindeable.
+  `.complete`. Un `[labelText]="getter"` se queda con el valor del primer render. Desde el 27-nov-2026
+  ("Contributing CGIAR Centers" ya no tiene variante ToC) hay **un** marcador con label estático, sin `@if`
+  (antes eran dos, "dos marcadores / congela labelText"). Si algún día vuelve a haber dos wordings, vuelven los dos
+  marcadores bajo `@if`. 🛑 Sólo `[isComplete]` es bindeable.
 
-- **P2-3249 — "Contributing CGIAR Centers" es obligatorio, con DOS reglas de precondición disjunta**
-  (decisión registrada en el ticket el 28-ago-2026; resuelve la contradicción aparente con P2-3324/P2-3326):
-  la ToC **trae** centros → tiene que quedar ≥1 del bucket ToC y los de "Other(s)" **no** cuentan; la ToC **no**
-  trae ninguno (o camino plano pre-2026) → cualquier centro vale. Todo sale de `contributingCentersComplete`
-  (`component.ts:200-203`), leído desde UN solo punto del template para que aplique a los **dos** caminos.
-  ⚠️ `results_center.from_toc` es `NOT NULL DEFAULT 0`, así que un resultado guardado antes del split 2026
-  carga TODOS sus centros en "Other(s)" y **sí** dispara la regla: es deliberado (un `0` no se distingue de
-  "el usuario dejó sólo Other(s)", que es justo lo que el ticket persigue). No bloquea el Save draft — es
-  feedback de capa 1, no un gate. El green check del backend **no** se tocó: sigue exigiendo ≥1 centro
-  cualquiera (`results-validation-module.repository.ts:415-424`), sin filtro `from_toc`.
+- 🛑 **SUPERSEDED (2026-11-27, Santiago, `changes/toc-sp-removal-confirm` TRC-R-3, ver § TRC-R-3): la regla de
+  P2-3249 de "dos reglas disjuntas / ≥1 centro del bucket ToC" ya no existe.** Hoy "Contributing CGIAR Centers" es
+  obligatorio con UNA regla: ≥1 centro REAL, de la ToC o de "Other(s)"; el centinela "Other(s)" no cuenta. Lo
+  que sigue vigente de P2-3249: sale de `contributingCentersComplete`, leído desde UN solo punto del template (los dos
+  caminos 2026/plano), y es feedback de capa 1, no un gate del Save draft. El green check del backend no se tocó
+  (≥1 centro cualquiera, `results-validation-module.repository.ts:415-424`, sin filtro `from_toc`).
+  ⚠️ `results_center.from_toc` es `NOT NULL DEFAULT 0`: un resultado guardado antes del split 2026 carga todos sus
+  centros en "Other(s)"; antes disparaba la regla, ahora cuenta como completo.
 
 - ⚠️ **An UNMAPPED 2026 result (`planned_result === false`) is a THIRD shape of this field, untested
   until P2-3554/P2-3553.** `isCP2026()` is still `true`, but the `planned_result !== false` clause on
@@ -676,7 +674,7 @@ mockean con `delay(0)` + `fakeAsync`/`tick`, nunca `of(...)` síncrono), `*.serv
 `onLeadCenterSelected — target field by active UI + generalized trigger (LC-DD-5, supersedes
 LC-DD-4)` con su sub-describe CP2026-mapeado, y `applyTocMappingOnLoad — sentinel reconciliation
 fix (LC-DD-5)`) y `*.zoneless.spec.ts`.
-La regla de P2-3249 se prueba en dos niveles a propósito: la lógica pura en `*.component.spec.ts`
+La regla de P2-3249 (relajada el 27-nov-2026) se prueba en dos niveles a propósito: la lógica pura en `*.component.spec.ts`
 (plantilla vaciada) y el **contrato DOM** en `*.zoneless.spec.ts`, donde se corre el escaneo real de
 `DataControlService.someMandatoryFieldIncompleteResultDetail('.section_container')` sobre el
 template real. Sin esa segunda mitad, borrar el marcador del HTML dejaría los tests en verde.
@@ -724,8 +722,9 @@ P2-3112 / P2-3358 dejarían de guardar su respuesta sin un solo error en pantall
   escribe `labelText` una vez en `ngOnInit`; el nombre sirve porque cada fila nace con su partner.
 - Contributing CGIAR Centers: el dropdown del ToC pasa `[complete]="contributingCentersComplete"`.
   El centinela "Other(s)" es una selección para `hasSelection`, así que la tarjeta se pintaba verde
-  mientras el marcador de `requiresTocCenter` seguía incompleto (hallado por el barrido de DeepSeek;
-  candado en `rd-contributors-and-partners.zoneless.spec.ts`, «does not paint the centres card green»).
+  aun sin ningún centro real (hallado por el barrido de DeepSeek). Desde el 27-nov-2026 (`requiresTocCenter`
+  ya no existe) el centinela solo se pinta `todo` y un centro real de Other(s) la pasa a `ok`; candado en
+  `rd-contributors-and-partners.zoneless.spec.ts`, «paints the centres card green only once a real centre exists».
 
 ## IRD-T-8 F-6
 
@@ -740,3 +739,10 @@ View-only. `CPMultipleWPsContentComponent`: only the KPI `app-pr-select` (`optio
 - `scienceDeselectGuard` / `centerDeselectGuard` (arrow properties) are bound as `[deselectGuard]` on the SP dropdown and on BOTH `contributing_center` dropdowns (ToC one and the flat one). NOT on the Other(s) dropdowns. `pr-multi-select` calls the guard with the panel option CLONE, so the model item is matched by `id` (SP) / `code` (Center); no match, the sentinel, or `!shouldConfirmLast*()` returns `false`. On `true` it only opens the dialog (`confirmRemoval`); `pr-multi-select` re-ticks the option and the native checkbox, leaves `value` unchanged and emits nothing. Yes runs `removeScienceItem` / `removeCenterItem(match, false)` (same path as the chip X).
 - `showSelectAll` is not set on any of the three guarded dropdowns, and the projected chips replace pr-multi-select own chips, so neither "Select all / Unselect all" nor its own chip X can bypass the guard today. Turning `showSelectAll` on there would bypass it.
 - Tests: last describe of `*.zoneless.spec.ts` (real `app-pr-multi-select` via `CustomFieldsModule`, real `onSelectOption`). The Other(s) test asserts `panel.deselectGuard()` is null: id matching makes a stray binding there otherwise harmless and unobservable.
+
+## TRC-R-3 — any Contributing Center counts (2026-11-27, `docs/specs/changes/toc-sp-removal-confirm`)
+
+- Decision (Santiago, 2026-11-27): the P2-3249 "at least one from the ToC" minimum is dropped. `contributingCentersComplete` = ToC-bucket real centres + Other(s) centres > 0, sentinel excluded. `contributingCentersValidationMessage` is always `contributingCentersEmptyNote` ("Please select at least one Contributing CGIAR Center."), which never mentions the Theory of Change or Other(s).
+- Removed: `requiresTocCenter`, `contributingCentersRequiredNote`, the second marker. `cp-centers-mandatory-marker` keeps its testid, single static label "Contributing CGIAR Centers". The asterisk tests are unchanged.
+- Consistent with TRC-R-2: removing the last ToC Center (with Other(s) centres left) now confirms AND leaves the field complete.
+- Tests: `*.component.spec.ts` P2-3249 describe (pure logic) and `*.zoneless.spec.ts` P2-3249 describe (real scan). The sentinel with no Other(s) centre stays `todo` / missing.

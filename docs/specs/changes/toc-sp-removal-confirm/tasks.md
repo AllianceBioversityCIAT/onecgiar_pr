@@ -7,7 +7,7 @@
 | Module / feature | `results` → `rd-contributors-and-partners` (+ additive `pr-multi-select` input) |
 | Linked spec | [`requirements.md`](./requirements.md) + [`design.md`](./design.md) (revision 4) |
 | Owner / driver | Santiago Sanchez |
-| Status | in-progress (T-1..T-4 done) |
+| Status | in-progress (T-1..T-5 done; T-6 HITL pending) |
 | Approval Mode | gated |
 | Budget (design §12) | 6 tasks (5 code + 1 manual) · ≈380 LOC · 6 review rounds — tripwire for `/akili-execute` |
 
@@ -124,7 +124,7 @@ Common rules for every task:
   - [ ] Yes via the panel removes the chip and the option (zoneless, no `detectChanges`).
   - [ ] `npm run build` green.
 
-### TRC-T-5 — Relax P2-3249: any Contributing Center counts
+### TRC-T-5 [x] — Relax P2-3249: any Contributing Center counts
 
 - **Type:** client
 - **Description:** `contributingCentersComplete` = toc + other real Centers > 0; `contributingCentersValidationMessage` = `contributingCentersEmptyNote`; remove `requiresTocCenter` and `contributingCentersRequiredNote`; collapse the marker `@if` (`html:251-263`) into one marker labelled "Contributing CGIAR Centers". Update stale comments (`component.ts:530-561`, `:591-597`), `section-bottom-bar.component.ts:209-210` ("marker"), and the folder `CLAUDE.md` (P2-3249, P2-3738 `requiresTocCenter`, "dos marcadores" entries; supersede `TOC-SP-DD-*` / `TOC-C-DD-*` as well, if T-1/T-2 did not).

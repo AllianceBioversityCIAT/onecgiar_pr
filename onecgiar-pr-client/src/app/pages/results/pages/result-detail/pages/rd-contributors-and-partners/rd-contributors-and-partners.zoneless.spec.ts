@@ -442,7 +442,6 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
     { code: 'ZZZ', name: 'Other Center', full_name: 'A Center the ToC never mentioned', acronym: 'OTH', institutionId: 99 }
   ];
 
-  const TOC_LABEL = 'Contributing CGIAR Centers (at least one from the ToC)';
   const PLAIN_LABEL = 'Contributing CGIAR Centers';
 
   /** The hidden `appFeedbackValidation` host, and the `.pr-field.mandatory` node the scan actually reads. */
@@ -562,7 +561,7 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
     expect(dropdown.querySelector('.pr-field.mandatory')).toBeNull();
   });
 
-  it('lists the field as missing, naming the ToC condition, when the ToC brought centres and none is selected', async () => {
+  it('lists the field as missing, without naming the ToC, when the ToC brought centres and none is selected', async () => {
     rdPartnersSE.tocReferenceCenterInstitutionIds.set([11, 22]);
     rdPartnersSE.partnersBody.contributing_center = [];
     await repaint();
@@ -570,8 +569,10 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
     expect(markerFieldEl().classList.contains('complete')).toBe(false);
     const { incomplete, labels } = scan();
     expect(incomplete).toBe(true);
-    expect(labels).toContain(TOC_LABEL);
-    expect(validationNoteText()).toContain('Theory of Change');
+    expect(labels).toContain(PLAIN_LABEL);
+    expect(validationNoteText()).toBe('Please select at least one Contributing CGIAR Center.');
+    expect(validationNoteText()).not.toContain('Theory of Change');
+    expect(validationNoteText()).not.toContain('Other(s)');
   });
 
   it('drops the field from the missing list once a ToC centre is selected', async () => {
@@ -580,12 +581,12 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
     await repaint();
 
     expect(markerFieldEl().classList.contains('complete')).toBe(true);
-    expect(scan().labels).not.toContain(TOC_LABEL);
+    expect(scan().labels).not.toContain(PLAIN_LABEL);
     expect(validationNoteText()).toBeNull();
   });
 
-  // THE ticket: "Other(s)" centres cannot satisfy the minimum on their own.
-  it('keeps listing the field when every ToC centre is replaced by "Other(s)" centres', async () => {
+  // Santiago, 2026-11-27 (supersedes P2-3249): any Contributing Center counts, ToC or Other(s).
+  it('drops the field when every ToC centre is replaced by an "Other(s)" centre', async () => {
     rdPartnersSE.tocReferenceCenterInstitutionIds.set([11, 22]);
     rdPartnersSE.partnersBody.contributing_center = [{ code: fixture.componentInstance.OTHER_CENTERS_CODE } as any];
     rdPartnersSE.otherCentersSelected = [CATALOG[2]] as any;
@@ -593,18 +594,30 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
 
     // The user really did pick a centre — it just is not a ToC one.
     expect(rdPartnersSE.otherCentersSelected.length).toBe(1);
+    expect(markerFieldEl().classList.contains('complete')).toBe(true);
+    expect(scan().labels).not.toContain(PLAIN_LABEL);
+    expect(validationNoteText()).toBeNull();
+  });
+
+  // The sentinel is a UI toggle, not a Center: sentinel alone, no Other(s) pick, is still missing.
+  it('still lists the field when only the "Other(s)" sentinel is ticked and no Other(s) centre is picked', async () => {
+    rdPartnersSE.tocReferenceCenterInstitutionIds.set([11, 22]);
+    rdPartnersSE.partnersBody.contributing_center = [{ code: fixture.componentInstance.OTHER_CENTERS_CODE } as any];
+    rdPartnersSE.otherCentersSelected = [];
+    await repaint();
+
     expect(markerFieldEl().classList.contains('complete')).toBe(false);
-    expect(scan().labels).toContain(TOC_LABEL);
+    expect(scan().labels).toContain(PLAIN_LABEL);
   });
 
   // P2-3738 (found by the DeepSeek sweep): the card read "filled" because the "Other(s)" sentinel is a
-  // selection, while the counter above kept the field as missing. The colour now follows the counter.
-  it('does not paint the centres card green while only the "Other(s)" sentinel sits in the ToC dropdown', async () => {
+  // selection. The colour follows the counter: sentinel alone is `todo`; a real Other(s) centre flips it to `ok`.
+  it('paints the centres card green only once a real centre exists, not for the "Other(s)" sentinel alone', async () => {
     const cardState = () =>
       fixture.nativeElement.querySelector('[data-testid="cp-field-contributing_center"] [data-state]')?.getAttribute('data-state');
     rdPartnersSE.tocReferenceCenterInstitutionIds.set([11, 22]);
     rdPartnersSE.partnersBody.contributing_center = [{ code: fixture.componentInstance.OTHER_CENTERS_CODE } as any];
-    rdPartnersSE.otherCentersSelected = [CATALOG[2]] as any;
+    rdPartnersSE.otherCentersSelected = [];
     // ngModel hands the new array to the control a tick after the first pass; a second pass paints it.
     await repaint();
     await repaint();
@@ -613,7 +626,7 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
     expect(multi.hasSelection).toBe(true); // the sentinel IS a selection — that is what used to paint it green
     expect(cardState()).toBe('todo');
 
-    rdPartnersSE.partnersBody.contributing_center = [CATALOG[0]] as any;
+    rdPartnersSE.otherCentersSelected = [CATALOG[2]] as any;
     await repaint();
     await repaint();
     expect(cardState()).toBe('ok');

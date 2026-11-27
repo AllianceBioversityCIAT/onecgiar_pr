@@ -278,3 +278,57 @@ Execution stopped for the user. Not auto-approved.
 ### Running totals after TRC-T-4
 
 Tasks 4 / 6 · review rounds 4 / 6 · LOC no longer tracked (user decision).
+
+### TRC-T-5 — Relax P2-3249: any Contributing Center counts
+
+| Field | Value |
+|---|---|
+| Final status | PASS |
+| Date | 2026-11-27 |
+| Attempts | 1 |
+| Requirements covered | TRC-R-3 (S-3.1, S-3.2) |
+| Skills / effort | `angular-developer`, `tdd` (task defaults) · effort medium · Implementer T2 wrapper, Reviewer T3 wrapper |
+
+**Attempt 1**
+
+- Files changed (`onecgiar-pr-client/src/app/pages/results/pages/result-detail/`): `pages/rd-contributors-and-partners/rd-contributors-and-partners.component.ts`, `.component.html`, `.component.spec.ts`, `.zoneless.spec.ts`, `CLAUDE.md`; `components/section-bottom-bar/section-bottom-bar.component.ts` (comment only). `result-detail/CLAUDE.md` has no P2-3249 or two-marker mention, so it was left untouched.
+- Disqualifier: the grep before editing found only this folder plus the section-bottom-bar comment. P-7 holds.
+- Red run (specs updated, code unchanged). Every failure is on a behavioral assertion:
+  - zoneless `drops the field when every ToC centre is replaced by an "Other(s)" centre`: `expect(markerFieldEl().classList.contains('complete')).toBe(true)`, Expected: true, Received: false.
+  - zoneless `lists the field as missing, without naming the ToC…`: Expected value "Contributing CGIAR Centers", Received array `["Contributing CGIAR Centers (at least one from the ToC)"]`.
+  - zoneless `paints the centres card green only once a real centre exists…`: Expected "ok", Received "todo" (zoneless.spec.ts:632).
+  - component spec `is COMPLETE when every ToC centre is removed and only "Other(s)"…`: Expected true, Received false.
+  - component spec `uses the generic message…`: Expected "Please select at least one Contributing CGIAR Center.", Received "At least one Contributing CGIAR Center coming from the Theory of Change must remain selected. Centers added through \"Other(s)\" do not satisfy this on their own."
+  - component spec `reports a legacy result … as complete`: Expected true, Received false.
+- Falsifiers: (a) reinstating the ToC-only branch → 2 red; (b) deleting the marker → 8 red; (c) counting the sentinel → 2 red. Each was reverted.
+- Implementer verification:
+  - `result-detail` Jest: 103/104 suites, 2039/2040 tests. The one failure, `impact-level-info.component.spec.ts` "a successful PATCH to the E4 URL … reloads the green checks" (expected 1 call, received 0), fails the same way with the changes stashed, so it predates this task and is out of scope.
+  - Folder Jest: 14/391.
+  - Lint clean. The grep finds 0 hits in code.
+- Evidence re-run (Leader inline, no worker active):
+  - Jest over the folder plus `section-bottom-bar`: `16 passed / 440 passed`.
+  - `npm run build`: exit 0, output `dist/onecgiar-pr-client`, no error lines.
+  - Grep `requiresTocCenter|at least one from the ToC|contributingCentersRequiredNote` over `src` `*.ts` / `*.html`: 0 hits.
+  - Result: **VERIFIED**. This also closes the Implementer's truncated build output.
+- Reviewer: **PASS**. Findings:
+  - TRC-R-3, S-3.1 and S-3.2 conform: there is one marker with a static label, the testid is kept, and the exact generic message is asserted with `toBe`.
+  - The sentinel alone is still incomplete.
+  - Flipping the legacy `from_toc=0` case to complete follows from TRC-R-3, and the PATCH is still not blocked (NFR-1).
+  - The asterisk tests and bindings are untouched.
+  - The remaining grep hits are only in `CLAUDE.md`, where they record the removal.
+- Runtime events: none. The worker reported that no background jobs were left running.
+
+`spawns: implementer 27 calls, 192066 tokens, ended complete; reviewer 8 calls, 54309 tokens, ended complete`
+
+**Assumptions (Implementer):** prettier flags style issues in the template. Not checked whether these predate the edit, and not reformatted, to avoid unrelated churn.
+
+**ADVISORY (4R, non-gating):**
+
+- Readability: the new marker (`component.html` around line 252) is a single long line, unlike the one-attribute-per-line template around it.
+- Readability: two renamed component-spec cases ("has no ToC reference centres", "is the flat path even when the ToC has centres") now only assert setup facts.
+- Risk: the folder `CLAUDE.md` `Verified:` line keeps growing as one line. This is pre-existing; candidate for a kaizen cleanup on `staging`.
+- Separate ticket candidate (pre-existing): the `impact-level-info.component.spec.ts` E4 PATCH green-check reload test fails on HEAD.
+
+### Running totals after TRC-T-5
+
+Tasks 5 / 6 · review rounds 5 / 6 · LOC no longer tracked (user decision).
