@@ -1,5 +1,6 @@
 import { NO_ERRORS_SCHEMA, provideZonelessChangeDetection, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { FormsModule } from '@angular/forms';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -1283,6 +1284,17 @@ describe('RdContributorsAndPartnersComponent — panel untick of the last ToC Sc
     option.selected = !option.selected;
     panel.onSelectOption(option);
   };
+  /** jsdom never lays out, so make every CDK virtual viewport measure itself and render its rows. */
+  const renderRows = async () => {
+    fixture.debugElement.queryAll(By.directive(CdkVirtualScrollViewport)).forEach(v => (v.componentInstance as CdkVirtualScrollViewport).checkViewportSize());
+    await repaint();
+  };
+  /** The REAL checkbox of the panel row whose label contains `text` (TRC-T-7: the DOM state is what the user sees). */
+  const rowInput = (panel: any, text: string): HTMLInputElement => {
+    const host = fixture.debugElement.queryAll(By.directive(PrMultiSelectComponent)).find(h => h.componentInstance === panel)!.nativeElement as HTMLElement;
+    const row = Array.from(host.querySelectorAll('.options .option')).find(o => o.textContent?.includes(text));
+    return row!.querySelector('input.pr-native-check') as HTMLInputElement;
+  };
   const selectedFlag = (panel: any, key: string, value: any) => panel.optionsIntance().find((o: any) => o[key] == value).selected;
   const dialog = (id: string) => document.getElementById(id);
   const repaint = async () => {
@@ -1291,7 +1303,11 @@ describe('RdContributorsAndPartnersComponent — panel untick of the last ToC Sc
     await fixture.whenStable();
   };
 
+  // jsdom measures every element as 0px, so the CDK virtual viewport (flat panel) would render no rows; give it a height.
+  const realClientHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight');
+
   beforeEach(async () => {
+    Object.defineProperty(HTMLElement.prototype, 'clientHeight', { configurable: true, get: () => 300 });
     TestBed.resetTestingModule();
     appRoot = document.createElement('app-root');
     document.body.appendChild(appRoot);
@@ -1351,6 +1367,8 @@ describe('RdContributorsAndPartnersComponent — panel untick of the last ToC Sc
   });
 
   afterEach(async () => {
+    if (realClientHeight) Object.defineProperty(HTMLElement.prototype, 'clientHeight', realClientHeight);
+    else delete (HTMLElement.prototype as any).clientHeight;
     await new Promise(resolve => setTimeout(resolve, 80));
     document.querySelectorAll('.custom_modal_container').forEach(node => node.remove());
     appRoot.remove();
@@ -1362,14 +1380,17 @@ describe('RdContributorsAndPartnersComponent — panel untick of the last ToC Sc
     await repaint();
     const panel = spPanel();
     expect(selectedFlag(panel, 'id', 7)).toBe(true);
+    await renderRows();
+    expect(rowInput(panel, 'SP07').checked).toBe(true);
 
-    untick(panel, 'id', 7);
+    rowInput(panel, 'SP07').click(); // a real user untick: NgModel flips, then the guard vetoes
     await fixture.whenStable();
 
     // Vetoed: dialog open, the item and the ticked option are untouched.
     expect(dialog(SP_DIALOG)).toBeTruthy();
     expect(rdPartnersSE.scienceSelected).toEqual([SP7]);
     expect(selectedFlag(panel, 'id', 7)).toBe(true);
+    expect(rowInput(panel, 'SP07').checked).toBe(true);
 
     document.getElementById(`confirm-${SP_DIALOG}`)!.click();
     await fixture.whenStable(); // NOT detectChanges
@@ -1377,6 +1398,7 @@ describe('RdContributorsAndPartnersComponent — panel untick of the last ToC Sc
     expect(rdPartnersSE.scienceSelected).toEqual([]);
     expect(fixture.nativeElement.querySelectorAll('.pr_chip_selected').length).toBe(0);
     expect(selectedFlag(panel, 'id', 7)).toBe(false);
+    expect(rowInput(panel, 'SP07').checked).toBe(false); // TRC-T-7: the box unticks after the confirmed removal
   });
 
   it('TRC-S-1.4: Cancel on the panel dialog keeps the Science Program and its ticked option', async () => {
@@ -1433,12 +1455,15 @@ describe('RdContributorsAndPartnersComponent — panel untick of the last ToC Sc
     await repaint();
     const panel = centerPanel();
     expect(selectedFlag(panel, 'code', 'C1')).toBe(true);
+    await renderRows();
+    expect(rowInput(panel, 'Center 1').checked).toBe(true);
 
-    untick(panel, 'code', 'C1');
+    rowInput(panel, 'Center 1').click(); // a real user untick: NgModel flips, then the guard vetoes
     await fixture.whenStable();
     expect(dialog(CENTER_DIALOG)).toBeTruthy();
     expect(rdPartnersSE.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1']);
     expect(selectedFlag(panel, 'code', 'C1')).toBe(true);
+    expect(rowInput(panel, 'Center 1').checked).toBe(true);
 
     document.getElementById(`confirm-${CENTER_DIALOG}`)!.click();
     await fixture.whenStable(); // NOT detectChanges
@@ -1446,5 +1471,6 @@ describe('RdContributorsAndPartnersComponent — panel untick of the last ToC Sc
     expect(rdPartnersSE.partnersBody.contributing_center).toEqual([]);
     expect(fixture.nativeElement.querySelectorAll('.pr_chip_selected').length).toBe(0);
     expect(selectedFlag(panel, 'code', 'C1')).toBe(false);
+    expect(rowInput(panel, 'Center 1').checked).toBe(false); // TRC-T-7
   });
 });

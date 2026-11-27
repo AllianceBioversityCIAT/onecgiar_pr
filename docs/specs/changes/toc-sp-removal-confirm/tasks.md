@@ -7,7 +7,7 @@
 | Module / feature | `results` → `rd-contributors-and-partners` (+ additive `pr-multi-select` input) |
 | Linked spec | [`requirements.md`](./requirements.md) + [`design.md`](./design.md) (revision 4) |
 | Owner / driver | Santiago Sanchez |
-| Status | in-progress (T-1..T-5 done; T-6 HITL pending) |
+| Status | blocked — Pivot on TRC-T-6 (panel Yes leaves the box ticked), awaiting approval |
 | Approval Mode | gated |
 | Budget (design §12) | 6 tasks (5 code + 1 manual) · ≈380 LOC · 6 review rounds — tripwire for `/akili-execute` |
 
@@ -147,12 +147,35 @@ Common rules for every task:
   - [ ] Grep `requiresTocCenter|at least one from the ToC|contributingCentersRequiredNote` over `onecgiar-pr-client/src` → 0 hits.
   - [ ] `npm run build` green.
 
-### TRC-T-6 — Manual browser check (HITL)
+### TRC-T-7 [x] — Untick the box after a confirmed panel removal (Pivot on TRC-T-6, approved 2026-11-27)
+
+- **Type:** client (shared custom field + wiring test)
+- **Description:** In `pr-multi-select`, the veto branch of `onSelectOption` also resets the row's NgModel `viewModel` to `true`. The checkbox paths (flat `.html:58`, group `.html:40`) add `#m="ngModel"` and pass it with `cb`. Then the parent's confirmed removal (`option.selected = false`) is seen as a change and unticks the box. Nothing changes outside the veto branch. In the `rd-contributors-and-partners` zoneless panel-untick describe (TRC-T-4), the Yes cases also assert DOM `input.checked === false`. Update both folder `CLAUDE.md` files (re-stamp `Verified:`); the `pr-multi-select` one also corrects "9 rojos conocidos" to 12 in the same edit, since the line is being touched.
+- **Implements:** TRC-R-1 S-1.1 / S-1.4, TRC-R-2 S-2.4 (the "removed exactly as an ordinary removal" clause for the panel path)
+- **Design refs:** TRC-DD-9 and P-10 (both amended 2026-11-27); design §8 `pr-multi-select.deselectGuard` row and the Tests rows marked "Amended 2026-11-27"
+- **Files (expected):** `custom-fields/pr-multi-select/pr-multi-select.component.{ts,html}`, `pr-multi-select.cy.ts`, folder `CLAUDE.md`; `rd-contributors-and-partners.zoneless.spec.ts`, folder `CLAUDE.md`
+- **Depends on:** TRC-T-3, TRC-T-4
+- **Blocks:** TRC-T-6
+- **Estimate:** S
+- **Review:** `full` — shared component with ~80 instances, and a rework of a PASSed task
+- **Skills:** `angular-developer`, `tdd`
+- **Verification:**
+  - **Falsifier:** (a) CT, flat: guard `true` on a checkbox untick, then the host removes the item from `value` → assert DOM `input.checked === false`. Red on current code (box stays ticked, as observed in TRC-T-6 #13). (b) The same in group mode. (c) The zoneless TRC-S-1.4 Yes case asserts `input.checked === false`. Red on current code.
+  - **Red run:** `predicted — observed live in TRC-T-6 #13/#14`; (a) and (c) must be observed red on HEAD before the fix. Quote them.
+  - **Disqualifier:** if resetting `viewModel` makes a later *user* untick stop emitting `ngModelChange` (the existing CT case "a later real untick still removes it"), stop and report.
+  - **Consumers:** `onSelectOption` → `pr-multi-select.component.html:40,42,58,60`; `repro-p2-3308.spec.ts:52`; all `pr-multi-select*.cy.ts`; `pr-multi-select.component.spec.ts`. Instances without `deselectGuard` never enter the veto branch.
+- **Definition of done:**
+  - [ ] Reds (a), (c) quoted, then green; (b) green.
+  - [ ] Existing CT cases green (`pr-multi-select.cy.ts`, `selection.cy.ts`); `contract.cy.ts` shows no new reds beyond the 12 known.
+  - [ ] `npx jest pr-multi-select repro-p2-3308` and the `rd-contributors-and-partners` folder green; `npm run build` green.
+  - [ ] TRC-T-6 steps 13/14 re-run in the browser after this task.
+
+### TRC-T-6 [~] — Manual browser check (HITL)
 
 - **Type:** rollout
 - **Description:** On a real ToC-mapped 2026 result, own `ng serve` (inject `token` **and** `user`): remove the last ToC SP via chip and via panel → dialog; Yes removes (chip and tick); Cancel keeps (tick still visible); save + reload → still removed; repeat for a Center (lead cleared, not the sentinel); only Other(s) Centers → no red message.
 - **Implements:** TRC-R-1, TRC-R-2, TRC-R-3 (end to end)
-- **Depends on:** TRC-T-1..T-5
+- **Depends on:** TRC-T-1..T-5, TRC-T-7 (steps 13/14 re-run after TRC-T-7)
 - **Estimate:** S
 - **Review:** `skip-eligible` — evidence task, no code; the claim to prove is the screenshots/notes in `execution.md`
 - **Verification:**

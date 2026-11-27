@@ -1,6 +1,6 @@
 import { Component, ElementRef, NgZone, ViewChild, forwardRef, inject, input, output, signal, OnChanges, SimpleChanges, computed, OnDestroy, OnInit } from '@angular/core';
 import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { ControlValueAccessor, NG_VALUE_ACCESSOR, NgModel } from '@angular/forms';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { RolesService } from '../../shared/services/global/roles.service';
@@ -474,7 +474,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges, 
     );
   }
 
-  onSelectOption(option, cb?: HTMLInputElement) {
+  onSelectOption(option, cb?: HTMLInputElement, ngModel?: NgModel) {
     this.selectAll = null;
 
     if (option?.disabled) return;
@@ -497,6 +497,10 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges, 
       if (!isReactivation && this.deselectGuard()?.(option)) {
         option.selected = true;
         if (cb) cb.checked = true;
+        // The user's untick left this row's NgModel.viewModel at `false`; the veto put the option back to `true`,
+        // so a later confirmed removal (`option.selected = false`) would compare `false` vs `false` and never
+        // repaint the box. Re-syncing viewModel makes that removal a real change (TRC-DD-9, amended 2026-11-27).
+        if (ngModel) ngModel.viewModel = true;
         return;
       }
       if (this.logicalDeletion() && !valueItemFind.new) {

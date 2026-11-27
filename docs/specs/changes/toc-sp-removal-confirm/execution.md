@@ -332,3 +332,143 @@ Tasks 4 / 6 · review rounds 4 / 6 · LOC no longer tracked (user decision).
 ### Running totals after TRC-T-5
 
 Tasks 5 / 6 · review rounds 5 / 6 · LOC no longer tracked (user decision).
+
+### TRC-T-6 — Manual browser check (HITL)
+
+| Field | Value |
+|---|---|
+| Final status | **pivot** (`[~]`): one step fails, panel Yes leaves the box ticked |
+| Date | 2026-11-27 |
+| Run by | Leader, driving Chrome (claude-in-chrome) on the user's PRTest session; user approval "dale a las pruebas tu" |
+| Environment | Own `ng serve` (localhost:4200) on HEAD `70b9ec2eb`, with the bundle confirmed current (`scienceDeselectGuard` present in the live component). API: PRTest backend (`https://prtest-back.ciat.cgiar.org/`). The local server could not be used: on Node v26 it crashes (`buffer-equal-constant-time` / `jwa`), and on Node 20 (`npx -p node@20`) the dev DB answers `connect ETIMEDOUT` |
+| Results used | **9164** (id 11632, "Testing CG Centers selector", created by the user): 1 ToC Center CENTER-03 = Lead, 3 ToC SPs. **8803** (id 11271): exactly 1 ToC SP, SP05 |
+
+**Steps and observations** (source: this session's transcript, from the TRC-T-6 browser run onwards):
+
+| # | Step | Expected (spec) | Observed | Result |
+|---|---|---|---|---|
+| 1 | 9164: chip X on CIAT (the only ToC Center, also Lead) | Dialog "Contributing CGIAR Center mapped in the Theory of Change", TRC-R-2 body, Cancel / Yes, remove it; chip still visible | Exactly that | PASS |
+| 2 | Cancel | `contributing_center` / Lead unchanged (S-2.2) | CENTER-03, Lead CENTER-03 | PASS |
+| 3 | Panel: untick CIAT | Same dialog, the option stays ticked (S-2.4) | Dialog shown, box ticked | PASS |
+| 4 | Cancel, reopen the panel | The tick is still visible | CIAT still ticked | PASS |
+| 5 | Panel: untick, then **Yes** | Removed like an ordinary removal; Lead cleared, not the sentinel (S-2.1) | Model: `contributing_center = []`, Lead `null`, chip gone with no interaction. Generic message "Please select at least one Contributing CGIAR Center." (S-3.2) | PASS (model / chip / message). **The tick: see #13** |
+| 6 | Tick "Other(s)" only (the sentinel) | Still incomplete | Red message stays | PASS |
+| 7 | Add CIP through "Other(s)" | No red message, card not incomplete (S-3.1) | Message gone, card green, scan back to the original "1 field missing"; Lead auto-assigned CIP (not the sentinel) | PASS |
+| 8 | Save draft, reload | Removal persisted; ToC prefill does not re-add (P-11) | Server/client: no ToC Center, Other = CENTER-06 (CIP), Lead CENTER-06 | PASS |
+| 9 | Chip X on CIAT, then **Yes** (unsaved) | Dialog; chip disappears with no interaction (DD-7, zoneless) | Dialog shown; chip gone, Lead `null` | PASS |
+| 10 | Restore 9164 (tick CIAT, Lead CIAT), save, force reload | Original state | Server: `CENTER-03 / from_toc 1 / lead 1`; client: ToC bucket, references `[45,50,49,46]`, confirm armed, no dirty badge | Restored |
+| 11 | 8803: chip X on SP05, Cancel | Dialog "Science Program mapped in the Theory of Change" (TRC-R-1); SP unchanged | Exactly that | PASS |
+| 12 | Panel: untick SP05, Cancel, reopen | Dialog; tick stays (S-1.4) | Dialog shown; SP05 still ticked | PASS |
+| 13 | Panel: untick SP05, then **Yes**, reopen the panel | Chip and option removed ("the chip is removed exactly as an ordinary removal removes it", S-1.1; design §8 Tests "Yes via the panel removes the chip and the option") | Model `scienceSelected = []`, `pr-multi-select` value `[]`, option `selected = false`, chip gone. **But the native `input.checked` for SP05 is still `true`: the box is still ticked** | **FAIL** |
+| 14 | Same as #13 on Centers (9164, unsaved, discarded) | Same | CIAT box still ticked after Yes, model `[]` | **FAIL** (same defect) |
+
+Not done on purpose: save + reload for the **SP** removal on 8803. SP05 is a *pending* contributing initiative, so removing and re-adding it can change its acceptance state or notify that SP. Persistence is already covered by step 8 (Centers) and by the unchanged PATCH contract (NFR-1). 8803 was left untouched (forced reload; server still `SP05/from_toc 1`).
+
+**Defect (root cause, measured in the live DOM).** Design premise **P-10** ("NgModel stays consistent: its next real change (`true`→`false`) still differs from the stored `true`") is **wrong for a model-side removal**:
+
+1. The user's native untick sets NgModel's internal `viewModel` to `false`.
+2. The guard intercepts and writes `option.selected = true` and `cb.checked = true`. The `[ngModel]` binding input is still `true`, so NgModel does not run.
+3. On Yes, `remove*Item` drops the item, and `pr-multi-select` sets `option.selected = false`. NgModel's `ngOnChanges` compares the new `false` with its `viewModel` (`false`), finds no change, and never writes the DOM.
+4. The box stays ticked although the item is gone.
+
+Why the gates missed it:
+
+- TRC-T-3's CT case "a later real untick still removes it" covers a **second user untick**, not a **model-side** removal.
+- TRC-T-4's zoneless "Yes removes … the option" asserts the option's `selected` flag, not DOM `input.checked`. That is exactly the shortcut design §8 Tests forbids for the CT ("assert the DOM, never `option.selected`").
+
+Impact: after Yes in the panel, the option still looks selected. The data is correct (chip gone, value `[]`, save sends the right body), but S-1.1 / S-1.4 / S-2.4 are not met visually, and a later click on that box flips it in the wrong direction.
+
+**Other observations (outside this spec's changes; not gating):**
+
+- Local-only: the gitignored `src/environments/environment.ts` stub has `elastic.baseUrl: ''`. `general-interceptor.service.ts` then matches every request with `req.url.includes('')` and **never attaches the `auth` header**, so a local client against any real API gets 401 on every authenticated call. For this run the stub was temporarily set to `http://elastic.invalid/` (restored afterwards). Worth a note in the client `CLAUDE.md` §9, or a guard in the interceptor (`baseUrl && …`).
+- Intermittent, not reproduced: one reload of 9164 (right after the restore save) came up with empty ToC Center references. The client then re-bucketed CENTER-03 (`from_toc=1` on the server) into "Other" and showed "Unsaved changes" on a page nobody had touched; saving then would have stored `from_toc=false`. A forced reload loaded correctly. The bucketing / prefill effects were not changed by this spec.
+- Existing behaviour: when ticking a ToC Center clears the "Other" list through the cascade, the Lead center (an "Other" Center) is not recomputed and stays pointing at a Center that is no longer a contributor.
+- The "Unsaved changes" field badge appears as soon as a chip X or the panel is clicked, even when the user then cancels. The model is unchanged (verified). The badge is the field-card's touched indicator, so it is not a data side effect, but it reads as one.
+
+## Pivot Record: TRC-T-6 (finding against TRC-T-3 / TRC-T-4)
+
+- **Blocker:** design §11 **P-10** is false for the confirmed-removal path, and §8 Tests (TRC-T-4) did not assert the DOM. S-1.1 / S-1.4 / S-2.4 fail visually in a real browser after a panel Yes.
+- **Alternatives:**
+  - **(A, recommended)** `pr-multi-select` re-syncs the native box when an option's selection changes from the model side. When `value` drops an item whose row is rendered, write `cb.checked = option.selected` for the rendered rows (the same native write the veto already uses). The opt-in input is unchanged, and the ~80 other instances do not change (the write only matches the model they already show).
+  - (B) The parent's confirm callback writes the native box itself. Rejected: it leaks `pr-multi-select` DOM into the page component.
+  - (C) Drive NgModel (`viewToModelUpdate(true)` on veto). Rejected: it emits `ngModelChange`, which re-enters `onSelectOption`.
+- **Revised direction (proposed, not yet applied):** amend design P-10 and §8 (`pr-multi-select.deselectGuard` row and Tests) and add **TRC-T-7**:
+  - Fix per (A).
+  - CT falsifier: guard `true` → Yes-equivalent model removal → DOM `input.checked === false`, in flat and group mode.
+  - TRC-T-4 zoneless: assert DOM `input.checked`, not `option.selected`.
+  - Then re-run TRC-T-6 step 13/14.
+- No ADR affected (client-only, no TRD decision).
+- **Status:** stopped for user approval (Pivot Protocol step 4). Nothing edited in requirements / design / tasks yet.
+
+**Pivot approved (user, 2026-11-27):** "si la A es la recomendable y no se va a dañar nada sigamos con esta opcion". Option A applied as the narrowest variant: on veto, also reset the row's NgModel `viewModel` (runs only inside the veto branch, so instances without a guard are untouched). Spec amended: `design.md` §8 (`pr-multi-select.deselectGuard` row, CT Tests row, new zoneless Tests row), §10 TRC-DD-9, §11 P-10; `tasks.md` gains TRC-T-7, and TRC-T-6 depends on it. Two-direction sweep: the only surviving old-claim text is historical evidence in this log and TRC-T-3's disqualifier wording. The diff removes only the four amended rows.
+
+### TRC-T-7 — Untick the box after a confirmed panel removal (Pivot rework)
+
+| Field | Value |
+|---|---|
+| Final status | PASS |
+| Date | 2026-11-27 |
+| Attempts | 1 |
+| Requirements covered | TRC-R-1 S-1.1 / S-1.4, TRC-R-2 S-2.4 (panel path, "removed exactly as an ordinary removal") |
+| Skills / effort | `angular-developer`, `tdd` · effort high (shared component, Angular forms internals, rework of PASSed tasks) · Implementer T2 wrapper, Reviewer T3 wrapper |
+
+**Attempt 1**
+
+- Files changed (`onecgiar-pr-client/src/app/`):
+  - `custom-fields/pr-multi-select/pr-multi-select.component.ts`: `onSelectOption(option, cb?, ngModel?)`, with `ngModel.viewModel = true` only in the veto branch.
+  - `custom-fields/pr-multi-select/pr-multi-select.component.html`: `#m="ngModel"` on the two checkbox paths.
+  - `custom-fields/pr-multi-select/pr-multi-select.cy.ts`: the new case "hook returns true, then the host removes the item (confirmed): the box unticks", in flat and group mode.
+  - `custom-fields/pr-multi-select/CLAUDE.md`: the `viewModel` note, and "9 rojos" corrected to 12 with the sections listed.
+  - `pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.zoneless.spec.ts`: the Yes cases click the real row input and assert `input.checked`. The `clientHeight` stub and `checkViewportSize()` make the virtual-scroll rows render in jsdom.
+  - `pages/results/pages/result-detail/pages/rd-contributors-and-partners/CLAUDE.md`: TRC-T-7 note.
+- Red (c), on code without the fix:
+
+  ```
+  TRC-S-1.4: unticking the last ToC Science Program ...
+    Expected: false
+    Received: true
+    > 1401 | expect(rowInput(panel, 'SP07').checked).toBe(false);
+  ```
+
+  The same failure occurred for TRC-S-2.4 (Center) at `:1474`.
+- Red (a)/(b), with only the `viewModel` line commented out: `AssertionError: Timed out retrying after 10000ms: expected '<input.pr-native-check.ng-untouched.ng-valid.ng-dirty>' not to be 'checked'` (`pr-multi-select.cy.ts:384`), 23 passing / 2 failing. Earlier attempts that failed during setup were discarded and are not counted as evidence.
+- Green:
+  - `pr-multi-select.cy.ts` 25 passing / 0 failing.
+  - `pr-multi-select.selection.cy.ts` 7 passing.
+  - `pr-multi-select.contract.cy.ts` 32 passing / 12 failing, exactly the known baseline.
+  - Jest `rd-contributors-and-partners pr-multi-select repro-p2-3308`: 18 suites / 407 tests.
+  - Lint clean; `npm run build` exit 0.
+  - Each Cypress run used a single `--spec`, and no `ng serve` was started, because memory was low.
+- Disqualifier: the existing CT case "a later real untick still removes it" is green in flat and group mode.
+- `NgModel.viewModel` was checked in `node_modules/@angular/forms`: it is public, read only in `ngOnChanges` (`isPropertyUpdated`) and written in `viewToModelUpdate`.
+- Evidence re-run (Leader inline, no worker active): Jest `18 passed / 407 passed` → **VERIFIED**. The Leader did not re-run CT or the build.
+- Reviewer: **PASS**. Findings:
+  - The change is a single line inside the veto branch, and the label paths are untouched (R2-2).
+  - `viewToModelUpdate` is not used.
+  - Tracing the mutation shows that removing the line flips the result: flat mode rebuilds `selected` from `_valueSig`, group mode syncs it in `writeValue`.
+  - The CT host removal (`model = []` + `ng.applyChanges`) is a faithful stand-in, because it reaches `writeValue` exactly as the parent's removal does. The zoneless test also covers the real parent path, and it was red on HEAD.
+  - The `clientHeight` stub only decides how many rows render; it cannot make the checked assertion pass.
+  - Named conformance checks (the execute-time spec edits of 2026-11-27): §8 `deselectGuard` row, both amended Tests rows, §10 TRC-DD-9 and §11 P-10 all conform.
+- Runtime events: none.
+
+`spawns: implementer 55 calls, 149295 tokens, ended complete; reviewer not reported by host`
+
+**Assumptions (Implementer):** the repo already had `stash@{0}` ("pre-pull WIP", 2026-11-23); the Implementer stashed nothing.
+
+**Working tree note (Leader):** while TRC-T-7 ran, these appeared in the tree:
+
+- `onecgiar-pr-server/src/api/replicated-innovation-reminders/templates/rir-template-copy{,.spec}.ts`
+- `onecgiar-pr-server/src/migrations/1793800000000-RIR-CopyV5CenterClosingDate.ts`
+
+No task in this spec accounts for them, and they are outside the TRC-T-7 diff. They are attributed to another session in this checkout, left untouched, and not staged.
+
+**ADVISORY (4R, non-gating):**
+
+- Reliability: the CT uses a fixed `cy.wait(50).then(repaint)`; putting `repaint()` inside a retried `.should()` would remove the timing assumption.
+- Reliability: the zoneless `afterEach` restores `clientHeight` before its 80 ms settle wait.
+- Readability: `cb` and `ngModel` always travel together; pass them as one argument or document the pairing.
+- Risk: the fix relies on `NgModel.viewModel`, which is public but behaves like internal Angular. Re-run the "host removes the item" CT case on every Angular upgrade (the folder `CLAUDE.md` flags this).
+
+### Running totals after TRC-T-7
+
+Tasks 6 / 7 (T-6 pending its re-run of steps 13/14) · review rounds 7, against the 6 budgeted in design §12. The extra round is the Pivot rework, which the user approved (Pivot Protocol). LOC no longer tracked (user decision).

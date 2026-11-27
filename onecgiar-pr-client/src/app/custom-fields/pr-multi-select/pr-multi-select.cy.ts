@@ -431,6 +431,31 @@ describe('PrMultiSelectComponent deselectGuard (CT)', () => {
       });
     });
 
+    // TRC-T-7 (TRC-DD-9 amended 2026-11-27): after a veto the host confirms and removes the item from
+    // `value`; the box must untick (the veto reset NgModel's viewModel, so the removal is seen as a change).
+    it(`hook returns true, then the host removes the item (confirmed): the box unticks, ${mode}`, () => {
+      const guard = cy.stub().returns(true).as('guard');
+      mountGuarded({ model: [C1], group, guard }).then(wrapper => {
+        openDropdown();
+        checkbox('Center 1').should('be.checked').click();
+        checkbox('Center 1').should('be.checked');
+        // The host confirms and removes the item: a new array bound to the host's ngModel, then CD passes
+        // (`ng.applyChanges`: the mounted wrapper fixture's own detectChanges does not reach the dropdown rows).
+        const repaint = () => {
+          const ng = (window as any).ng;
+          const host = Cypress.$('app-pr-multi-select')[0];
+          ng.applyChanges(ng.getOwningComponent(host));
+          ng.applyChanges(ng.getComponent(host));
+        };
+        cy.wrap(null).then(() => {
+          (wrapper.component as any).model = [];
+          repaint();
+        });
+        cy.wait(50).then(repaint);
+        checkbox('Center 1').should('not.be.checked');
+      });
+    });
+
     it(`hook returns false, ${mode}: removes the item`, () => {
       const guard = cy.stub().returns(false).as('guard');
       mountGuarded({ model: [C1], group, guard }).then(wrapper => {
