@@ -1,3 +1,5 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsInt, IsOptional, Min } from 'class-validator';
 import {
   PrimaryGeneratedColumn,
   Entity,
@@ -31,6 +33,28 @@ export class ResultIpMeasure extends BaseEntity {
     nullable: true,
   })
   quantity!: number;
+
+  /**
+   * Innovation Use 2026 — new users in this row (IU26-R-11). Stored, never copied across
+   * phases: not in any replication insert list, so a rollover leaves it NULL.
+   */
+  @ApiPropertyOptional({
+    description:
+      'IU26-R-11: new users in this row; whole number >= 0, never above the row total (the service answers 400).',
+    example: 40,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Column({
+    name: 'new_users',
+    type: 'int',
+    unsigned: true,
+    nullable: true,
+    default: null,
+  })
+  new_users: number | null;
 
   @Column({
     name: 'addressing_demands',

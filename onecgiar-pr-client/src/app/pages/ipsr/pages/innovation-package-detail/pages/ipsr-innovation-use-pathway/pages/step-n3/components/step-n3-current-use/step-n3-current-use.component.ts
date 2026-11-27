@@ -1,6 +1,24 @@
 import { ChangeDetectorRef, Component, Input, OnInit } from '@angular/core';
 import { ActorN3, IpsrStep3Body, MeasureN3, OrganizationN3 } from '../../model/Ipsr-step-3-body.model';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
+import { CURRENT_USE_UPDATE_COPY } from '../../../../../../../../../../internationalization/current-use-update.copy';
+import {
+  PreviousUseByCategory,
+  TotalsByCategory,
+  actorRowTotal,
+  newUsersByCategory,
+  NewUsersByCategory,
+  newUsersExceedsMessage,
+  newUsersExceedsTotal,
+  newUsersValue,
+  hasAnyPreviousFigure,
+  previousUseByCategory,
+  previousUsePhaseYear,
+  totalsByCategory
+} from '../../../../../../../../../../shared/utils/current-use-update.util';
+
+/** IU26-R-13 — first phase year of the IPSR current-use update (same year the server gates `new_users` on). */
+export const IPSR_IU26_FROM_YEAR = 2026;
 
 @Component({
   selector: 'app-step-n3-current-use',
@@ -13,6 +31,9 @@ export class StepN3CurrentUseComponent implements OnInit {
   actorsTypeList = [];
   executeTimer = null;
   institutionsTypeTreeList = [];
+
+  readonly copy = CURRENT_USE_UPDATE_COPY;
+  readonly categoryLabels = CURRENT_USE_UPDATE_COPY.categoryLabels;
 
   constructor(
     public api: ApiService,
@@ -172,11 +193,114 @@ export class StepN3CurrentUseComponent implements OnInit {
     this.calculateTotalField(actorItem);
   }
 
+  /**
+   * IU26-R-13 — true from the 2026 phase onwards. The ONLY source is `currentResultSignal().phase_year` (P-24: the
+   * phase of the Innovation Package open on screen, set by `GETInnovationPackageDetail`). No fallback: with no
+   * phase year the step keeps today's behaviour (fail open to the 2025 copy and fields).
+   */
+  isIu2026(): boolean {
+    const year = this.api?.dataControlSE?.currentResultSignal?.()?.phase_year;
+    return typeof year === 'number' && year >= IPSR_IU26_FROM_YEAR;
+  }
+
+  currentUseQuestion(): string {
+    return CURRENT_USE_UPDATE_COPY.question2026(this.api?.dataControlSE?.currentResultSignal?.()?.phase_year);
+  }
+
+  get howManyLabel(): string {
+    return this.isIu2026() ? CURRENT_USE_UPDATE_COPY.howManyTotalLabel : 'How many';
+  }
+
+  get quantityLabel(): string {
+    return this.isIu2026() ? CURRENT_USE_UPDATE_COPY.quantityTotalLabel : 'Quantity';
+  }
+
+  /** IU26-R-4 — the previous phase's figures per category, for reference only (null when the server sent none). */
+  hasPreviousUse(): boolean {
+    return hasAnyPreviousFigure(this.body?.current_use_previous);
+  }
+
+  previousUseByCategory(): PreviousUseByCategory | null {
+    const previous = this.body?.current_use_previous;
+    return previous ? previousUseByCategory(previous) : null;
+  }
+
+  previousUseHeading(): string {
+    return CURRENT_USE_UPDATE_COPY.previousUseHeading(previousUsePhaseYear(this.body?.current_use_previous));
+  }
+
+  private liveRows(rows: any[] | null | undefined): any[] {
+    return (rows ?? []).filter(row => row && row.is_active != false);
+  }
+
+  /**
+   * IU26-R-7 — read-only totals per category from the current rows (never stored). IPSR has no households unit,
+   * so every actor row counts as individuals and the Households tile never exists. Actor rows without the
+   * "does not apply" flag read Women + Men; the others their typed `how_many`.
+   */
+  currentUseTotals(): TotalsByCategory | null {
+    if (!this.isIu2026()) return null;
+    const use = this.body?.innovatonUse;
+    const actors = this.liveRows(use?.actors).map(actor => ({ ...actor, count_unit: null, how_many: actorRowTotal(actor) }));
+    const totals = totalsByCategory(actors, this.liveRows(use?.organization), this.liveRows(use?.measures));
+    const hasAny = totals.actorsIndividuals !== null || totals.organizations !== null || totals.measures.length > 0;
+    return hasAny ? { ...totals, households: null } : null;
+  }
+
+  currentUseNewUsers(): NewUsersByCategory {
+    const use = this.body?.innovatonUse;
+    return newUsersByCategory(
+      this.liveRows(use?.actors).map(actor => ({ ...actor, count_unit: null })),
+      this.liveRows(use?.organization),
+      this.liveRows(use?.measures)
+    );
+  }
+
+  newUsersForUnit(unit: string): number | null {
+    const key = String(unit ?? '').trim().toLowerCase();
+    return this.currentUseNewUsers().measures.find(m => m.unit.toLowerCase() === key)?.newUsers ?? null;
+  }
+
+  ofWhichNew(value: number | null | undefined): string {
+    return CURRENT_USE_UPDATE_COPY.ofWhichNew(value ?? null);
+  }
+
+  /** IU26-R-13 — the total a row's NEW is compared with: actors Women + Men (or `how_many`), organizations `how_many`, measures `quantity`. */
+  rowTotal(row: any, kind: 'actor' | 'organization' | 'measure'): number {
+    if (kind === 'actor') return actorRowTotal(row);
+    return Number(kind === 'organization' ? row?.how_many : row?.quantity) || 0;
+  }
+
+  newUsersExceeds(row: any, kind: 'actor' | 'organization' | 'measure'): boolean {
+    return newUsersExceedsTotal(row?.new_users, this.rowTotal(row, kind));
+  }
+
+  newUsersMessage(row: any, kind: 'actor' | 'organization' | 'measure'): string {
+    return newUsersExceedsMessage(row?.new_users, this.rowTotal(row, kind));
+  }
+
+  /** IU26-R-11 — true when any active row has NEW above its total (feeds the completeness marker). */
+  anyNewUsersExceeds(): boolean {
+    const use = this.body?.innovatonUse;
+    return (
+      this.liveRows(use?.actors).some(r => this.newUsersExceeds(r, 'actor')) ||
+      this.liveRows(use?.organization).some(r => this.newUsersExceeds(r, 'organization')) ||
+      this.liveRows(use?.measures).some(r => this.newUsersExceeds(r, 'measure'))
+    );
+  }
+
+  /** A cleared input is `null` (never `''` / `undefined`), so the payload always carries the key. */
+  setNewUsers(row: any, value: unknown) {
+    row.new_users = newUsersValue(value);
+    this.cdr.markForCheck();
+  }
+
   narrativeActors() {
+    const unspecified = this.isIu2026() ? '' : 'expected ';
     return `
     <ul>
     <li>
-    If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below.
+    If the innovation does not target specific groups of actors or people, then please specify the ${unspecified}innovation use at organizational level or other use below.
     </li>
     <li>
     The numbers for ‘youth' and 'non-youth' equal the total number for 'Women' or 'Men’.

@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { CustomField } from '../interfaces/customField.interface';
 import { DataControlService } from './data-control.service';
 import { ReportingDesignYear } from '../enum/reporting-design-year.enum';
+import { CURRENT_USE_UPDATE_COPY } from '../../internationalization/current-use-update.copy';
 import { INNOVATION_USE_2030_PROJECTION_COPY } from '../../internationalization/innovation-use-2030-projection.copy';
 enum Portfolios {
   'P22' = 0,
@@ -316,11 +317,16 @@ export class FieldsManagerService {
         required: true
       },
       '[innovation-use-form]-core-innovation': {
-        label: 'Current core innovation use in number of users that can be supported by evidence (within the reporting year)',
+        // IU26-R-6 — 2026 W1/W2 wording (the year is the result's phase year) and no "Depending…" description.
+        // Only the Innovation Use form (`!isIpsr`) reads this key, so the 2026 gate cannot reach IPSR step 1.
+        label: this.isInnovationUseAgeFallback2026()
+          ? CURRENT_USE_UPDATE_COPY.question2026(this.currentResultPhaseYear() ?? 2026)
+          : 'Current core innovation use in number of users that can be supported by evidence (within the reporting year)',
         hide: this.isP22(),
         required: true,
-        description:
-          'Depending on the innovation, users may be groups of actors or be organizations. Multiple actors or organizations can be selected.'
+        description: this.isInnovationUseAgeFallback2026()
+          ? ''
+          : 'Depending on the innovation, users may be groups of actors or be organizations. Multiple actors or organizations can be selected.'
       },
       '[innovation-use-form]-has-studies-links': {
         label:

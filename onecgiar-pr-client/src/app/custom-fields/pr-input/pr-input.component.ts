@@ -34,6 +34,9 @@ export class PrInputComponent implements ControlValueAccessor {
   readonly editable = input<boolean>(false);
   readonly noDataText = input<string>('');
   readonly autogenerate = input<boolean>(false);
+  /** IU26-R-11 — opt-in: paints the number box invalid (`aria-invalid="true"`, red border) and links it to its message. */
+  readonly markInvalid = input<boolean>(false);
+  readonly describedBy = input<string | null>(null);
   /** Lets a consumer keep a syntactically present value in the pending state when it is not valid for that field. */
   readonly valueValid = input<boolean>(true);
 

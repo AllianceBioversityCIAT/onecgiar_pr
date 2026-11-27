@@ -333,6 +333,10 @@ function usageLists(
             required_when: whenEq('sex_and_age_disaggregation', true),
           },
         ),
+        // IU26-R-11 / R-14: of the row's total, how many are new in this reporting period (CURRENT USE only; W3 has no NEW, R-12).
+        ...(sectionId === 1
+          ? [sub('result_actors', 'new_users', 'Of which NEW users', 'number')]
+          : []),
       ],
     },
     {
@@ -388,6 +392,17 @@ function usageLists(
           undefined,
           ALWAYS,
         ),
+        // IU26-R-11 / R-14: of the row's total, how many are new in this reporting period (current use only).
+        ...(sectionId === 1
+          ? [
+              sub(
+                'results_by_institution_type',
+                'new_users',
+                'Of which NEW users',
+                'number',
+              ),
+            ]
+          : []),
         // IUF:319-327 / :712-720 (`institution_types_id == 50`, `[required]="false"`); no rule in VIU.
         {
           ...sub(
@@ -434,6 +449,17 @@ function usageLists(
           undefined,
           ALWAYS,
         ),
+        // IU26-R-11 / R-14: of the row's quantity, how much is new in this reporting period (current use only).
+        ...(sectionId === 1
+          ? [
+              sub(
+                'result_ip_measure',
+                'new_users',
+                'Of which NEW users',
+                'number',
+              ),
+            ]
+          : []),
       ],
     },
   ];
@@ -539,26 +565,8 @@ export const INNOVATION_USE_FIELDS: CatalogField[] = [
     storage: col(USE_TABLE, 'innov_use_to_be_determined'),
   },
   {
-    // D12 (b): mandatory in the form (IUF:47-54 `[required]="true"`), no live rule -> unconfirmed. Shown only when the
-    // previous phase reported actors and the current use is not "to be determined" (showCurrentUseUpdate(),
-    // innovation-use-form.component.ts:202-208). 0 is a valid answer.
-    // QAC-T-19 DOCUMENTED GAP: kept `required: false`. The form requires it whenever it is shown, but the gate is the
-    // previous phase's reported actors, which is not a catalog field, so no `required_when` can state it without
-    // asking for it on results where the form never shows it.
-    key: 'innovation_use.current_use_update.new_users_added',
-    label: 'New users added during this reporting period',
-    type: 'number',
-    section: IU_CURRENT_USE_SECTION.key,
-    order: 4,
-    result_types: TYPES,
-    required: false,
-    required_confirmed: false,
-    ...FROM_2026,
-    storage: col(USE_TABLE, 'new_users_added'),
-  },
-  {
-    // D12 (b): same gate and treatment as `new_users_added` (IUF:64-69 `[required]="true"`; same QAC-T-19 documented
-    // gap); max 100 words.
+    // D12 (b): shown only when the previous phase reported actors (IUF:64-69 `[required]="true"`; QAC-T-19 documented gap:
+    // no `required_when` can state that gate); max 100 words. IU26-R-14: the sibling `new_users_added` item is no longer listed for 2026.
     key: 'innovation_use.current_use_update.use_expansion_narrative',
     label: 'Brief narrative on how the use expanded',
     type: 'text',

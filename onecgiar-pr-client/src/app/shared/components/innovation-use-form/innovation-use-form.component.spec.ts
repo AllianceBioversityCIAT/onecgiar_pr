@@ -17,6 +17,7 @@ import { FieldsManagerService } from '../../services/fields-manager.service';
 import { InnovationControlListService } from '../../services/global/innovation-control-list.service';
 import { InnovationUseResultsService } from '../../services/global/innovation-use-results.service';
 import { FARMERS_ACTOR_TYPE_ID, FARMER_FOLLOW_UP_COPY } from './farmer-follow-up';
+import { CURRENT_USE_UPDATE_COPY } from '../../../internationalization/current-use-update.copy';
 import { INNOVATION_USE_YOUTH_REQUIRED_COPY } from '../../../internationalization/innovation-use-youth-required.copy';
 
 /** P2-3295 — verbatim tooltip from the SIDS revision; must match `FieldsManagerService` character for character. */
@@ -1189,30 +1190,52 @@ describe('InnovationUseFormComponent', () => {
     });
   });
   /**
-   * P2-3537 §4 — the Current Use Update block, and the reconciliation that governs it.
+   * P2-3537 §4 / IU26 — the Current Use Update block.
    *
    * The case that matters most is the one that is NOT here as an error: a result whose previous
-   * phase reported no actors must not see the block at all. Yeck's decision of 3 Sep 2026 — showing
-   * it would mean reconciling against zero actors, an error the reporter can never resolve, so they
-   * could never submit. Every other test guards the arithmetic or the "0 is a valid answer" rule.
+   * phase reported no actors, organisations or measures must not see the block at all (a first report).
+   * IU26 reshaped the block: it sits ABOVE the 2026 question, ignores TBD, lists the previous figures per
+   * category and asks for the narrative alone (no "New users added", no cumulative total, no mismatch).
    */
-  describe('§4 — Current Use Update block (P2-3537)', () => {
-    const previous = (total: number, year: number | null = 2025) => ({
+  describe('§4 — Current Use Update block (P2-3537, IU26)', () => {
+    const previous = (total: number, year: number | null = 2025, extra: Record<string, unknown> = {}) => ({
       result_id: 40,
       phase_year: year,
       total_actors: total,
       actors: [],
+      ...extra
     });
 
     const withActors = (...amounts: number[]) =>
-      amounts.map(n => Object.assign(new Actor(), { how_many: n, is_active: true }));
+      amounts.map(n => Object.assign(new Actor(), { how_many: n, is_active: true, actor_type_id: 1, sex_and_age_disaggregation: true }));
+
+    let body: IpsrStep1Body;
+
+    // A fresh fixture per render: the outer one already ran its first check, and swapping the body under a
+    // rendered view trips NG0100 in this template. The body object is shared, so the method-only tests below
+    // keep reading the outer component.
+    const render = (isIpsr = false) => {
+      fixture = TestBed.createComponent(InnovationUseFormComponent);
+      component = fixture.componentInstance;
+      component.isIpsr = isIpsr;
+      component.saving = false;
+      // changeDetectorRef skips the dev-mode checkNoChanges pass, which this template trips on its own (farmerRowKey seeds on first read).
+      component.body = body;
+      fixture.changeDetectorRef.detectChanges();
+      fixture.changeDetectorRef.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    };
+    const cuu = (el: HTMLElement) => el.querySelector('[data-testid="iu-current-use-update"]');
+    const question = (el: HTMLElement) => el.querySelector('app-pr-radio-button');
 
     beforeEach(() => {
-      component.body = new IpsrStep1Body();
-      component.body.current_use_previous = previous(500);
-      component.body.innovatonUse.actors = withActors(500);
-      component.body.new_users_added = null;
-      component.body.use_expansion_narrative = null;
+      apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026 });
+      body = new IpsrStep1Body();
+      body.current_use_previous = previous(500);
+      body.innovatonUse.actors = withActors(500);
+      body.use_expansion_narrative = null;
+      component.isIpsr = false;
+      component.body = body;
     });
 
     it('renders the block when the previous phase reported actors', () => {
@@ -1220,16 +1243,9 @@ describe('InnovationUseFormComponent', () => {
     });
 
     it('does NOT render it on a first report', () => {
-      component.body.current_use_previous = null;
+      body.current_use_previous = null;
       expect(component.showCurrentUseUpdate()).toBe(false);
-    });
-
-    it('does NOT render it when the previous phase had organisations but no actors', () => {
-      // The server sends null for that case too. Rendering the block would show a permanent
-      // mismatch against zero actors that nothing the reporter does can fix.
-      component.body.current_use_previous = null;
-      expect(component.showCurrentUseUpdate()).toBe(false);
-      expect(component.hasCurrentUseMismatch()).toBe(false);
+      expect(cuu(render())).toBeNull();
     });
 
     it('does NOT render it before the 2026 phase', () => {
@@ -1240,90 +1256,427 @@ describe('InnovationUseFormComponent', () => {
     it('does NOT render it inside IPSR, which shares this template', () => {
       component.isIpsr = true;
       expect(component.showCurrentUseUpdate()).toBe(false);
+      expect(cuu(render(true))).toBeNull();
     });
 
-    it('calculates the cumulative total as previous + new, never typed', () => {
-      component.body.new_users_added = 120;
-      expect(component.totalCumulativeUse()).toBe(620);
+    it('IU26-DD-10: the CUU header, validation label and narrative placeholder come from CURRENT_USE_UPDATE_COPY', () => {
+      const block = cuu(render());
+      const header: any = block.querySelector('app-pr-field-header');
+      const narrative: any = block.querySelector('app-pr-textarea');
+      const validation: any = block.querySelector('[appFeedbackValidation]');
+      expect(header.label).toBe(CURRENT_USE_UPDATE_COPY.title);
+      expect(validation.labelText).toBe(CURRENT_USE_UPDATE_COPY.title);
+      expect(narrative.placeholder).toBe(CURRENT_USE_UPDATE_COPY.placeholder);
+      expect(CURRENT_USE_UPDATE_COPY.title).toBe('Current Use Update');
     });
 
-    it('treats an unanswered increment as zero for the arithmetic, without NaN', () => {
-      expect(component.totalCumulativeUse()).toBe(500);
-      expect(Number.isNaN(component.totalCumulativeUse())).toBe(false);
+    it('IU26-R-3: the CUU is rendered BEFORE the 2026 question and its TBD option', () => {
+      const el = render();
+      const block = cuu(el);
+      const q = question(el);
+      expect(block).not.toBeNull();
+      expect(q).not.toBeNull();
+      expect(block.compareDocumentPosition(q) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
-    it('reconciles when the user categories match the cumulative total', () => {
-      component.body.new_users_added = 120;
-      component.body.innovatonUse.actors = withActors(400, 220);
-      expect(component.actorsTotal()).toBe(620);
-      expect(component.hasCurrentUseMismatch()).toBe(false);
+    it('IU26-R-2: no "New users added", no cumulative line and no mismatch alert', () => {
+      body.innovatonUse.actors = withActors(1);
+      const el = render();
+      const text = el.textContent;
+      expect(text).not.toContain('New users added');
+      expect(text).not.toContain('Total cumulative current use');
+      expect(el.querySelector('.current_use_update__mismatch')).toBeNull();
+      expect(cuu(el).querySelector('app-pr-input')).toBeNull();
     });
 
-    it('flags a mismatch naming the exact difference', () => {
-      component.body.new_users_added = 120;
-      component.body.innovatonUse.actors = withActors(600);
-
-      expect(component.hasCurrentUseMismatch()).toBe(true);
-      expect(component.currentUseDifference()).toBe(-20);
-      const msg = component.currentUseMismatchMessage();
-      expect(msg).toContain('600');
-      expect(msg).toContain('620');
-      expect(msg).toContain('20');
+    it('IU26-R-3 TBD selected: the CUU and its narrative stay visible while guidance and rows are hidden', () => {
+      fieldsManagerServiceMock.isP25.mockReturnValue(true);
+      body.innov_use_to_be_determined = true;
+      const el = render();
+      expect(cuu(el)).not.toBeNull();
+      expect(cuu(el).querySelector('app-pr-textarea')).not.toBeNull();
+      expect(el.querySelector('[data-testid="iu-guidance"]')).toBeNull();
+      expect(el.querySelector('.fields_list')).toBeNull();
     });
 
-    it('ignores actor rows the reporter deleted', () => {
-      component.body.new_users_added = 0;
-      const actors = withActors(500, 999);
-      actors[1].is_active = false;
-      component.body.innovatonUse.actors = actors;
-
-      expect(component.actorsTotal()).toBe(500);
-      expect(component.hasCurrentUseMismatch()).toBe(false);
+    it('IU26-R-3 TBD not selected: guidance and rows are shown', () => {
+      fieldsManagerServiceMock.isP25.mockReturnValue(true);
+      body.innov_use_to_be_determined = false;
+      const el = render();
+      expect(el.querySelector('[data-testid="iu-guidance"]')).not.toBeNull();
+      expect(el.querySelector('.fields_list')).not.toBeNull();
     });
 
-    it('accepts a reported ZERO and still demands the narrative', () => {
-      // §5: use verified and did not grow. Allowed, but it has to be explained.
-      component.body.new_users_added = 0;
-      expect(component.isCurrentUseUpdateComplete()).toBe(false);
-
-      component.body.use_expansion_narrative = 'Verified with the cooperative; no new users.';
-      expect(component.isCurrentUseUpdateComplete()).toBe(true);
+    it('IU26-R-4: lists actors, organizations and one line per unit, with the FY heading', () => {
+      body.current_use_previous = previous(2600, 2025, {
+        total_organizations: 9,
+        measures: [
+          { unit: 'Hectares', quantity: 4100 },
+          { unit: 'Trees planted', quantity: 500 }
+        ]
+      });
+      const el = render();
+      const text = el.querySelector('[data-testid="iu-previous-use"]').textContent.replace(/\s+/g, ' ');
+      expect(text).toContain('Previous reported use (FY2025 · for reference only)');
+      expect(text).toContain('Actors: 2,600');
+      expect(text).toContain('Organizations: 9');
+      expect(text).toContain('Other quantitative measures:');
+      const lines = Array.from(el.querySelectorAll('[data-testid="iu-previous-measures"] div')).map(d => d.textContent.trim());
+      expect(lines).toEqual(['Hectares 4,100', 'Trees planted 500']);
     });
 
-    it('is incomplete while the increment has not been answered at all', () => {
-      component.body.use_expansion_narrative = 'Something happened.';
-      expect(component.isCurrentUseUpdateComplete()).toBe(false);
+    it('IU26 follow-up: a previous with only zero figures draws no heading, the narrative stays', () => {
+      body.current_use_previous = { phase_year: 2025, total_actors: 0, total_organizations: 0, measures: [{ unit: 'Hectares', quantity: 0 }] };
+      const el = render();
+      expect(cuu(el)).not.toBeNull();
+      expect(el.querySelector('[data-testid="iu-previous-use"]')).toBeNull();
+      expect(cuu(el).textContent).not.toContain('Previous reported use');
+      expect(cuu(el).querySelector('app-pr-textarea')).not.toBeNull();
     });
 
-    it('is incomplete while the figures do not reconcile, even with both fields filled', () => {
-      component.body.new_users_added = 120;
-      component.body.use_expansion_narrative = 'A distribution agreement.';
-      component.body.innovatonUse.actors = withActors(1);
-
-      expect(component.isCurrentUseUpdateComplete()).toBe(false);
+    it('IU26-R-3: organizations only still shows the CUU with "Organizations: N" and no Actors line', () => {
+      body.current_use_previous = { phase_year: 2025, total_actors: 0, total_organizations: 4, measures: [] };
+      const el = render();
+      expect(cuu(el)).not.toBeNull();
+      const text = el.querySelector('[data-testid="iu-previous-use"]').textContent;
+      expect(text).toContain('Organizations: 4');
+      expect(text).not.toContain('Actors:');
     });
 
-    it('refuses a negative increment: use cannot decrease through this field', () => {
-      component.body.new_users_added = -5;
-      component.onNewUsersAddedChange();
-      expect(component.body.new_users_added).toBe(0);
+    it('IU26-R-5: the narrative is labelled with the phase year and capped at 100 words', () => {
+      const el = render();
+      const textarea: any = cuu(el).querySelector('app-pr-textarea');
+      expect(textarea.label).toBe('Brief narrative on how use changed in 2026');
+      expect(textarea.maxWords).toBe(100);
     });
 
-    it('omits the round label rather than guessing it', () => {
-      component.body.current_use_previous = previous(500, null);
-      expect(component.previousUsePhaseYear()).toBeNull();
-      expect(component.previousReportedUse()).toBe(500);
+    it('IU26-R-6: the year in the labels is the result phase year', () => {
+      apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2027 });
+      expect(component.currentUseNarrativeLabel()).toBe('Brief narrative on how use changed in 2027');
+      expect(component.currentUseGuidance().title).toBe('Report 2027 use only.');
     });
 
-    it('counts nothing but actors — organisations never enter the total', () => {
-      // Yeck's Q4 decision. If this ever changes, next year's "previous use" becomes a figure
-      // nobody can decompose.
-      component.body.new_users_added = 0;
-      component.body.innovatonUse.organization = [{ how_many: 12 } as any];
-      component.body.innovatonUse.actors = withActors(500);
+    it('IU26-R-5: the narrative alone completes the block', () => {
+      expect(component.isCurrentUseNarrativeComplete()).toBe(false);
+      body.use_expansion_narrative = 'Verified with the cooperative.';
+      expect(component.isCurrentUseNarrativeComplete()).toBe(true);
+    });
 
-      expect(component.actorsTotal()).toBe(500);
-      expect(component.hasCurrentUseMismatch()).toBe(false);
+    it('IU26-R-5: 101 words are not complete, 100 are', () => {
+      body.use_expansion_narrative = Array.from({ length: 101 }, () => 'w').join(' ');
+      expect(component.isCurrentUseNarrativeComplete()).toBe(false);
+      body.use_expansion_narrative = Array.from({ length: 100 }, () => 'w').join(' ');
+      expect(component.isCurrentUseNarrativeComplete()).toBe(true);
+    });
+
+    it('is complete when the block is not shown (first report)', () => {
+      body.current_use_previous = null;
+      expect(component.isCurrentUseNarrativeComplete()).toBe(true);
+    });
+  });
+
+  /**
+   * IU26 — W1/W2 2026 copy, labels and guidance, and the fence that keeps 2025 and IPSR step 1 as they were.
+   */
+  describe('IU26 — 2026 labels, guidance and copy', () => {
+    const el = () => fixture.nativeElement as HTMLElement;
+    const rowInputLabels = () => Array.from(el().querySelectorAll('app-pr-input')).map((i: any) => i.label);
+
+    let body: IpsrStep1Body;
+    const mount = (isIpsr = false) => {
+      fixture = TestBed.createComponent(InnovationUseFormComponent);
+      component = fixture.componentInstance;
+      component.isIpsr = isIpsr;
+      component.saving = false;
+      // changeDetectorRef skips the dev-mode checkNoChanges pass, which this template trips on its own (farmerRowKey seeds on first read).
+      component.body = body;
+      fixture.changeDetectorRef.detectChanges();
+      fixture.changeDetectorRef.detectChanges();
+    };
+
+    beforeEach(() => {
+      fieldsManagerServiceMock.isP25.mockReturnValue(true);
+      body = new IpsrStep1Body();
+      body.innov_use_to_be_determined = false;
+      body.innovatonUse.actors = [
+        Object.assign(new Actor(), { is_active: true, actor_type_id: 2, sex_and_age_disaggregation: true, how_many: 5, result_actors_id: 1 })
+      ];
+      body.innovatonUse.organization = [Object.assign(new Organization(), { is_active: true, institution_types_id: 1, id: 1 })];
+      body.innovatonUse.measures = [Object.assign(new Measure(), { unit_of_measure: 'Hectares', quantity: 4, result_ip_measure_id: 1 })];
+    });
+
+    describe('2026 result', () => {
+      beforeEach(() => {
+        apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026 });
+        mount();
+      });
+
+      it('rows are labelled "How many – total" and "Quantity – total"', () => {
+        const labels = rowInputLabels();
+        expect(labels.filter(l => l === 'How many – total').length).toBeGreaterThanOrEqual(2);
+        expect(labels).toContain('Quantity – total');
+        expect(labels).not.toContain('Quantity');
+      });
+
+      it('the actor description drops "expected"', () => {
+        const result = component.narrativeActors();
+        expect(result).toContain('please specify the innovation use at organizational level or other use.');
+        expect(result).not.toContain('expected');
+      });
+
+      it('shows the guidance starting "Report 2026 use only." plus the NEW sentence (IU26-R-8, W1/W2)', () => {
+        const guidance = el().querySelector('[data-testid="iu-guidance"]');
+        expect(guidance.textContent).toContain('Report 2026 use only.');
+        expect(guidance.textContent).toContain('If you know how many of the 2026 users are new, enter that number in "Of which NEW users".');
+      });
+
+      it('does not show the "Depending on the innovation…" alert (one alert fewer than the 2025 form)', () => {
+        const n2026 = el().querySelectorAll('app-alert-status').length;
+        fieldsManagerServiceMock.isInnovationUseAgeFallback2026.mockReturnValue(false);
+        mount();
+        const n2025 = el().querySelectorAll('app-alert-status').length;
+        expect(n2026).toBe(n2025 - 1);
+      });
+    });
+
+    describe('2025 result (isInnovationUseAgeFallback2026 off) is unchanged', () => {
+      beforeEach(() => {
+        fieldsManagerServiceMock.isInnovationUseAgeFallback2026.mockReturnValue(false);
+        apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2025 });
+        body.current_use_previous = { phase_year: 2024, total_actors: 500 };
+        mount();
+      });
+
+      it('keeps "How many", "Quantity" and the "expected" wording', () => {
+        const labels = rowInputLabels();
+        expect(labels).toContain('How many');
+        expect(labels).toContain('Quantity');
+        expect(labels.some(l => String(l).includes('– total'))).toBe(false);
+        expect(component.narrativeActors()).toContain('specify the expected innovation use at organizational level');
+      });
+
+      it('keeps the "Depending on the innovation…" alert, no guidance and no CUU', () => {
+        const alert: any = el().querySelector('app-alert-status[status="info"]');
+        expect(alert).not.toBeNull();
+        expect(alert.description).toContain('Depending on the innovation');
+        expect(el().querySelector('[data-testid="iu-guidance"]')).toBeNull();
+        expect(el().querySelector('[data-testid="iu-current-use-update"]')).toBeNull();
+      });
+    });
+
+    describe('IPSR step 1 host (isIpsr = true) is unchanged', () => {
+      beforeEach(() => {
+        apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026 });
+        body.current_use_previous = { phase_year: 2025, total_actors: 500 };
+        mount(true);
+      });
+
+      it('shows no CUU, no guidance, original labels and the "expected" wording', () => {
+        expect(el().querySelector('[data-testid="iu-current-use-update"]')).toBeNull();
+        expect(el().querySelector('[data-testid="iu-guidance"]')).toBeNull();
+        expect(component.howManyLabel()).toBe('How many');
+        expect(component.quantityLabel()).toBe('Quantity');
+        expect(component.narrativeActors()).toContain('specify the expected innovation use');
+      });
+    });
+
+    // IU26-R-7 — totals per category block (T-6)
+    describe('totals per category (IU26-R-7)', () => {
+      const tile = (id: string) => el().querySelector(`[data-testid="${id}"]`);
+      const row = (over: any) => Object.assign(new Actor(), { is_active: true, actor_type_id: 2, sex_and_age_disaggregation: true, ...over });
+
+      beforeEach(() => {
+        body.innovatonUse.actors = [
+          row({ actor_type_id: 2, how_many: 1200, count_unit: 'households' }),
+          row({ actor_type_id: 2, how_many: 1800, count_unit: 'individuals' }),
+          row({ actor_type_id: 3, sex_and_age_disaggregation: false, women: 20, men: 25, how_many: null })
+        ];
+        body.innovatonUse.organization = [Object.assign(new Organization(), { is_active: true, institution_types_id: 1, how_many: 7 })];
+        body.innovatonUse.measures = [
+          Object.assign(new Measure(), { is_active: true, unit_of_measure: 'Hectares', quantity: 1500 }),
+          Object.assign(new Measure(), { is_active: true, unit_of_measure: 'hectares', quantity: 500 })
+        ];
+      });
+
+      describe('2026 result', () => {
+        beforeEach(() => {
+          apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026 });
+        });
+
+        it('renders each category in its own tile: 1,845 individuals apart from 1,200 households', () => {
+          mount();
+          expect(tile('iu-totals')).not.toBeNull();
+          expect(tile('iu-total-actors-individuals').textContent).toContain('1,845');
+          expect(tile('iu-total-actors-individuals').textContent).not.toContain('1,200');
+          expect(tile('iu-total-households').textContent).toContain('1,200');
+          expect(tile('iu-total-organizations').textContent).toContain('7');
+          expect(tile('iu-total-measures').textContent).toContain('Hectares: 2,000');
+        });
+
+        it('uses the copy labels, no "Calculated from" sentence and an "of which new" line per tile ("not available" without NEW)', () => {
+          mount();
+          const text = tile('iu-totals').textContent;
+          expect(text).toContain('Actors - individuals');
+          expect(text).toContain('Households');
+          expect(text).toContain('Other quantitative measures');
+          expect(text).not.toContain('Calculated from');
+          expect(text).toContain('Of which new: not available');
+        });
+
+        it('drops the Households tile when its row is removed (is_active false or 0)', () => {
+          body.innovatonUse.actors[0].is_active = false;
+          mount();
+          expect(tile('iu-total-households')).toBeNull();
+          expect(tile('iu-total-actors-individuals').textContent).toContain('1,845');
+          (body.innovatonUse.actors[1] as any).is_active = 0;
+          fixture.changeDetectorRef.detectChanges();
+          expect(tile('iu-total-actors-individuals').textContent).toContain('45');
+          expect(tile('iu-total-actors-individuals').textContent).not.toContain('1,845');
+        });
+
+        it('gives no tile to a category without rows and no grid when nothing has rows', () => {
+          body.innovatonUse.actors = [];
+          body.innovatonUse.measures = [];
+          mount();
+          expect(tile('iu-total-actors-individuals')).toBeNull();
+          expect(tile('iu-total-households')).toBeNull();
+          expect(tile('iu-total-measures')).toBeNull();
+          expect(tile('iu-total-organizations')).not.toBeNull();
+          body.innovatonUse.organization = [];
+          fixture.changeDetectorRef.detectChanges();
+          expect(tile('iu-totals')).toBeNull();
+        });
+
+        it('is hidden when "to be determined" is selected', () => {
+          body.innov_use_to_be_determined = true;
+          mount();
+          expect(tile('iu-totals')).toBeNull();
+        });
+
+        it('ignores the 2030 projection rows', () => {
+          (body as any).innovation_use_2030 = { actors: [row({ how_many: 99999, count_unit: 'households' })], organization: [], measures: [] };
+          mount();
+          expect(tile('iu-total-households').textContent).toContain('1,200');
+          expect(tile('iu-totals').textContent).not.toContain('99,999');
+        });
+      });
+
+      it('2025 result: no totals grid (IU26-R-1)', () => {
+        fieldsManagerServiceMock.isInnovationUseAgeFallback2026.mockReturnValue(false);
+        apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2025 });
+        mount();
+        expect(tile('iu-totals')).toBeNull();
+      });
+
+      it('IPSR step 1 host: no totals grid', () => {
+        apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026 });
+        mount(true);
+        expect(tile('iu-totals')).toBeNull();
+      });
+    });
+
+    describe('"Of which NEW" (IU26-T-12, IU26-R-11)', () => {
+      const q = (id: string) => el().querySelector(`[data-testid="${id}"]`);
+      const qa = (id: string) => Array.from(el().querySelectorAll(`[data-testid="${id}"]`));
+      // app-pr-input is a stub here (NO_ERRORS_SCHEMA): the invalid flag is its `markInvalid` input, which pr-input paints as aria-invalid on the real box (pr-input spec).
+      const invalidInputs = () => Array.from(el().querySelectorAll('app-pr-input')).filter((i: any) => i.markInvalid === true);
+      const setBody = () => {
+        body.innovatonUse.actors = [
+          Object.assign(new Actor(), { is_active: true, actor_type_id: 2, sex_and_age_disaggregation: false, women: 70, men: 50, how_many: null, result_actors_id: 1 })
+        ];
+        body.innovatonUse.organization = [Object.assign(new Organization(), { is_active: true, institution_types_id: 1, how_many: 40, id: 1 })];
+        body.innovatonUse.measures = [Object.assign(new Measure(), { is_active: true, unit_of_measure: 'Hectares', quantity: 30, result_ip_measure_id: 1 })];
+      };
+
+      beforeEach(() => {
+        apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026 });
+        setBody();
+      });
+
+      it('a disaggregated actor row shows ONE NEW input and no women/men/youth NEW input; orgs and measures say "Of which NEW (optional)"', () => {
+        mount();
+        const labels = rowInputLabels();
+        expect(labels.filter(l => l === 'Of which NEW users (optional)').length).toBe(1);
+        expect(labels.filter(l => l === 'Of which NEW (optional)').length).toBe(2);
+        expect(qa('iu-new-users-actor').length).toBe(1);
+        expect(qa('iu-new-users-organization').length).toBe(1);
+        expect(qa('iu-new-users-measure').length).toBe(1);
+      });
+
+      it('total 120 / new 150 -> message, the input flagged invalid and the section marked incomplete', () => {
+        body.innovatonUse.actors[0]['new_users'] = 150;
+        mount();
+        expect(q('iu-new-users-error').textContent.trim()).toBe('New users (150) cannot be higher than the total (120).');
+        expect(invalidInputs().length).toBe(1);
+        expect(component.isNewUsersComplete()).toBe(false);
+      });
+
+      it('new empty is valid; new equal to the total is valid; 0 is valid', () => {
+        body.innovatonUse.actors[0]['new_users'] = null;
+        body.innovatonUse.organization[0]['new_users'] = 40;
+        body.innovatonUse.measures[0]['new_users'] = 0;
+        mount();
+        expect(q('iu-new-users-error')).toBeNull();
+        expect(invalidInputs().length).toBe(0);
+        expect(component.isNewUsersComplete()).toBe(true);
+      });
+
+      it('compares organizations with how_many, measures with quantity and actors with women + men (not women only)', () => {
+        body.innovatonUse.actors[0]['new_users'] = 100; // 100 <= 70 + 50, but above women alone
+        body.innovatonUse.organization[0]['new_users'] = 41;
+        body.innovatonUse.measures[0]['new_users'] = 31;
+        mount();
+        expect(qa('iu-new-users-error').length).toBe(2);
+        expect(invalidInputs().length).toBe(2);
+      });
+
+      it('an actor row on a single total (does not apply) compares with its typed how_many', () => {
+        body.innovatonUse.actors[0] = Object.assign(new Actor(), {
+          is_active: true,
+          actor_type_id: 2,
+          sex_and_age_disaggregation: true,
+          how_many: 10,
+          new_users: 11,
+          result_actors_id: 1
+        });
+        mount();
+        expect(q('iu-new-users-error').textContent).toContain('New users (11) cannot be higher than the total (10).');
+      });
+
+      it('each total tile shows "Of which new: N", and "not available" for a category without NEW', () => {
+        body.innovatonUse.actors[0]['new_users'] = 25;
+        body.innovatonUse.organization[0]['new_users'] = null;
+        mount();
+        expect(q('iu-new-actors-individuals').textContent).toContain('Of which new: 25');
+        expect(q('iu-new-organizations').textContent).toContain('Of which new: not available');
+        expect(q('iu-new-measure').textContent).toContain('Of which new: not available');
+      });
+
+      it('2025 result and IPSR step 1 render no NEW input, no NEW tile line and no NEW completeness rule', () => {
+        fieldsManagerServiceMock.isInnovationUseAgeFallback2026.mockReturnValue(false);
+        apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2025 });
+        mount();
+        expect(q('iu-new-users-actor')).toBeNull();
+        fieldsManagerServiceMock.isInnovationUseAgeFallback2026.mockReturnValue(true);
+        apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026 });
+        body.innovatonUse.actors[0]['new_users'] = 999;
+        mount(true);
+        expect(q('iu-new-users-actor')).toBeNull();
+        expect(q('iu-new-actors-individuals')).toBeNull();
+        expect(component.isNewUsersComplete()).toBe(true);
+      });
+
+      it('a W3/Bilaterals result renders no NEW input, no NEW tile line and no NEW sentence (IU26-R-12)', () => {
+        apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026, source_name: 'W3/Bilaterals' });
+        body.innovatonUse.actors[0]['new_users'] = 999;
+        mount();
+        expect(q('iu-new-users-actor')).toBeNull();
+        expect(q('iu-new-users-organization')).toBeNull();
+        expect(q('iu-new-users-measure')).toBeNull();
+        expect(q('iu-new-actors-individuals')).toBeNull();
+        expect(q('iu-guidance').textContent).not.toContain('Of which NEW');
+        expect(component.isNewUsersComplete()).toBe(true);
+      });
     });
   });
 
@@ -1671,17 +2024,33 @@ describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
       expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[0].label).toBe('Actors who received information, advice or inputs');
       expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[0].value).toBe('information_received');
       expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[0].description).toBe(
-        'Advisories delivered face-to-face, by SMS, radio/media or a digital platform; climate advisories; market information; dietary guidelines; starter kits, vouchers or other incentives. Receipt is documented; application of the innovation is not confirmed.'
+        'Advisories delivered face-to-face, by SMS, radio/media or a digital platform; market information; dietary guidelines; starter kits, vouchers or other incentives. Receipt is documented; application of the innovation is not confirmed.'
       );
       expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[1].label).toBe('Actors who applied the innovation');
       expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[1].value).toBe('innovation_applied');
       expect(FARMER_FOLLOW_UP_COPY.useNatureOptions[1].description).toBe(
-        'Grew a variety, applied a practice, actively used a digital tool or service, took up a product. Application is supported by the attached evidence (survey, plot observation, purchase records, platform logs).'
+        'Grew a variety, applied a practice, took up a product. Application is supported by the attached evidence (survey, plot observation, purchase records, platform logs).'
       );
       expect('helper' in FARMER_FOLLOW_UP_COPY).toBe(false);
       expect(FARMERS_ACTOR_TYPE_ID).toBe(1);
     });
+
+    it('does not contain the removed examples (IWA-R-4)', () => {
+      const descriptions = FARMER_FOLLOW_UP_COPY.useNatureOptions.map(o => o.description);
+      for (const description of descriptions) {
+        expect(description).not.toContain('climate advisories; ');
+        expect(description).not.toContain('actively used a digital tool or service, ');
+      }
+    });
   });
+
+  // `[label]` (IU26-R-8) is a property binding, so on the stubbed `app-pr-input` the label is no longer a `label="..."`
+  // attribute on the current-use rows; the 2030 rows keep the static attribute. These read either. This describe runs with
+  // the 2026 gate OFF, so every row keeps "How many".
+  const inputByLabel = (root: HTMLElement, label: string) =>
+    Array.from(root.querySelectorAll('app-pr-input')).find((e: any) => e.label === label || e.getAttribute('label') === label) ?? null;
+  const inputDebugByLabel = (root: any, label: string) =>
+    root.queryAll(By.css('app-pr-input')).find((d: any) => d.properties['label'] === label || d.attributes['label'] === label);
 
   describe.each(BLOCKS)('$name block', block => {
     it('shows the block, with the verbatim copy, under the Actor type select of a Farmers row (2026, W1/W2)', () => {
@@ -1791,7 +2160,7 @@ describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
       expect(row.men_youth).toBeNull();
       const [farmerRow, otherRow] = rowEls(block.name);
       expect(farmerRow.nativeElement.querySelector('app-pr-input[label="Women"]')).toBeNull();
-      expect(farmerRow.nativeElement.querySelector('app-pr-input[label="How many"]')).toBeTruthy();
+      expect(inputByLabel(farmerRow.nativeElement, 'How many')).toBeTruthy();
       expect(farmerRow.nativeElement.querySelector('app-pr-checkbox[label="Sex and age disaggregation does not apply"]')).toBeNull();
       // Other actor types are untouched: grid and checkbox still there.
       expect(otherRow.nativeElement.querySelector('app-pr-input[label="Women"]')).toBeTruthy();
@@ -1877,7 +2246,7 @@ describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
       block.set(component, [row]);
       detect();
       const [rowEl] = rowEls(block.name);
-      const howMany = rowEl.query(By.css('app-pr-input[label="How many"]'));
+      const howMany = inputDebugByLabel(rowEl, 'How many');
       expect(howMany.properties['required']).toBe(true);
     });
 
@@ -1898,7 +2267,7 @@ describe('InnovationUseFormComponent — Farmers follow-up (IFC-T-4)', () => {
       detect();
       const [gridEl, singleEl] = rowEls(block.name);
       expect(gridEl.query(By.css('app-pr-input[label="Women"]')).properties['required']).toBe(false);
-      expect(singleEl.query(By.css('app-pr-input[label="How many"]')).properties['required']).toBe(false);
+      expect(inputDebugByLabel(singleEl, 'How many').properties['required']).toBe(false);
     });
 
     it('Households on a row already on a single total keeps its typed total', () => {
@@ -2158,5 +2527,59 @@ describe('InnovationUseFormComponent — IWH — 2030 block by source', () => {
     expect(block2030()).toBeNull();
     expect(component.body.innov_use_2030_to_be_determined).toBe(tbdBefore);
     expect(JSON.stringify(component.body.innovation_use_2030)).toBe(listBefore);
+  });
+});
+
+/**
+ * P2-4125 — "Current core innovation use" any-of rule.
+ *
+ * The live green check (`validation_innovation_use_P25`, current-use block) keeps the section red
+ * until, with "This is yet to be determined" off, at least one active actor, organization or other
+ * measure exists (documented in `onecgiar-pr-server/src/api/qa-catalog/definitions/sections/innovation-use.ts`,
+ * REVIEW D13). The form had no marker for it, so the bottom-bar alert said "Section complete" while
+ * the rail stayed grey. These tests pin the predicate and the marker that feeds the DOM scan.
+ */
+describe('InnovationUseFormComponent — current use any-of rule (P2-4125)', () => {
+  const complete = (body: any) => InnovationUseFormComponent.prototype.isCurrentUseGroupComplete.call({ body });
+  const emptyUse = () => ({ actors: [], organization: [], measures: [] });
+
+  it('is incomplete when the three lists are empty', () => {
+    expect(complete({ innovatonUse: emptyUse() })).toBe(false);
+  });
+
+  it('is incomplete when the only rows were added but never given a type, or were removed', () => {
+    const use = emptyUse();
+    use.actors.push({ actor_type_id: null } as never, { actor_type_id: 2, is_active: false } as never);
+    use.organization.push({ institution_types_id: null } as never);
+    use.measures.push({ unit_of_measure: '  ', quantity: null } as never);
+    expect(complete({ innovatonUse: use })).toBe(false);
+  });
+
+  it.each([
+    ['an actor with a type', { actors: [{ actor_type_id: 3 }] }],
+    ['an organization with a type', { organization: [{ institution_types_id: 7 }] }],
+    ['a measure with a unit', { measures: [{ unit_of_measure: 'hectares' }] }],
+    ['a measure with a quantity', { measures: [{ quantity: 0 }] }]
+  ])('is complete with %s', (_name, lists) => {
+    expect(complete({ innovatonUse: { ...emptyUse(), ...lists } })).toBe(true);
+  });
+
+  it('is complete when the reporter ticked "This is yet to be determined"', () => {
+    expect(complete({ innov_use_to_be_determined: true, innovatonUse: emptyUse() })).toBe(true);
+  });
+
+  it('tolerates a body without the innovatonUse object', () => {
+    expect(complete({})).toBe(false);
+  });
+
+  it('renders a scan marker for the rule in the current-use block, P25 only and never in IPSR', () => {
+    const { readFileSync } = require('fs');
+    const html: string = readFileSync(require('path').join(__dirname, 'innovation-use-form.component.html'), 'utf8');
+    const marker = html.indexOf('[isComplete]="isCurrentUseGroupComplete()"');
+    expect(marker).toBeGreaterThan(-1);
+    // Inside the current-use block (before the use-level ladder) and fenced to P25 + not IPSR.
+    expect(marker).toBeLessThan(html.indexOf('How would you assess the current use level of the innovation?'));
+    const fence = html.lastIndexOf('@if', marker);
+    expect(html.slice(fence, marker)).toContain('this.fieldsManagerSE.isP25() && !this.isIpsr');
   });
 });

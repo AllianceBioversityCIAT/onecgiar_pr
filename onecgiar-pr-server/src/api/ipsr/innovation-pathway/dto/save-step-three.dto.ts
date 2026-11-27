@@ -4,6 +4,7 @@ import { ResultsIpActor } from '../../results-ip-actors/entities/results-ip-acto
 import { ResultsIpInstitutionType } from '../../results-ip-institution-type/entities/results-ip-institution-type.entity';
 import { ResultsByIpInnovationUseMeasure } from '../../results-by-ip-innovation-use-measures/entities/results-by-ip-innovation-use-measure.entity';
 import { ResultIpExpertWorkshopOrganized } from '../entities/result-ip-expert-workshop-organized.entity';
+import { PreviousPhaseCurrentUse } from '../../../results/summary/utils/previous-phase-current-use.util';
 import { EvidencesCreateInterface } from '../../../results/evidences/dto/create-evidence.dto';
 
 /**
@@ -57,6 +58,11 @@ export class SaveStepTwoThree {
   public result_ip_expert_workshop_organized: ResultIpExpertWorkshopOrganized[];
   /** P2-3824 — GET only; ignored on save. */
   public principal_impact_areas?: IpsrPrincipalImpactArea[];
+  /**
+   * IU26-R-13: GET only, 2026+ packages: what the previous phase's package (same `result_code`)
+   * reported. `null` when there is none or it reported nothing; absent for earlier phases.
+   */
+  public current_use_previous?: PreviousPhaseCurrentUse | null;
 }
 
 class InnovatonUseInterface {

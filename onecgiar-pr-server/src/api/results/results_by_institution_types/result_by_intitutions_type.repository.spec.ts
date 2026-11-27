@@ -135,4 +135,69 @@ describe('ResultByIntitutionsTypeRepository (unit)', () => {
       expect(params).toEqual([15, 5, 12, 2]);
     });
   });
+
+  // IU26-T-3 (IU26-R-9) — a 2026 Innovation Use copy drops the role-5 (Innovation Use
+  // organization) rows that are not the 2030 projection. Partner roles 1/2 are never touched.
+  describe('Innovation Use 2026 stop-copy (IU26-R-9)', () => {
+    const config = {
+      user: { id: 77 } as any,
+      old_result_id: 1000,
+      new_result_id: 2000,
+    } as any;
+    const normalize = (sql: string) => sql.replace(/\s+/g, ' ').trim();
+    const EXCLUSION =
+      'AND (rbit.institution_roles_id IS NULL OR rbit.institution_roles_id <> 5 OR rbit.section_id = 2)';
+
+    it.each(['findQuery', 'insertQuery'] as const)(
+      'excludes role-5 rows outside section 2 in the %s when phase_year is 2026',
+      (key) => {
+        const sql = normalize(
+          repo.createQueries({ ...config, phase_year: 2026 })[key],
+        );
+        expect(sql).toContain(EXCLUSION);
+      },
+    );
+
+    it.each([2025, undefined])(
+      'copies every role and section when phase_year is %s',
+      (phase_year) => {
+        const { findQuery, insertQuery } = repo.createQueries({
+          ...config,
+          phase_year,
+        });
+        expect(normalize(findQuery)).not.toContain('institution_roles_id <> 5');
+        expect(normalize(insertQuery)).not.toContain(
+          'institution_roles_id <> 5',
+        );
+      },
+    );
+
+    it('never names the partner roles (1/2), so partner rows are copied', () => {
+      const { findQuery, insertQuery } = repo.createQueries({
+        ...config,
+        phase_year: 2026,
+      });
+      for (const sql of [normalize(findQuery), normalize(insertQuery)]) {
+        expect(sql).not.toMatch(
+          /institution_roles_id\s*(=|in|<>)\s*\(?\s*[12]/i,
+        );
+      }
+    });
+
+    it('keeps the filter out of the read-back', () => {
+      const { returnQuery } = repo.createQueries({
+        ...config,
+        phase_year: 2026,
+      });
+      expect(normalize(returnQuery)).not.toContain('<> 5');
+    });
+
+    it('never replicates new_users (IU26-R-11 stored, never copied)', () => {
+      const { findQuery, insertQuery, returnQuery } =
+        repo.createQueries(config);
+      for (const sql of [findQuery, insertQuery, returnQuery]) {
+        expect(normalize(sql)).not.toContain('new_users');
+      }
+    });
+  });
 });

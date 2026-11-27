@@ -48,6 +48,8 @@ export class DataControlService {
   readonly fieldFeedbackList = signal<string[]>([]);
   /** Cuántos campos obligatorios tiene la sección abierta — el denominador de su progreso. */
   readonly mandatoryFieldsTotal = signal<number>(0);
+  /** P2-4123: true while the last scanned section still showed its loading skeleton (`.rd-loading`). */
+  readonly feedbackLoading = signal<boolean>(false);
   /**
    * Gap-source registry (SBT-DD-1, P2-3542): a mounted section that has mandatory fields it does
    * NOT render (e.g. a ToC tab that is not the active one) registers a function here that returns
@@ -315,6 +317,11 @@ export class DataControlService {
   }
 
   someMandatoryFieldIncompleteResultDetail(container) {
+    // P2-4123: whether the open section still paints its loading skeleton. While it does, its
+    // fields are empty only because the GET has not landed, so the counts below are not the
+    // section's real answer — the bottom bar waits on this before it shows a number.
+    const loading = !!document.querySelector(`${container}.rd-loading, ${container} .rd-loading`);
+    if (this.feedbackLoading() !== loading) this.feedbackLoading.set(loading);
     if (!document.querySelector(container)) {
       if (this.fieldFeedbackList().length) this.fieldFeedbackList.set([]);
       return true;

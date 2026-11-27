@@ -19,6 +19,8 @@ export class ResultActorRepository
   createQueries(
     config: ReplicableConfigInterface<ResultActor>,
   ): ConfigCustomQueryInterface {
+    // IU26-R-9: a 2026+ Innovation Use copy carries only the 2030 projection (section_id = 2).
+    const sectionFilter = config.phase_year >= 2026 ? 'AND section_id = 2' : '';
     return {
       findQuery: `
       SELECT
@@ -52,7 +54,7 @@ export class ResultActorRepository
           result_actors
       WHERE
           result_id = ${config.old_result_id} 
-          AND is_active > 0;
+          AND is_active > 0 ${sectionFilter};
       `,
       insertQuery: `
       INSERT INTO
@@ -113,7 +115,7 @@ export class ResultActorRepository
           result_actors
       WHERE
           result_id = ${config.old_result_id} 
-          AND is_active > 0;
+          AND is_active > 0 ${sectionFilter};
       `,
       returnQuery: `
       SELECT

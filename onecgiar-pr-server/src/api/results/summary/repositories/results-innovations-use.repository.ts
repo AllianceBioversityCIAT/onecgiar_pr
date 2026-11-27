@@ -228,7 +228,9 @@ export class ResultsInnovationsUseRepository
         -- P2-3537 §4: the block has to label the figure with the round it came from
         -- ("1,200 users (FY2025)"). Taken from the previous phase of THIS result, never from the
         -- open phase minus one — a result can sit in a phase that is not the open one.
-        previous_v.phase_year AS previous_phase_year
+        previous_v.phase_year AS previous_phase_year,
+        -- IU26-R-2: the result's own phase year, so the save can keep the cumulative fields for 2026+.
+        v.phase_year AS phase_year
       FROM result r
       JOIN results_innovations_use riu
         ON riu.results_id = r.id

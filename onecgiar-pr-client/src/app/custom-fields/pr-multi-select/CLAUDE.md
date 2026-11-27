@@ -1,6 +1,6 @@
 # pr-multi-select
 
-**Verified:** 2026-09-16 · performance-refactor · merge con SIP-T-7 · input `complete` + apertura hacia arriba (P2-3737/P2-3738); prior: 2026-09-16 · branch qa-development-2026-ss · SIP-T-7 rework (attempt 2): fixed the option-row `min-height`/`itemSize` mismatch the Reviewer caught (global `height: 30px` made the new `padding: 16px 20px` a no-op; added `height: auto; min-height: 52px` + a matching `virtualOptionItemSize` computed driving the CDK `[itemSize]`); prior: 2026-09-16 · branch qa-development-2026-ss · SIP-T-7 adds opt-in visual variant (`resultPickerStyle` input, off by default) mirroring `rd-contributors-and-partners`'s linked-result picker — no filter chips, per `SIP-R-20`/`SIP-OQ-3`; prior: 2026-09-16 · branch qa-development-2026-ss · SIP-T-3 adds opt-in server-search mode (`serverSearchDebounceMs` input, `searchTextChange` output); prior: 2026-09-14 · branch performance-refactor · hueco `selectedItems`: los chips que pinta el consumidor entran DENTRO del marco de la tarjeta; prior: 2026-09-10 · branch qa-development-2026-ss · c307e5816 (adds `tooltip` input, forwarded to the internal `app-pr-field-header` — spec `changes/info-tooltip-hover-reveal` ITR-T-8, mirrors `pr-select`'s existing pattern); prior: 2026-08-25 · performance-refactor · bc25304fb
+**Verified:** 2026-11-27 · branch qa-development-2026-ss · TRC-T-7: el veto de `deselectGuard` también resetea `NgModel.viewModel` (un Yes posterior destickea la caja); línea base contract.cy.ts corregida a 12 rojos; prior: 2026-11-27 · TRC-T-3 input `deselectGuard`; prior: 2026-09-16 · performance-refactor · merge con SIP-T-7 · input `complete` + apertura hacia arriba (P2-3737/P2-3738); prior: 2026-09-16 · branch qa-development-2026-ss · SIP-T-7 rework (attempt 2): fixed the option-row `min-height`/`itemSize` mismatch the Reviewer caught (global `height: 30px` made the new `padding: 16px 20px` a no-op; added `height: auto; min-height: 52px` + a matching `virtualOptionItemSize` computed driving the CDK `[itemSize]`); prior: 2026-09-16 · branch qa-development-2026-ss · SIP-T-7 adds opt-in visual variant (`resultPickerStyle` input, off by default) mirroring `rd-contributors-and-partners`'s linked-result picker — no filter chips, per `SIP-R-20`/`SIP-OQ-3`; prior: 2026-09-16 · branch qa-development-2026-ss · SIP-T-3 adds opt-in server-search mode (`serverSearchDebounceMs` input, `searchTextChange` output); prior: 2026-09-14 · branch performance-refactor · hueco `selectedItems`: los chips que pinta el consumidor entran DENTRO del marco de la tarjeta; prior: 2026-09-10 · branch qa-development-2026-ss · c307e5816 (adds `tooltip` input, forwarded to the internal `app-pr-field-header` — spec `changes/info-tooltip-hover-reveal` ITR-T-8, mirrors `pr-select`'s existing pattern); prior: 2026-08-25 · performance-refactor · bc25304fb
 
 ## Qué es
 
@@ -43,9 +43,26 @@ El dropdown multi-selección de toda la app: buscador, `select all` opcional, mo
   ⚠️ **No uses `focusin`** (ni binding ni listener nativo, ni siquiera vacío): medido el 16-sep-2026,
   cualquier listener de `focusin` en este host pone 3 rojos NUEVOS en `pr-multi-select.contract.cy.ts`
   (reasignación del modelo, opciones tardías, modelo antes que opciones). Con `pointerdown` el archivo
-  queda en sus 9 rojos conocidos. Coste aceptado: abrir con Tab no voltea el panel.
+  queda en sus 12 rojos conocidos (secciones 2.2 ×4, 2.3 ×3, 2.6, 2.8 ×2, 2.10, isStatic). Coste aceptado: abrir con Tab no voltea el panel.
   El piso es el borde del scroll MENOS su `padding-bottom`: `.rd_scroll` y `.bcr-scroll` reservan
   ahí la zona de la barra inferior flotante.
+- `deselectGuard` — `((option) => boolean) | null`, default `null` (TRC-T-3, spec `changes/toc-sp-removal-confirm`
+  TRC-DD-9). Opt-in veto de un deselect hecho en el PANEL, modo plano y modo `group`. Se consulta
+  SOLO cuando se quita un item ACTIVO (la re-activación de un inactivo con `logicalDeletion` no lo
+  llama). Si devuelve `true`: no toca `value`, no emite `selectOptionEvent`, y deja el tick puesto.
+  🛑 El tick se restaura escribiendo el checkbox nativo: las rutas de checkbox pasan `#cb` a
+  `onSelectOption(option, cb?)` y el componente hace `option.selected = true; cb.checked = true`.
+  Ningún cambio del modelo re-marca la fila (CDK recicla las vistas, solo cambia `$implicit`; P-10).
+  🛑 TRC-T-7: las rutas de checkbox pasan también `#m="ngModel"` (`onSelectOption(option, cb, m)`) y el veto
+  hace `m.viewModel = true`. Sin eso, el untick del usuario deja `NgModel.viewModel=false` y el veto
+  vuelve `option.selected=true` sin que cambie el binding `[ngModel]`; el Yes posterior del padre
+  (`option.selected=false`) compara `false` vs `false`, no hay `writeValue` y la caja queda marcada con
+  `value=[]`. `viewModel` es público en `NgModel`; el reset NO emite (no usar `viewToModelUpdate`).
+  Candado: caso "the host removes the item (confirmed)" en `pr-multi-select.cy.ts`, plano y `group`.
+  Las rutas de label no pasan ref y no lo necesitan. NO lo consultan "Select all / Unselect all"
+  ni la X de los chips (`removeOption`): el consumidor no debe habilitarlos donde necesite el guard.
+  Las ~80 instancias que no lo enlazan no cambian. Candado: bloque `deselectGuard` en `pr-multi-select.cy.ts`
+  (asserta `input.checked` del DOM) y `pr-multi-select.component.spec.ts`.
 - Gates de render: `readOnly` · `RolesService.readOnly` (global, **default TRUE**) ·
   `isStatic` (fuerza el control aunque sea read-only) · `hideSelect`.
 - `required` — **default `true`**. Ver la trampa ⚠️ #1: hoy es casi inerte.

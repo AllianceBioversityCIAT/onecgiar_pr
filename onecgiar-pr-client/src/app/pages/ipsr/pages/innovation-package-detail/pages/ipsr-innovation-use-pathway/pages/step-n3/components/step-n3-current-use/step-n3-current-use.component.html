@@ -1,9 +1,67 @@
 <div class="ipsr-sub-title-2">Current use of the core innovation</div>
 
-<app-pr-field-header
-    label="Specify the current use of the core innovation by actors, organizations, hectares or other innovation users/ beneficiaries. The numbers should reflect the current innovation use that can be supported by evidence"></app-pr-field-header>
+@if (isIu2026()) {
+    <!-- IU26-R-13 — 2026+ packages: the question, the previous phase as reference and the read-only totals. No
+         narrative and no Households (IPSR rows have no households unit). -->
+    <app-pr-field-header [label]="currentUseQuestion()" [useColon]="false"></app-pr-field-header>
+    <div appFeedbackValidation [labelText]="copy.newUsersMarkerLabel" [isComplete]="!anyNewUsersExceeds()"></div>
 
-<app-pr-field-header [required]="false" label="Actors" description="{{narrativeActors()}}"></app-pr-field-header>
+    @let previousUse = previousUseByCategory();
+    @if (previousUse && hasPreviousUse()) {
+        <div class="mb-[16px] rounded-[8px] bg-[var(--pr-surface-sunken)] p-[12px] text-[13px] text-ink-body" data-testid="iu-previous-use">
+            <strong>{{ previousUseHeading() }}</strong>
+            @if (previousUse.actors !== null) {
+                <div data-testid="iu-previous-actors">{{ categoryLabels.actors }}: <span class="font-mono tabular-nums">{{ previousUse.actors | number }}</span></div>
+            }
+            @if (previousUse.organizations !== null) {
+                <div data-testid="iu-previous-organizations">{{ categoryLabels.organizations }}: <span class="font-mono tabular-nums">{{ previousUse.organizations | number }}</span></div>
+            }
+            @if (previousUse.measures.length) {
+                <div data-testid="iu-previous-measures">
+                    {{ categoryLabels.measures }}:
+                    @for (measure of previousUse.measures; track measure.unit) {
+                        <div class="pl-[12px]">{{ measure.unit }} <span class="font-mono tabular-nums">{{ measure.quantity | number }}</span></div>
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    @let totals = currentUseTotals();
+    @let newUsers = currentUseNewUsers();
+    @if (totals) {
+        <div class="mb-[16px] grid grid-cols-2 gap-[10px] lg:grid-cols-3" data-testid="iu-totals">
+            @if (totals.actorsIndividuals !== null) {
+                <div class="rounded-[8px] bg-[var(--pr-surface-sunken)] p-[12px]" data-testid="iu-total-actors-individuals">
+                    <div class="text-[13px] text-ink-secondary">{{ categoryLabels.actorsIndividuals }}</div>
+                    <div class="font-mono text-[20px] font-bold tabular-nums text-ink-body">{{ totals.actorsIndividuals | number }}</div>
+                    <div class="mt-[4px] text-[12px] text-ink-secondary" data-testid="iu-new-actors-individuals">{{ ofWhichNew(newUsers.actorsIndividuals) }}</div>
+                </div>
+            }
+            @if (totals.organizations !== null) {
+                <div class="rounded-[8px] bg-[var(--pr-surface-sunken)] p-[12px]" data-testid="iu-total-organizations">
+                    <div class="text-[13px] text-ink-secondary">{{ categoryLabels.organizations }}</div>
+                    <div class="font-mono text-[20px] font-bold tabular-nums text-ink-body">{{ totals.organizations | number }}</div>
+                    <div class="mt-[4px] text-[12px] text-ink-secondary" data-testid="iu-new-organizations">{{ ofWhichNew(newUsers.organizations) }}</div>
+                </div>
+            }
+            @if (totals.measures.length) {
+                <div class="rounded-[8px] bg-[var(--pr-surface-sunken)] p-[12px]" data-testid="iu-total-measures">
+                    <div class="text-[13px] text-ink-secondary">{{ categoryLabels.measures }}</div>
+                    @for (measure of totals.measures; track measure.unit) {
+                        <div class="text-[13px] text-ink-body">{{ measure.unit }}: <strong class="font-mono tabular-nums">{{ measure.quantity | number }}</strong></div>
+                        <div class="mb-[4px] text-[12px] text-ink-secondary" data-testid="iu-new-measure">{{ ofWhichNew(newUsersForUnit(measure.unit)) }}</div>
+                    }
+                </div>
+            }
+        </div>
+    }
+} @else {
+    <app-pr-field-header
+        label="Specify the current use of the core innovation by actors, organizations, hectares or other innovation users/ beneficiaries. The numbers should reflect the current innovation use that can be supported by evidence"></app-pr-field-header>
+}
+
+<app-pr-field-header [required]="false" label="Actors" [description]="narrativeActors()"></app-pr-field-header>
 <input type="text" id="removeFocus" style="position: absolute; opacity: 0;">
 <div class="fields_list" *ngIf="this.body.innovatonUse.actors?.length">
     <div class="fields" appYmzListStructureItem
@@ -73,10 +131,21 @@
                 </app-pr-input>
             </div>
             <div class="right_content" *ngIf="actorItem.sex_and_age_disaggregation">
-                <app-pr-input placeholder="Enter text" label="How many" type="number"
+                <app-pr-input placeholder="Enter text" [label]="howManyLabel" type="number"
                     [required]="!!actorItem?.result_ip_actors_id" [(ngModel)]="actorItem.how_many"
                     (ngModelChange)="validateYouth(i,true,actorItem)">
                 </app-pr-input>
+            </div>
+            <div class="right_content">
+                @if (isIu2026()) {
+                    <app-pr-input data-testid="iu-new-input" placeholder="Enter text" [label]="copy.newUsersActorLabel" type="number"
+                        [required]="false" [ngModel]="actorItem.new_users" (ngModelChange)="setNewUsers(actorItem, $event)"
+        [markInvalid]="newUsersExceeds(actorItem, 'actor')" [describedBy]="newUsersExceeds(actorItem, 'actor') ? 'iu-new-error-actor-' + i : null">
+                    </app-pr-input>
+                    @if (newUsersExceeds(actorItem, 'actor')) {
+                        <div [id]="'iu-new-error-actor-' + i" class="text-[12px] text-[var(--pr-danger)]" role="alert" data-testid="iu-new-error">{{ newUsersMessage(actorItem, 'actor') }}</div>
+                    }
+                }
             </div>
             <div class="right_content">
                 <!-- P2-3844: required only once the row is real (saved, or an actor type picked), like the
@@ -102,7 +171,7 @@
 <div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length">
     <div class="fields" appYmzListStructureItem (deleteEvent)="removeOrganization(organizationItem)"
         [ngClass]="{'hideElement': organizationItem.is_active == false|| (!organizationItem?.id && this.api.rolesSE.readOnly)}"
-        *ngFor="let organizationItem of this.body.innovatonUse.organization">
+        *ngFor="let organizationItem of this.body.innovatonUse.organization; let i=index">
         <div>
             <app-pr-select [required]="!!organizationItem?.id" [options]="this.institutionsTypeTreeList"
                 label="Organization" optionLabel="name" optionValue="code"
@@ -128,9 +197,18 @@
                 </app-pr-select>
             </div>
             <div class="right_content">
-                <app-pr-input placeholder="Enter text" label="How many" type="number"
+                <app-pr-input placeholder="Enter text" [label]="howManyLabel" type="number"
                     [required]="!!organizationItem?.id" [(ngModel)]="organizationItem.how_many">
                 </app-pr-input>
+                @if (isIu2026()) {
+                    <app-pr-input data-testid="iu-new-input" placeholder="Enter text" [label]="copy.newUsersLabel" type="number"
+                        [required]="false" [ngModel]="organizationItem.new_users" (ngModelChange)="setNewUsers(organizationItem, $event)"
+        [markInvalid]="newUsersExceeds(organizationItem, 'organization')" [describedBy]="newUsersExceeds(organizationItem, 'organization') ? 'iu-new-error-organization-' + i : null">
+                    </app-pr-input>
+                    @if (newUsersExceeds(organizationItem, 'organization')) {
+                        <div [id]="'iu-new-error-organization-' + i" class="text-[12px] text-[var(--pr-danger)]" role="alert" data-testid="iu-new-error">{{ newUsersMessage(organizationItem, 'organization') }}</div>
+                    }
+                }
 
                 <app-pr-input *ngIf="organizationItem.institution_types_id == 50" label="# of graduate students"
                     placeholder="Write the number..." type="number" [required]="false"
@@ -158,16 +236,25 @@
     <app-pr-field-header label="Other quantitative measures of innovation use (e.g. # of hectares)"
         [required]="false"></app-pr-field-header>
     <div class="fields" appYmzListStructureItem (deleteEvent)="measuresItem.is_active = false"
-        *ngFor="let measuresItem of this.body.innovatonUse.measures"
+        *ngFor="let measuresItem of this.body.innovatonUse.measures; let i=index"
         [ngClass]="{'hideElement': measuresItem.is_active == false|| (!measuresItem?.result_ip_result_measures_id && this.api.rolesSE.readOnly)}">
         <div class="right_content">
             <app-pr-input placeholder="Enter text" label="Unit of measure" type="text"
                 [required]="!!measuresItem?.result_ip_result_measures_id"
                 [(ngModel)]="measuresItem.unit_of_measure">
             </app-pr-input>
-            <app-pr-input placeholder="Enter text" label="Quantity" type="number"
+            <app-pr-input placeholder="Enter text" [label]="quantityLabel" type="number"
                 [required]="!!measuresItem?.result_ip_result_measures_id" [(ngModel)]="measuresItem.quantity">
             </app-pr-input>
+            @if (isIu2026()) {
+                <app-pr-input data-testid="iu-new-input" placeholder="Enter text" [label]="copy.newUsersLabel" type="number"
+                    [required]="false" [ngModel]="measuresItem.new_users" (ngModelChange)="setNewUsers(measuresItem, $event)"
+        [markInvalid]="newUsersExceeds(measuresItem, 'measure')" [describedBy]="newUsersExceeds(measuresItem, 'measure') ? 'iu-new-error-measure-' + i : null">
+                </app-pr-input>
+                @if (newUsersExceeds(measuresItem, 'measure')) {
+                    <div [id]="'iu-new-error-measure-' + i" class="text-[12px] text-[var(--pr-danger)]" role="alert" data-testid="iu-new-error">{{ newUsersMessage(measuresItem, 'measure') }}</div>
+                }
+            }
         </div>
         <div class="right_content">
             <app-pr-input placeholder="Enter text" label="Evidence link" type="link"

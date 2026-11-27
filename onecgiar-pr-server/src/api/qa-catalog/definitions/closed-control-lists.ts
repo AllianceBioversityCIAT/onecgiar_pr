@@ -105,6 +105,21 @@ export const CLOSED_CONTROL_LISTS: Readonly<Record<string, readonly number[]>> =
      * "Long-term with that degree" (the load maps it back, .ts:206-209).
      */
     capdev_degrees: [1, 2],
+    /**
+     * P2-4108: the impact-area components of ONE area, so each `general.<area>_impact_areas` field reads only the score rows of its own
+     * area (QRF-DD-13 row filter; before, all five read every row of `result_impact_area_score`). The area is
+     * `impact_areas_scores_components.impact_area`, which the form splits on (onecgiar-pr-client/src/app/shared/services/global/get-impact-areas-scores.service.ts:26-30) and the
+     * export query filters on (result.repository.ts:1041-1069).
+     * Source: migration 1760113104098-ImpactAreasScoresComponents.ts creates the table and inserts the 13 rows in this order, so the
+     * AUTO_INCREMENT ids are 1-3 Gender (Gender equality, Youth, Social Inclusion), 4-5 Climate (Adaptation, Mitigation),
+     * 6-8 Nutrition (Nutrition, Health, Food Security), 9-10 Environmental (Environmental health, Biodiversity), 11-13 Poverty
+     * (Poverty Reduction, Livelihoods, Jobs). No later migration inserts into the table.
+     */
+    impact_area_components_gender: [1, 2, 3],
+    impact_area_components_climate: [4, 5],
+    impact_area_components_nutrition: [6, 7, 8],
+    impact_area_components_environmental: [9, 10],
+    impact_area_components_poverty: [11, 12, 13],
   };
 
 /**

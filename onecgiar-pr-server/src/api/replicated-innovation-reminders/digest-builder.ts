@@ -91,6 +91,7 @@ export type InnovationUseRouting = 'MELIA_SUMMARY' | 'UNREACHABLE';
 export const INNOVATION_USE_ROUTING: InnovationUseRouting = 'MELIA_SUMMARY';
 
 const INNOVATION_DEVELOPMENT = 7;
+const INNOVATION_PACKAGE = 10;
 const BILATERAL_SOURCE = 'API';
 const FALLBACK_GREETING = 'colleague';
 
@@ -156,6 +157,8 @@ export function build(
   const noDeveloper: PendingInnovationRowV2[] = [];
   const byCenter = new Map<string, PendingInnovationRowV2[]>();
   const unreachable: UnreachableItem[] = [];
+  /** Greeting names of Innovation package lead contacts, keyed by lower-cased email. */
+  const leadNames = new Map<string, string>();
 
   const unreachableIds = new Set<number>();
   const markUnreachable = (
@@ -191,8 +194,23 @@ export function build(
       continue;
     }
 
-    // W1/W2. This branch covers EVERY result type other than Innovation development (7), i.e.
-    // today only Innovation Use (2), which has no developer field: routed by INNOVATION_USE_ROUTING.
+    // SR-167303 (Nicoleta, 2026-11-26): a W1/W2 Innovation package goes to its Lead contact person
+    // (active `ad_users` row), with the MELIA of its SP in copy, in the same per-person email as
+    // any innovation that person develops. No lead contact: the MELIA summary, like Innovation Use.
+    if (r.result_type_id === INNOVATION_PACKAGE) {
+      const lead = norm(r.lead_email);
+      if (lead) {
+        push(byDeveloper, lead, r);
+        const leadName = (r.lead_name ?? '').trim();
+        if (leadName && !leadNames.has(lead)) leadNames.set(lead, leadName);
+      } else {
+        noDeveloper.push(r);
+      }
+      continue;
+    }
+
+    // W1/W2. This branch covers every remaining result type other than Innovation development (7),
+    // i.e. Innovation Use (2), which has no developer field: routed by INNOVATION_USE_ROUTING.
     if (r.result_type_id !== INNOVATION_DEVELOPMENT) {
       if (innovationUseRouting === 'MELIA_SUMMARY') noDeveloper.push(r);
       else markUnreachable(r, 'NO_MELIA');
@@ -220,7 +238,8 @@ export function build(
       for (const mail of emailsOf(meliaByInitiative.get(id))) cc.add(mail);
     }
     cc.delete(email);
-    const name = (activeUsers.get(email)?.name ?? '').trim();
+    const name =
+      (activeUsers.get(email)?.name ?? '').trim() || leadNames.get(email) || '';
     messages.push({
       type: 'DEVELOPER',
       messageKey: `DEVELOPER:${email}`,

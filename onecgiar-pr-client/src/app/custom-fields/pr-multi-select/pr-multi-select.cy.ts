@@ -327,3 +327,168 @@ describe('PrMultiSelectComponent (CT)', () => {
     });
   });
 });
+
+// TRC-T-3 (TRC-DD-9, P-9, P-10): opt-in `deselectGuard`. The assertions read the DOM `input.checked`
+// on purpose: a model-side restore does NOT re-tick a recycled CDK row (flat) nor the group row.
+const GROUPS = [
+  { name: 'Group A', children: [OPTIONS[0], OPTIONS[1]] },
+  { name: 'Group B', children: [OPTIONS[2]] }
+];
+
+const TEMPLATE_GUARD = `
+  <app-pr-multi-select
+    [options]="group ? groups : options"
+    [group]="group"
+    optionGroupLabel="name"
+    optionGroupChildren="children"
+    optionValue="code"
+    optionLabel="full_name"
+    placeholder="Select centers"
+    label="Centers"
+    selectedLabel="Selected"
+    selectedOptionLabel="full_name"
+    [logicalDeletion]="logicalDeletion"
+    [deselectGuard]="guard"
+    (selectOptionEvent)="onSelect($event)"
+    [(ngModel)]="model">
+  </app-pr-multi-select>
+`;
+
+function mountGuarded(opts: { model: any[]; group?: boolean; guard?: ((o: any) => boolean) | null; logicalDeletion?: boolean }) {
+  const onSelect = cy.stub().as('onSelect');
+  return cy
+    .mount(TEMPLATE_GUARD, {
+      imports: [CustomFieldsModule, HttpClientTestingModule, NoopAnimationsModule],
+      providers: [provideRouter([])],
+      componentProperties: {
+        options: OPTIONS,
+        groups: GROUPS,
+        group: !!opts.group,
+        model: opts.model,
+        guard: opts.guard ?? null,
+        logicalDeletion: !!opts.logicalDeletion,
+        onSelect
+      }
+    })
+    .then(wrapper => {
+      wrapper.fixture.debugElement.injector.get(RolesService).readOnly = false;
+      wrapper.fixture.detectChanges();
+      return cy.wrap(wrapper);
+    });
+}
+
+describe('PrMultiSelectComponent deselectGuard (CT)', () => {
+  const C1 = { code: 'C1', full_name: 'Center 1' };
+
+  it('hook unset: untick removes the item (unchanged behavior)', () => {
+    mountGuarded({ model: [C1] }).then(wrapper => {
+      openDropdown();
+      checkbox('Center 1').should('be.checked').click();
+      checkbox('Center 1').should('not.be.checked');
+      cy.wrap(null).then(() => expect((wrapper.component as any).model).to.have.length(0));
+    });
+  });
+
+  for (const group of [false, true]) {
+    const mode = group ? 'group' : 'flat';
+
+    it(`hook returns true, checkbox click, ${mode}: keeps the DOM tick, value and no emit`, () => {
+      const guard = cy.stub().returns(true).as('guard');
+      mountGuarded({ model: [C1], group, guard }).then(wrapper => {
+        openDropdown();
+        checkbox('Center 1').should('be.checked').click();
+        checkbox('Center 1').should('be.checked');
+        cy.get('@guard').should('have.been.calledOnce');
+        cy.get('@onSelect').should('not.have.been.called');
+        cy.wrap(null).then(() => expect((wrapper.component as any).model.map((c: Center) => c.code)).to.deep.equal(['C1']));
+      });
+    });
+
+    it(`hook returns true, label click, ${mode}: keeps the tick, value and no emit`, () => {
+      const guard = cy.stub().returns(true).as('guard');
+      mountGuarded({ model: [C1], group, guard }).then(wrapper => {
+        openDropdown();
+        cy.contains('.options .option', 'Center 1').find('.label').click();
+        checkbox('Center 1').should('be.checked');
+        cy.get('@onSelect').should('not.have.been.called');
+        cy.wrap(null).then(() => expect((wrapper.component as any).model).to.have.length(1));
+      });
+    });
+
+    it(`after an intercepted untick, a later real untick still removes it (NgModel in sync), ${mode}`, () => {
+      let block = true;
+      const guard = cy.stub().callsFake(() => block).as('guard');
+      mountGuarded({ model: [C1], group, guard }).then(wrapper => {
+        openDropdown();
+        checkbox('Center 1').click();
+        checkbox('Center 1').should('be.checked');
+        cy.wrap(null).then(() => {
+          block = false;
+        });
+        checkbox('Center 1').click();
+        checkbox('Center 1').should('not.be.checked');
+        cy.wrap(null).then(() => expect((wrapper.component as any).model).to.have.length(0));
+      });
+    });
+
+    // TRC-T-7 (TRC-DD-9 amended 2026-11-27): after a veto the host confirms and removes the item from
+    // `value`; the box must untick (the veto reset NgModel's viewModel, so the removal is seen as a change).
+    it(`hook returns true, then the host removes the item (confirmed): the box unticks, ${mode}`, () => {
+      const guard = cy.stub().returns(true).as('guard');
+      mountGuarded({ model: [C1], group, guard }).then(wrapper => {
+        openDropdown();
+        checkbox('Center 1').should('be.checked').click();
+        checkbox('Center 1').should('be.checked');
+        // The host confirms and removes the item: a new array bound to the host's ngModel, then CD passes
+        // (`ng.applyChanges`: the mounted wrapper fixture's own detectChanges does not reach the dropdown rows).
+        const repaint = () => {
+          const ng = (window as any).ng;
+          const host = Cypress.$('app-pr-multi-select')[0];
+          ng.applyChanges(ng.getOwningComponent(host));
+          ng.applyChanges(ng.getComponent(host));
+        };
+        cy.wrap(null).then(() => {
+          (wrapper.component as any).model = [];
+          repaint();
+        });
+        cy.wait(50).then(repaint);
+        checkbox('Center 1').should('not.be.checked');
+      });
+    });
+
+    it(`hook returns false, ${mode}: removes the item`, () => {
+      const guard = cy.stub().returns(false).as('guard');
+      mountGuarded({ model: [C1], group, guard }).then(wrapper => {
+        openDropdown();
+        checkbox('Center 1').click();
+        checkbox('Center 1').should('not.be.checked');
+        cy.get('@guard').should('have.been.calledOnce');
+        cy.wrap(null).then(() => expect((wrapper.component as any).model).to.have.length(0));
+      });
+    });
+
+    it(`hook is not called when ADDING an option, ${mode}`, () => {
+      const guard = cy.stub().returns(true).as('guard');
+      mountGuarded({ model: [], group, guard }).then(wrapper => {
+        openDropdown();
+        checkbox('Center 2').click();
+        checkbox('Center 2').should('be.checked');
+        cy.get('@guard').should('not.have.been.called');
+        cy.wrap(null).then(() => expect((wrapper.component as any).model.map((c: Center) => c.code)).to.deep.equal(['C2']));
+      });
+    });
+  }
+
+  it('logicalDeletion re-activation of an inactive item does not call the hook', () => {
+    const guard = cy.stub().returns(true).as('guard');
+    mountGuarded({ model: [{ ...C1, is_active: false }], guard, logicalDeletion: true }).then(wrapper => {
+      openDropdown();
+      checkbox('Center 1').should('not.be.checked');
+      // Label click: the checkbox path derives `is_active` from the already-toggled flag (pre-existing).
+      cy.contains('.options .option', 'Center 1').find('.label').click();
+      checkbox('Center 1').should('be.checked');
+      cy.get('@guard').should('not.have.been.called');
+      cy.wrap(null).then(() => expect((wrapper.component as any).model[0].is_active).to.equal(true));
+    });
+  });
+});

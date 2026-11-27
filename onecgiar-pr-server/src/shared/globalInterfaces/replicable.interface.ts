@@ -15,6 +15,12 @@ export interface ReplicableConfigInterface<T> {
   entity_id?: number;
   /** When using V2 (entity_id): true if the source result primary initiative is already P25 (portfolio_id = 3). */
   same_portfolio_phase_change?: boolean;
+  /**
+   * IU26-R-9: target phase year of an Innovation Use (type 2) copy. Set only by the reporting
+   * phase copy for type 2 results; when >= 2026 the actor, P25 measure and organization copies
+   * skip the current-use rows. Absent -> today's behaviour (every other type and the IPSR flow).
+   */
+  phase_year?: number;
   f?: {
     custonFunction?: (res: T | T[]) => T | T[];
     errorFunction?: (error: any) => void;

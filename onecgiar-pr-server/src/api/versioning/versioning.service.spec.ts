@@ -1738,6 +1738,170 @@ describe('VersioningService', () => {
         (service as any)._resultIpMeasureRepository.replicate,
       ).toHaveBeenCalledWith(mockManager, expectedConfig);
     });
+
+    // IU26-T-3 (IU26-R-9) — a new phase of 2026 or later starts Innovation Use without current-use
+    // rows. The funnel is `$_phaseChangeReporting`: it hands the target year to the repositories
+    // that own the actor, measure and organization copies (design.md §5.2).
+    describe('IU26-R-9 — phase_year travels to the row copies for Innovation Use only', () => {
+      const repoNames = [
+        '_resultActorRepository',
+        '_resultIpMeasureRepository',
+        '_resultByIntitutionsTypeRepository',
+      ];
+
+      const wire = () => {
+        const mockNewResult: any = { id: 8001, result_code: 100 };
+        const mockManager: any = { update: jest.fn().mockResolvedValue({}) };
+        (service as any).dataSource = {
+          transaction: jest.fn(async (cb: any) => cb(mockManager)),
+        };
+        (service as any)._resultRepository = {
+          replicate: jest.fn().mockResolvedValue([mockNewResult]),
+        };
+        const replicators = [
+          '_resultByInitiativesRepository',
+          '_shareResultRequestRepository',
+          '_resultNonPooledProjectBudgetRepository',
+          '_resultsInnovationsUseRepository',
+          '_resultsInnovationsUseMeasuresRepository',
+          '_resultsInnovationsDevRepository',
+          '_resultAnswerRepository',
+          '_resultActorRepository',
+          '_resultIpMeasureRepository',
+          '_resultCountrySubnationalRepository',
+          '_nonPooledProjectRepository',
+          '_resultsCenterRepository',
+          '_resultByIntitutionsRepository',
+          '_resultByInstitutionsByDeliveriesTypeRepository',
+          '_resultByIntitutionsTypeRepository',
+          '_resultInstitutionsBudgetRepository',
+          '_resultCountryRepository',
+          '_resultRegionRepository',
+          '_linkedResultRepository',
+          '_evidencesRepository',
+          '_evidenceSharepointRepository',
+        ];
+        for (const name of replicators) {
+          (service as any)[name] = {
+            replicate: jest.fn().mockResolvedValue([]),
+          };
+        }
+        (
+          service as any
+        )._resultsInnovationsDevRepository.replicateScalingStudyUrls = jest
+          .fn()
+          .mockResolvedValue(undefined);
+        (service as any)._resultInitiativeBudgetRepository = {
+          replicate: jest.fn().mockResolvedValue([]),
+          ensureMissingBudgetsForPrimaryInitiatives: jest
+            .fn()
+            .mockResolvedValue(undefined),
+        };
+        (service as any)._evidencesService = {
+          replicateSPFiles: jest.fn().mockResolvedValue(undefined),
+        };
+        jest
+          .spyOn(service, 'transformInnovationDevAnswersFor2026')
+          .mockResolvedValue(undefined);
+        return mockManager;
+      };
+
+      const phaseYearsSeen = () =>
+        Object.fromEntries(
+          repoNames.map((name) => [
+            name,
+            (service as any)[name].replicate.mock.calls.map(
+              (call: any[]) => call[1].phase_year,
+            ),
+          ]),
+        );
+
+      it.each([
+        [ResultTypeEnum.INNOVATION_USE, 2026],
+        [ResultTypeEnum.INNOVATION_USE, 2027],
+        [ResultTypeEnum.INNOVATION_USE, 2025],
+      ])(
+        'type %s into a %s phase passes that phase_year to actors, measures and organizations',
+        async (typeId, year) => {
+          wire();
+          await service.$_phaseChangeReporting(
+            { id: 7001, result_code: 100, result_type_id: typeId } as any,
+            { id: 36, phase_name: 'p', phase_year: year } as any,
+            mockUser,
+          );
+          expect(phaseYearsSeen()).toEqual({
+            _resultActorRepository: [year],
+            _resultIpMeasureRepository: [year],
+            _resultByIntitutionsTypeRepository: [year],
+          });
+        },
+      );
+
+      it('leaves other result types free of the Innovation Use rule (type 7 into 2026)', async () => {
+        wire();
+        await service.$_phaseChangeReporting(
+          {
+            id: 7001,
+            result_code: 100,
+            result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT,
+          } as any,
+          { id: 36, phase_name: 'p', phase_year: 2026 } as any,
+          mockUser,
+        );
+        expect(phaseYearsSeen()).toEqual({
+          _resultActorRepository: [undefined],
+          _resultIpMeasureRepository: [undefined],
+          _resultByIntitutionsTypeRepository: [undefined],
+        });
+      });
+
+      it('still copies the IU answers and the legacy measures as today (DD-11)', async () => {
+        wire();
+        await service.$_phaseChangeReporting(
+          {
+            id: 7001,
+            result_code: 100,
+            result_type_id: ResultTypeEnum.INNOVATION_USE,
+          } as any,
+          { id: 36, phase_name: 'p', phase_year: 2026 } as any,
+          mockUser,
+        );
+        for (const name of [
+          '_resultsInnovationsUseRepository',
+          '_resultsInnovationsUseMeasuresRepository',
+        ]) {
+          const calls = (service as any)[name].replicate.mock.calls;
+          // Copied once, unfiltered: neither repository reads `phase_year`.
+          expect(calls).toHaveLength(1);
+        }
+      });
+
+      it('applies the same year through the annual cron path', async () => {
+        wire();
+        const phase: any = { id: 36, phase_name: 'p', phase_year: 2026 };
+        (service as any)._versionRepository = {
+          findOne: jest.fn().mockResolvedValue(phase),
+          $_getAllInovationDevToReplicate: jest.fn().mockResolvedValue([
+            {
+              id: 7001,
+              result_code: 100,
+              result_type_id: ResultTypeEnum.INNOVATION_USE,
+            },
+          ]),
+        };
+        jest
+          .spyOn(service, '$_genericValidation')
+          .mockResolvedValue(true as any);
+
+        await service.annualReplicationProcessInnovationUse(mockUser);
+
+        expect(phaseYearsSeen()).toEqual({
+          _resultActorRepository: [2026],
+          _resultIpMeasureRepository: [2026],
+          _resultByIntitutionsTypeRepository: [2026],
+        });
+      });
+    });
   });
 
   // `PSR-T-6` / `PSR-R-16` (SHOULD) — regression: current `$_phaseChangeReporting` replicates a

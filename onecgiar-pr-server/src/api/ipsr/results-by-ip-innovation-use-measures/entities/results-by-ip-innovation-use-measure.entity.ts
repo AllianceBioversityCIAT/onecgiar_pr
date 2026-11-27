@@ -30,6 +30,19 @@ export class ResultsByIpInnovationUseMeasure extends BaseEntity {
   })
   quantity!: number;
 
+  /**
+   * Innovation Use 2026 — new users in this row (IU26-R-11). Stored, never copied across
+   * phases: not in any replication insert list, so a rollover leaves it NULL.
+   */
+  @Column({
+    name: 'new_users',
+    type: 'int',
+    unsigned: true,
+    nullable: true,
+    default: null,
+  })
+  new_users: number | null;
+
   @Column({
     name: 'evidence_link',
     type: 'text',

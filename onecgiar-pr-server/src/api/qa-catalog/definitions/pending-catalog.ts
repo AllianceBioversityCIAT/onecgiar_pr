@@ -212,4 +212,10 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
 
   // IPSR step 2.1 / 2.2 tables: QAC-T-29 (2026.28) bound every column (results_complementary_innovation, its functions, the enabler types) and removed their entries
   // IPSR step 3 (QAC-T-30, 2026.29): the evidence links, the current use of the core innovation and the evidence-based levels are bound; what stays pending of step 3 is the legacy potential-situation pair and the four legacy single-link evidence columns above
+  // IU26-R-14: retired from the 2026 form (replaced by the per-row NEW users); the stored value of results already reported stays.
+  ...legacy2025(
+    'results_innovations_use',
+    'innovation_use.current_use_update.new_users_added',
+    'new_users_added',
+  ),
 ];

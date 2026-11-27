@@ -123,4 +123,46 @@ describe('PrMultiSelectComponent', () => {
       expect(component.selectedLabelDescription()).not.toContain('undefined');
     });
   });
+
+  // TRC-T-3: `deselectGuard` (the DOM re-tick itself is locked by the Cypress CT cases).
+  describe('deselectGuard', () => {
+    const setup = (guard: ((o: any) => boolean) | null, value: any[]) => {
+      fixture.componentRef.setInput('options', [{ code: 'C1' }, { code: 'C2' }]);
+      fixture.componentRef.setInput('optionValue', 'code');
+      fixture.componentRef.setInput('optionLabel', 'full_name');
+      fixture.componentRef.setInput('deselectGuard', guard);
+      fixture.detectChanges();
+      component.writeValue(value);
+    };
+
+    it('guard true on an active item: no value change, no emit, native box re-ticked', () => {
+      const guard = jest.fn().mockReturnValue(true);
+      setup(guard, [{ code: 'C1' }]);
+      const emit = jest.spyOn(component.selectOptionEvent, 'emit');
+      const cb = { checked: false } as HTMLInputElement;
+      const option = { code: 'C1', selected: false };
+
+      component.onSelectOption(option, cb);
+
+      expect(guard).toHaveBeenCalledWith(option);
+      expect(option.selected).toBe(true);
+      expect(cb.checked).toBe(true);
+      expect(component.value).toHaveLength(1);
+      expect(emit).not.toHaveBeenCalled();
+    });
+
+    it('guard false removes the item', () => {
+      setup(() => false, [{ code: 'C1' }]);
+      component.onSelectOption({ code: 'C1', selected: false });
+      expect(component.value).toHaveLength(0);
+    });
+
+    it('guard is not consulted when adding', () => {
+      const guard = jest.fn().mockReturnValue(true);
+      setup(guard, []);
+      component.onSelectOption({ code: 'C2', selected: true });
+      expect(guard).not.toHaveBeenCalled();
+      expect(component.value).toHaveLength(1);
+    });
+  });
 });

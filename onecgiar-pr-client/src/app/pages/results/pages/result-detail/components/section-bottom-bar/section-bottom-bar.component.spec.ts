@@ -42,7 +42,9 @@ describe('SectionBottomBarComponent', () => {
   const html = () => fixture.nativeElement as HTMLElement;
   const q = (sel: string) => html().querySelector(sel) as HTMLElement;
 
-  const build = async (url = '/result/result-detail/1234/partners?phase=7') => {
+  // `settled`: the cases below describe a section whose count already arrived; the arrival itself
+  // (P2-4123, "Checking fields…" until the count holds still) has its own describe at the end.
+  const build = async (url = '/result/result-detail/1234/partners?phase=7', settled = true) => {
     currentUrl = url;
     buildSectionsMock();
     // El año se fija POR CASO, despues del beforeEach que construyo el mock: publicarlo aqui es lo
@@ -67,6 +69,10 @@ describe('SectionBottomBarComponent', () => {
     fixture = TestBed.createComponent(SectionBottomBarComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
+    if (settled) {
+      component.feedbackReady.set(true);
+      fixture.detectChanges();
+    }
   };
 
   /**
@@ -107,6 +113,7 @@ describe('SectionBottomBarComponent', () => {
       // El denominador del aro de progreso. Va en el mock porque el componente lo lee al construirse:
       // sin él, CUALQUIER test de esta suite muere con "mandatoryFieldsTotal is not a function".
       mandatoryFieldsTotal: signal<number>(0),
+      feedbackLoading: signal<boolean>(false),
       currentResultSignal: signal({ phase_year: phaseYear })
     };
     rolesMock = { readOnly: false };
@@ -634,6 +641,82 @@ describe('SectionBottomBarComponent', () => {
         expect(el.getAttribute('aria-hidden')).toBeNull();
       }
       expect(q('[data-testid="section-bottom-bar"]').className).toContain('bg-transparent');
+    });
+  });
+
+  /**
+   * P2-4123 — the counter must not run down (or up) while a section arrives.
+   * Reproduced on prtest (result 10174): returning to Contributors & Partners painted 7 -> 3 -> 1,
+   * the 7 left by the previous section and the 3 by the loading skeleton / fields still filling in.
+   */
+  describe('arrival of the count (P2-4123)', () => {
+    const SETTLE = SectionBottomBarComponent.FEEDBACK_SETTLE_MS;
+    const pending = () => q('[data-testid="section-bottom-bar-pending"]');
+    const checking = () => q('[data-testid="section-bottom-bar-checking"]');
+    // Render first so the bar's effect sees the signals just set (and re-arms or drops its timer)
+    // BEFORE the clock moves; then render again to paint whatever the timer decided.
+    const render = () => {
+      TestBed.tick();
+      fixture.detectChanges();
+    };
+    const advance = (ms: number) => {
+      render();
+      jest.advanceTimersByTime(ms);
+      render();
+    };
+
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('shows no number while the section is still loading, then the final count only', async () => {
+      sectionIsDone = false;
+      dataControlMock.fieldFeedbackList = signal(['A', 'B', 'C', 'D', 'E', 'F', 'G']); // left by the previous section
+      await build(undefined, false);
+      dataControlMock.feedbackLoading.set(true); // the new section's skeleton is up
+      dataControlMock.fieldFeedbackList.set(['A', 'B', 'C']);
+      advance(SETTLE * 3);
+
+      expect(checking()).not.toBeNull();
+      expect(pending()).toBeNull();
+
+      dataControlMock.feedbackLoading.set(false);
+      dataControlMock.fieldFeedbackList.set(['A', 'B', 'C']); // first frames after the GET
+      advance(SETTLE - 100);
+      dataControlMock.fieldFeedbackList.set(['Lead center']); // fields finished filling in
+      advance(SETTLE - 1);
+      expect(pending()).toBeNull(); // still not still long enough: no intermediate value painted
+
+      advance(1);
+      expect(checking()).toBeNull();
+      expect(pending().textContent).toContain('1 field missing');
+    });
+
+    it('goes straight to "Section complete" when nothing is missing, without counting down', async () => {
+      dataControlMock.fieldFeedbackList = signal(['A', 'B']);
+      await build(undefined, false);
+      dataControlMock.fieldFeedbackList.set([]);
+      advance(SETTLE);
+
+      expect(pending()).toBeNull();
+      expect(q('[data-testid="section-bottom-bar-complete"]').textContent).toContain('Section complete');
+    });
+
+    it('stays live once settled: typing updates the count immediately', async () => {
+      sectionIsDone = false;
+      dataControlMock.fieldFeedbackList = signal(['Title', 'Description']);
+      await build(undefined, false);
+      advance(SETTLE);
+      expect(pending().textContent).toContain('2 fields missing');
+
+      dataControlMock.fieldFeedbackList.set(['Title']);
+      render();
+      expect(pending().textContent).toContain('1 field missing');
+    });
+
+    it('drops its settle timer on destroy', async () => {
+      await build(undefined, false);
+      fixture.destroy();
+      expect(() => jest.advanceTimersByTime(SETTLE * 2)).not.toThrow();
     });
   });
 });

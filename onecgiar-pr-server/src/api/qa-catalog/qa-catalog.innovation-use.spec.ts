@@ -343,4 +343,47 @@ describe('QAC-T-20 innovation use (Results)', () => {
       },
     );
   });
+
+  describe('IU26-R-14 NEW users per row', () => {
+    it('lists "Of which NEW users" on the current-use rows only, bound to the new_users column of each row table', () => {
+      const tables: Record<string, string> = {
+        actors: 'result_actors',
+        organizations: 'results_by_institution_type',
+        measures: 'result_ip_measure',
+      };
+      for (const [list, table] of Object.entries(tables)) {
+        const s = sub(get(`innovation_use.current_use.${list}`), 'new_users');
+        expect(s.label).toBe('Of which NEW users');
+        expect(s.type).toBe('number');
+        expect(s.required).toBe(false);
+        expect(s.storage).toEqual({
+          kind: 'column',
+          table,
+          column: 'new_users',
+        });
+        // The 2030 projection has no NEW (it is a per-period figure of the current use).
+        expect(
+          get(`innovation_use.projection_2030.${list}`).subfields?.some(
+            (x) => x.key === 'new_users',
+          ),
+        ).toBe(false);
+      }
+    });
+
+    it('no longer lists "New users added" for 2026; its column is pending, not hidden', () => {
+      expect(
+        CATALOG_FIELDS.some((f) => f.key.endsWith('new_users_added')),
+      ).toBe(false);
+      expect(
+        PENDING_CATALOG.some(
+          (e) =>
+            e.table === 'results_innovations_use' &&
+            e.column === 'new_users_added',
+        ),
+      ).toBe(true);
+      expect(PENDING_CATALOG.filter((e) => e.column === 'new_users')).toEqual(
+        [],
+      );
+    });
+  });
 });

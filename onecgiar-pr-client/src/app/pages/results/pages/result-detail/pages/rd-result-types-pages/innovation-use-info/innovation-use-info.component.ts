@@ -15,6 +15,7 @@ import {
 import { CanComponentDeactivate } from '../../../../../../../shared/guards/unsaved-changes.types';
 import { SectionDirtyTrackerService } from '../../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
 import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../../internationalization/result-detail-section-load.copy';
+import { newUsersValue } from '../../../../../../../shared/utils/current-use-update.util';
 
 @Component({
   selector: 'app-innovation-use-info',
@@ -465,12 +466,21 @@ export class InnovationUseInfoComponent implements CanComponentDeactivate {
     return (actors || []).map((actor: any) => ({ ...actor, count_unit: actor?.count_unit ?? null, use_nature: actor?.use_nature ?? null }));
   }
 
+  /**
+   * IU26-R-11 — a current-use row that carries `new_users` leaves with a clean number or `null` (a blank box is `null`,
+   * never `''`). A row without the key is left alone: the server writes NEW only when the key is present (T-11), so an
+   * untouched row never overwrites a stored value. Payload copy only; the bound rows are not mutated.
+   */
+  private withNewUsers<T>(rows: T[] | undefined | null): T[] {
+    return (rows || []).map((row: any) => ('new_users' in (row || {}) ? { ...row, new_users: newUsersValue(row.new_users) } : row));
+  }
+
   private saveSectionWith(innovationLink: { has_innovation_link: boolean; linked_results: number[] }): Observable<void> {
     const { investment_programs = [], investment_bilateral = [], investment_partners = [] } = this.innovationUseInfoBody as any;
-    const actors = this.withFarmerFollowUp(this.innovationUseInfoBody?.innovatonUse?.actors);
-    const measures = this.innovationUseInfoBody?.innovatonUse?.measures || [];
+    const actors = this.withNewUsers(this.withFarmerFollowUp(this.innovationUseInfoBody?.innovatonUse?.actors));
+    const measures = this.withNewUsers(this.innovationUseInfoBody?.innovatonUse?.measures);
     // Do not mutate UI-bound state; map payload only
-    const organization = (this.innovationUseInfoBody?.innovatonUse?.organization || []).map((item: any) => ({
+    const organization = this.withNewUsers(this.innovationUseInfoBody?.innovatonUse?.organization).map((item: any) => ({
       ...item,
       institution_types_id: item?.institution_sub_type_id ?? item?.institution_types_id
     }));
@@ -506,11 +516,18 @@ export class InnovationUseInfoComponent implements CanComponentDeactivate {
       // P2-3985 — P25 only (added below). The non-P25 path never hydrates them (`innovatonUse`
       // receives the GET), so they always leave as `null`, and since P2-3985 the legacy endpoint
       // persists them when the key is present: sending them there would blank them on every save.
+      // IU26 (DD-6, client half) — for 2026+ results `new_users_added` is OMITTED (the cumulative field is gone
+      // from the form and the stored value must survive; the server never writes undefined/null over it), and an
+      // emptied narrative goes as "" rather than null so clearing it still works under that server guard.
+      // The year gate is `isInnovationUseAgeFallback2026` (phase_year of the open result, P-14), already
+      // resolved by the time anything can be saved. Pre-2026 sends both exactly as before.
       ...(this.fieldsManagerSE.isP25()
-        ? {
-            new_users_added: this.innovationUseInfoBody.new_users_added ?? null,
-            use_expansion_narrative: this.innovationUseInfoBody.use_expansion_narrative ?? null
-          }
+        ? this.fieldsManagerSE.isInnovationUseAgeFallback2026()
+          ? { use_expansion_narrative: this.innovationUseInfoBody.use_expansion_narrative ?? '' }
+          : {
+              new_users_added: this.innovationUseInfoBody.new_users_added ?? null,
+              use_expansion_narrative: this.innovationUseInfoBody.use_expansion_narrative ?? null
+            }
         : {}),
       investment_programs,
       investment_bilateral,
