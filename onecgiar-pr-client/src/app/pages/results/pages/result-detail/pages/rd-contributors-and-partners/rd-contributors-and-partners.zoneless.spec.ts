@@ -19,6 +19,7 @@ import { FieldsManagerService } from '../../../../../../shared/services/fields-m
 import { TermPipe } from '../../../../../../internationalization/term.pipe';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
+import { PrMultiSelectComponent } from '../../../../../../custom-fields/pr-multi-select/pr-multi-select.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
 
 /**
@@ -1235,5 +1236,202 @@ describe('RdContributorsAndPartnersComponent — last ToC Center removal dialog 
     expect(rdPartnersSE.leadCenterCode).toBe('C2');
     expect(spy).toHaveBeenCalledWith(true);
     expect(chipNames()).toEqual(['C2']);
+  });
+});
+
+/**
+ * TRC-R-1 / TRC-R-2 panel path (changes/toc-sp-removal-confirm, TRC-DD-9) — unticking the last ToC-origin Science Program /
+ * Center in the dropdown PANEL must open the same confirm dialog as the chip X.
+ *
+ * Renders the REAL `app-pr-multi-select` (CustomFieldsModule) and drives its REAL `onSelectOption` the way the panel does:
+ * flip the option clone's `selected` flag, then call the method. The guard is only consulted by the real component, so a
+ * dropped `[deselectGuard]` binding is observable here (the sentinel and Other(s) cases prove the guard's exclusions).
+ * No `detectChanges` after "Yes": the repaint must come from the component itself.
+ */
+describe('RdContributorsAndPartnersComponent — panel untick of the last ToC Science Program / Center (TRC-DD-9)', () => {
+  let fixture: ComponentFixture<RdContributorsAndPartnersComponent>;
+  let rdPartnersSE: RdContributorsAndPartnersService;
+  let appRoot: HTMLElement;
+
+  const SP7 = { id: 7, official_code: 'SP07', name: 'Breeding', short_name: 'Breeding', full_name: 'SP07 - Breeding' };
+  const SP8 = { id: 8, official_code: 'SP08', name: 'Climate', short_name: 'Climate', full_name: 'SP08 - Climate' };
+  const C1 = { code: 'C1', name: 'Center 1', acronym: 'C1', full_name: 'Center 1', institutionId: 11 };
+  const C2 = { code: 'C2', name: 'Center 2', acronym: 'C2', full_name: 'Center 2', institutionId: 22 };
+  const SP_DIALOG = 'toc-science-program-remove-confirm';
+  const CENTER_DIALOG = 'toc-center-remove-confirm';
+
+  const panels = (): any[] => fixture.debugElement.queryAll(By.directive(PrMultiSelectComponent)).map(h => h.componentInstance);
+  const spPanel = (): any => panels().find(c => c.selectedLabel() === 'Science Program/Accelerator selected');
+  const centerPanel = (): any => panels().find(c => c.selectedLabel() === 'Center(s) selected');
+  const otherSciencePanel = (): any => panels().find(c => c.optionValue() === 'id' && c.selectedLabel() !== 'Science Program/Accelerator selected');
+  /** The panel's untick: the click handler flips the clone's flag, then calls onSelectOption. */
+  const untick = (panel: any, key: string, value: any) => {
+    const option = panel.optionsIntance().find((o: any) => o[key] == value);
+    option.selected = !option.selected;
+    panel.onSelectOption(option);
+  };
+  const selectedFlag = (panel: any, key: string, value: any) => panel.optionsIntance().find((o: any) => o[key] == value).selected;
+  const dialog = (id: string) => document.getElementById(id);
+  const repaint = async () => {
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    await fixture.whenStable();
+  };
+
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+    appRoot = document.createElement('app-root');
+    document.body.appendChild(appRoot);
+
+    const currentResult = { id: 4244, result_code: 'R-4244', version_id: 1, portfolio: 'P26', initiative_id: 5, initiative_official_code: 'INIT-05', status: null };
+    const apiMock = {
+      dataControlSE: {
+        currentResult,
+        currentResultSignal: signal(currentResult),
+        currentResultSectionName: signal(''),
+        findClassTenSeconds: jest.fn().mockResolvedValue(true),
+        isKnowledgeProduct: false,
+        showPartnersRequest: false
+      },
+      resultsSE: {
+        GET_resultById: jest.fn().mockReturnValue(of({ response: currentResult })),
+        GET_generalInformationByResultId: jest.fn().mockReturnValue(of({ response: {} })),
+        GET_AllWithoutResults: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [SP7, SP8] })),
+        GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] }))
+      },
+      rolesSE: { readOnly: false, isAdmin: false, platformIsClosed: false }
+    };
+
+    await TestBed.configureTestingModule({
+      declarations: [RdContributorsAndPartnersComponent],
+      imports: [CommonModule, FormsModule, HttpClientTestingModule, TermPipe, CustomFieldsModule],
+      providers: [
+        provideZonelessChangeDetection(),
+        RdContributorsAndPartnersService,
+        { provide: ApiService, useValue: apiMock },
+        { provide: RolesService, useValue: { readOnly: false } },
+        { provide: InstitutionsService, useValue: { loadedInstitutions: new BehaviorSubject<boolean>(false), institutionsList: [], institutionsWithoutCentersList: [] } },
+        { provide: CentersService, useValue: { centersList: [C1, C2], centers: signal<any[]>([C1, C2]), loadedCenters: new BehaviorSubject(true), getData: jest.fn().mockResolvedValue([]) } },
+        // NOTE: the REAL CustomizedAlertsFeService (providedIn root) is deliberately not mocked.
+        { provide: ResultLevelService, useValue: { currentResultLevelId: 2 } },
+        { provide: InnovationUseResultsService, useValue: { resultsList: [] } },
+        {
+          provide: FieldsManagerService,
+          useValue: { isContributorsPartners2026: () => true, isLeadContactPersonMandatory2026: () => false, fields: () => ({}), isP25: () => false, activeIndicatorsLength: () => 0, hasSelectedIndicator: () => false }
+        }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+
+    rdPartnersSE = TestBed.inject(RdContributorsAndPartnersService);
+    jest.spyOn(rdPartnersSE, 'getSectionInformation').mockImplementation(() => undefined as any);
+    jest.spyOn(rdPartnersSE, 'loadFilteredBilateralProjects').mockImplementation(() => undefined as any);
+
+    fixture = TestBed.createComponent(RdContributorsAndPartnersComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    rdPartnersSE.sectionHydratedFromToc.set(true);
+    rdPartnersSE.tocSelectionTouched.set(false);
+    rdPartnersSE.partnersBody.result_toc_result = { planned_result: true } as any;
+  });
+
+  afterEach(async () => {
+    await new Promise(resolve => setTimeout(resolve, 80));
+    document.querySelectorAll('.custom_modal_container').forEach(node => node.remove());
+    appRoot.remove();
+  });
+
+  it('TRC-S-1.4: unticking the last ToC Science Program in the panel opens the dialog; Yes removes the chip and the option, no detectChanges', async () => {
+    rdPartnersSE.tocReferenceSynergyInitiativeIds.set([7]);
+    rdPartnersSE.scienceSelected = [SP7];
+    await repaint();
+    const panel = spPanel();
+    expect(selectedFlag(panel, 'id', 7)).toBe(true);
+
+    untick(panel, 'id', 7);
+    await fixture.whenStable();
+
+    // Vetoed: dialog open, the item and the ticked option are untouched.
+    expect(dialog(SP_DIALOG)).toBeTruthy();
+    expect(rdPartnersSE.scienceSelected).toEqual([SP7]);
+    expect(selectedFlag(panel, 'id', 7)).toBe(true);
+
+    document.getElementById(`confirm-${SP_DIALOG}`)!.click();
+    await fixture.whenStable(); // NOT detectChanges
+
+    expect(rdPartnersSE.scienceSelected).toEqual([]);
+    expect(fixture.nativeElement.querySelectorAll('.pr_chip_selected').length).toBe(0);
+    expect(selectedFlag(panel, 'id', 7)).toBe(false);
+  });
+
+  it('TRC-S-1.4: Cancel on the panel dialog keeps the Science Program and its ticked option', async () => {
+    rdPartnersSE.tocReferenceSynergyInitiativeIds.set([7]);
+    rdPartnersSE.scienceSelected = [SP7];
+    await repaint();
+    const panel = spPanel();
+
+    untick(panel, 'id', 7);
+    document.getElementById(`cancel-${SP_DIALOG}`)!.click();
+    await fixture.whenStable();
+
+    expect(rdPartnersSE.scienceSelected).toEqual([SP7]);
+    expect(selectedFlag(panel, 'id', 7)).toBe(true);
+  });
+
+  it('TRC-S-1.4: unticking the "Other(s)" sentinel in the panel removes it with no dialog', async () => {
+    const sentinel = { id: fixture.componentInstance.OTHER_SP_CODE, official_code: 'Other(s)' };
+    rdPartnersSE.tocReferenceSynergyInitiativeIds.set([7]);
+    rdPartnersSE.scienceSelected = [SP7, sentinel];
+    await repaint();
+    const panel = spPanel();
+
+    untick(panel, 'id', fixture.componentInstance.OTHER_SP_CODE);
+    await fixture.whenStable();
+
+    expect(dialog(SP_DIALOG)).toBeNull();
+    expect(rdPartnersSE.scienceSelected).toEqual([SP7]);
+  });
+
+  it('TRC-S-1.4: unticking an "Other" Science Program (Other(s) dropdown) never opens the dialog', async () => {
+    const sentinel = { id: fixture.componentInstance.OTHER_SP_CODE, official_code: 'Other(s)' };
+    rdPartnersSE.tocReferenceSynergyInitiativeIds.set([7]);
+    rdPartnersSE.scienceSelected = [SP7, sentinel];
+    rdPartnersSE.otherScienceSelected = [{ ...SP8 }] as any;
+    await repaint();
+    const panel = otherSciencePanel();
+    expect(panel).toBeTruthy();
+    expect(selectedFlag(panel, 'id', 8)).toBe(true);
+    // The guard is for the ToC-origin dropdown only: the Other(s) dropdown must not carry it.
+    expect(panel.deselectGuard()).toBeNull();
+
+    untick(panel, 'id', 8);
+    await fixture.whenStable();
+
+    expect(dialog(SP_DIALOG)).toBeNull();
+    expect(rdPartnersSE.otherScienceSelected).toEqual([]);
+    expect(rdPartnersSE.scienceSelected).toEqual([SP7, sentinel]);
+  });
+
+  it('TRC-S-2.4: unticking the last ToC Center in the panel opens the dialog; Yes removes the chip and the option', async () => {
+    rdPartnersSE.tocReferenceCenterInstitutionIds.set([11]);
+    rdPartnersSE.partnersBody.contributing_center = [{ ...C1 }];
+    await repaint();
+    const panel = centerPanel();
+    expect(selectedFlag(panel, 'code', 'C1')).toBe(true);
+
+    untick(panel, 'code', 'C1');
+    await fixture.whenStable();
+    expect(dialog(CENTER_DIALOG)).toBeTruthy();
+    expect(rdPartnersSE.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1']);
+    expect(selectedFlag(panel, 'code', 'C1')).toBe(true);
+
+    document.getElementById(`confirm-${CENTER_DIALOG}`)!.click();
+    await fixture.whenStable(); // NOT detectChanges
+
+    expect(rdPartnersSE.partnersBody.contributing_center).toEqual([]);
+    expect(fixture.nativeElement.querySelectorAll('.pr_chip_selected').length).toBe(0);
+    expect(selectedFlag(panel, 'code', 'C1')).toBe(false);
   });
 });

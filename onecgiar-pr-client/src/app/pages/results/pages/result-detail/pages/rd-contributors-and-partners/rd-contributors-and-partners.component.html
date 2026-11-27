@@ -131,6 +131,7 @@
         [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
         placeholder="Select center(s)"
         [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
+        [deselectGuard]="centerDeselectGuard"
         (selectOptionEvent)="onContributingCenterSelect($event)">
         <ng-container ngProjectAs="[selectedItems]" *ngTemplateOutlet="contributingCenterChips"></ng-container>
       </app-pr-multi-select>
@@ -157,6 +158,7 @@
       [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
       placeholder="Select center(s)"
       [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
+      [deselectGuard]="centerDeselectGuard"
       (selectOptionEvent)="this.rdPartnersSE.setPossibleLeadCenters(true)">
       <ng-container ngProjectAs="[selectedItems]" *ngTemplateOutlet="contributingCenterChips"></ng-container>
     </app-pr-multi-select>
@@ -481,6 +483,7 @@
         [required]="false"
         [(ngModel)]="this.rdPartnersSE.scienceSelected"
         placeholder="Select Science Program/Accelerator"
+        [deselectGuard]="scienceDeselectGuard"
         (selectOptionEvent)="onScienceSelect($event)">
         <div class="medal_selector selected_container" selectedItems>
           <div class="centers chips_container">

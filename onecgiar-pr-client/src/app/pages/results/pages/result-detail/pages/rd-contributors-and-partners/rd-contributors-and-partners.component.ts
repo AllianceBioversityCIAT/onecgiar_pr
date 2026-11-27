@@ -929,6 +929,25 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
     this.confirmRemoval('science', () => this.removeScienceItem(item));
   }
 
+  // TRC-DD-9: `pr-multi-select.deselectGuard` for the Science Program panel. Called with the panel's option CLONE, so the model item
+  // is matched by `id`. Returns true (the untick is vetoed) only after opening the dialog; no other side effect.
+  scienceDeselectGuard = (option: any): boolean => {
+    if (option?.id === this.OTHER_SP_CODE || !this.shouldConfirmLastScience()) return false;
+    const match = (this.rdPartnersSE.scienceSelected || []).find((sp: any) => sp?.id == option?.id);
+    if (!match) return false;
+    this.confirmRemoval('science', () => this.removeScienceItem(match));
+    return true;
+  };
+
+  // TRC-DD-9: same for the Contributing CGIAR Centers panels; the model item is matched by `code`.
+  centerDeselectGuard = (option: any): boolean => {
+    if (option?.code === this.OTHER_CENTERS_CODE || !this.shouldConfirmLastCenter()) return false;
+    const match = (this.rdPartnersSE.partnersBody?.contributing_center || []).find((c: any) => c?.code == option?.code);
+    if (!match) return false;
+    this.confirmRemoval('center', () => this.removeCenterItem(match, false));
+    return true;
+  };
+
   deleteOtherScience(index: number) {
     // Removing an "Other" Science Program never asks for confirmation (TRC-S-1.3).
     this.rdPartnersSE.otherScienceSelected = (this.rdPartnersSE.otherScienceSelected || []).filter((_: any, i: number) => i !== index);

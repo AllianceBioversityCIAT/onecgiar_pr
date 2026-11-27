@@ -219,3 +219,62 @@ Execution stopped for the user. Not auto-approved.
 | Review rounds | 3 | 6 |
 
 **BUDGET TRIPWIRE FIRED (production).** Production insertions (+119) now exceed the ≈110 estimate, and T-4 (guard wiring) is still to come. T-5 mostly deletes code (`requiresTocCenter`, a note, a marker branch), so net production is +43. The test budget (≈800) is not exceeded yet, but T-4 and T-5 will likely exceed it. The cause: each new `remove*Item` method is a full copy of an existing body, plus the side-effect-free predicates and the shared dialog. Stopped for the user; not auto-approved.
+
+**Tripwire decision (user, 2026-11-27):** "Continue, drop LOC limits". From now on the spec does not track LOC; review rounds (6) are still tracked. Execution resumes with TRC-T-4.
+
+### TRC-T-4 — Wire the panel deselect guards
+
+| Field | Value |
+|---|---|
+| Final status | PASS |
+| Date | 2026-11-27 |
+| Attempts | 1 |
+| Requirements covered | TRC-R-1 S-1.4, TRC-R-2 S-2.4 |
+| Skills / effort | `angular-developer`, `tdd` (task defaults) · effort medium · Implementer T2 wrapper, Reviewer T3 wrapper |
+
+**Attempt 1**
+
+- Files changed (`onecgiar-pr-client/src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/`): `rd-contributors-and-partners.component.ts`, `.component.html`, `.zoneless.spec.ts`, `CLAUDE.md`. `component.spec.ts` was not touched; all the new coverage is in the zoneless spec, as the DoD requires.
+- Implementer verification: folder Jest 14 suites / 390 tests passed; lint clean; `npm run build` exit 0.
+- Red (a): with `[deselectGuard]="scienceDeselectGuard"` removed from the SP dropdown:
+
+  ```
+  ● ... panel untick of the last ToC Science Program / Center (TRC-DD-9) › TRC-S-1.4: unticking the last ToC Science Program in the panel opens the dialog; Yes removes the chip and the option, no detectChanges
+      expect(received).toBeTruthy()
+      Received: null
+      > expect(dialog(SP_DIALOG)).toBeTruthy();
+  ● ... › TRC-S-1.4: Cancel on the panel dialog keeps the Science Program and its ticked option
+      TypeError: Cannot read properties of null (reading 'click')   (no dialog was opened)
+  ```
+
+- Red (b): with the sentinel no longer excluded, "Other(s) sentinel untick: no dialog" received `<div class="custom_modal_container active" id="toc-science-program-remove-confirm">`.
+- Red (c): the first attempt stayed green. An Other SP never matches a `scienceSelected` item, so a guard bound by mistake returns `false` and no dialog opens. The Implementer added `expect(panel.deselectGuard()).toBeNull()` to the Other(s) test, which then failed with `Received: [Function anonymous]`. The Reviewer accepted it: design §8 states this obligation structurally ("The Other(s) dropdowns get no `deselectGuard`").
+- Evidence re-run (Leader inline, no worker active): folder Jest `14 passed / 390 passed` → **VERIFIED**.
+- Reviewer: **PASS**. Findings:
+  - The guards are stable arrow properties and conform to TRC-DD-9.
+  - "The option stays ticked" holds, through `pr-multi-select.onSelectOption:497-501`.
+  - No other instance is affected: the input defaults to `null`, and only the three named dropdowns are bound.
+  - Yes clears the model, the chip and the panel flag with no `detectChanges`.
+  - The extra `if (!match) return false` is within the design: with no match there is nothing to remove, and a veto would trap the user.
+  - The disqualifier was cleared: the panel clone carries `id` / `code`.
+- Runtime events: none. After its hand-back the worker still held a background job. The Leader stopped it with TaskStop and confirmed that no test or build process was left running.
+
+`spawns: implementer 48 calls, 215431 tokens, ended complete; reviewer 5 calls, 45892 tokens, ended complete`
+
+**Select-all / chip X state (`[advisory-grade]`, state only):** `showSelectAll` is not set on any guarded dropdown (default `false`, `pr-multi-select.component.ts:41`). All three dropdowns project their own chips, which T-1 and T-2 already guard, so the pr-multi-select chip X is not shown. The folder `CLAUDE.md` records that turning `showSelectAll` on would bypass the guard.
+
+**ADVISORY (4R, non-gating):**
+
+- Reliability / coverage: nothing tests a panel untick of the Centers "Other(s)" sentinel, and the binding on the flat `contributing_center` dropdown is never exercised. Only the ToC-split Centers dropdown is.
+- Readability: the SP sentinel check uses `===` and the match uses `==`.
+
+### Full `npm run test:ct` (owed since TRC-T-3), run 2026-11-27 with no worker active
+
+- Result: the runner reported `x 76 spec(s) failed`. That is every spec in all 10 batches, including `pr-multi-select.cy.ts`, which passed 23/23 when run directly in TRC-T-3. Log: the session scratchpad `test-ct-full.log`.
+- Probe (`leader.md` → *Deferring a check*). Assumption tested: "the failures are in the product". Running `npx cypress run --component --spec src/app/custom-fields/add-button/add-button.cy.ts` directly gave 3 passing, 0 failing.
+- Cause: `scripts/run-ct-batched.js:93` calls `spawnSync('npx', ['cypress', ...])` without `shell: true`. On Windows `npx` is `npx.cmd`, so every batch fails to start. This is an existing tooling defect, last touched by `a50364243`, and it is outside this spec.
+- Gate decision: the `custom-fields/` CT gate for this spec stays as satisfied by TRC-T-3's direct runs (`pr-multi-select.cy.ts` 23 passing, `selection.cy.ts` 7 passing, `contract.cy.ts` 32 passing / 12 failing, the same as on HEAD). TRC-T-4 does not touch `custom-fields/`. The runner defect is reported to the user as a separate ticket candidate.
+
+### Running totals after TRC-T-4
+
+Tasks 4 / 6 · review rounds 4 / 6 · LOC no longer tracked (user decision).

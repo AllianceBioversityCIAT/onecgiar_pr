@@ -7,7 +7,7 @@
 | Module / feature | `results` → `rd-contributors-and-partners` (+ additive `pr-multi-select` input) |
 | Linked spec | [`requirements.md`](./requirements.md) + [`design.md`](./design.md) (revision 4) |
 | Owner / driver | Santiago Sanchez |
-| Status | in-progress (T-1, T-2, T-3 done) |
+| Status | in-progress (T-1..T-4 done) |
 | Approval Mode | gated |
 | Budget (design §12) | 6 tasks (5 code + 1 manual) · ≈380 LOC · 6 review rounds — tripwire for `/akili-execute` |
 
@@ -101,7 +101,7 @@ Common rules for every task:
   - [ ] `npm run test:ct` (the `custom-fields/` gate): no new reds beyond the 9 known in `pr-multi-select.contract.cy.ts`.
   - [ ] `npx jest pr-multi-select` and `repro-p2-3308` green; `npm run build` green.
 
-### TRC-T-4 — Wire the panel deselect guards
+### TRC-T-4 [x] — Wire the panel deselect guards
 
 - **Type:** client
 - **Description:** Add `scienceDeselectGuard` / `centerDeselectGuard` (arrow properties) to the component: sentinel or no-confirm-needed → `false`; otherwise match the model item by `id` / `code`, `confirmRemoval(kind, () => removeXItem(match))`, return `true`. Bind `[deselectGuard]` on the SP dropdown (`html:475`) and both `contributing_center` dropdowns (`html:122`, `:149`). Not on the Other(s) dropdowns.
